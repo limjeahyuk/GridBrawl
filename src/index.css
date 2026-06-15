@@ -40,10 +40,7 @@ body,
 }
 
 body {
-  background:
-    radial-gradient(1200px 700px at 50% -10%, #11203f 0%, transparent 60%),
-    radial-gradient(900px 600px at 90% 110%, #2a0e3a 0%, transparent 55%),
-    var(--bg-0);
+  background: var(--bg-0);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 16px;
@@ -109,38 +106,20 @@ h3 {
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(120% 90% at 50% 40%, #000 30%, transparent 100%);
-  animation: grid-drift 18s linear infinite;
   pointer-events: none;
+  opacity: 0.6;
 }
 
-@keyframes grid-drift {
-  from {
-    background-position: 0 0, 0 0;
-  }
-  to {
-    background-position: 0 44px, 44px 0;
-  }
-}
-
+/* Scanline/CRT overlay removed for a flat matte look. */
 .scanlines {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0) 0px,
-    rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.18) 3px
-  );
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  opacity: 0.5;
+  display: none;
 }
 
 /* Generic neon button ---------------------------------------------------- */
 .btn {
   appearance: none;
   border: 1px solid var(--accent);
-  background: linear-gradient(180deg, rgba(47, 243, 255, 0.12), rgba(47, 243, 255, 0.02));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--text);
   padding: 14px 28px;
   font-size: 15px;
@@ -148,13 +127,11 @@ h3 {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   border-radius: 4px;
-  transition: transform 0.08s ease, box-shadow 0.18s ease, background 0.18s ease;
-  box-shadow: 0 0 18px rgba(47, 243, 255, 0.12), inset 0 0 12px rgba(47, 243, 255, 0.06);
+  transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .btn:hover {
-  background: linear-gradient(180deg, rgba(47, 243, 255, 0.22), rgba(47, 243, 255, 0.05));
-  box-shadow: 0 0 30px rgba(47, 243, 255, 0.4), inset 0 0 14px rgba(47, 243, 255, 0.12);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .btn:active {
@@ -164,16 +141,14 @@ h3 {
 .btn--ghost {
   border-color: var(--panel-edge);
   background: transparent;
-  box-shadow: none;
   color: var(--text-dim);
 }
 
 .btn--ghost:hover {
   color: var(--text);
   border-color: var(--accent);
-  box-shadow: 0 0 18px rgba(47, 243, 255, 0.18);
 }
 
 .neon-text {
-  text-shadow: 0 0 14px currentColor, 0 0 28px currentColor;
+  text-shadow: none;
 }

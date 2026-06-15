@@ -1,27 +1,41 @@
 import type { CardDef } from './types'
 import type { CharacterDef } from '../data/roster'
 
-export const GUARD_BLOCK = 15
-export const ENERGY_GAIN = 15
+export const GUARD_BLOCK = 50 // damage absorbed by one guard for the whole turn
+export const GUARD_COST = 10 // energy spent to raise the guard
+export const ENERGY_GAIN = 50 // energy restored by the recovery card
+export const ENERGY_REGEN = 10 // passive energy regained at the start of each turn
 
-// Shared cards every fighter can play. Movement/guard/energy are free; they
-// resolve before attacks within a beat, so they set up or dodge.
+// Shared cards every fighter can play. Movement is free but cools down; guard
+// costs energy and absorbs damage for the turn; energy restores fuel. All of
+// these resolve before attacks within a turn (see engine `resolveTurn` phases).
 export const COMMON_CARDS: CardDef[] = [
-  { id: 'c-forward', name: '전진', kind: 'move', dir: 'forward', desc: '상대 쪽으로 한 칸 이동.' },
-  { id: 'c-back', name: '후퇴', kind: 'move', dir: 'back', desc: '상대에게서 한 칸 멀어진다.' },
-  { id: 'c-up', name: '점프', kind: 'move', dir: 'up', desc: '이번 비트 동안 공중. 지상기를 회피한다.' },
-  { id: 'c-down', name: '앉기', kind: 'move', dir: 'down', desc: '이번 비트 동안 앉기. 상단기를 회피한다.' },
-  { id: 'c-guard', name: '가드', kind: 'guard', block: GUARD_BLOCK, desc: `이번 비트의 피해를 ${GUARD_BLOCK} 막는다.` },
-  { id: 'c-energy', name: '원기', kind: 'energy', gain: ENERGY_GAIN, desc: `기력을 ${ENERGY_GAIN} 회복한다.` },
+  { id: 'm-right', name: '오른쪽', kind: 'move', dir: 'right', steps: 1, cooldown: 0, desc: '오른쪽으로 한 칸 이동. (>)' },
+  { id: 'm-left', name: '왼쪽', kind: 'move', dir: 'left', steps: 1, cooldown: 0, desc: '왼쪽으로 한 칸 이동. (<)' },
+  { id: 'm-up', name: '위', kind: 'move', dir: 'up', steps: 1, cooldown: 0, desc: '위로 한 칸 이동. (^)' },
+  { id: 'm-down', name: '아래', kind: 'move', dir: 'down', steps: 1, cooldown: 0, desc: '아래로 한 칸 이동. (v)' },
+  { id: 'm-right2', name: '오른쪽 대시', kind: 'move', dir: 'right', steps: 2, cooldown: 1, desc: '오른쪽으로 두 칸 이동. (>>)' },
+  { id: 'm-left2', name: '왼쪽 대시', kind: 'move', dir: 'left', steps: 2, cooldown: 1, desc: '왼쪽으로 두 칸 이동. (<<)' },
+  {
+    id: 'c-guard',
+    name: '가드',
+    kind: 'guard',
+    block: GUARD_BLOCK,
+    guardCost: GUARD_COST,
+    cooldown: 1,
+    desc: `기력 ${GUARD_COST} 소모. 이번 턴 받는 피해를 최대 ${GUARD_BLOCK} 막는다.`,
+  },
+  {
+    id: 'c-energy',
+    name: '원기 회복',
+    kind: 'energy',
+    gain: ENERGY_GAIN,
+    cooldown: 0,
+    desc: `기력을 ${ENERGY_GAIN} 회복한다.`,
+  },
 ]
 
 /** The full selectable card set for a fighter: common cards + their attacks. */
 export function deckFor(char: CharacterDef): CardDef[] {
   return [...COMMON_CARDS, ...char.attacks]
-}
-
-export const STANCE_LABEL: Record<string, string> = {
-  crouch: '앉기',
-  stand: '서기',
-  jump: '점프',
 }

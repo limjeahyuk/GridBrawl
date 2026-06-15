@@ -5,12 +5,13 @@ import { CardBattle, planAffordable } from '../../battle/engine'
 import { decideAI } from '../../battle/ai'
 import { deckFor } from '../../battle/cards'
 import {
-  LANE,
+  GRID_COLS,
+  GRID_ROWS,
   type ActionResult,
-  type Beat,
+  type Cell,
   type CardDef,
   type Difficulty,
-  type Stance,
+  type Step,
 } from '../../battle/types'
 
 export interface BattleOpponent {
@@ -23,20 +24,18 @@ interface Fx {
   result: ActionResult
 }
 interface View {
-  pos: [number, number]
-  stance: [Stance, Stance]
+  pos: [Cell, Cell]
   hp: [number, number]
   energy: [number, number]
-  guard: [boolean, boolean]
-  attacking: [boolean, boolean]
+  shield: [number, number]
+  acting: [boolean, boolean] // attack lunge
   damage: [number, number]
   fx: [Fx | null, Fx | null]
-  label: [string, string]
+  say: [string, string]
 }
 
-const X0 = 15
-const X1 = 85
-const xPct = (pos: number) => X0 + (pos / (LANE - 1)) * (X1 - X0)
+const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
+const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
@@ -46,22 +45,48 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   nofuel: '기력부족',
   guard: '가드',
   energy: '원기 +',
-  jump: '점프',
-  crouch: '앉기',
+  move: '이동',
 }
+const PHASE_TEXT: Record<Step['phase'], string> = { move: '이동', defense: '수비', attack: '공격' }
+const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
+const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900 }
 
 function baseView(b: CardBattle): View {
   const s = b.state
   return {
-    pos: [s.pos[0], s.pos[1]],
-    stance: ['stand', 'stand'],
+    pos: [{ ...s.pos[0] }, { ...s.pos[1] }],
     hp: [s.hp[0], s.hp[1]],
     energy: [s.energy[0], s.energy[1]],
-    guard: [false, false],
-    attacking: [false, false],
+    shield: [s.shield[0], s.shield[1]],
+    acting: [false, false],
     damage: [0, 0],
     fx: [null, null],
-    label: ['', ''],
+    say: ['', ''],
+  }
+}
+
+function stepToView(step: Step): View {
+  const s = step.snapshot
+  const a = step.actor
+  const d = 1 - a
+  const acting: [boolean, boolean] = [false, false]
+  acting[a] = isAtk(step.result)
+  const damage: [number, number] = [0, 0]
+  if (isAtk(step.result) && step.damage > 0) damage[d] = step.damage
+  const fx: [Fx | null, Fx | null] = [null, null]
+  if (step.card.kind === 'attack' && step.result !== 'nofuel')
+    fx[a] = { kind: step.card.fx ?? 'punch', result: step.result }
+  const say: [string, string] = ['', '']
+  say[a] = `${step.card.name} ${RESULT_TEXT[step.result] ?? ''}`.trim()
+  return {
+    pos: [{ ...s.pos[0] }, { ...s.pos[1] }],
+    hp: [s.hp[0], s.hp[1]],
+    energy: [s.energy[0], s.energy[1]],
+    shield: [s.shield[0], s.shield[1]],
+    acting,
+    damage,
+    fx,
+    say,
   }
 }
 
@@ -91,12 +116,20 @@ export function BattleScreen({
   const [view, setView] = useState<View>(() => baseView(battle))
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null])
   const [phase, setPhase] = useState<'select' | 'resolving' | 'over'>('select')
+  const [phaseTag, setPhaseTag] = useState<string>('')
   const [banner, setBanner] = useState<string | null>(null)
   const cancelled = useRef(false)
+  // bump to re-read cooldowns after a turn resolves
+  const [, setTick] = useState(0)
 
   // ---- plan building -----------------------------------------------------
+  const cdLeft = (id: string) => battle.state.cooldowns[0][id] ?? 0
+  const placedSameCd = (c: CardDef) =>
+    (c.cooldown ?? 0) >= 1 && slots.some((s) => s?.id === c.id)
+  const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedSameCd(c)
+
   const addCard = (c: CardDef) => {
-    if (phase !== 'select') return
+    if (phase !== 'select' || !selectable(c)) return
     const i = slots.indexOf(null)
     if (i === -1) return
     const next = slots.slice()
@@ -115,29 +148,32 @@ export function BattleScreen({
   const affordable =
     filled && planAffordable(slots as CardDef[], battle.state.energy[0], player.maxEnergy)
 
-  // running energy preview to dim unaffordable deck cards
-  const energyNow = battle.state.energy[0]
+  // rough energy budget to dim unaffordable attack cards while picking
+  const energyBudget = Math.min(
+    player.maxEnergy,
+    battle.state.energy[0] +
+      10 +
+      slots.reduce((e, c) => e + (c?.kind === 'energy' ? (c.gain ?? 0) : 0), 0),
+  )
 
   // ---- resolve a turn ----------------------------------------------------
   const confirm = async () => {
     if (!filled || !affordable || phase !== 'select') return
     const playerPlan = slots as CardDef[]
     const aiPlan = decideAI(battle.state, 1, enemy, opponent.difficulty)
-    const prevHp: [number, number] = [battle.state.hp[0], battle.state.hp[1]]
-    const beats = battle.resolveTurn(playerPlan, aiPlan)
+    const steps = battle.resolveTurn(playerPlan, aiPlan)
     setPhase('resolving')
 
-    let last: [number, number] = prevHp
-    for (const beat of beats) {
+    for (const step of steps) {
       if (cancelled.current) return
-      setView(beatToView(beat, last))
-      last = [beat.snapshot.hp[0], beat.snapshot.hp[1]]
-      await wait(980)
+      setPhaseTag(PHASE_TEXT[step.phase])
+      setView(stepToView(step))
+      await wait(STEP_MS[step.phase])
       if (cancelled.current) return
     }
 
-    // settle to neutral
     setView(baseView(battle))
+    setPhaseTag('')
 
     if (battle.state.over) {
       const playerWon = battle.state.winner === 0
@@ -150,10 +186,10 @@ export function BattleScreen({
     }
 
     setSlots([null, null, null])
+    setTick((t) => t + 1) // refresh cooldown display
     setPhase('select')
   }
 
-  // stop the beat animation loop if we unmount mid-resolve
   useEffect(() => {
     cancelled.current = false
     return () => {
@@ -161,32 +197,23 @@ export function BattleScreen({
     }
   }, [])
 
-  const dist = Math.abs(view.pos[0] - view.pos[1])
-
   return (
     <div className="screen battle">
       <div className="grid-bg" />
 
-      <BattleHud
-        player={player}
-        enemy={enemy}
-        view={view}
-        turn={battle.state.turn}
-        onQuit={onQuit}
-      />
+      <BattleHud player={player} enemy={enemy} view={view} turn={battle.state.turn} onQuit={onQuit} />
 
       <div className="board">
-        <div className="board__dist">거리 {dist}</div>
-        <div className="board__lane">
-          {Array.from({ length: LANE }, (_, i) => (
-            <span className="board__tick" key={i} style={{ left: `${xPct(i)}%` }} />
+        <div className="gridboard">
+          {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => (
+            <span className="cell" key={i} />
           ))}
+          <FighterSprite svg={svgs[0]} side="left" accent={player.accent} v={view} idx={0} />
+          <FighterSprite svg={svgs[1]} side="right" accent={enemy.accent} v={view} idx={1} />
         </div>
-        <FighterSprite svg={svgs[0]} side="left" accent={player.accent} v={view} idx={0} />
-        <FighterSprite svg={svgs[1]} side="right" accent={enemy.accent} v={view} idx={1} />
 
         {banner && <div className="board__banner">{banner}</div>}
-        {phase === 'resolving' && !banner && <div className="board__turnflash">RESOLVE</div>}
+        {phaseTag && !banner && <div className="board__turnflash">{phaseTag}</div>}
       </div>
 
       {phase === 'select' ? (
@@ -197,17 +224,29 @@ export function BattleScreen({
                 key={i}
                 className={`slot ${c ? 'slot--filled' : ''}`}
                 onClick={() => clearSlot(i)}
-                style={c ? ({ ['--accent' as string]: cardAccent(c, player.accent) }) : undefined}
+                style={c ? { ['--accent' as string]: cardAccent(c, player.accent) } : undefined}
               >
                 <span className="slot__no">{i + 1}</span>
-                {c ? <CardFace card={c} accent={cardAccent(c, player.accent)} /> : <span className="slot__empty">카드</span>}
+                {c ? (
+                  <CardFace card={c} accent={cardAccent(c, player.accent)} />
+                ) : (
+                  <span className="slot__empty">{i + 1}번째</span>
+                )}
               </button>
             ))}
             <div className="cards__actions">
-              <button className="btn btn--ghost cards__reset" onClick={reset} disabled={slots.every((s) => !s)}>
+              <button
+                className="btn btn--ghost cards__reset"
+                onClick={reset}
+                disabled={slots.every((s) => !s)}
+              >
                 초기화
               </button>
-              <button className={`btn cards__confirm ${affordable ? '' : 'is-disabled'}`} onClick={confirm} disabled={!affordable}>
+              <button
+                className={`btn cards__confirm ${affordable ? '' : 'is-disabled'}`}
+                onClick={confirm}
+                disabled={!affordable}
+              >
                 {filled && !affordable ? '기력 부족' : '실행 ▶'}
               </button>
             </div>
@@ -215,15 +254,19 @@ export function BattleScreen({
 
           <div className="cards__hand">
             {deck.map((c) => {
-              const dim = c.kind === 'attack' && (c.energyCost ?? 0) > energyNow
+              const onCd = cdLeft(c.id) > 0
+              const locked = onCd || placedSameCd(c)
+              const dim = locked || (c.kind === 'attack' && (c.energyCost ?? 0) > energyBudget)
               return (
                 <button
                   key={c.id}
-                  className={`handcard ${dim ? 'is-dim' : ''}`}
+                  className={`handcard ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
                   onClick={() => addCard(c)}
+                  disabled={locked}
                   style={{ ['--accent' as string]: cardAccent(c, player.accent) }}
                 >
                   <CardFace card={c} accent={cardAccent(c, player.accent)} />
+                  {onCd && <span className="handcard__cd">{cdLeft(c.id)}</span>}
                 </button>
               )
             })}
@@ -231,7 +274,11 @@ export function BattleScreen({
         </div>
       ) : (
         <div className="cards cards--resolving">
-          <div className="cards__status">{view.label[0] || ' '}</div>
+          <div className="cards__status">
+            {[view.say[0] && `${player.name}: ${view.say[0]}`, view.say[1] && `${enemy.name}: ${view.say[1]}`]
+              .filter(Boolean)
+              .join('     ') || ' '}
+          </div>
         </div>
       )}
 
@@ -242,28 +289,6 @@ export function BattleScreen({
 
 // ---------------------------------------------------------------------------
 
-function beatToView(beat: Beat, prevHp: [number, number]): View {
-  const s = beat.snapshot
-  const a0 = beat.actions[0]
-  const a1 = beat.actions[1]
-  const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
-  const label = (a: typeof a0) => `${a.card?.name ?? ''} ${RESULT_TEXT[a.result] ?? ''}`.trim()
-  return {
-    pos: [s.pos[0], s.pos[1]],
-    stance: [s.stance[0], s.stance[1]],
-    hp: [s.hp[0], s.hp[1]],
-    energy: [s.energy[0], s.energy[1]],
-    guard: [s.guard[0], s.guard[1]],
-    attacking: [isAtk(a0.result), isAtk(a1.result)],
-    damage: [Math.max(0, prevHp[0] - s.hp[0]), Math.max(0, prevHp[1] - s.hp[1])],
-    fx: [
-      a0.card?.kind === 'attack' && a0.result !== 'nofuel' ? { kind: a0.card.fx ?? 'punch', result: a0.result } : null,
-      a1.card?.kind === 'attack' && a1.result !== 'nofuel' ? { kind: a1.card.fx ?? 'punch', result: a1.result } : null,
-    ],
-    label: [label(a0), label(a1)],
-  }
-}
-
 function cardAccent(c: CardDef, fallback: string): string {
   if (c.kind === 'attack') return c.accent ?? fallback
   if (c.kind === 'guard') return '#9fc2ff'
@@ -271,38 +296,71 @@ function cardAccent(c: CardDef, fallback: string): string {
   return '#8493bd'
 }
 
+function moveIcon(dir: CardDef['dir'], steps: number): string {
+  const one = dir === 'right' ? '▶' : dir === 'left' ? '◀' : dir === 'up' ? '▲' : '▼'
+  return steps >= 2 ? one + one : one
+}
+
+/** Compact range chart, like the reference 3x3: center = attacker. */
+function RangeChart({ card }: { card: CardDef }) {
+  const cols = [-1, 0, 1, 2, 3] // forward window
+  const rows = [1, 0, -1] // up..down
+  const hit = (df: number, du: number) =>
+    (card.range ?? []).some((o) => o.df === df && o.du === du)
+  return (
+    <div className="rangechart">
+      {rows.map((du) =>
+        cols.map((df) => {
+          const self = df === 0 && du === 0
+          const on = hit(df, du)
+          return <span key={`${df},${du}`} className={`rc ${self ? 'rc--self' : on ? 'rc--on' : ''}`} />
+        }),
+      )}
+    </div>
+  )
+}
+
 function CardFace({ card, accent }: { card: CardDef; accent: string }) {
   const icon =
     card.kind === 'attack'
-      ? '⚔️'
+      ? '⚔'
       : card.kind === 'guard'
         ? '🛡'
         : card.kind === 'energy'
           ? '⚡'
-          : card.dir === 'forward'
-            ? '▶'
-            : card.dir === 'back'
-              ? '◀'
-              : card.dir === 'up'
-                ? '▲'
-                : '▼'
+          : moveIcon(card.dir, card.steps ?? 1)
+  const reach =
+    card.kind === 'attack' ? Math.max(0, ...(card.range ?? []).map((o) => o.df)) : 0
   return (
     <div className={`cardface cardface--${card.kind}`} style={{ ['--accent' as string]: accent }}>
       <div className="cardface__top">
         <span className="cardface__icon">{icon}</span>
         {card.signature && <span className="cardface__sig">SP</span>}
+        {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>
       <div className="cardface__name">{card.name}</div>
       {card.kind === 'attack' && (
+        <>
+          <RangeChart card={card} />
+          <div className="cardface__meta">
+            <span>⚔{card.damage}</span>
+            <span>↦{reach}</span>
+            <span>⚡{card.energyCost}</span>
+          </div>
+        </>
+      )}
+      {card.kind === 'guard' && (
         <div className="cardface__meta">
-          <span>⚔️{card.damage}</span>
-          <span>↔{card.reach}</span>
-          <span>⚡{card.energyCost}</span>
+          <span>방어 {card.block}</span>
+          <span>⚡{card.guardCost}</span>
         </div>
       )}
-      {card.kind === 'guard' && <div className="cardface__meta"><span>피해 −{card.block}</span></div>}
-      {card.kind === 'energy' && <div className="cardface__meta"><span>기력 +{card.gain}</span></div>}
-      {card.kind === 'move' && <div className="cardface__meta"><span>{card.desc}</span></div>}
+      {card.kind === 'energy' && (
+        <div className="cardface__meta">
+          <span>기력 +{card.gain}</span>
+        </div>
+      )}
+      {card.kind === 'move' && <div className="cardface__meta cardface__meta--move"><span>{card.desc}</span></div>}
     </div>
   )
 }
@@ -323,17 +381,23 @@ function FighterSprite({
   const cls = [
     'fighter',
     `fighter--${side}`,
-    `is-${v.stance[idx]}`,
-    v.attacking[idx] ? 'is-attacking' : '',
+    v.acting[idx] ? 'is-attacking' : '',
     v.damage[idx] > 0 ? 'is-hit' : '',
-    v.guard[idx] ? 'is-guard' : '',
+    v.shield[idx] > 0 ? 'is-guard' : '',
   ].join(' ')
   const fx = v.fx[idx]
   return (
-    <div className={cls} style={{ left: `${xPct(v.pos[idx])}%`, ['--accent' as string]: accent }}>
+    <div
+      className={cls}
+      style={{
+        left: `${cellX(v.pos[idx].col)}%`,
+        top: `${cellY(v.pos[idx].row)}%`,
+        ['--accent' as string]: accent,
+      }}
+    >
       {v.damage[idx] > 0 && <div className="fighter__dmg">-{v.damage[idx]}</div>}
-      {v.label[idx] && <div className="fighter__say">{v.label[idx]}</div>}
-      {v.guard[idx] && <div className="fighter__shield" />}
+      {v.say[idx] && <div className="fighter__say">{v.say[idx]}</div>}
+      {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}
       <div className="fighter__art" dangerouslySetInnerHTML={{ __html: svg }} />
     </div>

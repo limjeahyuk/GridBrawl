@@ -133,7 +133,7 @@ function signatureFront(id: string, p: Pal): string {
 const defs = (id: string, p: Pal) => `
 <defs>
   <filter id="g-${id}" x="-60%" y="-60%" width="220%" height="220%">
-    <feGaussianBlur stdDeviation="3.4" result="b"/>
+    <feGaussianBlur stdDeviation="0" result="b"/>
     <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
   <linearGradient id="torso-${id}" x1="0" y1="0" x2="0" y2="1">
@@ -170,12 +170,12 @@ export function buildPortraitSvg(c: CharacterDef): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 340" width="300" height="340" preserveAspectRatio="xMidYMid slice">
 <defs>
   <radialGradient id="bg-${c.id}" cx="0.5" cy="0.4" r="0.78">
-    <stop offset="0" stop-color="${c.accent}" stop-opacity="0.36"/>
-    <stop offset="0.55" stop-color="${c.accent2}" stop-opacity="0.12"/>
+    <stop offset="0" stop-color="${c.accent}" stop-opacity="0.16"/>
+    <stop offset="0.55" stop-color="${c.accent2}" stop-opacity="0.06"/>
     <stop offset="1" stop-color="#070a13" stop-opacity="0"/>
   </radialGradient>
   <filter id="pg-${c.id}" x="-60%" y="-60%" width="220%" height="220%">
-    <feGaussianBlur stdDeviation="3.6" result="b"/>
+    <feGaussianBlur stdDeviation="0" result="b"/>
     <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
   <linearGradient id="ptorso-${c.id}" x1="0" y1="0" x2="0" y2="1">

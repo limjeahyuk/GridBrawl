@@ -1,0 +1,47 @@
+# GridBrawl — 프로젝트 가이드 (Claude용)
+
+> 이 파일은 매 세션 자동 로드됩니다. **전투/카드/토너먼트 관련 작업 전에는 반드시 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)를 먼저 읽으세요.**
+
+## 무엇을 만드는가
+
+*이누야샤 데몬 토너먼트*의 룰을 차용한 **1:1 토너먼트 카드 전투 게임**. 한 턴에 카드 3장을 골라 순서대로 실행해 상대 HP를 깎고, 이기면 다음 상대로 진행. 원작 캐릭터 대신 오리지널 사이버 아레나 캐릭터(VOLT/TITAN/NOVA/CIPHER/AEGIS/EMBER)를 사용. 전체 룰/설계는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
+
+## 기술 스택 / 명령어
+
+- React 19 + TypeScript + Vite. 외부 게임 엔진 없음 — 전투는 순수 TS(`CardBattle`)로 시뮬레이션 후 React 렌더.
+- 개발 `npm run dev` · 빌드 `npm run build` · 타입검사 `npm run typecheck`
+- 코드 변경(특히 전투 로직) 후에는 `npm run typecheck`로 확인.
+
+## 코드 지도
+
+| 영역               | 파일                                                     |
+| ------------------ | -------------------------------------------------------- |
+| 전투 타입·상수     | `src/battle/types.ts`                                    |
+| 공용 카드          | `src/battle/cards.ts`                                    |
+| 전투 엔진(턴 해소) | `src/battle/engine.ts`                                   |
+| CPU AI             | `src/battle/ai.ts`                                       |
+| 캐릭터·공격 카드   | `src/data/roster.ts`                                     |
+| 토너먼트(건틀릿)   | `src/game/tournament.ts`                                 |
+| 화면 흐름 / UI     | `src/App.tsx`, `src/ui/screens/*`, `src/ui/`, `src/art/` |
+
+## 전투 모델 (현재 구현 요약) — 2D 격자
+
+- 화면 흐름: `title → select → bracket → fight → result` (`src/App.tsx` 상태 머신).
+- 전장은 **2D 격자 6열 × 3행**(`GRID_COLS/ROWS`). 위치는 셀 `{col,row}`, 시작은 가운뎃줄 양 끝. p0는 오른쪽, p1은 왼쪽을 바라봄(`facing`).
+- 카드 종류: `move / attack / guard / energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수).
+  - 이동: `> < ^ v`(쿨0), 좌우 대시 `>> <<`(쿨1). 가드: 기력 10·실드 +50·쿨1. 원기: 기력 +50·쿨0. 턴 시작 패시브 기력 +10.
+  - 공격: `range` 오프셋 `{df,du}`(df=앞, du=위)로 타격 셀 지정. 상대 셀이 들어오면 적중, 실드가 먼저 흡수.
+- 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드. (`CardBattle.resolveTurn`)
+
+## 명세 ↔ 코드: 정합 완료 (방향 A)
+
+설계 명세(2D 격자)와 코드는 이제 **일치**합니다(2026-06-15, 방향 A 채택·구현·검증). 상세 차이표·결정 근거는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) §⑤.
+
+- 전투 룰·격자·카드 수치를 바꾸면 **GDD를 같은 변경에서 함께 갱신**. 격자 크기 변경 시 `types.ts`의 `GRID_COLS/ROWS`와 `ui.css`의 `.gridboard`를 같이 수정.
+- 미구현(다음 후보): 승리 후 미스터리 카드 5중 1 선택(원작 보상).
+
+## 컨벤션
+
+- 게임 내 텍스트(카드 이름·설명·캐릭터 소개)와 주석은 **한국어**. 코드 식별자·파일·명령어는 영어.
+- 새 캐릭터/카드는 기존 패턴(`roster.ts`의 `atk()` 헬퍼, `cards.ts`의 `CardDef`)을 따른다.
+- 룰·시스템을 바꾸면 **[docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)를 같은 커밋에서 함께 갱신**한다.
