@@ -10,6 +10,24 @@ import type { CardDef, Offset } from '../battle/types'
 // rows upward (+ above). The engine mirrors df by the attacker's facing.
 // ---------------------------------------------------------------------------
 
+/**
+ * A character's signature passive. Each field is an independent hook the engine
+ * applies at a fixed moment (see `CardBattle.resolveTurn` / `computeAttack`):
+ *   turnEnergy/turnShield — granted at the start of every turn (after the global
+ *     regen + shield reset).
+ *   damageReduction — flat amount subtracted from each incoming attack's damage.
+ *   lifestealDiv — on a connecting attack, heal floor(damageDealt / div) HP.
+ *   shieldBreak — a connecting attack wipes the defender's remaining shield.
+ */
+export interface Passive {
+  desc: string
+  turnEnergy?: number
+  turnShield?: number
+  damageReduction?: number
+  lifestealDiv?: number
+  shieldBreak?: boolean
+}
+
 export interface CharacterDef {
   id: string
   name: string
@@ -20,6 +38,7 @@ export interface CharacterDef {
   maxHp: number
   maxEnergy: number
   startEnergy: number
+  passive: Passive
   attacks: CardDef[]
 }
 
@@ -69,6 +88,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 100,
     maxEnergy: 100,
     startEnergy: 55,
+    passive: { desc: '오버차지: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
     attacks: [
       atk({ id: 'volt-jab', name: '스파크 잽', range: [fwd(1)], damage: 18, energyCost: 12, fx: 'punch', desc: '바로 앞 한 칸 약공격. 빠르고 저렴하다.' }),
       atk({ id: 'volt-bolt', name: '아크 볼트', range: beam(1, 4), damage: 30, energyCost: 28, fx: 'bolt', desc: '같은 줄로 4칸까지 뻗는 전격 빔.' }),
@@ -85,6 +105,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 142,
     maxEnergy: 100,
     startEnergy: 40,
+    passive: { desc: '장갑판: 받는 공격 피해 -10.', damageReduction: 10 },
     attacks: [
       atk({ id: 'titan-hammer', name: '해머 핸드', range: [fwd(1)], damage: 22, energyCost: 14, fx: 'punch', desc: '바로 앞 한 칸 강타. 묵직하다.' }),
       atk({ id: 'titan-crush', name: '크러셔', range: bar(1), damage: 36, energyCost: 30, fx: 'quake', desc: '앞 한 칸의 위·중·아래를 동시에 친다.' }),
@@ -101,6 +122,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 106,
     maxEnergy: 100,
     startEnergy: 55,
+    passive: { desc: '플라스마 충전: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
     attacks: [
       atk({ id: 'nova-palm', name: '팜 펄스', range: [fwd(1)], damage: 18, energyCost: 10, fx: 'orb', desc: '바로 앞 한 칸 견제.' }),
       atk({ id: 'nova-blast', name: '노바 블래스트', range: beam(1, 5), damage: 32, energyCost: 30, fx: 'orb', desc: '같은 줄 끝까지 닿는 최장 구체.' }),
@@ -117,6 +139,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 100,
     maxEnergy: 100,
     startEnergy: 50,
+    passive: { desc: '데이터 흡수: 공격 적중 시 입힌 피해의 1/5만큼 체력 회복.', lifestealDiv: 5 },
     attacks: [
       atk({ id: 'cipher-cut', name: '엣지 컷', range: [fwd(1)], damage: 18, energyCost: 10, fx: 'slash', desc: '바로 앞 한 칸 빠른 베기.' }),
       atk({ id: 'cipher-cross', name: '크로스 슬래시', range: CROSS, damage: 30, energyCost: 24, fx: 'slash', desc: '상·하·좌·우 네 칸을 동시에 베는 십자 범위.' }),
@@ -133,6 +156,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 132,
     maxEnergy: 100,
     startEnergy: 45,
+    passive: { desc: '상시 방벽: 매 턴 보호막 +20.', turnShield: 20 },
     attacks: [
       atk({ id: 'aegis-jab', name: '실드 잽', range: [fwd(1)], damage: 20, energyCost: 12, fx: 'shield', desc: '바로 앞 한 칸 방패 견제.' }),
       atk({ id: 'aegis-bash', name: '실드 배시', range: bar(1), damage: 34, energyCost: 28, fx: 'shield', desc: '앞 한 칸의 위·중·아래를 방패로 쓴다.' }),
@@ -149,6 +173,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 102,
     maxEnergy: 100,
     startEnergy: 50,
+    passive: { desc: '가드 브레이크: 공격이 적중하면 상대 보호막을 모두 제거.', shieldBreak: true },
     attacks: [
       atk({ id: 'ember-claw', name: '신더 클로', range: [fwd(1)], damage: 17, energyCost: 10, fx: 'flame', desc: '바로 앞 한 칸 빠른 할퀴기.' }),
       atk({ id: 'ember-kick', name: '플레임 킥', range: bar(1), damage: 30, energyCost: 26, fx: 'flame', desc: '앞 한 칸의 위·중·아래를 차는 불꽃 부채.' }),

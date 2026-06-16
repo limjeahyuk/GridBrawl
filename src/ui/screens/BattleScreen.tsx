@@ -3,7 +3,7 @@ import { getChar } from '../../data/roster'
 import { buildFighterSvg } from '../../art/art'
 import { CardBattle, planAffordable } from '../../battle/engine'
 import { decideAI } from '../../battle/ai'
-import { deckFor } from '../../battle/cards'
+import { deckFor, ENERGY_REGEN } from '../../battle/cards'
 import {
   GRID_COLS,
   GRID_ROWS,
@@ -30,6 +30,7 @@ interface View {
   shield: [number, number]
   acting: [boolean, boolean] // attack lunge
   damage: [number, number]
+  heal: [number, number]
   fx: [Fx | null, Fx | null]
   say: [string, string]
 }
@@ -37,6 +38,14 @@ interface View {
 const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
 const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+/** Board cells an attack covers, from the attacker's cell and facing (+1 / -1). */
+function attackCells(from: Cell, card: CardDef, facing: number): Cell[] {
+  if (card.kind !== 'attack') return []
+  return (card.range ?? [])
+    .map((o) => ({ col: from.col + facing * o.df, row: from.row - o.du }))
+    .filter((c) => c.col >= 0 && c.col < GRID_COLS && c.row >= 0 && c.row < GRID_ROWS)
+}
 
 const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   hit: '명중!',
@@ -60,6 +69,7 @@ function baseView(b: CardBattle): View {
     shield: [s.shield[0], s.shield[1]],
     acting: [false, false],
     damage: [0, 0],
+    heal: [0, 0],
     fx: [null, null],
     say: ['', ''],
   }
@@ -73,6 +83,8 @@ function stepToView(step: Step): View {
   acting[a] = isAtk(step.result)
   const damage: [number, number] = [0, 0]
   if (isAtk(step.result) && step.damage > 0) damage[d] = step.damage
+  const heal: [number, number] = [0, 0]
+  if (step.heal > 0) heal[a] = step.heal
   const fx: [Fx | null, Fx | null] = [null, null]
   if (step.card.kind === 'attack' && step.result !== 'nofuel')
     fx[a] = { kind: step.card.fx ?? 'punch', result: step.result }
@@ -85,6 +97,7 @@ function stepToView(step: Step): View {
     shield: [s.shield[0], s.shield[1]],
     acting,
     damage,
+    heal,
     fx,
     say,
   }
@@ -121,6 +134,10 @@ export function BattleScreen({
   const cancelled = useRef(false)
   // bump to re-read cooldowns after a turn resolves
   const [, setTick] = useState(0)
+  const [hoveredCard, setHoveredCard] = useState<CardDef | null>(null)
+  const [hitFlash, setHitFlash] = useState<{ seq: number; target: 0 | 1 } | null>(null)
+  // cells the currently-resolving attack covers, with which fighter is attacking
+  const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
 
   // ---- plan building -----------------------------------------------------
   const cdLeft = (id: string) => battle.state.cooldowns[0][id] ?? 0
@@ -144,17 +161,30 @@ export function BattleScreen({
   }
   const reset = () => setSlots([null, null, null])
 
+  const passiveEnergy = player.passive.turnEnergy ?? 0
   const filled = slots.every((c): c is CardDef => c !== null)
   const affordable =
-    filled && planAffordable(slots as CardDef[], battle.state.energy[0], player.maxEnergy)
+    filled &&
+    planAffordable(slots as CardDef[], battle.state.energy[0], player.maxEnergy, passiveEnergy)
 
   // rough energy budget to dim unaffordable attack cards while picking
   const energyBudget = Math.min(
     player.maxEnergy,
     battle.state.energy[0] +
-      10 +
+      ENERGY_REGEN +
+      passiveEnergy +
       slots.reduce((e, c) => e + (c?.kind === 'energy' ? (c.gain ?? 0) : 0), 0),
   )
+
+  // cells the hovered attack card would hit, based on player's current position
+  const targetCells = useMemo(
+    () => (hoveredCard ? attackCells(view.pos[0], hoveredCard, battle.facing(0)) : []),
+    [hoveredCard, view, battle],
+  )
+
+  // which slot numbers (1-based) contain this card id
+  const slotNosFor = (id: string): number[] =>
+    slots.map((s, i) => (s?.id === id ? i + 1 : null)).filter((n): n is number => n !== null)
 
   // ---- resolve a turn ----------------------------------------------------
   const confirm = async () => {
@@ -163,16 +193,29 @@ export function BattleScreen({
     const aiPlan = decideAI(battle.state, 1, enemy, opponent.difficulty)
     const steps = battle.resolveTurn(playerPlan, aiPlan)
     setPhase('resolving')
+    setHoveredCard(null)
 
     for (const step of steps) {
       if (cancelled.current) return
       setPhaseTag(PHASE_TEXT[step.phase])
       setView(stepToView(step))
+      if (step.card.kind === 'attack' && step.result !== 'nofuel') {
+        const actor = step.actor as 0 | 1
+        const cells = attackCells(step.snapshot.pos[actor], step.card, battle.facing(actor))
+        setResolveHit({ cells, actor })
+      } else {
+        setResolveHit(null)
+      }
+      if (step.result === 'hit' && step.damage > 0) {
+        const target = (1 - step.actor) as 0 | 1
+        setHitFlash((prev) => ({ seq: (prev?.seq ?? 0) + 1, target }))
+      }
       await wait(STEP_MS[step.phase])
       if (cancelled.current) return
     }
 
     setView(baseView(battle))
+    setResolveHit(null)
     setPhaseTag('')
 
     if (battle.state.over) {
@@ -205,13 +248,29 @@ export function BattleScreen({
 
       <div className="board">
         <div className="gridboard">
-          {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => (
-            <span className="cell" key={i} />
-          ))}
+          {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
+            const col = i % GRID_COLS
+            const row = Math.floor(i / GRID_COLS)
+            const hovered = targetCells.some((c) => c.col === col && c.row === row)
+            const live = resolveHit?.cells.some((c) => c.col === col && c.row === row)
+            const cls =
+              hovered || (live && resolveHit?.actor === 0)
+                ? ' cell--target'
+                : live
+                  ? ' cell--target cell--target-foe'
+                  : ''
+            return <span className={`cell${cls}`} key={i} />
+          })}
           <FighterSprite svg={svgs[0]} side="left" accent={player.accent} v={view} idx={0} />
           <FighterSprite svg={svgs[1]} side="right" accent={enemy.accent} v={view} idx={1} />
         </div>
 
+        {hitFlash && (
+          <div
+            key={hitFlash.seq}
+            className={`board__hitflash board__hitflash--${hitFlash.target === 0 ? 'left' : 'right'}`}
+          />
+        )}
         {banner && <div className="board__banner">{banner}</div>}
         {phaseTag && !banner && <div className="board__turnflash">{phaseTag}</div>}
       </div>
@@ -224,6 +283,8 @@ export function BattleScreen({
                 key={i}
                 className={`slot ${c ? 'slot--filled' : ''}`}
                 onClick={() => clearSlot(i)}
+                onMouseEnter={() => setHoveredCard(c?.kind === 'attack' ? c : null)}
+                onMouseLeave={() => setHoveredCard(null)}
                 style={c ? { ['--accent' as string]: cardAccent(c, player.accent) } : undefined}
               >
                 <span className="slot__no">{i + 1}</span>
@@ -257,16 +318,22 @@ export function BattleScreen({
               const onCd = cdLeft(c.id) > 0
               const locked = onCd || placedSameCd(c)
               const dim = locked || (c.kind === 'attack' && (c.energyCost ?? 0) > energyBudget)
+              const inSlots = slotNosFor(c.id)
               return (
                 <button
                   key={c.id}
                   className={`handcard ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
                   onClick={() => addCard(c)}
+                  onMouseEnter={() => setHoveredCard(c)}
+                  onMouseLeave={() => setHoveredCard(null)}
                   disabled={locked}
                   style={{ ['--accent' as string]: cardAccent(c, player.accent) }}
                 >
                   <CardFace card={c} accent={cardAccent(c, player.accent)} />
                   {onCd && <span className="handcard__cd">{cdLeft(c.id)}</span>}
+                  {inSlots.length > 0 && (
+                    <span className="handcard__slot-badge">{inSlots.join(' ')}</span>
+                  )}
                 </button>
               )
             })}
@@ -396,6 +463,7 @@ function FighterSprite({
       }}
     >
       {v.damage[idx] > 0 && <div className="fighter__dmg">-{v.damage[idx]}</div>}
+      {v.heal[idx] > 0 && <div className="fighter__heal">+{v.heal[idx]}</div>}
       {v.say[idx] && <div className="fighter__say">{v.say[idx]}</div>}
       {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}

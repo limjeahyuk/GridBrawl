@@ -105,16 +105,20 @@ export class CardBattle {
     const plans: [CardDef[], CardDef[]] = [planA, planB]
     const steps: Step[] = []
 
-    // start of turn: clear last turn's guard, apply passive energy regen
+    // start of turn: clear last turn's guard, apply passive energy regen, then
+    // each fighter's character passive (bonus energy / standing shield).
     s.shield = [0, 0]
     for (let p = 0; p < 2; p++) {
-      s.energy[p] = clamp(s.energy[p] + ENERGY_REGEN, 0, this.chars[p].maxEnergy)
+      const ch = this.chars[p]
+      const bonus = ENERGY_REGEN + (ch.passive.turnEnergy ?? 0)
+      s.energy[p] = clamp(s.energy[p] + bonus, 0, ch.maxEnergy)
+      s.shield[p] += ch.passive.turnShield ?? 0
     }
 
-    const emit = (actor: number, card: CardDef, result: Step['result'], damage = 0) => {
+    const emit = (actor: number, card: CardDef, result: Step['result'], damage = 0, heal = 0) => {
       const phase: Step['phase'] =
         card.kind === 'move' ? 'move' : card.kind === 'attack' ? 'attack' : 'defense'
-      steps.push({ phase, actor, card, result, damage, snapshot: this.snapshot() })
+      steps.push({ phase, actor, card, result, damage, heal, snapshot: this.snapshot() })
     }
 
     // resolve one move/guard/energy card in place
@@ -140,16 +144,24 @@ export class CardBattle {
     // spend energy and measure one attack against the current board (no HP yet)
     const computeAttack = (p: number, c: CardDef) => {
       const cost = c.energyCost ?? 0
-      if (s.energy[p] < cost) return { p, card: c, result: 'nofuel' as Step['result'], dmg: 0 }
+      if (s.energy[p] < cost)
+        return { p, card: c, result: 'nofuel' as Step['result'], dmg: 0, heal: 0 }
       s.energy[p] -= cost
       const d = 1 - p
       const connects = this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
-      if (!connects) return { p, card: c, result: 'whiff' as Step['result'], dmg: 0 }
+      if (!connects) return { p, card: c, result: 'whiff' as Step['result'], dmg: 0, heal: 0 }
+      const atkPas = this.chars[p].passive
+      const defPas = this.chars[d].passive
       const raw = c.damage ?? 0
+      // EMBER (shieldBreak): a connecting hit wipes the defender's shield first.
+      if (atkPas.shieldBreak) s.shield[d] = 0
       const absorbed = Math.min(s.shield[d], raw)
       s.shield[d] -= absorbed
-      const dmg = raw - absorbed
-      return { p, card: c, result: (dmg > 0 ? 'hit' : 'blocked') as Step['result'], dmg }
+      // TITAN (damageReduction): flat reduction on the damage that gets through.
+      const dmg = Math.max(0, raw - absorbed - (defPas.damageReduction ?? 0))
+      // CIPHER (lifestealDiv): heal a fraction of the damage actually dealt.
+      const heal = dmg > 0 && atkPas.lifestealDiv ? Math.floor(dmg / atkPas.lifestealDiv) : 0
+      return { p, card: c, result: (dmg > 0 ? 'hit' : 'blocked') as Step['result'], dmg, heal }
     }
 
     const prio = (c: CardDef) => (c.kind === 'move' ? 0 : c.kind === 'attack' ? 2 : 1)
@@ -167,14 +179,18 @@ export class CardBattle {
       if (bothAttack) {
         // simultaneous trade: measure both vs the same board, then apply together
         const banked = here.map((e) => computeAttack(e.p, e.card))
-        for (const e of banked) s.hp[1 - e.p] = Math.max(0, s.hp[1 - e.p] - e.dmg)
-        for (const e of banked) emit(e.p, e.card, e.result, e.dmg)
+        for (const e of banked) {
+          s.hp[1 - e.p] = Math.max(0, s.hp[1 - e.p] - e.dmg)
+          if (e.heal) s.hp[e.p] = Math.min(this.chars[e.p].maxHp, s.hp[e.p] + e.heal)
+        }
+        for (const e of banked) emit(e.p, e.card, e.result, e.dmg, e.heal)
       } else {
         for (const e of here) {
           if (e.card.kind === 'attack') {
             const r = computeAttack(e.p, e.card)
             s.hp[1 - r.p] = Math.max(0, s.hp[1 - r.p] - r.dmg)
-            emit(r.p, r.card, r.result, r.dmg)
+            if (r.heal) s.hp[r.p] = Math.min(this.chars[r.p].maxHp, s.hp[r.p] + r.heal)
+            emit(r.p, r.card, r.result, r.dmg, r.heal)
           } else {
             resolvePrep(e.p, e.card)
           }
@@ -207,8 +223,13 @@ export class CardBattle {
  * so energy gains / guard costs / attack costs apply in that order (after the
  * start-of-turn passive regen). Returns false if any card can't be afforded.
  */
-export function planAffordable(plan: CardDef[], startEnergy: number, maxEnergy: number): boolean {
-  let e = Math.min(maxEnergy, startEnergy + ENERGY_REGEN)
+export function planAffordable(
+  plan: CardDef[],
+  startEnergy: number,
+  maxEnergy: number,
+  extraRegen = 0,
+): boolean {
+  let e = Math.min(maxEnergy, startEnergy + ENERGY_REGEN + extraRegen)
   for (const c of plan) {
     if (c.kind === 'energy') {
       e = Math.min(maxEnergy, e + (c.gain ?? 0))

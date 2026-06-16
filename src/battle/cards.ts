@@ -4,7 +4,7 @@ import type { CharacterDef } from '../data/roster'
 export const GUARD_BLOCK = 50 // damage absorbed by one guard for the whole turn
 export const GUARD_COST = 10 // energy spent to raise the guard
 export const ENERGY_GAIN = 50 // energy restored by the recovery card
-export const ENERGY_REGEN = 10 // passive energy regained at the start of each turn
+export const ENERGY_REGEN = 30 // passive energy regained at the start of each turn
 
 // Shared cards every fighter can play. Movement is free but cools down; guard
 // costs energy and absorbs damage for the turn; energy restores fuel. All of

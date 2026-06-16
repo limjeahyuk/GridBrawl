@@ -58,6 +58,10 @@ export function CharacterSelect({
             <div className="detail__name neon-text">{sel.name}</div>
             <div className="detail__title">{sel.title}</div>
             <p className="detail__desc">{sel.description}</p>
+            <div className="detail__passive">
+              <span className="detail__passive-tag">패시브</span>
+              <span className="detail__passive-text">{sel.passive.desc}</span>
+            </div>
             <div className="detail__stats">
               {bars.map((b) => (
                 <div className="stat" key={b.label}>

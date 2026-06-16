@@ -93,5 +93,6 @@ export interface Step {
   card: CardDef
   result: ActionResult
   damage: number // damage dealt to the opponent by this action
+  heal: number // HP the actor recovered this action (e.g. lifesteal passive)
   snapshot: BattleSnapshot
 }
