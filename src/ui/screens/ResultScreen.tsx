@@ -9,12 +9,15 @@ export function ResultScreen({
   onNext,
   onRetry,
   onMenu,
+  variant = 'gauntlet',
 }: {
   outcome: Outcome
   playerCharId: string
   onNext: () => void
   onRetry: () => void
   onMenu: () => void
+  /** 'gauntlet' shows next/retry; 'versus' (online 1:1) shows only the menu. */
+  variant?: 'gauntlet' | 'versus'
 }) {
   const player = getChar(playerCharId)
   const cfg = {
@@ -22,6 +25,7 @@ export function ResultScreen({
     champion: { title: 'GRID 챔피언', sub: '코어를 장악했다', cls: 'champ' },
     loss: { title: '패배', sub: 'SYSTEM FAILURE', cls: 'loss' },
   }[outcome]
+  const gauntlet = variant === 'gauntlet'
 
   return (
     <div className={`screen result result--${cfg.cls}`}>
@@ -35,12 +39,12 @@ export function ResultScreen({
         <PortraitSvg char={player} className="result__portrait" />
         <div className="result__name neon-text">{player.name}</div>
         <div className="result__buttons">
-          {outcome === 'win' && (
+          {gauntlet && outcome === 'win' && (
             <button className="btn" onClick={onNext}>
               다음 상대 ▶
             </button>
           )}
-          {outcome === 'loss' && (
+          {gauntlet && outcome === 'loss' && (
             <button className="btn" onClick={onRetry}>
               다시 도전
             </button>

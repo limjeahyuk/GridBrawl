@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AuthUser } from '../../net/auth'
 
 const HOW_TO: { step: string; label: string }[] = [
   { step: '1', label: '매 턴 카드 3장을 골라 슬롯에 순서대로 배치한다.' },
@@ -8,11 +9,37 @@ const HOW_TO: { step: string; label: string }[] = [
   { step: '5', label: '상대 HP를 먼저 0으로 만들면 승리. 사다리를 끝까지 올라라.' },
 ]
 
-export function TitleScreen({ onStart }: { onStart: () => void }) {
+export function TitleScreen({
+  user,
+  onLogout,
+  onStart,
+  onOnline,
+}: {
+  user: AuthUser | null
+  onLogout: () => void
+  onStart: () => void
+  onOnline: () => void
+}) {
   const [showControls, setShowControls] = useState(false)
   return (
     <div className="screen title">
       <div className="grid-bg" />
+
+      {user && (
+        <div className="userchip">
+          {user.photo ? (
+            <img className="userchip__avatar" src={user.photo} alt="" referrerPolicy="no-referrer" />
+          ) : (
+            <span className="userchip__avatar userchip__avatar--fallback">
+              {user.name.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <span className="userchip__name">{user.name}</span>
+          <button className="btn btn--ghost userchip__logout" onClick={onLogout}>
+            로그아웃
+          </button>
+        </div>
+      )}
       <div className="title__content">
         <div className="title__kicker neon-text">THE GRID · DEMON GAUNTLET</div>
         <h1 className="title__logo">
@@ -25,6 +52,9 @@ export function TitleScreen({ onStart }: { onStart: () => void }) {
         <div className="title__buttons">
           <button className="btn" onClick={onStart}>
             게임 시작
+          </button>
+          <button className="btn btn--online" onClick={onOnline}>
+            온라인 대전
           </button>
           <button className="btn btn--ghost" onClick={() => setShowControls((v) => !v)}>
             조작법

@@ -15,6 +15,7 @@
 .rung__art svg,
 .bracket__playerart svg,
 .hud__avatar svg,
+.mp__me-art svg,
 .result__portrait svg {
   width: 100%;
   height: 100%;
@@ -71,6 +72,111 @@
   display: flex;
   gap: 18px;
   justify-content: center;
+}
+
+/* ---- Login gate ---------------------------------------------------------- */
+.login {
+  display: grid;
+  place-items: center;
+}
+.login__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+.login__lead {
+  margin: 28px auto 30px;
+  color: var(--text-dim);
+  font-size: 19px;
+  font-weight: 600;
+}
+.login__google {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  color: #1f2330;
+  border: none;
+  font-weight: 700;
+}
+.login__google:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.login__gmark {
+  flex: none;
+}
+.login__error {
+  margin-top: 18px;
+  color: var(--neon-red, #ff4d5e);
+  font-size: 15px;
+}
+.login__setup {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 22px 26px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.login__setup-title {
+  color: var(--neon-cyan);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.login__hint {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.login__hint code {
+  background: #0d1322;
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 13px;
+}
+
+/* ---- Signed-in user chip (title) ----------------------------------------- */
+.userchip {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  background: rgba(8, 12, 20, 0.7);
+}
+.userchip__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+}
+.userchip__avatar--fallback {
+  background: var(--neon-cyan);
+  color: #07121a;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 14px;
+}
+.userchip__name {
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.userchip__logout {
+  padding: 5px 12px;
+  font-size: 13px;
 }
 
 /* ---- Overlay / panels ---------------------------------------------------- */
@@ -757,6 +863,22 @@
   font-size: 17px;
   margin-bottom: 5px;
 }
+.bhud__you {
+  display: inline-block;
+  margin: 0 6px;
+  padding: 1px 7px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  vertical-align: middle;
+}
+.bhud__side--right .bhud__you {
+  /* keep the badge tight to the name on the right-aligned side */
+  margin-left: 0;
+}
 .bhud__hp {
   position: relative;
   height: 22px;
@@ -944,6 +1066,71 @@
 }
 .fighter--right {
   --flip: -1;
+}
+/* glowing ground ring under the fighter this client controls */
+.fighter--me::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 96px;
+  height: 22px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--accent), transparent 70%);
+  opacity: 0.55;
+  z-index: 0;
+  pointer-events: none;
+  animation: mepulse 1.8s ease-in-out infinite;
+}
+@keyframes mepulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.fighter__me {
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #0b0f18;
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 1px 9px;
+  box-shadow: 0 0 12px var(--accent);
+  z-index: 4;
+  pointer-events: none;
+}
+/* translucent preview of where a hovered move/attack card will leave me */
+.fighter--ghost {
+  z-index: 1;
+  pointer-events: none;
+  transition: none;
+  opacity: 0.45;
+}
+.fighter--ghost .fighter__art {
+  filter: drop-shadow(0 0 9px var(--accent));
+}
+.fighter--ghost::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 84px;
+  height: 18px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 2px dashed var(--accent);
+  opacity: 0.9;
+  animation: mepulse 1.4s ease-in-out infinite;
 }
 .fighter__art {
   width: 104px;
@@ -1366,4 +1553,191 @@
   color: var(--text-dim);
   font-weight: 600;
   font-size: 15px;
+}
+
+/* ---- Online multiplayer (invite-code lobby) ------------------------------ */
+.btn--online {
+  --accent: var(--neon-magenta);
+}
+
+.mp {
+  display: flex;
+  flex-direction: column;
+}
+.mp__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 36px 8px;
+}
+.mp__header h2 {
+  color: var(--neon-magenta);
+  letter-spacing: 0.3em;
+  font-size: 26px;
+}
+.mp__me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 90px;
+  justify-content: flex-end;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.mp__me-art {
+  width: 38px;
+  height: 38px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 8%, #0a0e1a);
+}
+.mp__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 10px 36px 30px;
+  min-height: 0;
+}
+.mp__lead {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 17px;
+  text-align: center;
+  max-width: 640px;
+}
+.mp__choose {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+}
+.mp__roles {
+  display: flex;
+  gap: 22px;
+}
+.mp__rolebtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 320px;
+  padding: 22px 26px;
+  text-transform: none;
+  letter-spacing: 0.08em;
+  font-size: 19px;
+}
+.mp__roleicon {
+  font-size: 26px;
+}
+.mp__rolehint {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-transform: none;
+}
+.mp__flow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 760px;
+  max-width: 100%;
+}
+.mp__go {
+  align-self: center;
+  min-width: 220px;
+}
+.mp__go.is-disabled,
+.mp__go:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mp__status {
+  color: var(--neon-cyan);
+  font-weight: 600;
+  text-align: center;
+}
+.mp__error {
+  color: var(--neon-red);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* short room-code host/guest panels */
+.mp__flow {
+  align-items: center;
+  width: auto;
+}
+.mp__codelabel {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+.mp__code {
+  min-width: 360px;
+  padding: 18px 28px;
+  border: 2px solid var(--neon-magenta);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--neon-magenta) 8%, #0a0e1a);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 64px;
+  letter-spacing: 0.22em;
+  text-align: center;
+  color: #ffe6fb;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--neon-magenta) 60%, transparent);
+}
+.mp__copy {
+  padding: 8px 18px;
+  font-size: 12px;
+}
+.mp__codeinput {
+  width: 360px;
+  box-sizing: border-box;
+  padding: 16px 20px;
+  border: 2px solid var(--panel-edge);
+  border-radius: 10px;
+  background: #0b1020;
+  color: #ffe6fb;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 44px;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.mp__codeinput:focus {
+  outline: none;
+  border-color: var(--neon-magenta);
+}
+.mp__codeinput::placeholder {
+  color: var(--text-faint);
+  letter-spacing: 0.18em;
+}
+.mp__notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 680px;
+  text-align: center;
+}
+.mp__notice-detail {
+  color: var(--text-dim);
+  font-weight: 600;
+  line-height: 1.9;
+}
+.mp__notice-detail code {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 61, 240, 0.12);
+  border: 1px solid color-mix(in srgb, var(--neon-magenta) 35%, transparent);
+  color: #ffd2f6;
+  font-size: 13px;
 }

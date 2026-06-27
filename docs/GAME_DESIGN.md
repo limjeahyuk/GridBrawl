@@ -199,6 +199,46 @@
 
 ---
 
+## ⑤-bis 온라인 멀티플레이 (P2P + 짧은 코드) — 2026-06-18 추가 / 갱신
+
+> 친구와 1:1 온라인 대전. **게임 데이터는 항상 P2P(WebRTC 데이터 채널)** 로 직접 흐른다. 연결 성사(시그널링)에만 약간의 중개가 필요하며, 두 가지 방식이 전송 추상화(`NetTransport`) 위에 올라간다:
+> - **(기본) 짧은 6자리 룸 코드** — Firebase Realtime Database를 *시그널링*으로만 사용(SDP 교환). 사용자가 "AD3EF1"처럼 짧은 코드를 원해 도입(2차 결정). 6자리 코드는 정보량상 *반드시* 중개소의 열쇠여야 하므로(연결정보=DTLS 지문+ICE+IP 등) 시그널링 서버 없이는 불가능.
+> - **(폴백) 복붙 초대 코드** — 백엔드 0, 전체 SDP를 base64 코드로 직접 주고받음. `net/webrtc.ts`의 `createHost`/`joinAsGuest`로 구현돼 있으나 현재 로비 UI는 짧은 코드만 노출(오프라인/무설정 폴백용으로 코드 보존).
+>
+> 핵심 설계 의도: **전송 계층을 게임에서 분리**(`src/net/protocol.ts`의 `NetTransport`) → 시그널링 방식을 바꿔도(서버/WebSocket/매치메이킹) 전투·UI 불변.
+
+### 화면 흐름
+`title → mp-select(캐릭터 선택, CharacterSelect 재사용) → mp-lobby(6자 코드) → mp-fight(전투) → mp-result(승/패)`. 타이틀의 **"온라인 대전"** 버튼으로 진입. (`src/App.tsx`)
+
+### 설정 (온라인 사용 전 필수)
+- `.env`에 `VITE_FIREBASE_DB_URL=<RTDB URL>` 지정(미설정 시 로비가 "설정 필요" 안내를 띄우고 온라인 비활성). Firebase RTDB 규칙에서 `gridbrawl` 경로 읽기/쓰기 허용. 자세한 절차는 `.env.example`.
+- 시그널링 데이터는 작고 1회성이며 **연결되면 자동 삭제**. SDK 없이 **REST + 폴링**으로 구현(`net/firebase.ts`).
+
+### 연결 핸드셰이크 (짧은 코드, Firebase 시그널링)
+1. **호스트**: `방 만들기` → `createOffer()`(ICE 수집) → 6자 코드 생성, RTDB `gridbrawl/<코드>/offer`에 SDP 기록 → `answer` 폴링.
+2. **게스트**: `참가하기` → 코드 입력 → `offer` 읽기 → `createAnswer()` → `gridbrawl/<코드>/answer`에 기록.
+3. **호스트**: `answer` 수신 → `acceptAnswer()` → 데이터 채널 오픈, 방 삭제. 양쪽 `NetTransport` 획득.
+- STUN(`stun.l.google.com:19302`) 사용 → 대부분 NAT 통과. **대칭 NAT는 TURN 릴레이 필요**(아직 없음, 추후 업그레이드). 같은 LAN/PC는 STUN 없이도 동작.
+- 연결 직후 양측이 `hello{charId}`를 교환해 서로의 아바타를 알아낸다.
+
+### 동기화 모델 — **결정론적 락스텝** (서버 없이 일치 보장)
+- **핵심 전제**: `engine.resolveTurn(planA, planB)`은 **랜덤이 전혀 없는 결정론** 함수다(PvP엔 AI 미관여). 따라서 두 피어가 **동일 엔진**을 돌리고 매 턴 **카드 3장 ID만 교환**하면, 둘 다 같은 `resolveTurn`을 호출해 동일한 결과·애니메이션·상태에 도달한다.
+- **정규 좌표(canonical) — 엔진 한정**: 엔진 상태는 양쪽 피어 모두 **호스트 = side 0(col 0 끝), 게스트 = side 1(col 5 끝)** 로 동일하게 구성. 이동 방향이 절대좌표(col +/-)이므로 엔진은 절대 미러링하지 않는다.
+- 매 턴: 로컬 플레이어가 3장 확정 → `plan{turn, cards}` 전송 → 상대 plan 수신 → **양쪽 모두** `resolveTurn(side0Plan, side1Plan)` → 동일 진행. plan은 `turn` 번호로 태깅(순서 보장 채널이지만 버퍼링으로 위상차 흡수).
+- **렌더링은 로컬 시점(2026-06-27)**: 각 피어는 **자기 캐릭터를 항상 왼쪽(오른쪽 바라봄)·상대를 오른쪽**에 본다. 엔진은 정규 좌표 그대로 두고 `BattleScreen`이 `localSide === 1`일 때만 화면 col을 좌우 반전(`flip`, `dcol = 5 - col`)해 렌더. 절대좌표 이동 카드가 깨지는 문제는, 반전 시 좌↔우 이동 카드의 **표시 라벨·화살표만 교체**(`faceCard`, id·엔진 입력은 정규 그대로)해서 "화살표 방향 = 화면에서 실제 가는 방향"을 보장하여 해결. 공격 카드 사정거리/예측 범위는 로컬이 항상 오른쪽을 보므로 "앞 = 오른쪽" 고정(미러 불필요). HUD도 자기 쪽을 왼쪽에 두고 **"나"** 배지. 각 피어는 자기 쪽(`localSide`)만 조작.
+- 상대 연결 끊김: 대기 중 `getOpponentPlan`이 `null` 반환 → "상대 연결 끊김" 배너 후 메뉴 복귀.
+
+### 검증 (2026-06-18, 브라우저 루프백)
+- WebRTC 핸드셰이크 + 데이터 채널 + 메시지 왕복 OK(복붙·짧은 코드 양쪽).
+- **2피어 락스텝 전투를 끝까지 실행 → 양쪽 엔진 최종 상태(hp·winner·turn) 완전 일치** 확인.
+- Firebase 시그널링은 **RTDB REST를 모킹**해 호스트→6자 코드 생성→게스트 참가→폴링→연결→왕복까지 검증(실제 RTDB 없이 로직 확인). 실제 대전은 사용자의 `VITE_FIREBASE_DB_URL` 필요.
+
+### 미구현(다음 후보)
+- **재대결(rematch)**: 현재 한 연결당 1경기, 종료 시 연결 종료 후 메뉴. 양측 합의 핸드셰이크로 같은 연결 재사용 가능.
+- TURN 릴레이(대칭 NAT), 방 만료/정리 강화, 입력 검증·안티치트(서버 전환 시), 무설정 폴백으로 복붙 코드 UI 노출.
+
+---
+
 ## ⑥ 용어집
 - **턴(Turn)**: 양측이 카드 3장을 골라 전역 페이즈로 해소하는 단위.
 - **페이즈(Phase)**: 한 턴의 해소 단계 — `move`(이동) → `defense`(수비) → `attack`(공격).
@@ -223,6 +263,12 @@
 | 캐릭터/공격 카드 | `src/data/roster.ts` |
 | 토너먼트 구조 | `src/game/tournament.ts` |
 | 화면 흐름 | `src/App.tsx`, `src/ui/screens/*` |
+| 멀티 전송 추상화(프로토콜) | `src/net/protocol.ts` |
+| 멀티 WebRTC 프리미티브·복붙 폴백 | `src/net/webrtc.ts` |
+| 멀티 짧은 코드 시그널링(Firebase) | `src/net/firebase.ts` |
+| 멀티 턴 플랜 교환(락스텝) | `src/net/session.ts` |
+| 멀티 로비 UI | `src/ui/screens/MultiplayerLobby.tsx` |
+| 온라인 설정 가이드 | `.env.example` |
 
 ---
 
@@ -232,4 +278,4 @@
 - [Inuyasha Demon Tournament — Play-Games](https://www.play-games.com/game/15212/inuyasha-demon-tournament.html)
 - [InuYasha: Demon Tournament — Flash Game (evilgames.eu)](https://evilgames.eu/flashgames/inuyasha-demon-tournament.htm)
 
-*최종 갱신: 2026-06-15*
+*최종 갱신: 2026-06-18 (온라인 멀티플레이 P2P 추가)*
