@@ -47,6 +47,14 @@ export interface CardDef {
   damage?: number
   energyCost?: number
 
+  // attack 특수 능력 — 모두 선택적, 엔진(computeAttack)이 자동 적용
+  drain?: number // 적중 시(가드돼도) 상대 기력을 최대 N 빼앗아 흡수
+  leech?: number // 피해를 실제로 입히면 체력 N 회복
+  pierce?: boolean // 상대 보호막을 무시하고 피해를 관통
+  push?: number // 적중 시 상대를 (공격자 기준) 뒤로 N칸 밀어냄 — 벽·공격자 셀에서 멈춤
+  selfShield?: number // 기력 지불 성공 시 자신에게 보호막 +N (빗나가도 적용)
+  recoil?: number // 기력 지불 성공 시 자신이 체력 N 손실 (빗나가도 적용)
+
   // guard
   block?: number // damage absorbed this turn
   guardCost?: number // energy spent to raise the guard
@@ -93,6 +101,8 @@ export interface Step {
   card: CardDef
   result: ActionResult
   damage: number // damage dealt to the opponent by this action
-  heal: number // HP the actor recovered this action (e.g. lifesteal passive)
+  heal: number // HP the actor recovered this action (leech card / lifesteal passive)
+  drain: number // energy stolen from the opponent this action
+  recoil: number // HP the actor lost to their own card's recoil
   snapshot: BattleSnapshot
 }

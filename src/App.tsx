@@ -8,6 +8,7 @@ import { decideAI } from './battle/ai'
 import { createPlanExchange } from './net/session'
 import { LoginScreen } from './ui/screens/LoginScreen'
 import { TitleScreen } from './ui/screens/TitleScreen'
+import { CodexScreen } from './ui/screens/CodexScreen'
 import { CharacterSelect } from './ui/screens/CharacterSelect'
 import { BracketScreen } from './ui/screens/BracketScreen'
 import { BattleScreen } from './ui/screens/BattleScreen'
@@ -16,6 +17,7 @@ import { ResultScreen, type Outcome } from './ui/screens/ResultScreen'
 
 type Phase =
   | 'title'
+  | 'codex'
   | 'select'
   | 'bracket'
   | 'fight'
@@ -114,8 +116,11 @@ export default function App() {
         onLogout={onLogout}
         onStart={() => setPhase('select')}
         onOnline={() => setPhase('mp-select')}
+        onCodex={() => setPhase('codex')}
       />
     )
+  } else if (phase === 'codex') {
+    screen = <CodexScreen onBack={toTitle} />
   } else if (phase === 'select') {
     screen = <CharacterSelect onConfirm={confirmChar} onBack={toTitle} />
   } else if (phase === 'bracket' && gauntlet) {

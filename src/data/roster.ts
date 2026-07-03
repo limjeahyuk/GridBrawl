@@ -2,9 +2,12 @@ import type { CardDef, Offset } from '../battle/types'
 
 // ---------------------------------------------------------------------------
 // THE GRID roster, rebuilt for 2D card battles. Each avatar keeps its identity
-// (colour, silhouette, art) but fights with three signature attack cards that
-// differ in their RANGE on the grid (a set of cells relative to the attacker),
-// damage and energy cost — plus the shared common cards (see battle/cards.ts).
+// (colour, silhouette, art) but is now a distinct "직업" built around unique
+// cards: everyone shares the weak common attack/guard cards (battle/cards.ts),
+// and the character's own cards carry the exciting abilities — wide ranges,
+// heavy damage, energy drain, lifesteal, pierce, knockback, self-shield,
+// recoil. Unique cards are mostly attacks but can be any kind (AEGIS has a
+// unique guard).
 //
 // Range offsets are { df, du }: df = cells forward (+ toward opponent), du =
 // rows upward (+ above). The engine mirrors df by the attacker's facing.
@@ -39,7 +42,8 @@ export interface CharacterDef {
   maxEnergy: number
   startEnergy: number
   passive: Passive
-  attacks: CardDef[]
+  /** 고유(전용) 카드. 대부분 공격이지만 어떤 종류든 될 수 있다(예: AEGIS의 전용 가드). */
+  cards: CardDef[]
 }
 
 // --- range helpers ---------------------------------------------------------
@@ -84,15 +88,17 @@ export const ROSTER: CharacterDef[] = [
     title: 'Arc Runner',
     accent: '#2ff3ff',
     accent2: '#ffe14d',
-    description: '전광석화의 원거리 견제형. 체력은 낮지만 빠른 잽과 긴 전격 빔으로 거리를 지배한다.',
+    description:
+      '전격 흡수형 스피드스터. 체력은 낮지만 긴 빔으로 거리를 지배하고, 맞힐 때마다 상대의 기력을 빨아들여 제 연료로 쓴다.',
     maxHp: 100,
     maxEnergy: 100,
     startEnergy: 55,
     passive: { desc: '오버차지: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
-    attacks: [
+    cards: [
       atk({ id: 'volt-jab', name: '스파크 잽', range: [fwd(1)], damage: 18, energyCost: 12, fx: 'punch', desc: '바로 앞 한 칸 약공격. 빠르고 저렴하다.' }),
+      atk({ id: 'volt-leech', name: '라이트닝 리치', range: beam(1, 2), damage: 16, energyCost: 14, drain: 15, fx: 'bolt', desc: '앞 두 칸 전격 채찍. 적중 시 상대 기력 15를 빼앗아 흡수한다.' }),
       atk({ id: 'volt-bolt', name: '아크 볼트', range: beam(1, 4), damage: 30, energyCost: 28, fx: 'bolt', desc: '같은 줄로 4칸까지 뻗는 전격 빔.' }),
-      atk({ id: 'volt-surge', name: '체인 서지', range: beam(1, 5), damage: 42, energyCost: 46, fx: 'bolt', signature: true, accent: '#2ff3ff', desc: '시그니처. 화면 끝까지 닿는 최장 전격 빔.' }),
+      atk({ id: 'volt-surge', name: '체인 서지', range: beam(1, 5), damage: 40, energyCost: 44, drain: 20, fx: 'bolt', signature: true, accent: '#2ff3ff', desc: '시그니처. 화면 끝까지 닿는 최장 전격 — 적중 시 기력 20까지 흡수.' }),
     ],
   },
   {
@@ -101,15 +107,17 @@ export const ROSTER: CharacterDef[] = [
     title: 'Siege Frame',
     accent: '#ff9a3d',
     accent2: '#ffd36b',
-    description: '걸어다니는 요새. 느리지만 한 방이 무겁고, 앞 줄 전체를 짓이기는 광역기가 있다.',
+    description:
+      '걸어다니는 공성 병기. 느리지만 한 방이 무겁고, 광역 강타와 넉백으로 제 사거리를 강요한다.',
     maxHp: 142,
     maxEnergy: 100,
     startEnergy: 40,
     passive: { desc: '장갑판: 받는 공격 피해 -10.', damageReduction: 10 },
-    attacks: [
-      atk({ id: 'titan-hammer', name: '해머 핸드', range: [fwd(1)], damage: 22, energyCost: 14, fx: 'punch', desc: '바로 앞 한 칸 강타. 묵직하다.' }),
-      atk({ id: 'titan-crush', name: '크러셔', range: bar(1), damage: 36, energyCost: 30, fx: 'quake', desc: '앞 한 칸의 위·중·아래를 동시에 친다.' }),
-      atk({ id: 'titan-slam', name: '사이즈믹 슬램', range: [...bar(1), ...bar(2)], damage: 52, energyCost: 48, fx: 'quake', signature: true, accent: '#ff9a3d', desc: '시그니처. 앞 두 칸 × 세 줄을 통째로 부수는 지진파.' }),
+    cards: [
+      atk({ id: 'titan-hammer', name: '해머 핸드', range: [fwd(1)], damage: 24, energyCost: 14, fx: 'punch', desc: '바로 앞 한 칸 강타. 묵직하다.' }),
+      atk({ id: 'titan-ram', name: '램 프레스', range: [fwd(1)], damage: 16, energyCost: 16, push: 2, fx: 'punch', desc: '앞 한 칸을 밀쳐 두 칸 넉백. 들러붙는 상대를 떼어낸다.' }),
+      atk({ id: 'titan-crush', name: '크러셔', range: bar(1), damage: 34, energyCost: 30, fx: 'quake', desc: '앞 한 칸의 위·중·아래를 동시에 친다.' }),
+      atk({ id: 'titan-slam', name: '사이즈믹 슬램', range: [...bar(1), ...bar(2)], damage: 50, energyCost: 48, push: 1, fx: 'quake', signature: true, accent: '#ff9a3d', desc: '시그니처. 앞 두 칸 × 세 줄을 부수는 지진파 — 적중한 상대를 한 칸 밀어낸다.' }),
     ],
   },
   {
@@ -118,15 +126,17 @@ export const ROSTER: CharacterDef[] = [
     title: 'Plasma Oracle',
     accent: '#ff3df0',
     accent2: '#a96bff',
-    description: '플라스마 견제의 대가. 가장 긴 사거리의 구체로 접근을 응징한다.',
+    description:
+      '초장거리 포격수. 끝없이 차오르는 플라스마로 화면 반대편에서 상대를 태우고, 관통 광선은 가드조차 소용없다.',
     maxHp: 106,
     maxEnergy: 100,
     startEnergy: 55,
-    passive: { desc: '플라스마 충전: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
-    attacks: [
-      atk({ id: 'nova-palm', name: '팜 펄스', range: [fwd(1)], damage: 18, energyCost: 10, fx: 'orb', desc: '바로 앞 한 칸 견제.' }),
+    passive: { desc: '플라스마 코어: 매 턴 기력 +15.', turnEnergy: 15 },
+    cards: [
+      atk({ id: 'nova-palm', name: '팜 펄스', range: beam(1, 2), damage: 16, energyCost: 10, fx: 'orb', desc: '앞 두 칸을 훑는 견제 펄스.' }),
+      atk({ id: 'nova-lance', name: '이온 랜스', range: beam(2, 4), damage: 28, energyCost: 26, pierce: true, fx: 'orb', desc: '앞 2~4칸 관통 광선. 상대 보호막을 무시한다. 바로 앞은 사각.' }),
       atk({ id: 'nova-blast', name: '노바 블래스트', range: beam(1, 5), damage: 32, energyCost: 30, fx: 'orb', desc: '같은 줄 끝까지 닿는 최장 구체.' }),
-      atk({ id: 'nova-flare', name: '라이징 플레어', range: [...bar(1), fwd(2)], damage: 40, energyCost: 40, fx: 'orb', signature: true, accent: '#ff3df0', desc: '시그니처. 앞 한 칸의 세 줄 + 앞 두 칸을 덮는 폭발.' }),
+      atk({ id: 'nova-flare', name: '라이징 플레어', range: [...bar(1), ...bar(2), fwd(3)], damage: 42, energyCost: 46, fx: 'orb', signature: true, accent: '#ff3df0', desc: '시그니처. 앞 두 칸 × 세 줄 + 앞 세 칸째까지 덮는 대폭발.' }),
     ],
   },
   {
@@ -135,15 +145,17 @@ export const ROSTER: CharacterDef[] = [
     title: 'Null Phantom',
     accent: '#57ffa0',
     accent2: '#1bd6c4',
-    description: '시스템의 버그. 순간이동으로 거리를 지우고, 상하좌우를 한 번에 베는 십자 베기를 쓴다.',
+    description:
+      '시스템의 버그이자 흡혈 암살자. 상하좌우를 동시에 베고, 베어낸 만큼 체력과 기력을 제 것으로 만든다.',
     maxHp: 100,
     maxEnergy: 100,
     startEnergy: 50,
     passive: { desc: '데이터 흡수: 공격 적중 시 입힌 피해의 1/5만큼 체력 회복.', lifestealDiv: 5 },
-    attacks: [
+    cards: [
       atk({ id: 'cipher-cut', name: '엣지 컷', range: [fwd(1)], damage: 18, energyCost: 10, fx: 'slash', desc: '바로 앞 한 칸 빠른 베기.' }),
-      atk({ id: 'cipher-cross', name: '크로스 슬래시', range: CROSS, damage: 30, energyCost: 24, fx: 'slash', desc: '상·하·좌·우 네 칸을 동시에 베는 십자 범위.' }),
-      atk({ id: 'cipher-phase', name: '페이즈 스트라이크', range: [...beam(1, 3), { df: 1, du: 1 }, { df: 1, du: -1 }], damage: 44, energyCost: 44, fx: 'slash', signature: true, accent: '#57ffa0', desc: '시그니처. 앞 세 칸 + 앞 한 칸의 위·아래까지 관통하는 순간이동 강타.' }),
+      atk({ id: 'cipher-siphon', name: '널 사이펀', range: bar(1), damage: 22, energyCost: 20, leech: 10, drain: 10, fx: 'slash', desc: '앞 한 칸의 세 줄을 베며 체력 10 회복 + 상대 기력 10 흡수.' }),
+      atk({ id: 'cipher-cross', name: '크로스 슬래시', range: CROSS, damage: 30, energyCost: 26, fx: 'slash', desc: '상·하·좌·우 네 칸을 동시에 베는 십자 범위. 등 뒤도 벤다.' }),
+      atk({ id: 'cipher-phase', name: '페이즈 스트라이크', range: [...beam(1, 3), { df: 1, du: 1 }, { df: 1, du: -1 }], damage: 44, energyCost: 44, leech: 12, fx: 'slash', signature: true, accent: '#57ffa0', desc: '시그니처. 앞 세 칸 + 앞 한 칸의 위·아래를 관통하는 순간이동 강타 — 체력 12 회복.' }),
     ],
   },
   {
@@ -152,15 +164,26 @@ export const ROSTER: CharacterDef[] = [
     title: 'Bulwark Unit',
     accent: '#4d7cff',
     accent2: '#9fc2ff',
-    description: '부동의 수호자. 단단한 방패로 버티다, 좌우를 쓸어버리는 돌격으로 되갚는다.',
+    description:
+      '부동의 수호자. 공격하면서도 방패를 거두지 않고, 전용 방벽 아이언 커튼은 웬만한 강타를 통째로 삼킨다.',
     maxHp: 132,
     maxEnergy: 100,
     startEnergy: 45,
     passive: { desc: '상시 방벽: 매 턴 보호막 +20.', turnShield: 20 },
-    attacks: [
-      atk({ id: 'aegis-jab', name: '실드 잽', range: [fwd(1)], damage: 20, energyCost: 12, fx: 'shield', desc: '바로 앞 한 칸 방패 견제.' }),
-      atk({ id: 'aegis-bash', name: '실드 배시', range: bar(1), damage: 34, energyCost: 28, fx: 'shield', desc: '앞 한 칸의 위·중·아래를 방패로 쓴다.' }),
-      atk({ id: 'aegis-drive', name: '벌워크 드라이브', range: [fwd(-1), fwd(1), fwd(2)], damage: 50, energyCost: 44, fx: 'shield', signature: true, accent: '#4d7cff', desc: '시그니처. 같은 줄의 뒤 한 칸 + 앞 두 칸(좌·우)을 쓸어버리는 돌진.' }),
+    cards: [
+      atk({ id: 'aegis-jab', name: '실드 잽', range: [fwd(1)], damage: 20, energyCost: 12, selfShield: 10, fx: 'shield', desc: '바로 앞 한 칸 방패 견제. 사용 시 보호막 +10.' }),
+      atk({ id: 'aegis-bash', name: '실드 배시', range: bar(1), damage: 30, energyCost: 28, push: 1, fx: 'shield', desc: '앞 한 칸의 세 줄을 방패로 후려쳐 한 칸 밀어낸다.' }),
+      {
+        id: 'aegis-wall',
+        name: '아이언 커튼',
+        kind: 'guard',
+        block: 80,
+        guardCost: 15,
+        cooldown: 2,
+        fx: 'shield',
+        desc: '전용 방벽. 기력 15 소모, 이번 턴 받는 피해를 최대 80 막는다. 쿨타임 2턴.',
+      },
+      atk({ id: 'aegis-drive', name: '벌워크 드라이브', range: [fwd(-1), fwd(1), fwd(2)], damage: 46, energyCost: 44, selfShield: 20, fx: 'shield', signature: true, accent: '#4d7cff', desc: '시그니처. 같은 줄의 뒤 한 칸 + 앞 두 칸을 쓸어버리는 돌진 — 사용 시 보호막 +20.' }),
     ],
   },
   {
@@ -169,15 +192,17 @@ export const ROSTER: CharacterDef[] = [
     title: 'Cinder Blade',
     accent: '#ff4d5e',
     accent2: '#ff9a3d',
-    description: '끝없는 압박. 불타는 연격으로 가드를 녹이며 앞으로 파고든다.',
-    maxHp: 102,
+    description:
+      '제 몸을 태워 싸우는 하이리스크 러셔. 가드를 부수는 주먹과 반동을 감수한 초화력으로 단기 결전을 노린다.',
+    maxHp: 108,
     maxEnergy: 100,
     startEnergy: 50,
     passive: { desc: '가드 브레이크: 공격이 적중하면 상대 보호막을 모두 제거.', shieldBreak: true },
-    attacks: [
-      atk({ id: 'ember-claw', name: '신더 클로', range: [fwd(1)], damage: 17, energyCost: 10, fx: 'flame', desc: '바로 앞 한 칸 빠른 할퀴기.' }),
-      atk({ id: 'ember-kick', name: '플레임 킥', range: bar(1), damage: 30, energyCost: 26, fx: 'flame', desc: '앞 한 칸의 위·중·아래를 차는 불꽃 부채.' }),
-      atk({ id: 'ember-inferno', name: '인페르노 러시', range: beam(1, 3), damage: 46, energyCost: 44, fx: 'rush', signature: true, accent: '#ff4d5e', desc: '시그니처. 같은 줄 앞 세 칸을 꿰뚫는 돌진 연격.' }),
+    cards: [
+      atk({ id: 'ember-claw', name: '신더 클로', range: [fwd(1)], damage: 18, energyCost: 10, fx: 'flame', desc: '바로 앞 한 칸 빠른 할퀴기.' }),
+      atk({ id: 'ember-fan', name: '플레임 팬', range: bar(1), damage: 28, energyCost: 24, fx: 'flame', desc: '앞 한 칸의 위·중·아래를 차는 불꽃 부채.' }),
+      atk({ id: 'ember-blitz', name: '오버히트 블리츠', range: beam(1, 2), damage: 34, energyCost: 22, recoil: 8, fx: 'rush', desc: '과열 돌진. 싸고 강하지만 자신도 화상으로 체력 8을 잃는다.' }),
+      atk({ id: 'ember-inferno', name: '인페르노 러시', range: beam(1, 3), damage: 54, energyCost: 46, recoil: 12, fx: 'rush', signature: true, accent: '#ff4d5e', desc: '시그니처. 같은 줄 앞 세 칸을 꿰뚫는 최대 화력 — 반동으로 체력 12를 잃는다.' }),
     ],
   },
 ]

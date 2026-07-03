@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5180,
+    port: Number(process.env.PORT) || 5180, // PORT env로 덮어쓰기 가능(프리뷰 도구 등)
     strictPort: true,
     host: true,
   },

@@ -14,11 +14,13 @@ export function TitleScreen({
   onLogout,
   onStart,
   onOnline,
+  onCodex,
 }: {
   user: AuthUser | null
   onLogout: () => void
   onStart: () => void
   onOnline: () => void
+  onCodex: () => void
 }) {
   const [showControls, setShowControls] = useState(false)
   return (
@@ -55,6 +57,9 @@ export function TitleScreen({
           </button>
           <button className="btn btn--online" onClick={onOnline}>
             온라인 대전
+          </button>
+          <button className="btn btn--codex" onClick={onCodex}>
+            도감
           </button>
           <button className="btn btn--ghost" onClick={() => setShowControls((v) => !v)}>
             조작법

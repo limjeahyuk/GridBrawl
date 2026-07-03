@@ -46,7 +46,12 @@ export function decideAI(
   const cdLeft = (id: string) => state.cooldowns[self][id] ?? 0
   const usable = (c: CardDef) => cdLeft(c.id) === 0 && !locked.has(c.id)
 
-  const cheapest = Math.min(...char.attacks.map((a) => a.energyCost ?? 0))
+  // attack pool: the character's unique attack cards + the weak common attacks
+  const attacks = [
+    ...char.cards.filter((c) => c.kind === 'attack'),
+    ...COMMON_CARDS.filter((c) => c.kind === 'attack'),
+  ]
+  const cheapest = Math.min(...attacks.map((a) => a.energyCost ?? 0))
   const plan: CardDef[] = []
 
   const take = (c: CardDef) => {
@@ -92,7 +97,7 @@ export function decideAI(
 
   for (let slot = 0; slot < 3; slot++) {
     // 1) attack if one connects right now and we roll aggressive
-    const ready = char.attacks
+    const ready = attacks
       .filter((a) => energy >= (a.energyCost ?? 0) && hits(pos, facing, a, opp))
       .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
     if (ready.length > 0 && Math.random() < cfg.aggression) {
@@ -120,7 +125,7 @@ export function decideAI(
     }
 
     // 5) fallbacks: any affordable attack (cheapest), else any free move, else idle
-    const cheap = char.attacks
+    const cheap = attacks
       .filter((a) => energy >= (a.energyCost ?? 0))
       .sort((x, y) => (x.energyCost ?? 0) - (y.energyCost ?? 0))[0]
     if (cheap) {
@@ -133,7 +138,7 @@ export function decideAI(
       continue
     }
     if (usable(ENERGY)) take(ENERGY)
-    else take(char.attacks[0]) // last resort (will fizzle on no fuel)
+    else take(attacks[0]) // last resort (will fizzle on no fuel)
   }
 
   return plan

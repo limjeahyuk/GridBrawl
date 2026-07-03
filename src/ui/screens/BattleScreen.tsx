@@ -3,6 +3,7 @@ import { getChar } from '../../data/roster'
 import { buildFighterSvg } from '../../art/art'
 import { CardBattle, planAffordable } from '../../battle/engine'
 import { deckFor, ENERGY_REGEN } from '../../battle/cards'
+import { CardFace, cardAccent } from '../CardFace'
 import {
   GRID_COLS,
   GRID_ROWS,
@@ -105,6 +106,7 @@ function stepToView(step: Step): View {
   acting[a] = isAtk(step.result)
   const damage: [number, number] = [0, 0]
   if (isAtk(step.result) && step.damage > 0) damage[d] = step.damage
+  if (step.recoil > 0) damage[a] = step.recoil // 반동: 자기 자신에게 -N 표시
   const heal: [number, number] = [0, 0]
   if (step.heal > 0) heal[a] = step.heal
   const fx: [Fx | null, Fx | null] = [null, null]
@@ -112,6 +114,7 @@ function stepToView(step: Step): View {
     fx[a] = { kind: step.card.fx ?? 'punch', result: step.result }
   const say: [string, string] = ['', '']
   say[a] = `${step.card.name} ${RESULT_TEXT[step.result] ?? ''}`.trim()
+  if (step.drain > 0) say[a] += ` ⚡+${step.drain}`
   return {
     pos: [{ ...s.pos[0] }, { ...s.pos[1] }],
     hp: [s.hp[0], s.hp[1]],
@@ -452,7 +455,7 @@ export function BattleScreen({
               return (
                 <button
                   key={c.id}
-                  className={`handcard ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
+                  className={`handcard handcard--${c.kind} ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
                   onClick={() => addCard(c)}
                   onMouseEnter={() => {
                     setHoveredCard(c)
@@ -493,84 +496,6 @@ export function BattleScreen({
 }
 
 // ---------------------------------------------------------------------------
-
-function cardAccent(c: CardDef, fallback: string): string {
-  if (c.kind === 'attack') return c.accent ?? fallback
-  if (c.kind === 'guard') return '#9fc2ff'
-  if (c.kind === 'energy') return '#ffe14d'
-  return '#8493bd'
-}
-
-function moveIcon(dir: CardDef['dir'], steps: number): string {
-  const one = dir === 'right' ? '▶' : dir === 'left' ? '◀' : dir === 'up' ? '▲' : '▼'
-  return steps >= 2 ? one + one : one
-}
-
-/** Compact range chart, like the reference 3x3: center = attacker. The local
- *  fighter always faces right on screen (see BattleScreen perspective flip), so
- *  "forward" is always to the right here. */
-function RangeChart({ card }: { card: CardDef }) {
-  const cols = [-1, 0, 1, 2, 3] // forward window
-  const rows = [1, 0, -1] // up..down
-  const hit = (df: number, du: number) =>
-    (card.range ?? []).some((o) => o.df === df && o.du === du)
-  return (
-    <div className="rangechart">
-      {rows.map((du) =>
-        cols.map((df) => {
-          const self = df === 0 && du === 0
-          const on = hit(df, du)
-          return <span key={`${df},${du}`} className={`rc ${self ? 'rc--self' : on ? 'rc--on' : ''}`} />
-        }),
-      )}
-    </div>
-  )
-}
-
-function CardFace({ card, accent }: { card: CardDef; accent: string }) {
-  const icon =
-    card.kind === 'attack'
-      ? '⚔'
-      : card.kind === 'guard'
-        ? '🛡'
-        : card.kind === 'energy'
-          ? '⚡'
-          : moveIcon(card.dir, card.steps ?? 1)
-  const reach =
-    card.kind === 'attack' ? Math.max(0, ...(card.range ?? []).map((o) => o.df)) : 0
-  return (
-    <div className={`cardface cardface--${card.kind}`} style={{ ['--accent' as string]: accent }}>
-      <div className="cardface__top">
-        <span className="cardface__icon">{icon}</span>
-        {card.signature && <span className="cardface__sig">SP</span>}
-        {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
-      </div>
-      <div className="cardface__name">{card.name}</div>
-      {card.kind === 'attack' && (
-        <>
-          <RangeChart card={card} />
-          <div className="cardface__meta">
-            <span>⚔{card.damage}</span>
-            <span>↦{reach}</span>
-            <span>⚡{card.energyCost}</span>
-          </div>
-        </>
-      )}
-      {card.kind === 'guard' && (
-        <div className="cardface__meta">
-          <span>방어 {card.block}</span>
-          <span>⚡{card.guardCost}</span>
-        </div>
-      )}
-      {card.kind === 'energy' && (
-        <div className="cardface__meta">
-          <span>기력 +{card.gain}</span>
-        </div>
-      )}
-      {card.kind === 'move' && <div className="cardface__meta cardface__meta--move"><span>{card.desc}</span></div>}
-    </div>
-  )
-}
 
 function FighterSprite({
   svg,

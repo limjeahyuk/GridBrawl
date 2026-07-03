@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { authConfigured, signInWithGoogle } from '../../net/auth'
+import { authConfigured, signInAsGuest, signInWithGoogle } from '../../net/auth'
 
 /** App-wide gate: the player signs in with Google before reaching the title. */
 export function LoginScreen() {
@@ -39,24 +39,31 @@ export function LoginScreen() {
         </h1>
         <p className="login__lead">계정으로 로그인하고 그리드에 입장하세요.</p>
 
-        {configured ? (
-          <>
+        <div className="login__actions">
+          {configured ? (
             <button className="btn login__google" onClick={onGoogle} disabled={busy}>
               <GoogleMark />
               {busy ? '로그인 중…' : 'Google로 로그인'}
             </button>
-            {error && <p className="login__error">{error}</p>}
-          </>
-        ) : (
-          <div className="login__setup">
-            <p className="login__setup-title">로그인이 아직 설정되지 않았습니다.</p>
-            <p className="login__hint">
-              <code>.env</code> 에 <code>VITE_FIREBASE_API_KEY</code> 를 추가하고, Firebase 콘솔의
-              Authentication → 로그인 방법에서 <b>Google</b> 공급업체를 활성화하세요. 자세한 절차는{' '}
-              <code>.env.example</code> 참고.
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="login__setup">
+              <p className="login__setup-title">Google 로그인이 아직 설정되지 않았습니다.</p>
+              <p className="login__hint">
+                <code>.env</code> 에 <code>VITE_FIREBASE_API_KEY</code> 를 추가하고, Firebase 콘솔의
+                Authentication → 로그인 방법에서 <b>Google</b> 공급업체를 활성화하세요. 자세한 절차는{' '}
+                <code>.env.example</code> 참고.
+              </p>
+            </div>
+          )}
+
+          <button className="btn btn--ghost login__guest" onClick={signInAsGuest} disabled={busy}>
+            게스트로 시작
+          </button>
+          <p className="login__guest-note">
+            게스트 기록은 이 기기에 저장되어 다음 접속 시 자동으로 이어집니다.
+          </p>
+          {error && <p className="login__error">{error}</p>}
+        </div>
       </div>
       <div className="scanlines" />
     </div>

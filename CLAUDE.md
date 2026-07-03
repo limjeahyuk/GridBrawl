@@ -29,11 +29,12 @@
 ## 전투 모델 (현재 구현 요약) — 2D 격자
 
 - **로그인 게이트(앱 전체)**: 모든 화면 앞에 구글 로그인이 필수(`App.tsx`가 `useAuth`로 게이트). 미로그인 시 `LoginScreen`, 인증 복원 중엔 "접속 중…". 로그인 후에야 아래 흐름 진입. 예외적으로 **Firebase Auth는 SDK 의존**(시그널링용 `net/firebase.ts`는 여전히 REST-only) — `VITE_FIREBASE_API_KEY` 필요, 미설정 시 로그인 화면이 "설정 필요" 안내(`.env.example`). 콘솔에서 Google 공급업체 활성화 필수.
-- 화면 흐름(싱글): `title → select → bracket → fight → result` (`src/App.tsx` 상태 머신). 온라인: `title →(온라인 대전)→ mp-select → mp-lobby → mp-fight → mp-result`.
+- 화면 흐름(싱글): `title → select → bracket → fight → result` (`src/App.tsx` 상태 머신). 온라인: `title →(온라인 대전)→ mp-select → mp-lobby → mp-fight → mp-result`. 타이틀의 **도감** 버튼 → `codex`(`src/ui/screens/CodexScreen.tsx`): 영웅별 초상화·패시브·능력치 + 전용/공용 카드 열람(`뒤로`로 복귀). 카드 렌더는 배틀과 공용 컴포넌트 `src/ui/CardFace.tsx` 사용.
 - 전장은 **2D 격자 6열 × 3행**(`GRID_COLS/ROWS`). 위치는 셀 `{col,row}`, 시작은 가운뎃줄 양 끝. p0는 오른쪽, p1은 왼쪽을 바라봄(`facing`).
-- 카드 종류: `move / attack / guard / energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수).
-  - 이동: `> < ^ v`(쿨0), 좌우 대시 `>> <<`(쿨1). 가드: 기력 10·실드 +50·쿨1. 원기: 기력 +50·쿨0. 턴 시작 패시브 기력 +30.
+- 카드 종류: `move / attack / guard / energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수). **공용(약함) + 캐릭터 고유(강함, 각 4장)** 이원화 — 2026-07-03.
+  - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 스트라이크(12dmg)·펄스 샷(2칸째만 10dmg)** + 가드(실드 50·쿨1)·**브레이스(실드 25·쿨0)** + 원기(기력 +50). 턴 시작 패시브 기력 +30.
   - 공격: `range` 오프셋 `{df,du}`(df=앞, du=위)로 타격 셀 지정. 상대 셀이 들어오면 적중, 실드가 먼저 흡수.
+  - **고유 카드 특수 능력**(`roster.ts`의 `CharacterDef.cards` — 공격 외 종류도 가능, 예: AEGIS 전용 가드): `drain`(기력 흡수)·`leech`(흡혈)·`pierce`(실드 관통)·`push`(넉백)·`selfShield`(사용 시 실드)·`recoil`(반동 자해). 발동 조건·적용 순서는 GDD ③/④, 카드 UI엔 능력 칩(`CardFace`의 `abilityTags`).
 - 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 보호막 파괴 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
 - 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드. (`CardBattle.resolveTurn`)
 

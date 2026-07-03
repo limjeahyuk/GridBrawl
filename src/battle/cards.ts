@@ -6,9 +6,11 @@ export const GUARD_COST = 10 // energy spent to raise the guard
 export const ENERGY_GAIN = 50 // energy restored by the recovery card
 export const ENERGY_REGEN = 30 // passive energy regained at the start of each turn
 
-// Shared cards every fighter can play. Movement is free but cools down; guard
-// costs energy and absorbs damage for the turn; energy restores fuel. All of
-// these resolve before attacks within a turn (see engine `resolveTurn` phases).
+// Shared cards every fighter can play. Movement is free but cools down; the
+// common attack/guard cards are deliberately WEAK — every fighter has them as a
+// baseline, and the exciting versions are each character's unique cards (and,
+// later, cards obtained from draws/purchases). All non-attacks resolve before
+// attacks within a slot (see engine `resolveTurn`).
 export const COMMON_CARDS: CardDef[] = [
   { id: 'm-right', name: '오른쪽', kind: 'move', dir: 'right', steps: 1, cooldown: 0, desc: '오른쪽으로 한 칸 이동. (>)' },
   { id: 'm-left', name: '왼쪽', kind: 'move', dir: 'left', steps: 1, cooldown: 0, desc: '왼쪽으로 한 칸 이동. (<)' },
@@ -17,6 +19,28 @@ export const COMMON_CARDS: CardDef[] = [
   { id: 'm-right2', name: '오른쪽 대시', kind: 'move', dir: 'right', steps: 2, cooldown: 1, desc: '오른쪽으로 두 칸 이동. (>>)' },
   { id: 'm-left2', name: '왼쪽 대시', kind: 'move', dir: 'left', steps: 2, cooldown: 1, desc: '왼쪽으로 두 칸 이동. (<<)' },
   {
+    id: 'c-strike',
+    name: '스트라이크',
+    kind: 'attack',
+    range: [{ df: 1, du: 0 }],
+    damage: 12,
+    energyCost: 8,
+    cooldown: 0,
+    fx: 'punch',
+    desc: '바로 앞 한 칸 기본 타격. 약하지만 누구나 언제든 쓸 수 있다.',
+  },
+  {
+    id: 'c-shot',
+    name: '펄스 샷',
+    kind: 'attack',
+    range: [{ df: 2, du: 0 }],
+    damage: 10,
+    energyCost: 10,
+    cooldown: 0,
+    fx: 'bolt',
+    desc: '앞 두 칸째 한 칸만 맞히는 견제 사격. 위력은 낮다.',
+  },
+  {
     id: 'c-guard',
     name: '가드',
     kind: 'guard',
@@ -24,6 +48,15 @@ export const COMMON_CARDS: CardDef[] = [
     guardCost: GUARD_COST,
     cooldown: 1,
     desc: `기력 ${GUARD_COST} 소모. 이번 턴 받는 피해를 최대 ${GUARD_BLOCK} 막는다.`,
+  },
+  {
+    id: 'c-brace',
+    name: '브레이스',
+    kind: 'guard',
+    block: 25,
+    guardCost: 5,
+    cooldown: 0,
+    desc: '기력 5 소모. 이번 턴 받는 피해를 최대 25 막는다. 쿨타임이 없다.',
   },
   {
     id: 'c-energy',
@@ -35,7 +68,7 @@ export const COMMON_CARDS: CardDef[] = [
   },
 ]
 
-/** The full selectable card set for a fighter: common cards + their attacks. */
+/** The full selectable card set for a fighter: common cards + their uniques. */
 export function deckFor(char: CharacterDef): CardDef[] {
-  return [...COMMON_CARDS, ...char.attacks]
+  return [...COMMON_CARDS, ...char.cards]
 }
