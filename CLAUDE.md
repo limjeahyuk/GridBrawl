@@ -37,6 +37,7 @@
   - **고유 카드 특수 능력**(`roster.ts`의 `CharacterDef.cards` — 공격 외 종류도 가능, 예: AEGIS 전용 가드): `drain`(기력 흡수)·`leech`(흡혈)·`pierce`(실드 관통)·`push`(넉백)·`selfShield`(사용 시 실드)·`recoil`(반동 자해). 발동 조건·적용 순서는 GDD ③/④, 카드 UI엔 능력 칩(`CardFace`의 `abilityTags`).
 - 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 보호막 파괴 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
 - 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드. (`CardBattle.resolveTurn`)
+- **독안개(장기전 억제)** — 2026-07-13: 5턴에 HUD 경고 → **6턴부터 가장자리(테두리) 셀**에 독안개, **턴 종료 시** 그 위에 있으면 **턴당 10 고정 피해**(실드 무시, KO 가능). 상수·판정은 `types.ts`(`FOG_WARN_TURN/FOG_START_TURN/FOG_DAMAGE/isFogCell`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). AI는 경고 턴부터 안개 탈출 우선. 상세는 GDD ④ "독안개".
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18
 
@@ -52,6 +53,13 @@
 
 - 전투 룰·격자·카드 수치를 바꾸면 **GDD를 같은 변경에서 함께 갱신**. 격자 크기 변경 시 `types.ts`의 `GRID_COLS/ROWS`와 `ui.css`의 `.gridboard`를 같이 수정.
 - 미구현(다음 후보): 승리 후 미스터리 카드 5중 1 선택(원작 보상).
+
+## 배포 / 네이티브 앱 — 2026-07-13
+
+- **웹 배포**: Firebase Hosting(`https://gridbrawl-9073d.web.app`). `npm run build && npx firebase deploy --only hosting,database`. env는 빌드 시점에 박히므로 배포 빌드 전에 `.env` 확인.
+- **RTDB 규칙**: `database.rules.json`(레포 관리) — `gridbrawl/<코드>` 경로만 열림, 코드 형식·offer/answer 필드 검증. 규칙 바꾸면 `--only database`로 배포.
+- **TURN**: `.env`의 `VITE_TURN_URL/USERNAME/CREDENTIAL`(선택, `webrtc.ts`가 ICE에 자동 추가). 비면 STUN 단독 — 셀룰러/대칭 NAT에서 연결 실패 가능. 관리형 TURN 발급 후 채우고 재빌드·재배포.
+- **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `kr.co.insplanet.gridbrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
 
 ## 컨벤션
 

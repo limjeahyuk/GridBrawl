@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { authConfigured, signInAsGuest, signInWithGoogle } from '../../net/auth'
 
-/** App-wide gate: the player signs in with Google before reaching the title. */
+// 네이티브 앱(WebView)에서는 구글이 임베디드 WebView OAuth를 차단하므로
+// (disallowed_useragent) 팝업 로그인을 숨기고 게스트를 기본으로 쓴다.
+// 구글 로그인은 추후 네이티브 플러그인(토큰 → Firebase 연동)으로 지원 예정.
+const isNativeApp = Capacitor.isNativePlatform()
+
+/** App-wide gate: the player signs in before reaching the title. */
 export function LoginScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const configured = authConfigured()
+  const configured = authConfigured() && !isNativeApp
 
   const onGoogle = async () => {
     setError(null)
@@ -45,7 +51,7 @@ export function LoginScreen() {
               <GoogleMark />
               {busy ? '로그인 중…' : 'Google로 로그인'}
             </button>
-          ) : (
+          ) : isNativeApp ? null : (
             <div className="login__setup">
               <p className="login__setup-title">Google 로그인이 아직 설정되지 않았습니다.</p>
               <p className="login__hint">
@@ -56,7 +62,11 @@ export function LoginScreen() {
             </div>
           )}
 
-          <button className="btn btn--ghost login__guest" onClick={signInAsGuest} disabled={busy}>
+          <button
+            className={`btn ${isNativeApp ? '' : 'btn--ghost'} login__guest`}
+            onClick={signInAsGuest}
+            disabled={busy}
+          >
             게스트로 시작
           </button>
           <p className="login__guest-note">

@@ -1,26 +1,25 @@
 import { getChar, type CharacterDef } from '../data/roster'
 import { ENERGY_REGEN } from './cards'
 import {
+  FOG_DAMAGE,
+  FOG_START_TURN,
   GRID_COLS,
-  GRID_ROWS,
+  MOVE_DELTA,
   START_CELLS,
+  inBounds,
+  isFogCell,
   type BattleSnapshot,
   type Cell,
   type CardDef,
-  type MoveDir,
   type Step,
 } from './types'
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
+
+// 독안개 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
+const FOG_CARD: CardDef = { id: 'fog', name: '독안개', kind: 'guard', desc: '가장자리를 덮는 독안개.' }
 const cloneCell = (c: Cell): Cell => ({ col: c.col, row: c.row })
 const sameCell = (a: Cell, b: Cell) => a.col === b.col && a.row === b.row
-
-const DELTA: Record<MoveDir, [number, number]> = {
-  right: [1, 0],
-  left: [-1, 0],
-  up: [0, -1],
-  down: [0, 1],
-}
 
 export interface BattleState {
   pos: [Cell, Cell]
@@ -81,13 +80,13 @@ export class CardBattle {
 
   private applyMove(p: number, card: CardDef) {
     const s = this.state
-    const [dc, dr] = DELTA[card.dir ?? 'right']
+    const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
     const steps = card.steps ?? 1
     const other = s.pos[1 - p]
     for (let k = 0; k < steps; k++) {
       const next: Cell = { col: s.pos[p].col + dc, row: s.pos[p].row + dr }
       // stop at walls or the opponent's cell
-      if (next.col < 0 || next.col >= GRID_COLS || next.row < 0 || next.row >= GRID_ROWS) break
+      if (!inBounds(next)) break
       if (sameCell(next, other)) break
       s.pos[p] = next
     }
@@ -243,6 +242,30 @@ export class CardBattle {
         s.over = true
         s.winner = s.hp[0] <= 0 && s.hp[1] <= 0 ? null : s.hp[0] <= 0 ? 1 : 0
         break
+      }
+    }
+
+    // 독안개: FOG_START_TURN부터 턴 종료 시 가장자리 셀에 서 있으면 피해.
+    // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
+    if (!s.over && s.turn >= FOG_START_TURN) {
+      for (let p = 0; p < 2; p++) {
+        if (!isFogCell(s.pos[p])) continue
+        s.hp[p] = Math.max(0, s.hp[p] - FOG_DAMAGE)
+        steps.push({
+          phase: 'fog',
+          actor: p,
+          card: FOG_CARD,
+          result: 'fog',
+          damage: 0,
+          heal: 0,
+          drain: 0,
+          recoil: FOG_DAMAGE,
+          snapshot: this.snapshot(),
+        })
+      }
+      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
+        s.over = true
+        s.winner = s.hp[0] <= 0 && s.hp[1] <= 0 ? null : s.hp[0] <= 0 ? 1 : 0
       }
     }
 

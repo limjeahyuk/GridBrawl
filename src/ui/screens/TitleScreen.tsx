@@ -3,8 +3,8 @@ import type { AuthUser } from '../../net/auth'
 
 const HOW_TO: { step: string; label: string }[] = [
   { step: '1', label: '매 턴 카드 3장을 골라 슬롯에 순서대로 배치한다.' },
-  { step: '2', label: '이동·가드·원기(빠른 카드)가 공격보다 먼저 실행된다.' },
-  { step: '3', label: '점프로 지상기, 앉기로 상단기를 회피한다.' },
+  { step: '2', label: '같은 슬롯에선 이동·가드·원기(빠른 카드)가 공격보다 먼저 실행된다.' },
+  { step: '3', label: '6×3 격자를 상하좌우로 움직여 상대의 사정거리를 피하라.' },
   { step: '4', label: '공격 카드는 기력(⚡)을 소모한다. 원기 카드로 회복.' },
   { step: '5', label: '상대 HP를 먼저 0으로 만들면 승리. 사다리를 끝까지 올라라.' },
 ]

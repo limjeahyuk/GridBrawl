@@ -5,8 +5,14 @@ import { CardBattle, planAffordable } from '../../battle/engine'
 import { deckFor, ENERGY_REGEN } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
 import {
+  FOG_DAMAGE,
+  FOG_START_TURN,
+  FOG_WARN_TURN,
   GRID_COLS,
   GRID_ROWS,
+  MOVE_DELTA,
+  inBounds,
+  isFogCell,
   type ActionResult,
   type Cell,
   type CardDef,
@@ -41,19 +47,12 @@ const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
 const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-const MOVE_DELTA: Record<string, [number, number]> = {
-  right: [1, 0],
-  left: [-1, 0],
-  up: [0, -1],
-  down: [0, 1],
-}
-
 /** Board cells an attack covers, from the attacker's cell and facing (+1 / -1). */
 function attackCells(from: Cell, card: CardDef, facing: number): Cell[] {
   if (card.kind !== 'attack') return []
   return (card.range ?? [])
     .map((o) => ({ col: from.col + facing * o.df, row: from.row - o.du }))
-    .filter((c) => c.col >= 0 && c.col < GRID_COLS && c.row >= 0 && c.row < GRID_ROWS)
+    .filter(inBounds)
 }
 
 /** Where a move card lands, mirroring the engine's wall/opponent stops. Used to
@@ -63,7 +62,7 @@ function applyMovePreview(from: Cell, other: Cell, card: CardDef): Cell {
   let cur = { ...from }
   for (let k = 0; k < (card.steps ?? 1); k++) {
     const next = { col: cur.col + dc, row: cur.row + dr }
-    if (next.col < 0 || next.col >= GRID_COLS || next.row < 0 || next.row >= GRID_ROWS) break
+    if (!inBounds(next)) break
     if (next.col === other.col && next.row === other.row) break
     cur = next
   }
@@ -78,10 +77,16 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   guard: '가드',
   energy: '원기 +',
   move: '이동',
+  fog: '피해!',
 }
-const PHASE_TEXT: Record<Step['phase'], string> = { move: '이동', defense: '수비', attack: '공격' }
+const PHASE_TEXT: Record<Step['phase'], string> = {
+  move: '이동',
+  defense: '수비',
+  attack: '공격',
+  fog: '독안개',
+}
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
-const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900 }
+const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900, fog: 700 }
 
 function baseView(b: CardBattle): View {
   const s = b.state
@@ -355,12 +360,16 @@ export function BattleScreen({
             const ccol = dcol(i % GRID_COLS)
             const hovered = targetCells.some((c) => c.col === ccol && c.row === row)
             const live = resolveHit?.cells.some((c) => c.col === ccol && c.row === row)
+            // 독안개: 발동 턴부터 가장자리 셀을 보라색으로 물들인다
+            const fog = battle.state.turn >= FOG_START_TURN && isFogCell({ col: ccol, row })
             const cls =
               hovered || (live && resolveHit?.actor === localSide)
                 ? ' cell--target'
                 : live
                   ? ' cell--target cell--target-foe'
-                  : ''
+                  : fog
+                    ? ' cell--fog'
+                    : ''
             return <span className={`cell${cls}`} key={i} />
           })}
           {preview.ghost && (
@@ -567,6 +576,12 @@ function BattleHud({
       <BhudSide char={chars[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
       <div className="bhud__turn">
         <div className="bhud__turnno">TURN {turn}</div>
+        {turn === FOG_WARN_TURN && (
+          <div className="bhud__fog bhud__fog--warn">⚠ 다음 턴부터 가장자리 독안개!</div>
+        )}
+        {turn >= FOG_START_TURN && (
+          <div className="bhud__fog">☠ 독안개 — 가장자리 턴당 -{FOG_DAMAGE}</div>
+        )}
         <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
           ESC · 종료
         </button>

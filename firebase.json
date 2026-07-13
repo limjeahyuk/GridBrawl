@@ -8,5 +8,8 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "database": {
+    "rules": "database.rules.json"
   }
 }

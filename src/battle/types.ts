@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // Card-battle domain types. Turn-based on a 2D grid: each turn both fighters
-// pick 3 cards, which resolve in fixed GLOBAL PHASES — all movement first,
-// then defense (guard/energy), then attacks — faithful to Inuyasha Demon
-// Tournament. Cards carry a cooldown (turns locked after use). See
-// docs/GAME_DESIGN.md for the full design.
+// pick 3 cards, which resolve in the SELECTED slot order (1→2→3); within one
+// slot the two sides' cards order by type priority — move, then defense
+// (guard/energy), then attack (see engine `resolveTurn`). Cards carry a
+// cooldown (turns locked after use). See docs/GAME_DESIGN.md for the design.
 // ---------------------------------------------------------------------------
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
@@ -70,6 +70,27 @@ export interface CardDef {
 
 export const GRID_COLS = 6
 export const GRID_ROWS = 3
+
+/** col/row delta for each move direction (row grows downward). */
+export const MOVE_DELTA: Record<MoveDir, readonly [number, number]> = {
+  right: [1, 0],
+  left: [-1, 0],
+  up: [0, -1],
+  down: [0, 1],
+}
+
+export const inBounds = (c: Cell): boolean =>
+  c.col >= 0 && c.col < GRID_COLS && c.row >= 0 && c.row < GRID_ROWS
+
+// 독안개 — 장기전(도망 반복) 억제 장치. FOG_WARN_TURN 동안 경고를 띄우고,
+// FOG_START_TURN부터 턴 종료 시 가장자리 셀에 서 있으면 FOG_DAMAGE 피해.
+export const FOG_WARN_TURN = 5
+export const FOG_START_TURN = 6
+export const FOG_DAMAGE = 10
+
+/** 독안개가 덮는 격자 가장자리(테두리) 셀인가. */
+export const isFogCell = (c: Cell): boolean =>
+  c.col === 0 || c.col === GRID_COLS - 1 || c.row === 0 || c.row === GRID_ROWS - 1
 /** Both fighters start on the middle row at opposite ends, facing each other. */
 export const START_CELLS: readonly [Cell, Cell] = [
   { col: 0, row: 1 },
@@ -91,8 +112,9 @@ export type ActionResult =
   | 'blocked' // connected but fully absorbed by the opponent's guard
   | 'whiff' // out of range
   | 'nofuel' // could not pay the energy cost
+  | 'fog' // took poison-fog damage at the edge of the grid (end of turn)
 
-export type Phase = 'move' | 'defense' | 'attack'
+export type Phase = 'move' | 'defense' | 'attack' | 'fog'
 
 /** One resolved card action, with the post-action snapshot (for animation). */
 export interface Step {

@@ -1,7 +1,18 @@
 import type { CharacterDef } from '../data/roster'
 import { COMMON_CARDS } from './cards'
 import type { BattleState } from './engine'
-import { type Cell, type CardDef, type Difficulty, type MoveDir } from './types'
+import {
+  FOG_WARN_TURN,
+  GRID_COLS,
+  GRID_ROWS,
+  MOVE_DELTA,
+  inBounds,
+  isFogCell,
+  type Cell,
+  type CardDef,
+  type Difficulty,
+  type MoveDir,
+} from './types'
 
 const common = (id: string) => COMMON_CARDS.find((c) => c.id === id)!
 const GUARD = common('c-guard')
@@ -65,15 +76,13 @@ export function decideAI(
 
   function applyMove(c: CardDef) {
     const steps = c.steps ?? 1
-    const d =
-      c.dir === 'right' ? [1, 0] : c.dir === 'left' ? [-1, 0] : c.dir === 'up' ? [0, -1] : [0, 1]
+    const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
     for (let k = 0; k < steps; k++) {
-      const nc = pos.col + d[0]
-      const nr = pos.row + d[1]
-      if (nc < 0 || nc > 5 || nr < 0 || nr > 2) break
-      if (nc === opp.col && nr === opp.row) break
-      pos.col = nc
-      pos.row = nr
+      const next: Cell = { col: pos.col + dc, row: pos.row + dr }
+      if (!inBounds(next)) break
+      if (next.col === opp.col && next.row === opp.row) break
+      pos.col = next.col
+      pos.row = next.row
     }
   }
 
@@ -98,35 +107,49 @@ export function decideAI(
   for (let slot = 0; slot < 3; slot++) {
     // 1) attack if one connects right now and we roll aggressive
     const ready = attacks
-      .filter((a) => energy >= (a.energyCost ?? 0) && hits(pos, facing, a, opp))
+      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0) && hits(pos, facing, a, opp))
       .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
     if (ready.length > 0 && Math.random() < cfg.aggression) {
       take(ready[0])
       continue
     }
 
-    // 2) recharge when starved and the energy card is up
+    // 2) 독안개 이탈 — 경고 턴부터, 가장자리에 있으면 중앙 쪽으로 이동
+    if (state.turn >= FOG_WARN_TURN && isFogCell(pos)) {
+      const esc: CardDef[] = []
+      if (pos.row === 0) esc.push(moveCard('down', 1))
+      else if (pos.row === GRID_ROWS - 1) esc.push(moveCard('up', 1))
+      if (pos.col === 0) esc.push(moveCard('right', 1))
+      else if (pos.col === GRID_COLS - 1) esc.push(moveCard('left', 1))
+      const m = esc.find(usable)
+      if (m) {
+        take(m)
+        continue
+      }
+    }
+
+    // 3) recharge when starved and the energy card is up
     if (energy < Math.max(cfg.energyFloor, cheapest) && usable(ENERGY)) {
       take(ENERGY)
       continue
     }
 
-    // 3) close in / line up with the opponent
+    // 4) close in / line up with the opponent
     const wish = approachCards().find(usable)
     if (wish) {
       take(wish)
       continue
     }
 
-    // 4) occasional guard
+    // 5) occasional guard
     if (Math.random() < cfg.guardChance && energy >= (GUARD.guardCost ?? 0) && usable(GUARD)) {
       take(GUARD)
       continue
     }
 
-    // 5) fallbacks: any affordable attack (cheapest), else any free move, else idle
+    // 6) fallbacks: any affordable attack (cheapest), else any free move, else idle
     const cheap = attacks
-      .filter((a) => energy >= (a.energyCost ?? 0))
+      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0))
       .sort((x, y) => (x.energyCost ?? 0) - (y.energyCost ?? 0))[0]
     if (cheap) {
       take(cheap)

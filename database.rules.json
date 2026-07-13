@@ -1,0 +1,25 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "gridbrawl": {
+      "$code": {
+        ".read": "$code.matches(/^[A-HJ-NP-Z2-9]{4,8}$/)",
+        ".write": "$code.matches(/^[A-HJ-NP-Z2-9]{4,8}$/)",
+
+        "offer": {
+          "type": { ".validate": "newData.isString() && newData.val() === 'offer'" },
+          "sdp": { ".validate": "newData.isString() && newData.val().length < 20000" },
+          "$other": { ".validate": false }
+        },
+        "answer": {
+          "type": { ".validate": "newData.isString() && newData.val() === 'answer'" },
+          "sdp": { ".validate": "newData.isString() && newData.val().length < 20000" },
+          "$other": { ".validate": false }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

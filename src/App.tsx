@@ -60,14 +60,13 @@ export default function App() {
     setPhase('bracket')
   }, [])
 
-  const onFightEnd = useCallback((playerWon: boolean) => {
-    setGauntlet((g) => {
-      if (g && playerWon) setOutcome(isFinalMatch(g) ? 'champion' : 'win')
-      else setOutcome('loss')
-      return g
-    })
-    setPhase('result')
-  }, [])
+  const onFightEnd = useCallback(
+    (playerWon: boolean) => {
+      setOutcome(playerWon && gauntlet ? (isFinalMatch(gauntlet) ? 'champion' : 'win') : 'loss')
+      setPhase('result')
+    },
+    [gauntlet],
+  )
 
   const resultNext = useCallback(() => {
     setGauntlet((g) => (g ? { ...g, index: g.index + 1, wins: g.wins + 1 } : g))

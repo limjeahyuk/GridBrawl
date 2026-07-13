@@ -10,9 +10,23 @@
 // ---------------------------------------------------------------------------
 import type { NetMessage, NetTransport } from './protocol'
 
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+// STUN은 무료 공용 서버로 충분하지만, 대칭 NAT(셀룰러망·회사망)에서는 TURN
+// 릴레이가 있어야 연결된다. TURN은 .env로 주입 — VITE_TURN_URL 이 비어 있으면
+// STUN 단독으로 동작한다(같은 공유기·일반 가정망 위주). 절차는 .env.example.
+function buildIceServers(): RTCIceServer[] {
+  const servers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
+  const turnUrl = import.meta.env.VITE_TURN_URL as string | undefined
+  if (turnUrl) {
+    servers.push({
+      urls: turnUrl.split(',').map((u) => u.trim()),
+      username: (import.meta.env.VITE_TURN_USERNAME as string | undefined) ?? '',
+      credential: (import.meta.env.VITE_TURN_CREDENTIAL as string | undefined) ?? '',
+    })
+  }
+  return servers
 }
+
+const RTC_CONFIG: RTCConfiguration = { iceServers: buildIceServers() }
 
 /** Resolve once ICE gathering finishes, so the emitted SDP is self-contained
  *  (non-trickle: all candidates are embedded in the description). */

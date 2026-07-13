@@ -1,31 +1,31 @@
 :root {
-  /* Surfaces */
-  --bg-0: #05060d;
-  --bg-1: #0a0e1a;
-  --bg-2: #111726;
-  --panel: rgba(16, 22, 38, 0.82);
-  --panel-edge: rgba(82, 120, 200, 0.28);
-  --grid-line: rgba(64, 96, 180, 0.16);
+  /* Surfaces — 캐주얼 초원 테마 */
+  --bg-0: #7ec8ec;
+  --bg-1: #eef8e6;
+  --bg-2: #ffffff;
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-edge: rgba(110, 150, 100, 0.4);
+  --grid-line: rgba(110, 150, 100, 0.14);
 
-  /* Neon palette (per-character accents live in data) */
-  --neon-cyan: #2ff3ff;
-  --neon-magenta: #ff3df0;
-  --neon-yellow: #ffe14d;
-  --neon-green: #57ffa0;
-  --neon-red: #ff4d5e;
-  --neon-blue: #4d7cff;
-  --neon-orange: #ff9a3d;
+  /* 캐주얼 팔레트 (캐릭터별 강조색은 data에) — 변수명은 기존 것을 유지 */
+  --neon-cyan: #1d9bb5;
+  --neon-magenta: #d4569e;
+  --neon-yellow: #e8a23d;
+  --neon-green: #3aa568;
+  --neon-red: #e25563;
+  --neon-blue: #4f7dd9;
+  --neon-orange: #e6813c;
 
   /* Text */
-  --text: #e8f0ff;
-  --text-dim: #8493bd;
-  --text-faint: #4a5680;
+  --text: #3d4a40;
+  --text-dim: #6d7f6f;
+  --text-faint: #97a698;
 
-  --accent: var(--neon-cyan);
+  --accent: var(--neon-green);
   --danger: var(--neon-red);
 
-  --font-display: 'Orbitron', system-ui, sans-serif;
-  --font-body: 'Rajdhani', system-ui, sans-serif;
+  --font-display: 'Jua', 'Gowun Dodum', system-ui, sans-serif;
+  --font-body: 'Gowun Dodum', system-ui, sans-serif;
 }
 
 * {
@@ -40,7 +40,7 @@ body,
 }
 
 body {
-  background: var(--bg-0);
+  background: linear-gradient(180deg, #7ec8ec, #c8ecf9);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 16px;
@@ -86,9 +86,10 @@ h3 {
   transform-origin: center center;
   background: var(--bg-1);
   overflow: hidden;
+  border-radius: 18px;
   box-shadow:
-    0 0 0 1px var(--panel-edge),
-    0 30px 90px rgba(0, 0, 0, 0.6);
+    0 0 0 4px rgba(255, 255, 255, 0.55),
+    0 24px 60px rgba(50, 100, 70, 0.35);
 }
 
 .screen {
@@ -97,17 +98,15 @@ h3 {
   overflow: hidden;
 }
 
-/* Animated grid backdrop shared across screens */
+/* 공용 초원 배경 — 하늘·해·구름·언덕·꽃 */
 .grid-bg {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(120% 90% at 50% 40%, #000 30%, transparent 100%);
+  z-index: -1; /* 불투명 배경이라 일반 흐름 콘텐츠 아래로 내린다 */
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='sky' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%237ec8ec'/><stop offset='0.6' stop-color='%23d8f1fb'/><stop offset='1' stop-color='%23e8f7e0'/></linearGradient></defs><rect width='1280' height='720' fill='url(%23sky)'/><circle cx='1080' cy='118' r='56' fill='%23ffdf8a'/><circle cx='1080' cy='118' r='82' fill='%23ffdf8a' opacity='0.35'/><g fill='%23ffffff' opacity='0.92'><ellipse cx='230' cy='142' rx='90' ry='32'/><ellipse cx='305' cy='122' rx='66' ry='26'/><ellipse cx='700' cy='92' rx='78' ry='25'/><ellipse cx='640' cy='112' rx='58' ry='22'/><ellipse cx='985' cy='235' rx='66' ry='20' opacity='0.75'/></g><path d='M0 470 Q 250 380 520 440 T 1280 420 L 1280 720 L 0 720 Z' fill='%23a5dd8b'/><path d='M0 560 Q 320 470 680 540 T 1280 520 L 1280 720 L 0 720 Z' fill='%2385cc68'/><path d='M0 660 Q 400 610 760 650 T 1280 640 L 1280 720 L 0 720 Z' fill='%2372bd55'/><g fill='%23ffffff'><circle cx='180' cy='608' r='7'/><circle cx='560' cy='592' r='6'/><circle cx='980' cy='624' r='7'/><circle cx='1180' cy='585' r='5'/></g><g fill='%23ffd166'><circle cx='180' cy='608' r='3'/><circle cx='560' cy='592' r='2.6'/><circle cx='980' cy='624' r='3'/><circle cx='1180' cy='585' r='2.2'/></g></svg>");
+  background-size: cover;
+  background-position: center;
   pointer-events: none;
-  opacity: 0.6;
 }
 
 /* Scanline/CRT overlay removed for a flat matte look. */
@@ -115,33 +114,36 @@ h3 {
   display: none;
 }
 
-/* Generic neon button ---------------------------------------------------- */
+/* Generic casual button ---------------------------------------------------- */
 .btn {
   appearance: none;
-  border: 1px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, #ffffff);
   color: var(--text);
   padding: 14px 28px;
   font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-radius: 4px;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 35%, #d8e6d2);
   transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .btn:hover {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  background: color-mix(in srgb, var(--accent) 26%, #ffffff);
 }
 
 .btn:active {
-  transform: translateY(1px) scale(0.99);
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 35%, #d8e6d2);
 }
 
 .btn--ghost {
   border-color: var(--panel-edge);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.6);
   color: var(--text-dim);
+  box-shadow: 0 4px 0 rgba(140, 170, 140, 0.25);
 }
 
 .btn--ghost:hover {
