@@ -12,3 +12,39 @@ dist-ssr
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# TypeScript / tooling build caches
+*.tsbuildinfo
+
+# Firebase deploy caches
+.firebase/
+
+# Native binaries / app packages (never commit build outputs)
+*.so
+*.apk
+*.aab
+*.keystore
+
+# Capacitor — Android build outputs
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+
+# Capacitor — iOS build outputs
+ios/App/build/
+ios/App/Pods/
+ios/App/output/
+ios/App/App/public/
+ios/DerivedData/
+**/xcuserdata/
+*.xcuserstate
+
+# Flutter (unused — this project ships via Capacitor)
+**/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
