@@ -893,11 +893,12 @@
   /* keep the badge tight to the name on the right-aligned side */
   margin-left: 0;
 }
+/* HP/기력 바 — 가독성 우선: 단색 채움 + 크고 뚜렷한 숫자(현재/최대) */
 .bhud__hp {
   position: relative;
-  height: 22px;
-  background: #15080c;
-  border: 2px solid #2a3450;
+  height: 28px;
+  background: #0c1018;
+  border: 2px solid #46536e;
   transform: skewX(-15deg);
   overflow: hidden;
 }
@@ -905,38 +906,45 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  background: linear-gradient(90deg, #ff5a3c, #ffe14d 55%, #57ffa0);
-  transition: width 0.4s ease;
+  background: #3fca87;
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.bhud__hpfill--low {
+  background: #ff4d5e;
 }
 .bhud__hpfill--left {
   right: 0;
 }
 .bhud__hpfill--right {
   left: 0;
-  background: linear-gradient(270deg, #ff5a3c, #ffe14d 55%, #57ffa0);
 }
 .bhud__hpnum {
   position: absolute;
-  top: 1px;
+  top: 3px;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 0.04em;
   color: #fff;
-  text-shadow: 0 1px 2px #000;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9);
   transform: skewX(15deg);
 }
 .bhud__side--left .bhud__hpnum {
-  left: 8px;
+  left: 10px;
 }
 .bhud__side--right .bhud__hpnum {
-  right: 8px;
+  right: 10px;
 }
 .bhud__energy {
   position: relative;
-  height: 11px;
-  margin-top: 5px;
-  background: #0a1020;
-  border: 1px solid #243150;
+  height: 18px;
+  margin-top: 6px;
+  background: #0c1018;
+  border: 2px solid #46536e;
   transform: skewX(-15deg);
   overflow: hidden;
 }
@@ -944,8 +952,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+  background: #f2c53d;
   transition: width 0.4s ease;
 }
 .bhud__energyfill--left {
@@ -956,17 +963,23 @@
 }
 .bhud__energynum {
   position: absolute;
-  top: -2px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--neon-yellow);
+  top: 1px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9);
   transform: skewX(15deg);
 }
 .bhud__side--left .bhud__energynum {
-  right: 6px;
+  left: 10px;
 }
 .bhud__side--right .bhud__energynum {
-  left: 6px;
+  right: 10px;
 }
 .bhud__turn {
   display: flex;
@@ -1081,6 +1094,14 @@
 .fighter--right {
   --flip: -1;
 }
+/* 같은 셀에 겹쳐 선 두 파이터: 좌우로 살짝 비켜 둘 다 보이게 */
+.fighter--stacked-left {
+  margin-left: -26px;
+  z-index: 3;
+}
+.fighter--stacked-right {
+  margin-left: 26px;
+}
 /* glowing ground ring under the fighter this client controls */
 .fighter--me::after {
   content: '';
@@ -1185,45 +1206,62 @@
     transform: translate(-43%, -72%);
   }
 }
+/* 캐릭터 주변 플로팅 숫자 — 피해 -N(빨강)·회복 +N(초록), 위로 떠오르며 사라짐 */
 .fighter__dmg {
   position: absolute;
   left: 50%;
-  top: -10px;
+  top: -14px;
   transform: translateX(-50%);
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: 30px;
-  color: var(--neon-red);
-  text-shadow: 0 0 12px rgba(255, 77, 94, 0.7);
-  animation: dmgfloat 0.95s ease-out forwards;
-  z-index: 3;
+  font-size: 40px;
+  color: #ff4d5e;
+  text-shadow:
+    -2px -2px 0 rgba(0, 0, 0, 0.85),
+    2px -2px 0 rgba(0, 0, 0, 0.85),
+    -2px 2px 0 rgba(0, 0, 0, 0.85),
+    2px 2px 0 rgba(0, 0, 0, 0.85),
+    0 0 16px rgba(255, 77, 94, 0.6);
+  animation: dmgfloat 1.3s ease-out forwards;
+  z-index: 5;
+  pointer-events: none;
 }
 @keyframes dmgfloat {
   from {
     opacity: 0;
-    transform: translate(-50%, 10px) scale(0.7);
+    transform: translate(-50%, 14px) scale(0.6);
   }
-  30% {
+  20% {
     opacity: 1;
-    transform: translate(-50%, -18px) scale(1.1);
+    transform: translate(-50%, -20px) scale(1.25);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -56px) scale(1);
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -54px) scale(1);
+    transform: translate(-50%, -84px) scale(0.95);
   }
 }
 .fighter__heal {
   position: absolute;
   left: 50%;
-  top: -10px;
+  top: -14px;
   transform: translateX(-50%);
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: 26px;
-  color: var(--neon-green);
-  text-shadow: 0 0 12px rgba(87, 255, 160, 0.7);
-  animation: dmgfloat 0.95s ease-out forwards;
-  z-index: 3;
+  font-size: 34px;
+  color: #3fca87;
+  text-shadow:
+    -2px -2px 0 rgba(0, 0, 0, 0.85),
+    2px -2px 0 rgba(0, 0, 0, 0.85),
+    -2px 2px 0 rgba(0, 0, 0, 0.85),
+    2px 2px 0 rgba(0, 0, 0, 0.85),
+    0 0 16px rgba(87, 255, 160, 0.55);
+  animation: dmgfloat 1.3s ease-out forwards;
+  z-index: 5;
+  pointer-events: none;
 }
 .fighter__say {
   position: absolute;
@@ -1309,13 +1347,13 @@
 
 /* ---- cards (bottom) ------------------------------------------------------ */
 .cards {
-  height: 256px;
+  height: 330px;
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 14px 24px 18px;
+  gap: 10px;
+  padding: 12px 24px 14px;
   background: linear-gradient(0deg, rgba(6, 9, 16, 0.97), rgba(6, 9, 16, 0.55));
   border-top: 1px solid var(--panel-edge);
   z-index: 5;
@@ -1387,45 +1425,86 @@
   cursor: not-allowed;
   filter: grayscale(0.5);
 }
+/* 종류별 탭 — 한 번에 한 종류만 크게 보여준다 */
+.cards__tabs {
+  display: flex;
+  gap: 10px;
+}
+.cards__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 34px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  background: rgba(10, 16, 28, 0.6);
+  border: 1px solid var(--panel-edge);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.cards__tab:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+.cards__tab.is-active {
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  background: color-mix(in srgb, var(--neon-cyan) 14%, #0b1120);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 30%, transparent);
+}
+/* 이 탭의 카드가 슬롯에 몇 장 들어갔는지 */
+.cards__tab-count {
+  font-size: 11px;
+  font-weight: 900;
+  color: #07090f;
+  background: var(--neon-cyan);
+  border-radius: 8px;
+  padding: 0 7px;
+  line-height: 16px;
+}
 .cards__hand {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
 }
-/* 한 줄에 15장(공용 11 + 고유 4)이 들어가야 한다 — 무대 세로 여유가 한 줄뿐. */
+/* 탭당 최대 6장이라 크게 보여줄 수 있다 (이동 6 · 공격 6 · 수비 3~4) */
 .handcard {
-  width: 84px;
-  height: 122px;
+  width: 118px;
+  height: 158px;
   padding: 0;
   border: none;
   background: none;
   transition: transform 0.1s ease;
 }
 .handcard--move {
-  width: 58px;
+  width: 92px;
 }
 .handcard--move .cardface__meta--move {
-  display: none; /* 좁은 이동 카드는 화살표+이름으로 충분 */
+  display: none; /* 이동 카드는 화살표+이름으로 충분 */
 }
 .handcard .cardface {
-  padding: 6px 7px;
+  padding: 9px 10px;
 }
 .handcard .cardface__icon {
-  font-size: 14px;
+  font-size: 18px;
 }
 .handcard .cardface__name {
-  font-size: 11px;
-  margin: 4px 0 auto;
+  font-size: 13px;
+  margin: 6px 0 auto;
 }
 .handcard .cardface__meta {
-  font-size: 10px;
-  gap: 2px 5px;
+  font-size: 12px;
+  gap: 3px 7px;
 }
 .handcard .rangechart {
-  width: 44px;
-  gap: 1.5px;
-  margin: 3px 0 4px;
+  width: 58px;
+  gap: 2px;
+  margin: 4px 0 5px;
 }
 .handcard:hover {
   transform: translateY(-4px) scale(1.08);

@@ -74,16 +74,23 @@ export function decideAI(
     else if (c.kind === 'move') applyMove(c)
   }
 
-  function applyMove(c: CardDef) {
+  // 이동 카드가 도착할 셀 — 엔진 applyMove와 동일 규칙(벽에서 멈춤, 겹침 허용)
+  function landingOf(c: CardDef): Cell {
     const steps = c.steps ?? 1
     const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
+    let cur: Cell = { col: pos.col, row: pos.row }
     for (let k = 0; k < steps; k++) {
-      const next: Cell = { col: pos.col + dc, row: pos.row + dr }
+      const next: Cell = { col: cur.col + dc, row: cur.row + dr }
       if (!inBounds(next)) break
-      if (next.col === opp.col && next.row === opp.row) break
-      pos.col = next.col
-      pos.row = next.row
+      cur = next
     }
+    return cur
+  }
+
+  function applyMove(c: CardDef) {
+    const cur = landingOf(c)
+    pos.col = cur.col
+    pos.row = cur.row
   }
 
   // ordered movement wishes to line up with / close on the opponent
@@ -93,6 +100,11 @@ export function decideAI(
     const wishes: CardDef[] = []
     const hdir: MoveDir = dcol >= 0 ? 'right' : 'left'
     const vdir: MoveDir = drow >= 0 ? 'down' : 'up'
+    // 상대와 겹쳐 있으면 공격이 전부 빗나감 — 한 칸 빠져 공격 위치를 회복
+    if (dcol === 0 && drow === 0) {
+      const back: MoveDir = facing > 0 ? 'left' : 'right'
+      wishes.push(moveCard(back, 1), moveCard('up', 1), moveCard('down', 1))
+    }
     if (Math.abs(dcol) >= 2) wishes.push(moveCard(hdir, 2))
     if (Math.abs(dcol) >= 3) {
       if (dcol !== 0) wishes.push(moveCard(hdir, 1))
@@ -101,7 +113,11 @@ export function decideAI(
       if (drow !== 0) wishes.push(moveCard(vdir, 1))
       if (dcol !== 0) wishes.push(moveCard(hdir, 1))
     }
-    return wishes
+    // 상대 셀에 정확히 올라서는 이동은 제외 — 겹치면 자기 공격이 전부 빗나간다
+    return wishes.filter((w) => {
+      const land = landingOf(w)
+      return !(land.col === opp.col && land.row === opp.row)
+    })
   }
 
   for (let slot = 0; slot < 3; slot++) {

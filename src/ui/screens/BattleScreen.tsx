@@ -41,6 +41,8 @@ interface View {
   heal: [number, number]
   fx: [Fx | null, Fx | null]
   say: [string, string]
+  /** step sequence — keys the floating -N/+N so the animation restarts every step */
+  seq: number
 }
 
 const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
@@ -55,15 +57,15 @@ function attackCells(from: Cell, card: CardDef, facing: number): Cell[] {
     .filter(inBounds)
 }
 
-/** Where a move card lands, mirroring the engine's wall/opponent stops. Used to
+/** Where a move card lands, mirroring the engine's rule: walls stop you, the
+ *  opponent's cell can be passed through or landed on (겹침 허용). Used to
  *  preview an attack's reach *after* earlier move cards in the plan resolve. */
-function applyMovePreview(from: Cell, other: Cell, card: CardDef): Cell {
+function applyMovePreview(from: Cell, card: CardDef): Cell {
   const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
   let cur = { ...from }
   for (let k = 0; k < (card.steps ?? 1); k++) {
     const next = { col: cur.col + dc, row: cur.row + dr }
     if (!inBounds(next)) break
-    if (next.col === other.col && next.row === other.row) break
     cur = next
   }
   return cur
@@ -88,6 +90,16 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
 const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900, fog: 700 }
 
+// 손패 탭 — 종류별로 나눠 카드를 크게 보여준다 (가드+원기 = 수비)
+type HandTab = 'move' | 'attack' | 'defense'
+const HAND_TABS: { id: HandTab; label: string }[] = [
+  { id: 'move', label: '이동' },
+  { id: 'attack', label: '공격' },
+  { id: 'defense', label: '수비' },
+]
+const tabOf = (c: CardDef): HandTab =>
+  c.kind === 'move' ? 'move' : c.kind === 'attack' ? 'attack' : 'defense'
+
 function baseView(b: CardBattle): View {
   const s = b.state
   return {
@@ -100,10 +112,11 @@ function baseView(b: CardBattle): View {
     heal: [0, 0],
     fx: [null, null],
     say: ['', ''],
+    seq: 0,
   }
 }
 
-function stepToView(step: Step): View {
+function stepToView(step: Step, seq: number): View {
   const s = step.snapshot
   const a = step.actor
   const d = 1 - a
@@ -130,6 +143,7 @@ function stepToView(step: Step): View {
     heal,
     fx,
     say,
+    seq,
   }
 }
 
@@ -191,6 +205,7 @@ export function BattleScreen({
   // bump to re-read cooldowns after a turn resolves
   const [, setTick] = useState(0)
   const [hoveredCard, setHoveredCard] = useState<CardDef | null>(null)
+  const [handTab, setHandTab] = useState<HandTab>('move')
   // where the hovered attack sits in the plan: a slot index, or null = "from hand"
   // (would land in the next empty slot). Drives the move-aware range preview.
   const [hoverSlot, setHoverSlot] = useState<number | null>(null)
@@ -211,6 +226,9 @@ export function BattleScreen({
     const next = slots.slice()
     next[i] = c
     setSlots(next)
+    // 쿨타임 카드는 배치 즉시 손패에서 잠기는데, 마우스가 그 위에 남아 있으면
+    // 잠긴 카드 기준의 미리보기(예: >> 두 번 = 4칸 이동 유령)가 떠 버린다.
+    if ((c.cooldown ?? 0) >= 1) setHoveredCard(null)
   }
   const clearSlot = (i: number) => {
     if (phase !== 'select') return
@@ -243,17 +261,16 @@ export function BattleScreen({
   const preview = useMemo(() => {
     const cur = view.pos[localSide]
     if (!hoveredCard) return { from: cur, ghost: null as Cell | null }
-    const opp = view.pos[1 - localSide]
     const nextEmpty = slots.indexOf(null)
     const upto = hoverSlot ?? (nextEmpty === -1 ? slots.length : nextEmpty)
     let from = { ...cur }
     for (let j = 0; j < upto; j++) {
       const c = slots[j]
-      if (c?.kind === 'move') from = applyMovePreview(from, opp, c)
+      if (c?.kind === 'move') from = applyMovePreview(from, c)
     }
     let ghost: Cell | null =
       hoveredCard.kind === 'move'
-        ? applyMovePreview(from, opp, hoveredCard)
+        ? applyMovePreview(from, hoveredCard)
         : hoveredCard.kind === 'attack'
           ? from
           : null
@@ -301,10 +318,10 @@ export function BattleScreen({
     const planB = localSide === 0 ? oppPlan : localPlan
     const steps = battle.resolveTurn(planA, planB)
 
-    for (const step of steps) {
+    for (const [si, step] of steps.entries()) {
       if (cancelled.current) return
       setPhaseTag(PHASE_TEXT[step.phase])
-      setView(stepToView(step))
+      setView(stepToView(step, si + 1))
       if (step.card.kind === 'attack' && step.result !== 'nofuel') {
         const actor = step.actor as 0 | 1
         const cells = attackCells(step.snapshot.pos[actor], step.card, battle.facing(actor))
@@ -455,8 +472,24 @@ export function BattleScreen({
             </div>
           </div>
 
+          <div className="cards__tabs">
+            {HAND_TABS.map((t) => {
+              const picked = slots.filter((s) => s && tabOf(s) === t.id).length
+              return (
+                <button
+                  key={t.id}
+                  className={`cards__tab ${handTab === t.id ? 'is-active' : ''}`}
+                  onClick={() => setHandTab(t.id)}
+                >
+                  {t.label}
+                  {picked > 0 && <span className="cards__tab-count">{picked}</span>}
+                </button>
+              )
+            })}
+          </div>
+
           <div className="cards__hand">
-            {deck.map((c) => {
+            {deck.filter((c) => tabOf(c) === handTab).map((c) => {
               const onCd = cdLeft(c.id) > 0
               const locked = onCd || placedSameCd(c)
               const dim = locked || (c.kind === 'attack' && (c.energyCost ?? 0) > energyBudget)
@@ -467,6 +500,7 @@ export function BattleScreen({
                   className={`handcard handcard--${c.kind} ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
                   onClick={() => addCard(c)}
                   onMouseEnter={() => {
+                    if (locked) return // 잠긴 카드는 이번 턴 못 쓰므로 예측도 없다
                     setHoveredCard(c)
                     setHoverSlot(null)
                   }}
@@ -523,9 +557,13 @@ function FighterSprite({
   flip: boolean
   isLocal?: boolean
 }) {
+  // 두 파이터가 같은 셀에 겹치면 화면상 좌우로 살짝 비켜 둘 다 보이게 한다
+  const stacked =
+    v.pos[0].col === v.pos[1].col && v.pos[0].row === v.pos[1].row
   const cls = [
     'fighter',
     `fighter--${side}`,
+    stacked ? `fighter--stacked-${side}` : '',
     isLocal ? 'fighter--me' : '',
     v.acting[idx] ? 'is-attacking' : '',
     v.damage[idx] > 0 ? 'is-hit' : '',
@@ -541,8 +579,16 @@ function FighterSprite({
         ['--accent' as string]: accent,
       }}
     >
-      {v.damage[idx] > 0 && <div className="fighter__dmg">-{v.damage[idx]}</div>}
-      {v.heal[idx] > 0 && <div className="fighter__heal">+{v.heal[idx]}</div>}
+      {v.damage[idx] > 0 && (
+        <div key={`dmg-${v.seq}`} className="fighter__dmg">
+          -{v.damage[idx]}
+        </div>
+      )}
+      {v.heal[idx] > 0 && (
+        <div key={`heal-${v.seq}`} className="fighter__heal">
+          +{v.heal[idx]}
+        </div>
+      )}
       {v.say[idx] && <div className="fighter__say">{v.say[idx]}</div>}
       {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}
@@ -606,6 +652,7 @@ function BhudSide({
 }) {
   const hpPct = Math.max(0, (hp / char.maxHp) * 100)
   const ePct = Math.max(0, (energy / char.maxEnergy) * 100)
+  const hpLow = hpPct <= 30
   return (
     <div className={`bhud__side bhud__side--${side}`} style={{ ['--accent' as string]: char.accent }}>
       <div className="bhud__name">
@@ -613,12 +660,19 @@ function BhudSide({
         {isLocal && <span className="bhud__you">나</span>}
       </div>
       <div className="bhud__hp">
-        <div className={`bhud__hpfill bhud__hpfill--${side}`} style={{ width: `${hpPct}%` }} />
-        <span className="bhud__hpnum">{Math.ceil(hp)}</span>
+        <div
+          className={`bhud__hpfill bhud__hpfill--${side} ${hpLow ? 'bhud__hpfill--low' : ''}`}
+          style={{ width: `${hpPct}%` }}
+        />
+        <span className="bhud__hpnum">
+          HP {Math.ceil(hp)} / {char.maxHp}
+        </span>
       </div>
       <div className="bhud__energy">
         <div className={`bhud__energyfill bhud__energyfill--${side}`} style={{ width: `${ePct}%` }} />
-        <span className="bhud__energynum">⚡ {Math.floor(energy)}</span>
+        <span className="bhud__energynum">
+          ⚡ {Math.floor(energy)} / {char.maxEnergy}
+        </span>
       </div>
     </div>
   )

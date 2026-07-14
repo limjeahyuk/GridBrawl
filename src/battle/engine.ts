@@ -82,14 +82,13 @@ export class CardBattle {
     const s = this.state
     const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
     const steps = card.steps ?? 1
-    const other = s.pos[1 - p]
+    let cur = cloneCell(s.pos[p])
     for (let k = 0; k < steps; k++) {
-      const next: Cell = { col: s.pos[p].col + dc, row: s.pos[p].row + dr }
-      // stop at walls or the opponent's cell
-      if (!inBounds(next)) break
-      if (sameCell(next, other)) break
-      s.pos[p] = next
+      const next: Cell = { col: cur.col + dc, row: cur.row + dr }
+      if (!inBounds(next)) break // 벽에서 멈춤
+      cur = next // 상대 셀 통과·정지 모두 가능(겹침 허용)
     }
+    s.pos[p] = cur
   }
 
   /**
@@ -179,24 +178,23 @@ export class CardBattle {
         s.energy[d] -= drain
         s.energy[p] = clamp(s.energy[p] + drain, 0, this.chars[p].maxEnergy)
       }
-      // 회복: 카드 흡혈(leech) + CIPHER 패시브(lifestealDiv), 피해가 들어갔을 때만.
+      // 회복: 카드 흡혈(leech) + CIPHER 패시브(lifesteal 고정치), 피해가 들어갔을 때만.
       let heal = 0
       if (dmg > 0) {
         heal += c.leech ?? 0
-        if (atkPas.lifestealDiv) heal += Math.floor(dmg / atkPas.lifestealDiv)
+        heal += atkPas.lifesteal ?? 0
       }
       const result = (dmg > 0 ? 'hit' : 'blocked') as Step['result']
       return { ...zero, result, dmg, heal, drain, recoil, push: c.push ?? 0 }
     }
 
-    // 넉백: 공격자가 바라보는 방향으로 상대를 밀어낸다(벽·공격자 셀에서 멈춤).
+    // 넉백: 공격자가 바라보는 방향으로 상대를 밀어낸다(벽에서만 멈춤, 겹침 허용).
     const applyPush = (attacker: number, n: number) => {
       const d = 1 - attacker
       const f = this.facing(attacker)
       for (let k = 0; k < n; k++) {
         const next: Cell = { col: s.pos[d].col + f, row: s.pos[d].row }
         if (next.col < 0 || next.col >= GRID_COLS) break
-        if (sameCell(next, s.pos[attacker])) break
         s.pos[d] = next
       }
     }
