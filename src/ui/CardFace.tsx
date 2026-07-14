@@ -3,9 +3,9 @@ import type { CardDef } from '../battle/types'
 /** Accent colour for a card by kind (attacks keep their signature accent). */
 export function cardAccent(c: CardDef, fallback: string): string {
   if (c.kind === 'attack') return c.accent ?? fallback
-  if (c.kind === 'guard') return '#6f95d9'
-  if (c.kind === 'energy') return '#e3a832'
-  return '#8a9a8e'
+  if (c.kind === 'guard') return '#9fc2ff'
+  if (c.kind === 'energy') return '#ffe14d'
+  return '#8493bd'
 }
 
 function moveIcon(dir: CardDef['dir'], steps: number): string {
