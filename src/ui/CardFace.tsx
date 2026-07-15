@@ -26,9 +26,10 @@ export function abilityTags(c: CardDef): string[] {
 }
 
 /** Compact range chart, like the reference 3x3: center = attacker. "Forward" is
- *  always to the right (the local fighter always faces right on screen). */
+ *  always to the right (the local fighter always faces right on screen).
+ *  앞뒤 대칭 공격이 기본이 되면서 창을 -3..3으로 넓혔다. */
 export function RangeChart({ card }: { card: CardDef }) {
-  const cols = [-1, 0, 1, 2, 3] // forward window
+  const cols = [-3, -2, -1, 0, 1, 2, 3] // back..forward window
   const rows = [1, 0, -1] // up..down
   const hit = (df: number, du: number) =>
     (card.range ?? []).some((o) => o.df === df && o.du === du)

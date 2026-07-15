@@ -80,15 +80,17 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   energy: '원기 +',
   move: '이동',
   fog: '피해!',
+  revive: '🔥',
 }
 const PHASE_TEXT: Record<Step['phase'], string> = {
   move: '이동',
   defense: '수비',
   attack: '공격',
   fog: '독안개',
+  revive: '부활',
 }
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
-const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900, fog: 700 }
+const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900, fog: 700, revive: 1100 }
 
 // 손패 탭 — 종류별로 나눠 카드를 크게 보여준다 (가드+원기 = 수비)
 type HandTab = 'move' | 'attack' | 'defense'
@@ -215,9 +217,11 @@ export function BattleScreen({
 
   // ---- plan building -----------------------------------------------------
   const cdLeft = (id: string) => battle.state.cooldowns[localSide][id] ?? 0
-  const placedSameCd = (c: CardDef) =>
-    (c.cooldown ?? 0) >= 1 && slots.some((s) => s?.id === c.id)
-  const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedSameCd(c)
+  // 한 턴에 같은 카드를 두 번 못 넣는 경우: 쿨타임 카드(다음 턴 잠기므로)와
+  // 모든 공격 카드(같은 공격 반복 금지 — 3공격은 서로 다른 카드로만 가능).
+  const placedNoRepeat = (c: CardDef) =>
+    ((c.cooldown ?? 0) >= 1 || c.kind === 'attack') && slots.some((s) => s?.id === c.id)
+  const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c)
 
   const addCard = (c: CardDef) => {
     if (phase !== 'select' || !selectable(c)) return
@@ -491,7 +495,7 @@ export function BattleScreen({
           <div className="cards__hand">
             {deck.filter((c) => tabOf(c) === handTab).map((c) => {
               const onCd = cdLeft(c.id) > 0
-              const locked = onCd || placedSameCd(c)
+              const locked = onCd || placedNoRepeat(c)
               const dim = locked || (c.kind === 'attack' && (c.energyCost ?? 0) > energyBudget)
               const inSlots = slotNosFor(c.id)
               return (

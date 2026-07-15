@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sim": "esbuild scripts/simulate.ts --bundle --platform=node --outfile=node_modules/.cache/sim.cjs --log-level=error && node node_modules/.cache/sim.cjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

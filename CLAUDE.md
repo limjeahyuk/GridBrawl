@@ -9,7 +9,7 @@
 ## 기술 스택 / 명령어
 
 - React 19 + TypeScript + Vite. 외부 게임 엔진 없음 — 전투는 순수 TS(`CardBattle`)로 시뮬레이션 후 React 렌더.
-- 개발 `npm run dev` · 빌드 `npm run build` · 타입검사 `npm run typecheck`
+- 개발 `npm run dev` · 빌드 `npm run build` · 타입검사 `npm run typecheck` · **밸런스 시뮬 `npm run sim [판수]`**(`scripts/simulate.ts`, AI vs AI 36매치업 — 수치 조정 후 평균 턴·승률 확인)
 - 코드 변경(특히 전투 로직) 후에는 `npm run typecheck`로 확인.
 
 ## 코드 지도
@@ -32,11 +32,11 @@
 - 화면 흐름(싱글): `title → select → bracket → fight → result` (`src/App.tsx` 상태 머신). 온라인: `title →(온라인 대전)→ mp-select → mp-lobby → mp-fight → mp-result`. 타이틀의 **도감** 버튼 → `codex`(`src/ui/screens/CodexScreen.tsx`): 영웅별 초상화·패시브·능력치 + 전용/공용 카드 열람(`뒤로`로 복귀). 카드 렌더는 배틀과 공용 컴포넌트 `src/ui/CardFace.tsx` 사용.
 - 전장은 **2D 격자 6열 × 3행**(`GRID_COLS/ROWS`). 위치는 셀 `{col,row}`, 시작은 가운뎃줄 양 끝. p0는 오른쪽, p1은 왼쪽을 바라봄(`facing`).
 - 카드 종류: `move / attack / guard / energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수). **공용(약함) + 캐릭터 고유(강함, 각 4장)** 이원화 — 2026-07-03.
-  - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 스트라이크(10dmg)·펄스 샷(2칸째만 10dmg)** + 가드(실드 50·쿨1)·**브레이스(실드 30·쿨0)** + 원기(기력 +50). 턴 시작 패시브 기력 +30.
+  - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 스트라이크(앞뒤1칸 10dmg)·펄스 샷(앞뒤 2칸째 10dmg)** + 가드(실드 50·쿨1)·**브레이스(실드 30·쿨0)** + 원기(기력 +35·쿨1). 턴 시작 패시브 기력 +20. (2026-07-15 "5턴 페이싱" 밸런스 패스 — GDD ④ 참고)
   - 공격: `range` 오프셋 `{df,du}`(df=앞, du=위)로 타격 셀 지정. 상대 셀이 들어오면 적중, 실드가 먼저 흡수.
   - **고유 카드 특수 능력**(`roster.ts`의 `CharacterDef.cards` — 공격 외 종류도 가능, 예: AEGIS 전용 가드): `drain`(기력 흡수)·`leech`(흡혈)·`pierce`(실드 관통)·`push`(넉백)·`selfShield`(사용 시 실드)·`recoil`(반동 자해). 발동 조건·적용 순서는 GDD ③/④, 카드 UI엔 능력 칩(`CardFace`의 `abilityTags`).
-- 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 보호막 파괴 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
-- 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드. (`CardBattle.resolveTurn`)
+- 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정/KO 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 1회 부활 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
+- 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. **같은 공격 카드는 한 턴에 한 번만**(쿨0이어도 — UI·AI가 강제, 2026-07-15). 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드 — **동시 KO는 턴 시작 HP 비율이 높던 쪽이 승리**(타이브레이크, 랜덤 없음). (`CardBattle.resolveTurn`)
 - **독안개(장기전 억제)** — 2026-07-13: 5턴에 HUD 경고 → **6턴부터 가장자리(테두리) 셀**에 독안개, **턴 종료 시** 그 위에 있으면 **턴당 10 고정 피해**(실드 무시, KO 가능). 상수·판정은 `types.ts`(`FOG_WARN_TURN/FOG_START_TURN/FOG_DAMAGE/isFogCell`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). AI는 경고 턴부터 안개 탈출 우선. 상세는 GDD ④ "독안개".
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18

@@ -1502,7 +1502,7 @@
   gap: 3px 7px;
 }
 .handcard .rangechart {
-  width: 58px;
+  width: 80px;
   gap: 2px;
   margin: 4px 0 5px;
 }
@@ -1597,10 +1597,10 @@
 /* range chart — center cell is the attacker, accent cells are the hit area */
 .rangechart {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 2px;
-  width: 56px;
+  width: 78px;
   margin: 4px 0 5px;
 }
 .rc {

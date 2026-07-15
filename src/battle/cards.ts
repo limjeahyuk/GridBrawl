@@ -3,8 +3,8 @@ import type { CharacterDef } from '../data/roster'
 
 export const GUARD_BLOCK = 50 // damage absorbed by one guard for the whole turn
 export const GUARD_COST = 10 // energy spent to raise the guard
-export const ENERGY_GAIN = 50 // energy restored by the recovery card
-export const ENERGY_REGEN = 30 // passive energy regained at the start of each turn
+export const ENERGY_GAIN = 35 // energy restored by the recovery card
+export const ENERGY_REGEN = 20 // passive energy regained at the start of each turn
 
 // Shared cards every fighter can play. Movement is free but cools down; the
 // common attack/guard cards are deliberately WEAK — every fighter has them as a
@@ -22,23 +22,29 @@ export const COMMON_CARDS: CardDef[] = [
     id: 'c-strike',
     name: '스트라이크',
     kind: 'attack',
-    range: [{ df: 1, du: 0 }],
+    range: [
+      { df: 1, du: 0 },
+      { df: -1, du: 0 },
+    ],
     damage: 10,
     energyCost: 10,
     cooldown: 0,
     fx: 'punch',
-    desc: '바로 앞 한 칸 기본 타격. 약하지만 누구나 언제든 쓸 수 있다.',
+    desc: '앞뒤 한 칸 기본 타격. 약하지만 누구나 언제든 쓸 수 있다.',
   },
   {
     id: 'c-shot',
     name: '펄스 샷',
     kind: 'attack',
-    range: [{ df: 2, du: 0 }],
+    range: [
+      { df: 2, du: 0 },
+      { df: -2, du: 0 },
+    ],
     damage: 10,
     energyCost: 10,
     cooldown: 0,
     fx: 'bolt',
-    desc: '앞 두 칸째 한 칸만 맞히는 견제 사격. 위력은 낮다.',
+    desc: '앞뒤 두 칸째 한 칸씩만 맞히는 견제 사격. 위력은 낮다.',
   },
   {
     id: 'c-guard',
@@ -63,7 +69,7 @@ export const COMMON_CARDS: CardDef[] = [
     name: '원기 회복',
     kind: 'energy',
     gain: ENERGY_GAIN,
-    cooldown: 0,
+    cooldown: 1,
     desc: `기력을 ${ENERGY_GAIN} 회복한다.`,
   },
 ]

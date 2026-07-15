@@ -113,8 +113,9 @@ export type ActionResult =
   | 'whiff' // out of range
   | 'nofuel' // could not pay the energy cost
   | 'fog' // took poison-fog damage at the edge of the grid (end of turn)
+  | 'revive' // came back from a KO via a revive passive (once per battle)
 
-export type Phase = 'move' | 'defense' | 'attack' | 'fog'
+export type Phase = 'move' | 'defense' | 'attack' | 'fog' | 'revive'
 
 /** One resolved card action, with the post-action snapshot (for animation). */
 export interface Step {

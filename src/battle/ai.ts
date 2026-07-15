@@ -24,13 +24,17 @@ interface AICfg {
   aggression: number // chance to attack when a hit is available
   guardChance: number
   energyFloor: number // recharge when below this
+  panicGuard: number // 체력이 위험할 때 공격 대신 가드를 드는 확률
 }
 
 const DIFF: Record<Difficulty, AICfg> = {
-  easy: { aggression: 0.55, guardChance: 0.1, energyFloor: 18 },
-  normal: { aggression: 0.8, guardChance: 0.2, energyFloor: 24 },
-  hard: { aggression: 0.94, guardChance: 0.3, energyFloor: 30 },
+  easy: { aggression: 0.55, guardChance: 0.1, energyFloor: 18, panicGuard: 0.15 },
+  normal: { aggression: 0.8, guardChance: 0.2, energyFloor: 24, panicGuard: 0.4 },
+  hard: { aggression: 0.94, guardChance: 0.3, energyFloor: 30, panicGuard: 0.65 },
 }
+
+/** 이 체력 이하면 "한 방에 죽을 수 있는 위기"로 보고 가드를 고려한다. */
+const PANIC_HP = 45
 
 /** Does `card` from `self` (at `pos`, given `facing`) cover the opponent cell? */
 function hits(pos: Cell, facing: number, card: CardDef, opp: Cell): boolean {
@@ -67,7 +71,8 @@ export function decideAI(
 
   const take = (c: CardDef) => {
     plan.push(c)
-    if ((c.cooldown ?? 0) >= 1) locked.add(c.id)
+    // 쿨타임 카드 + 모든 공격 카드는 한 턴에 한 번만 (같은 공격 반복 금지 룰)
+    if ((c.cooldown ?? 0) >= 1 || c.kind === 'attack') locked.add(c.id)
     if (c.kind === 'attack') energy -= c.energyCost ?? 0
     else if (c.kind === 'guard') energy -= c.guardCost ?? 0
     else if (c.kind === 'energy') energy = Math.min(char.maxEnergy, energy + (c.gain ?? 0))
@@ -121,16 +126,20 @@ export function decideAI(
   }
 
   for (let slot = 0; slot < 3; slot++) {
-    // 1) attack if one connects right now and we roll aggressive
-    const ready = attacks
-      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0) && hits(pos, facing, a, opp))
-      .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
-    if (ready.length > 0 && Math.random() < cfg.aggression) {
-      take(ready[0])
+    // 0) 위기 회피 — 체력이 위험하면 첫 슬롯에 가드를 우선 (가드는 턴 전체 지속)
+    if (
+      slot === 0 &&
+      state.hp[self] <= PANIC_HP &&
+      Math.random() < cfg.panicGuard &&
+      usable(GUARD) &&
+      energy >= (GUARD.guardCost ?? 0)
+    ) {
+      take(GUARD)
       continue
     }
 
-    // 2) 독안개 이탈 — 경고 턴부터, 가장자리에 있으면 중앙 쪽으로 이동
+    // 1) 독안개 이탈 — 경고 턴부터, 가장자리에 있으면 공격보다 탈출이 먼저
+    //    (안개에 서서 트레이드하다 둘 다 죽는 사고 방지)
     if (state.turn >= FOG_WARN_TURN && isFogCell(pos)) {
       const esc: CardDef[] = []
       if (pos.row === 0) esc.push(moveCard('down', 1))
@@ -142,6 +151,15 @@ export function decideAI(
         take(m)
         continue
       }
+    }
+
+    // 2) attack if one connects right now and we roll aggressive
+    const ready = attacks
+      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0) && hits(pos, facing, a, opp))
+      .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
+    if (ready.length > 0 && Math.random() < cfg.aggression) {
+      take(ready[0])
+      continue
     }
 
     // 3) recharge when starved and the energy card is up
@@ -177,7 +195,7 @@ export function decideAI(
       continue
     }
     if (usable(ENERGY)) take(ENERGY)
-    else take(attacks[0]) // last resort (will fizzle on no fuel)
+    else take(attacks.find(usable) ?? attacks[0]) // last resort (will fizzle on no fuel)
   }
 
   return plan

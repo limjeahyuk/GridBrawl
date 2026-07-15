@@ -16,8 +16,9 @@ import {
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
 
-// 독안개 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
+// 독안개·부활 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
 const FOG_CARD: CardDef = { id: 'fog', name: '독안개', kind: 'guard', desc: '가장자리를 덮는 독안개.' }
+const REVIVE_CARD: CardDef = { id: 'revive', name: '잿불 부활', kind: 'guard', desc: '쓰러진 자리에서 불씨로 되살아난다.' }
 const cloneCell = (c: Cell): Cell => ({ col: c.col, row: c.row })
 const sameCell = (a: Cell, b: Cell) => a.col === b.col && a.row === b.row
 
@@ -28,6 +29,8 @@ export interface BattleState {
   shield: [number, number]
   /** Per-fighter card cooldowns remaining, keyed by card id. */
   cooldowns: [Record<string, number>, Record<string, number>]
+  /** 부활 패시브를 이미 소모했는가 (전투당 1회). */
+  revived: [boolean, boolean]
   turn: number
   over: boolean
   winner: number | null
@@ -46,6 +49,7 @@ export class CardBattle {
       energy: [this.chars[0].startEnergy, this.chars[1].startEnergy],
       shield: [0, 0],
       cooldowns: [{}, {}],
+      revived: [false, false],
       turn: 1,
       over: false,
       winner: null,
@@ -102,6 +106,19 @@ export class CardBattle {
     const s = this.state
     const plans: [CardDef[], CardDef[]] = [planA, planB]
     const steps: Step[] = []
+
+    // 동시 KO 타이브레이크용: 이 턴이 시작될 때의 체력 비율을 기억해 둔다.
+    const startHpRatio: [number, number] = [
+      s.hp[0] / this.chars[0].maxHp,
+      s.hp[1] / this.chars[1].maxHp,
+    ]
+    // 동시 KO 시 승자: 턴 시작 시점에 체력 비율이 높았던 쪽(같으면 무승부).
+    // 랜덤 없음 — 멀티 락스텝 안전.
+    const koWinner = (): number | null => {
+      if (s.hp[0] <= 0 && s.hp[1] <= 0)
+        return startHpRatio[0] > startHpRatio[1] ? 0 : startHpRatio[1] > startHpRatio[0] ? 1 : null
+      return s.hp[0] <= 0 ? 1 : 0
+    }
 
     // start of turn: clear last turn's guard, apply passive energy regen, then
     // each fighter's character passive (bonus energy / standing shield).
@@ -207,6 +224,25 @@ export class CardBattle {
       if (r.push) applyPush(r.p, r.push)
     }
 
+    // 부활(EMBER 잿불 부활 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
+    const tryRevive = (p: number) => {
+      const amount = this.chars[p].passive.revive ?? 0
+      if (s.hp[p] > 0 || amount <= 0 || s.revived[p]) return
+      s.revived[p] = true
+      s.hp[p] = Math.min(this.chars[p].maxHp, amount)
+      steps.push({
+        phase: 'revive',
+        actor: p,
+        card: REVIVE_CARD,
+        result: 'revive',
+        damage: 0,
+        heal: amount,
+        drain: 0,
+        recoil: 0,
+        snapshot: this.snapshot(),
+      })
+    }
+
     const prio = (c: CardDef) => (c.kind === 'move' ? 0 : c.kind === 'attack' ? 2 : 1)
 
     for (let slot = 0; slot < 3; slot++) {
@@ -237,8 +273,12 @@ export class CardBattle {
       }
 
       if (s.hp[0] <= 0 || s.hp[1] <= 0) {
+        tryRevive(0)
+        tryRevive(1)
+      }
+      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
         s.over = true
-        s.winner = s.hp[0] <= 0 && s.hp[1] <= 0 ? null : s.hp[0] <= 0 ? 1 : 0
+        s.winner = koWinner()
         break
       }
     }
@@ -262,8 +302,12 @@ export class CardBattle {
         })
       }
       if (s.hp[0] <= 0 || s.hp[1] <= 0) {
+        tryRevive(0)
+        tryRevive(1)
+      }
+      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
         s.over = true
-        s.winner = s.hp[0] <= 0 && s.hp[1] <= 0 ? null : s.hp[0] <= 0 ? 1 : 0
+        s.winner = koWinner()
       }
     }
 
