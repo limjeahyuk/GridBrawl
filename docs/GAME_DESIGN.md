@@ -242,7 +242,8 @@
 ## ⑤-bis 온라인 멀티플레이 (P2P + 짧은 코드) — 2026-06-18 추가 / 갱신
 
 > 친구와 1:1 온라인 대전. **게임 데이터는 항상 P2P(WebRTC 데이터 채널)** 로 직접 흐른다. 연결 성사(시그널링)에만 약간의 중개가 필요하며, 두 가지 방식이 전송 추상화(`NetTransport`) 위에 올라간다:
-> - **(기본) 짧은 6자리 룸 코드** — Firebase Realtime Database를 *시그널링*으로만 사용(SDP 교환). 사용자가 "AD3EF1"처럼 짧은 코드를 원해 도입(2차 결정). 6자리 코드는 정보량상 *반드시* 중개소의 열쇠여야 하므로(연결정보=DTLS 지문+ICE+IP 등) 시그널링 서버 없이는 불가능.
+> - **(기본) 빠른 대전 — 랜덤 매칭(2026-07-15 추가)** — `src/net/matchmaking.ts`. RTDB 대기열 `gridbrawl-mm`에서: ①살아있는(심장박동 45초 이내) 대기표를 오래된 순으로 **ETag CAS**(`lock` 필드, REST `X-Firebase-ETag`/`if-match`)로 원자 선점 → 게스트로 answer 작성. ②없으면 내 대기표(offer + `createdAt`/`aliveAt` 서버시각)를 걸고 answer 폴링(호스트), 20초마다 심장박동. 대기 중에도 4초마다 재스캔해 **나보다 엄격히 먼저 온**(createdAt, 동률이면 id) 대기표가 보이면 그쪽 게스트로 전환 — 둘이 동시에 큐를 눌러 서로 기다리는 교착을 풀고, 엄격한 나이순이라 서로를 동시에 잡는 역교착은 불가능. 연결 시도 12초 타임아웃 후 다음 후보, 5분 지난 대기표는 스캔 중 청소. RTDB 규칙은 `gridbrawl-mm`에 offer/answer/createdAt/aliveAt/lock만 허용.
+> - **짧은 6자리 룸 코드** — Firebase Realtime Database를 *시그널링*으로만 사용(SDP 교환). 사용자가 "AD3EF1"처럼 짧은 코드를 원해 도입(2차 결정). 6자리 코드는 정보량상 *반드시* 중개소의 열쇠여야 하므로(연결정보=DTLS 지문+ICE+IP 등) 시그널링 서버 없이는 불가능.
 > - **(폴백) 복붙 초대 코드** — 백엔드 0, 전체 SDP를 base64 코드로 직접 주고받음. `net/webrtc.ts`의 `createHost`/`joinAsGuest`로 구현돼 있으나 현재 로비 UI는 짧은 코드만 노출(오프라인/무설정 폴백용으로 코드 보존).
 >
 > 핵심 설계 의도: **전송 계층을 게임에서 분리**(`src/net/protocol.ts`의 `NetTransport`) → 시그널링 방식을 바꿔도(서버/WebSocket/매치메이킹) 전투·UI 불변.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { PortraitSvg } from '../PortraitSvg'
 import { firebaseConfigured, hostRoom, joinRoom } from '../../net/firebase'
+import { startQuickMatch } from '../../net/matchmaking'
 import type { NetTransport } from '../../net/protocol'
 
 export interface MatchReady {
@@ -12,6 +13,8 @@ export interface MatchReady {
 }
 
 type Role = 'host' | 'guest'
+/** 로비 화면 모드: 코드 방 만들기/참가 + 빠른 대전(랜덤 매칭). */
+type Mode = Role | 'quick'
 type Cancelable = { cancel(): void }
 
 /** Exchange `hello` so each peer learns the other's avatar, then build the
@@ -43,7 +46,7 @@ export function MultiplayerLobby({
 }) {
   const me = getChar(myCharId)
   const configured = firebaseConfigured()
-  const [role, setRole] = useState<Role | null>(null)
+  const [role, setRole] = useState<Mode | null>(null)
   const [code, setCode] = useState('') // host: shown / guest: typed
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
@@ -66,6 +69,22 @@ export function MultiplayerLobby({
       done.current = true
       onReady(m)
     })
+  }
+
+  const startQuick = () => {
+    setRole('quick')
+    setError('')
+    setBusy(true)
+    setStatus('상대를 찾는 중… 첫 상대가 잡히면 자동으로 시작됩니다.')
+    try {
+      const ticket = startQuickMatch()
+      roomRef.current = ticket
+      void ticket.matched.then(({ transport, role: r }) => ready(transport, r))
+    } catch (e) {
+      setBusy(false)
+      setError(msg(e))
+      setRole(null)
+    }
   }
 
   const startHost = async () => {
@@ -150,8 +169,12 @@ export function MultiplayerLobby({
           </div>
         ) : role === null ? (
           <div className="mp__choose">
-            <p className="mp__lead">친구와 1:1 대전. 6자리 코드를 주고받아 연결합니다.</p>
+            <p className="mp__lead">1:1 온라인 대전 — 랜덤 매칭 또는 친구와 코드로 연결합니다.</p>
             <div className="mp__roles">
+              <button className="btn btn--online mp__rolebtn" onClick={startQuick}>
+                <span className="mp__roleicon">⚡</span>빠른 대전
+                <span className="mp__rolehint">대기 중인 아무 상대와 자동으로 매칭됩니다.</span>
+              </button>
               <button className="btn mp__rolebtn" onClick={startHost}>
                 <span className="mp__roleicon">🛰</span>방 만들기 (호스트)
                 <span className="mp__rolehint">코드를 만들어 친구에게 알려줍니다.</span>
@@ -161,6 +184,26 @@ export function MultiplayerLobby({
                 <span className="mp__rolehint">친구의 6자리 코드를 입력해 참가합니다.</span>
               </button>
             </div>
+          </div>
+        ) : role === 'quick' ? (
+          <div className="mp__flow">
+            <div className="mp__codelabel">빠른 대전</div>
+            <div className="mp__searching">
+              <span className="mp__searching-dot" />
+              상대를 찾는 중…
+            </div>
+            <button
+              className="btn btn--ghost"
+              onClick={() => {
+                roomRef.current?.cancel()
+                roomRef.current = null
+                setRole(null)
+                setBusy(false)
+                setStatus('')
+              }}
+            >
+              찾기 중단
+            </button>
           </div>
         ) : role === 'host' ? (
           <div className="mp__flow">

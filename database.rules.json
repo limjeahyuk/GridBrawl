@@ -20,6 +20,29 @@
         },
         "$other": { ".validate": false }
       }
+    },
+
+    "gridbrawl-mm": {
+      ".read": true,
+
+      "$id": {
+        ".write": "$id.matches(/^[A-HJ-NP-Z2-9]{4,8}$/)",
+
+        "offer": {
+          "type": { ".validate": "newData.isString() && newData.val() === 'offer'" },
+          "sdp": { ".validate": "newData.isString() && newData.val().length < 20000" },
+          "$other": { ".validate": false }
+        },
+        "answer": {
+          "type": { ".validate": "newData.isString() && newData.val() === 'answer'" },
+          "sdp": { ".validate": "newData.isString() && newData.val().length < 20000" },
+          "$other": { ".validate": false }
+        },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "aliveAt": { ".validate": "newData.isNumber()" },
+        "lock": { ".validate": "newData.isString() && newData.val().length < 40" },
+        "$other": { ".validate": false }
+      }
     }
   }
 }

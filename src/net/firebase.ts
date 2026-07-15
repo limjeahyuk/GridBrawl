@@ -21,26 +21,26 @@ const DB = import.meta.env.VITE_FIREBASE_DB_URL?.replace(/\/$/, '')
 export const firebaseConfigured = (): boolean => !!DB
 
 const ROOT = 'gridbrawl'
-const refUrl = (path: string) => `${DB}/${path}.json`
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+export const refUrl = (path: string) => `${DB}/${path}.json`
+export const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-async function dbGet<T>(path: string): Promise<T | null> {
+export async function dbGet<T>(path: string): Promise<T | null> {
   const res = await fetch(refUrl(path))
   if (!res.ok) throw new Error(`시그널링 서버 오류 (${res.status})`)
   return (await res.json()) as T | null
 }
-async function dbPut(path: string, data: unknown): Promise<void> {
+export async function dbPut(path: string, data: unknown): Promise<void> {
   const res = await fetch(refUrl(path), { method: 'PUT', body: JSON.stringify(data) })
   if (!res.ok) throw new Error(`시그널링 서버 오류 (${res.status})`)
 }
-function dbDelete(path: string): void {
+export function dbDelete(path: string): void {
   // best-effort cleanup; ignore failures
   void fetch(refUrl(path), { method: 'DELETE' }).catch(() => {})
 }
 
 // unambiguous alphabet (no 0/O/1/I) for codes that are easy to read aloud
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const randomCode = (n = 6): string => {
+export const randomCode = (n = 6): string => {
   const a = new Uint32Array(n)
   crypto.getRandomValues(a)
   return Array.from(a, (x) => ALPHABET[x % ALPHABET.length]).join('')

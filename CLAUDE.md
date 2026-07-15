@@ -41,7 +41,7 @@
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18
 
-- **게임 데이터는 항상 P2P(WebRTC).** 연결 성사(시그널링)에만 중개가 필요. **기본은 6자리 룸 코드** — Firebase RTDB를 *시그널링으로만* 사용(`src/net/firebase.ts`, REST+폴링, SDK 의존성 0). 복붙 초대 코드(`webrtc.ts`의 `createHost/joinAsGuest`)는 무설정 폴백으로 코드만 보존(현재 UI 미노출). STUN만 사용 → 대칭 NAT는 TURN 필요(미구현).
+- **게임 데이터는 항상 P2P(WebRTC).** 연결 성사(시그널링)에만 중개가 필요. **빠른 대전(랜덤 매칭)** — RTDB 대기열 `gridbrawl-mm`을 스캔해 가장 오래된 대기자를 ETag CAS(`lock`)로 원자 선점, 없으면 내 대기표(offer+심장박동)를 걸고 폴링(`src/net/matchmaking.ts`, 2026-07-15). 동시 큐 교착은 "나보다 먼저 온 대기표만 선점" 규칙으로 해소. **6자리 룸 코드** — Firebase RTDB를 *시그널링으로만* 사용(`src/net/firebase.ts`, REST+폴링, SDK 의존성 0). 복붙 초대 코드(`webrtc.ts`의 `createHost/joinAsGuest`)는 무설정 폴백으로 코드만 보존(현재 UI 미노출). STUN만 사용 → 대칭 NAT는 TURN 필요(미구현).
 - **설정 필수**: `.env`의 `VITE_FIREBASE_DB_URL`(미설정 시 로비가 "설정 필요" 안내, 온라인 비활성). 절차는 `.env.example`. ⚠️ 테스트용 `.env.local`을 만들면 실제 `.env`를 덮어쓰니 주의(쓰면 반드시 삭제).
 - **전송 분리**: 게임은 `NetTransport`(`src/net/protocol.ts`)에만 의존. 시그널링/전송을 바꿔도(서버·WebSocket·매치메이킹) 전투·UI 불변.
 - **결정론 락스텝**: `engine.resolveTurn`은 랜덤 없음 → 두 피어가 동일 엔진(**호스트=side0, 게스트=side1 고정**)을 돌리고 매 턴 카드 ID만 교환(`session.ts`). `BattleScreen`은 `localSide` + `getOpponentPlan` 콜백으로 싱글(AI)·멀티(네트워크) 공용. **렌더는 로컬 시점**: 엔진은 정규 좌표(호스트=side0)지만 `BattleScreen`이 side1을 잡으면 화면을 좌우 반전해 **내 캐릭터를 항상 왼쪽(오른쪽 바라봄)·상대를 오른쪽**에 표시(`flip`/`dcol`). 절대좌표 이동 카드는 반전 시 좌↔우 라벨을 바꿔(`faceCard`) 화살표가 실제 화면 이동과 일치. 카드 사정거리·예측 범위는 항상 "앞=오른쪽". 내 쪽엔 "나" 배지.

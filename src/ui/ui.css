@@ -1892,6 +1892,36 @@
   align-items: center;
   width: auto;
 }
+/* quick-match searching indicator */
+.mp__searching {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 28px;
+  border: 2px solid var(--neon-cyan);
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+.mp__searching-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  animation: mm-pulse 1.1s ease-in-out infinite;
+}
+@keyframes mm-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
 .mp__codelabel {
   font-weight: 700;
   letter-spacing: 0.06em;
