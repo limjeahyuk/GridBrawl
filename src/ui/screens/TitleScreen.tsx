@@ -37,8 +37,13 @@ export function TitleScreen({
             </span>
           )}
           <span className="userchip__name">{user.name}</span>
-          <button className="btn btn--ghost userchip__logout" onClick={onLogout}>
-            로그아웃
+          <button
+            className="userchip__logout"
+            onClick={onLogout}
+            title="로그아웃"
+            aria-label="로그아웃"
+          >
+            ⏻
           </button>
         </div>
       )}

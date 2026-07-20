@@ -14,8 +14,12 @@ import { BracketScreen } from './ui/screens/BracketScreen'
 import { BattleScreen } from './ui/screens/BattleScreen'
 import { MultiplayerLobby, type MatchReady } from './ui/screens/MultiplayerLobby'
 import { ResultScreen, type Outcome } from './ui/screens/ResultScreen'
+import { TutorialScreen } from './ui/screens/TutorialScreen'
+
+const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
 
 type Phase =
+  | 'tutorial'
   | 'title'
   | 'codex'
   | 'select'
@@ -28,7 +32,7 @@ type Phase =
   | 'mp-result'
 
 export default function App() {
-  const stageTransform = useStageScale()
+  const stageFit = useStageScale()
   const { user, loading: authLoading } = useAuth()
   const [phase, setPhase] = useState<Phase>('title')
   const [gauntlet, setGauntlet] = useState<Gauntlet | null>(null)
@@ -40,6 +44,16 @@ export default function App() {
 
   const toTitle = useCallback(() => {
     setGauntlet(null)
+    setPhase('title')
+  }, [])
+
+  // 첫 접속(이 기기에서 튜토리얼 미완료)이면 로그인 직후 튜토리얼로 진입
+  useEffect(() => {
+    if (user && !localStorage.getItem(TUTORIAL_DONE_KEY)) setPhase('tutorial')
+  }, [user])
+
+  const tutorialDone = useCallback(() => {
+    localStorage.setItem(TUTORIAL_DONE_KEY, '1')
     setPhase('title')
   }, [])
 
@@ -108,7 +122,9 @@ export default function App() {
   useEffect(() => () => mpExchange?.dispose(), [mpExchange])
 
   let screen: React.ReactNode = null
-  if (phase === 'title') {
+  if (phase === 'tutorial') {
+    screen = <TutorialScreen onDone={tutorialDone} />
+  } else if (phase === 'title') {
     screen = (
       <TitleScreen
         user={user}
@@ -199,7 +215,14 @@ export default function App() {
 
   return (
     <div className="viewport">
-      <div className="stage" style={{ transform: stageTransform }}>
+      <div
+        className="stage"
+        style={{
+          width: stageFit.width,
+          height: stageFit.height,
+          transform: stageFit.transform,
+        }}
+      >
         {gated}
       </div>
     </div>
