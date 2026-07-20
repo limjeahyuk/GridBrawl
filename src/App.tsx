@@ -28,7 +28,7 @@ type Phase =
   | 'mp-result'
 
 export default function App() {
-  const scale = useStageScale()
+  const stageTransform = useStageScale()
   const { user, loading: authLoading } = useAuth()
   const [phase, setPhase] = useState<Phase>('title')
   const [gauntlet, setGauntlet] = useState<Gauntlet | null>(null)
@@ -199,7 +199,7 @@ export default function App() {
 
   return (
     <div className="viewport">
-      <div className="stage" style={{ transform: `scale(${scale})` }}>
+      <div className="stage" style={{ transform: stageTransform }}>
         {gated}
       </div>
     </div>
