@@ -154,6 +154,7 @@ export function BattleScreen({
   p1CharId,
   localSide,
   getOpponentPlan,
+  turnSeconds,
   onEnd,
   onQuit,
 }: {
@@ -164,6 +165,9 @@ export function BattleScreen({
   /** Which side this client controls (0 in single-player). */
   localSide: 0 | 1
   getOpponentPlan: OpponentPlanner
+  /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
+   *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
+  turnSeconds?: number
   onEnd: (localWon: boolean) => void
   onQuit: () => void
 }) {
@@ -203,6 +207,9 @@ export function BattleScreen({
   const [waitingRemote, setWaitingRemote] = useState(false)
   const [phaseTag, setPhaseTag] = useState<string>('')
   const [banner, setBanner] = useState<string | null>(null)
+  /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
+  const [remain, setRemain] = useState<number | null>(null)
+  const submittingRef = useRef(false)
   const cancelled = useRef(false)
   // bump to re-read cooldowns after a turn resolves
   const [, setTick] = useState(0)
@@ -300,9 +307,10 @@ export function BattleScreen({
     slots.map((s, i) => (s?.id === id ? i + 1 : null)).filter((n): n is number => n !== null)
 
   // ---- resolve a turn ----------------------------------------------------
-  const confirm = async () => {
-    if (!filled || !affordable || phase !== 'select') return
-    const localPlan = slots as CardDef[]
+  const submitPlan = async (localPlan: CardDef[]) => {
+    // 수동 제출과 타이머 자동 제출이 겹쳐 두 번 보내지 않도록 ref로 잠근다
+    if (phase !== 'select' || submittingRef.current) return
+    submittingRef.current = true
     setPhase('resolving')
     setHoveredCard(null)
 
@@ -361,8 +369,55 @@ export function BattleScreen({
 
     setSlots([null, null, null])
     setTick((t) => t + 1) // refresh cooldown display
+    submittingRef.current = false
     setPhase('select')
   }
+
+  const confirm = () => {
+    if (!filled || !affordable) return
+    void submitPlan(slots as CardDef[])
+  }
+
+  // 시간 초과 자동 제출 — 항상 유효한 플랜을 만들어 낸다.
+  // ① 지금 플랜이 완성·지불 가능하면 그대로 ② 아니면 빈 슬롯을 원기 회복으로
+  // 메우고 ③ 그래도 기력이 모자라면 원기 회복 3장(언제나 유효).
+  const autoSubmitRef = useRef<() => void>(() => {})
+  autoSubmitRef.current = () => {
+    if (phase !== 'select' || submittingRef.current) return
+    if (filled && affordable) {
+      void submitPlan(slots as CardDef[])
+      return
+    }
+    const energyCard = deck.find((c) => c.kind === 'energy')
+    if (!energyCard) return
+    const padded = slots.map((s) => s ?? energyCard) as CardDef[]
+    const ok = planAffordable(
+      padded,
+      battle.state.energy[localSide],
+      local.maxEnergy,
+      passiveEnergy,
+    )
+    void submitPlan(ok ? padded : [energyCard, energyCard, energyCard])
+  }
+
+  // 턴 카운트다운(온라인 전용). 0이 되면 자동 제출해 상대 대기가 끝난다.
+  useEffect(() => {
+    if (!turnSeconds || phase !== 'select') {
+      setRemain(null)
+      return
+    }
+    const end = Date.now() + turnSeconds * 1000
+    setRemain(turnSeconds)
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000))
+      setRemain(left)
+      if (left <= 0) {
+        clearInterval(id)
+        autoSubmitRef.current()
+      }
+    }, 200)
+    return () => clearInterval(id)
+  }, [phase, turnSeconds])
 
   useEffect(() => {
     cancelled.current = false
@@ -375,7 +430,15 @@ export function BattleScreen({
     <div className="screen battle">
       <div className="grid-bg" />
 
-      <BattleHud c0={c0} c1={c1} localSide={localSide} view={view} turn={battle.state.turn} onQuit={onQuit} />
+      <BattleHud
+        c0={c0}
+        c1={c1}
+        localSide={localSide}
+        view={view}
+        turn={battle.state.turn}
+        remain={remain}
+        onQuit={onQuit}
+      />
 
       <div className="board">
         <div className="gridboard">
@@ -633,6 +696,7 @@ function BattleHud({
   localSide,
   view,
   turn,
+  remain,
   onQuit,
 }: {
   c0: ReturnType<typeof getChar>
@@ -640,6 +704,7 @@ function BattleHud({
   localSide: 0 | 1
   view: View
   turn: number
+  remain: number | null
   onQuit: () => void
 }) {
   // mirror the HUD to match the board: this client's fighter on the left
@@ -651,6 +716,11 @@ function BattleHud({
       <BhudSide char={chars[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
       <div className="bhud__turn">
         <div className="bhud__turnno">TURN {turn}</div>
+        {remain !== null && (
+          <div className={`bhud__timer ${remain <= 5 ? 'bhud__timer--urgent' : ''}`}>
+            ⏱ {remain}s
+          </div>
+        )}
         {fogEscalatesNext(turn) && (
           <div className="bhud__fog bhud__fog--warn">
             {turn < FOG_START_TURN ? '⚠ 다음 턴부터 독안개!' : '⚠ 다음 턴 독안개 확대!'}

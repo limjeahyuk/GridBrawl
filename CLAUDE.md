@@ -45,6 +45,7 @@
 - **설정 필수**: `.env`의 `VITE_FIREBASE_DB_URL`(미설정 시 로비가 "설정 필요" 안내, 온라인 비활성). 절차는 `.env.example`. ⚠️ 테스트용 `.env.local`을 만들면 실제 `.env`를 덮어쓰니 주의(쓰면 반드시 삭제).
 - **전송 분리**: 게임은 `NetTransport`(`src/net/protocol.ts`)에만 의존. 시그널링/전송을 바꿔도(서버·WebSocket·매치메이킹) 전투·UI 불변.
 - **결정론 락스텝**: `engine.resolveTurn`은 랜덤 없음 → 두 피어가 동일 엔진(**호스트=side0, 게스트=side1 고정**)을 돌리고 매 턴 카드 ID만 교환(`session.ts`). `BattleScreen`은 `localSide` + `getOpponentPlan` 콜백으로 싱글(AI)·멀티(네트워크) 공용. **렌더는 로컬 시점**: 엔진은 정규 좌표(호스트=side0)지만 `BattleScreen`이 side1을 잡으면 화면을 좌우 반전해 **내 캐릭터를 항상 왼쪽(오른쪽 바라봄)·상대를 오른쪽**에 표시(`flip`/`dcol`). 절대좌표 이동 카드는 반전 시 좌↔우 라벨을 바꿔(`faceCard`) 화살표가 실제 화면 이동과 일치. 카드 사정거리·예측 범위는 항상 "앞=오른쪽". 내 쪽엔 "나" 배지.
+- **턴 제한 30초(온라인만)** — `App.tsx`의 `MP_TURN_SECONDS`, `BattleScreen`의 `turnSeconds` prop. 0이 되면 자동 제출(현재 플랜이 유효하면 그대로, 아니면 빈 슬롯을 원기 회복으로 메움 → 최후엔 원기 회복 3장). 각 피어가 자기 플랜만 만들어 전송하므로 락스텝 안전. 싱글·튜토리얼은 prop 미지정 = 타이머 없음.
 - 자세한 흐름·설정·검증·미구현(재대결 등)은 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) §⑤-bis.
 
 ## 명세 ↔ 코드: 정합 완료 (방향 A)

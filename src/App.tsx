@@ -17,6 +17,8 @@ import { ResultScreen, type Outcome } from './ui/screens/ResultScreen'
 import { TutorialScreen } from './ui/screens/TutorialScreen'
 
 const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
+/** 온라인 대전 턴 제한(초). 0이 되면 자동 제출 — 상대를 무한정 기다리지 않게. */
+const MP_TURN_SECONDS = 30
 
 type Phase =
   | 'tutorial'
@@ -181,6 +183,7 @@ export default function App() {
         p1CharId={mpMatch.p1CharId}
         localSide={mpMatch.localSide}
         getOpponentPlan={mpExchange.getOpponentPlan}
+        turnSeconds={MP_TURN_SECONDS}
         onEnd={mpFightEnd}
         onQuit={leaveMp}
       />

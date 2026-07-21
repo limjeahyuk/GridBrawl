@@ -204,6 +204,33 @@
   color: var(--neon-red, #ff4d5e);
 }
 
+/* ---- 턴 제한 카운트다운(온라인) ------------------------------------------- */
+.bhud__timer {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--neon-cyan);
+  padding: 2px 10px;
+  border: 1px solid var(--neon-cyan);
+  border-radius: 999px;
+  background: rgba(8, 12, 20, 0.75);
+}
+.bhud__timer--urgent {
+  color: #ff4d5e;
+  border-color: #ff4d5e;
+  animation: timerpulse 0.7s ease-in-out infinite;
+}
+@keyframes timerpulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* ---- 튜토리얼 코치 배너 --------------------------------------------------- */
 .tut-tip {
   position: absolute;
