@@ -230,15 +230,19 @@ export function BattleScreen({
     const next = slots.slice()
     next[i] = c
     setSlots(next)
-    // 쿨타임 카드는 배치 즉시 손패에서 잠기는데, 마우스가 그 위에 남아 있으면
-    // 잠긴 카드 기준의 미리보기(예: >> 두 번 = 4칸 이동 유령)가 떠 버린다.
-    if ((c.cooldown ?? 0) >= 1) setHoveredCard(null)
+    // 배치 직후엔 미리보기(고스트·사거리)를 항상 지운다. 특히 터치 기기는
+    // mouseleave가 없어 프리뷰가 남으므로, 방금 놓은 카드 기준으로 유령이
+    // 붙어버리는 것을 막는다.
+    setHoveredCard(null)
+    setHoverSlot(null)
   }
   const clearSlot = (i: number) => {
     if (phase !== 'select') return
     const next = slots.slice()
     next[i] = null
     setSlots(next)
+    setHoveredCard(null)
+    setHoverSlot(null)
   }
   const reset = () => setSlots([null, null, null])
 
@@ -443,11 +447,21 @@ export function BattleScreen({
                 key={i}
                 className={`slot ${c ? 'slot--filled' : ''}`}
                 onClick={() => clearSlot(i)}
-                onMouseEnter={() => {
+                onPointerEnter={(e) => {
+                  if (e.pointerType !== 'mouse') return
                   setHoveredCard(c && (c.kind === 'attack' || c.kind === 'move') ? c : null)
                   setHoverSlot(i)
                 }}
-                onMouseLeave={() => setHoveredCard(null)}
+                onPointerDown={(e) => {
+                  if (e.pointerType === 'mouse') return
+                  setHoveredCard(c && (c.kind === 'attack' || c.kind === 'move') ? c : null)
+                  setHoverSlot(i)
+                }}
+                onPointerLeave={() => setHoveredCard(null)}
+                onPointerUp={(e) => {
+                  if (e.pointerType !== 'mouse') setHoveredCard(null)
+                }}
+                onPointerCancel={() => setHoveredCard(null)}
                 style={c ? { ['--accent' as string]: cardAccent(c, local.accent) } : undefined}
               >
                 <span className="slot__no">{i + 1}</span>
@@ -503,12 +517,23 @@ export function BattleScreen({
                   key={c.id}
                   className={`handcard handcard--${c.kind} ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
                   onClick={() => addCard(c)}
-                  onMouseEnter={() => {
-                    if (locked) return // 잠긴 카드는 이번 턴 못 쓰므로 예측도 없다
+                  onPointerEnter={(e) => {
+                    // 마우스: 올려두면 미리보기(hover). 잠긴 카드는 예측 없음.
+                    if (locked || e.pointerType !== 'mouse') return
                     setHoveredCard(c)
                     setHoverSlot(null)
                   }}
-                  onMouseLeave={() => setHoveredCard(null)}
+                  onPointerDown={(e) => {
+                    // 터치/펜: 누르는 동안만 미리보기(떼면 배치되며 지워짐).
+                    if (locked || e.pointerType === 'mouse') return
+                    setHoveredCard(c)
+                    setHoverSlot(null)
+                  }}
+                  onPointerLeave={() => setHoveredCard(null)}
+                  onPointerUp={(e) => {
+                    if (e.pointerType !== 'mouse') setHoveredCard(null)
+                  }}
+                  onPointerCancel={() => setHoveredCard(null)}
                   disabled={locked}
                   style={{ ['--accent' as string]: cardAccent(c, local.accent) }}
                 >
