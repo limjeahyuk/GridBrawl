@@ -283,11 +283,11 @@ export class CardBattle {
       }
     }
 
-    // 독안개: FOG_START_TURN부터 턴 종료 시 가장자리 셀에 서 있으면 피해.
+    // 독안개: FOG_START_TURN부터 턴 종료 시 독안개 위에 서 있으면 피해.
     // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
     if (!s.over && s.turn >= FOG_START_TURN) {
       for (let p = 0; p < 2; p++) {
-        if (!isFogCell(s.pos[p])) continue
+        if (!isFogCell(s.pos[p], s.turn)) continue
         s.hp[p] = Math.max(0, s.hp[p] - FOG_DAMAGE)
         steps.push({
           phase: 'fog',

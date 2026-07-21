@@ -7,7 +7,7 @@ import { CardFace, cardAccent } from '../CardFace'
 import {
   FOG_DAMAGE,
   FOG_START_TURN,
-  FOG_WARN_TURN,
+  fogEscalatesNext,
   GRID_COLS,
   GRID_ROWS,
   MOVE_DELTA,
@@ -385,8 +385,8 @@ export function BattleScreen({
             const ccol = dcol(i % GRID_COLS)
             const hovered = targetCells.some((c) => c.col === ccol && c.row === row)
             const live = resolveHit?.cells.some((c) => c.col === ccol && c.row === row)
-            // 독안개: 발동 턴부터 가장자리 셀을 보라색으로 물들인다
-            const fog = battle.state.turn >= FOG_START_TURN && isFogCell({ col: ccol, row })
+            // 독안개: 발동 턴부터 덮인 열을 보라색으로 물들인다(열 기준 점진 확대)
+            const fog = isFogCell({ col: ccol, row }, battle.state.turn)
             const cls =
               hovered || (live && resolveHit?.actor === localSide)
                 ? ' cell--target'
@@ -651,11 +651,13 @@ function BattleHud({
       <BhudSide char={chars[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
       <div className="bhud__turn">
         <div className="bhud__turnno">TURN {turn}</div>
-        {turn === FOG_WARN_TURN && (
-          <div className="bhud__fog bhud__fog--warn">⚠ 다음 턴부터 가장자리 독안개!</div>
+        {fogEscalatesNext(turn) && (
+          <div className="bhud__fog bhud__fog--warn">
+            {turn < FOG_START_TURN ? '⚠ 다음 턴부터 독안개!' : '⚠ 다음 턴 독안개 확대!'}
+          </div>
         )}
         {turn >= FOG_START_TURN && (
-          <div className="bhud__fog">☠ 독안개 — 가장자리 턴당 -{FOG_DAMAGE}</div>
+          <div className="bhud__fog">☠ 독안개 위 턴당 -{FOG_DAMAGE}</div>
         )}
         <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
           ESC · 종료

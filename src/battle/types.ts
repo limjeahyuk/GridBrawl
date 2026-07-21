@@ -82,15 +82,31 @@ export const MOVE_DELTA: Record<MoveDir, readonly [number, number]> = {
 export const inBounds = (c: Cell): boolean =>
   c.col >= 0 && c.col < GRID_COLS && c.row >= 0 && c.row < GRID_ROWS
 
-// 독안개 — 장기전(도망 반복) 억제 장치. FOG_WARN_TURN 동안 경고를 띄우고,
-// FOG_START_TURN부터 턴 종료 시 가장자리 셀에 서 있으면 FOG_DAMAGE 피해.
-export const FOG_WARN_TURN = 5
+// 독안개 — 무한전 억제 장치. FOG_START_TURN에 양 끝 열(col 0·5)부터 시작해,
+// FOG_STEP_TURNS 턴마다 한 열씩 안쪽으로 조여들어(0·5 → 0·1·4·5 → 전부) 결국
+// 판 전체를 덮는다. 턴 종료 시 독안개 위에 있으면 FOG_DAMAGE(실드 무시) 피해.
 export const FOG_START_TURN = 6
+export const FOG_STEP_TURNS = 3
 export const FOG_DAMAGE = 10
 
-/** 독안개가 덮는 격자 가장자리(테두리) 셀인가. */
-export const isFogCell = (c: Cell): boolean =>
-  c.col === 0 || c.col === GRID_COLS - 1 || c.row === 0 || c.row === GRID_ROWS - 1
+// 마지막 단계 = 모든 열이 덮이는 단계. 6열이면 stage 2에서 col 0~5 전부.
+const FOG_MAX_STAGE = Math.ceil(GRID_COLS / 2) - 1
+
+/** 해당 턴의 독안개 단계. 시작 전 -1, 시작 턴 0, 이후 FOG_STEP_TURNS마다 +1(최대 cap). */
+export const fogStageAt = (turn: number): number =>
+  turn < FOG_START_TURN
+    ? -1
+    : Math.min(FOG_MAX_STAGE, Math.floor((turn - FOG_START_TURN) / FOG_STEP_TURNS))
+
+/** 해당 턴에 이 셀이 독안개에 덮이는가 — 양 끝 열부터 안쪽으로 조여든다. */
+export const isFogCell = (c: Cell, turn: number): boolean => {
+  const stage = fogStageAt(turn)
+  return stage >= 0 && (c.col <= stage || c.col >= GRID_COLS - 1 - stage)
+}
+
+/** 다음 턴에 독안개가 시작되거나 한 단계 더 조여드는가(경고용). */
+export const fogEscalatesNext = (turn: number): boolean =>
+  fogStageAt(turn + 1) > fogStageAt(turn)
 /** Both fighters start on the middle row at opposite ends, facing each other. */
 export const START_CELLS: readonly [Cell, Cell] = [
   { col: 0, row: 1 },

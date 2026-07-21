@@ -2,9 +2,7 @@ import type { CharacterDef } from '../data/roster'
 import { COMMON_CARDS } from './cards'
 import type { BattleState } from './engine'
 import {
-  FOG_WARN_TURN,
   GRID_COLS,
-  GRID_ROWS,
   MOVE_DELTA,
   inBounds,
   isFogCell,
@@ -138,14 +136,11 @@ export function decideAI(
       continue
     }
 
-    // 1) 독안개 이탈 — 경고 턴부터, 가장자리에 있으면 공격보다 탈출이 먼저
-    //    (안개에 서서 트레이드하다 둘 다 죽는 사고 방지)
-    if (state.turn >= FOG_WARN_TURN && isFogCell(pos)) {
-      const esc: CardDef[] = []
-      if (pos.row === 0) esc.push(moveCard('down', 1))
-      else if (pos.row === GRID_ROWS - 1) esc.push(moveCard('up', 1))
-      if (pos.col === 0) esc.push(moveCard('right', 1))
-      else if (pos.col === GRID_COLS - 1) esc.push(moveCard('left', 1))
+    // 1) 독안개 이탈 — 지금 또는 다음 턴에 안개에 덮이면 공격보다 탈출이 먼저
+    //    (안개에 서서 트레이드하다 둘 다 죽는 사고 방지). 중앙 열 쪽으로 이동.
+    if (isFogCell(pos, state.turn) || isFogCell(pos, state.turn + 1)) {
+      const toCenter: MoveDir = pos.col <= (GRID_COLS - 1) / 2 ? 'right' : 'left'
+      const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)]
       const m = esc.find(usable)
       if (m) {
         take(m)

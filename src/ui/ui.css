@@ -1203,10 +1203,11 @@
 }
 /* translucent preview of where a hovered move/attack card will leave me */
 .fighter--ghost {
-  z-index: 1;
+  /* 상대 셀에 겹쳐 서는 미리보기도 보이도록 실제 파이터(z 2·3)보다 위에 */
+  z-index: 5;
   pointer-events: none;
   transition: none;
-  opacity: 0.45;
+  opacity: 0.6;
 }
 .fighter--ghost .fighter__art {
   filter: drop-shadow(0 0 9px var(--accent));
