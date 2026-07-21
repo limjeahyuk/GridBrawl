@@ -8,9 +8,8 @@ export interface StageFit {
 
 const BASE_W = 1280
 const BASE_H = 720
-const MAX_W = 1600 // 초광각 화면에서 UI가 너무 벌어지지 않게 상한
 
-// env(safe-area-inset-*)를 JS에서 읽기 위한 프로브 엘리먼트 (viewport-fit=cover 필요)
+// env(safe-area-inset-*)를 JS에서 읽기 위한 프로브 (viewport-fit=cover 필요)
 let probe: HTMLDivElement | null = null
 function readSafeInsets() {
   if (!probe) {
@@ -31,13 +30,12 @@ function readSafeInsets() {
 }
 
 /**
- * Fit the fixed-height design surface (720) to the viewport.
- * - 화면 비율이 16:9보다 넓으면(폰 19.5:9 등) 무대 폭을 늘려 좌우 여백 없이 채운다.
- * - 세로 화면(폰을 세로로 든 경우)에서는 무대를 90° 회전한다 —
- *   iOS 홈 화면 앱은 manifest의 가로 고정을 무시하기 때문.
- * - 노치/홈 인디케이터(safe area)를 피해 그 안쪽 영역에 맞추고 중앙 정렬한다.
- * - iOS 홈 화면 앱은 첫 페인트에 뷰포트 크기를 작게 보고하고 이후 resize도 안
- *   오는 경우가 있어, visualViewport 리스너 + 지연 재계산으로 따라잡는다.
+ * 고정 1280×720 디자인 무대를 화면에 맞춘다(uniform contain).
+ * - 무대는 항상 16:9 비율 유지 — HUD·보드·카드가 720px를 빈틈없이 쓰므로
+ *   더 담으려 스케일을 키우면 HP바/카드가 잘린다. 그래서 자르지 않는 contain.
+ * - 세로로 든 폰에서는 90° 회전(iOS 홈 화면 앱은 manifest 가로 고정을 무시).
+ * - 노치/홈 인디케이터(safe area)를 피한 영역에 맞추고 그 중심으로 정렬.
+ * - 긴 축에 남는 얇은 대칭 여백은 뷰포트 배경 그리드가 이어져 자연스럽게 보인다.
  */
 export function useStageScale(): StageFit {
   const [fit, setFit] = useState<StageFit>({ width: BASE_W, height: BASE_H, transform: 'scale(1)' })
@@ -49,16 +47,15 @@ export function useStageScale(): StageFit {
       const inset = readSafeInsets()
       const availW = Math.max(1, vw - inset.left - inset.right)
       const availH = Math.max(1, vh - inset.top - inset.bottom)
-      // safe 영역의 중심으로 무대를 이동 (뷰포트 중심 기준 오프셋)
       const dx = (inset.left - inset.right) / 2
       const dy = (inset.top - inset.bottom) / 2
       const portrait = vh > vw
+      // 회전 시 무대 가로(1280)는 화면 긴 축에, 세로(720)는 짧은 축에 매핑
       const longSide = portrait ? availH : availW
       const shortSide = portrait ? availW : availH
-      const width = Math.min(MAX_W, Math.max(BASE_W, Math.round((longSide / shortSide) * BASE_H)))
-      const scale = Math.min(longSide / width, shortSide / BASE_H)
+      const scale = Math.min(longSide / BASE_W, shortSide / BASE_H)
       setFit({
-        width,
+        width: BASE_W,
         height: BASE_H,
         transform: `translate(${dx}px, ${dy}px) ${portrait ? 'rotate(90deg) ' : ''}scale(${scale})`,
       })

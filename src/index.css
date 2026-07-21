@@ -77,6 +77,12 @@ h3 {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: var(--bg-1);
+  /* 무대 밖 레터박스를 죽은 검은 띠가 아니라 이어지는 그리드로 채운다 */
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 44px 44px;
 }
 
 .stage {
@@ -87,9 +93,6 @@ h3 {
   transform-origin: center center;
   background: var(--bg-1);
   overflow: hidden;
-  box-shadow:
-    0 0 0 1px var(--panel-edge),
-    0 30px 90px rgba(0, 0, 0, 0.6);
 }
 
 .screen {
