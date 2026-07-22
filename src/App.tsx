@@ -3,14 +3,18 @@ import './ui/ui.css'
 import { useStageScale } from './ui/useStageScale'
 import { useAuth } from './ui/useAuth'
 import { signOutUser } from './net/auth'
-import { buildGauntlet, isFinalMatch, type Gauntlet } from './game/tournament'
+import { ROSTER } from './data/roster'
 import { decideAI } from './battle/ai'
+import type { CardDef } from './battle/types'
+import { assembleDeck, presetDeck, saveDeck, type Deck } from './game/decks'
 import { createPlanExchange } from './net/session'
 import { LoginScreen } from './ui/screens/LoginScreen'
 import { TitleScreen } from './ui/screens/TitleScreen'
 import { CodexScreen } from './ui/screens/CodexScreen'
-import { CharacterSelect } from './ui/screens/CharacterSelect'
-import { BracketScreen } from './ui/screens/BracketScreen'
+import { DeckManagerScreen } from './ui/screens/DeckManagerScreen'
+import { DeckBuilderScreen } from './ui/screens/DeckBuilderScreen'
+import { DeckSelectScreen } from './ui/screens/DeckSelectScreen'
+import { ModeSelectScreen } from './ui/screens/ModeSelectScreen'
 import { BattleScreen } from './ui/screens/BattleScreen'
 import { MultiplayerLobby, type MatchReady } from './ui/screens/MultiplayerLobby'
 import { ResultScreen, type Outcome } from './ui/screens/ResultScreen'
@@ -24,30 +28,35 @@ type Phase =
   | 'tutorial'
   | 'title'
   | 'codex'
-  | 'select'
-  | 'bracket'
+  | 'deck-manage'
+  | 'deck-build'
+  | 'deck-select'
+  | 'mode-select'
   | 'fight'
   | 'result'
-  | 'mp-select'
   | 'mp-lobby'
   | 'mp-fight'
   | 'mp-result'
+
+interface BotMatch {
+  oppCharId: string
+  oppDeckCards: CardDef[]
+}
 
 export default function App() {
   const stageFit = useStageScale()
   const { user, loading: authLoading } = useAuth()
   const [phase, setPhase] = useState<Phase>('title')
-  const [gauntlet, setGauntlet] = useState<Gauntlet | null>(null)
+  // 선택한 덱(전투용) + 편집 중인 덱(빌더) + 봇 상대
+  const [deck, setDeck] = useState<Deck | null>(null)
+  const [editingDeck, setEditingDeck] = useState<Deck | undefined>(undefined)
+  const [botMatch, setBotMatch] = useState<BotMatch | null>(null)
   const [outcome, setOutcome] = useState<Outcome>('win')
   // --- online multiplayer ---
-  const [mpCharId, setMpCharId] = useState<string | null>(null)
   const [mpMatch, setMpMatch] = useState<MatchReady | null>(null)
   const [mpOutcome, setMpOutcome] = useState<Outcome>('win')
 
-  const toTitle = useCallback(() => {
-    setGauntlet(null)
-    setPhase('title')
-  }, [])
+  const toTitle = useCallback(() => setPhase('title'), [])
 
   // 첫 접속(이 기기에서 튜토리얼 미완료)이면 로그인 직후 튜토리얼로 진입
   useEffect(() => {
@@ -64,32 +73,38 @@ export default function App() {
       m?.transport.close()
       return null
     })
-    setMpCharId(null)
-    setGauntlet(null)
     setPhase('title')
     void signOutUser() // auth listener swaps to the login screen
   }, [])
 
-  // -- single-player gauntlet ------------------------------------------------
-  const confirmChar = useCallback((id: string) => {
-    setGauntlet(buildGauntlet(id))
-    setPhase('bracket')
+  // -- deck build / manage ---------------------------------------------------
+  const onSaveDeck = useCallback((d: Deck) => {
+    saveDeck(d)
+    setPhase('deck-manage')
   }, [])
 
-  const onFightEnd = useCallback(
-    (playerWon: boolean) => {
-      setOutcome(playerWon && gauntlet ? (isFinalMatch(gauntlet) ? 'champion' : 'win') : 'loss')
-      setPhase('result')
-    },
-    [gauntlet],
-  )
-
-  const resultNext = useCallback(() => {
-    setGauntlet((g) => (g ? { ...g, index: g.index + 1, wins: g.wins + 1 } : g))
-    setPhase('bracket')
+  // -- deck select → mode → battle -------------------------------------------
+  const pickDeck = useCallback((d: Deck) => {
+    setDeck(d)
+    setPhase('mode-select')
   }, [])
 
-  const resultRetry = useCallback(() => setPhase('fight'), [])
+  // 봇전(1:1 단판): 상대는 나와 다른 캐릭터를 랜덤으로, 프리셋 덱을 쓴다.
+  const startBot = useCallback(() => {
+    setDeck((d) => {
+      if (!d) return d
+      const pool = ROSTER.filter((c) => c.id !== d.charId)
+      const opp = pool[Math.floor(Math.random() * pool.length)]
+      setBotMatch({ oppCharId: opp.id, oppDeckCards: assembleDeck(presetDeck(opp.id)) })
+      setPhase('fight')
+      return d
+    })
+  }, [])
+
+  const onFightEnd = useCallback((playerWon: boolean) => {
+    setOutcome(playerWon ? 'win' : 'loss')
+    setPhase('result')
+  }, [])
 
   // -- online multiplayer ----------------------------------------------------
   const leaveMp = useCallback(() => {
@@ -97,13 +112,7 @@ export default function App() {
       m?.transport.close()
       return null
     })
-    setMpCharId(null)
     setPhase('title')
-  }, [])
-
-  const mpConfirmChar = useCallback((id: string) => {
-    setMpCharId(id)
-    setPhase('mp-lobby')
   }, [])
 
   const mpOnReady = useCallback((m: MatchReady) => {
@@ -123,6 +132,8 @@ export default function App() {
   )
   useEffect(() => () => mpExchange?.dispose(), [mpExchange])
 
+  const localCards = useMemo(() => (deck ? assembleDeck(deck) : null), [deck])
+
   let screen: React.ReactNode = null
   if (phase === 'tutorial') {
     screen = <TutorialScreen onDone={tutorialDone} />
@@ -131,57 +142,88 @@ export default function App() {
       <TitleScreen
         user={user}
         onLogout={onLogout}
-        onStart={() => setPhase('select')}
-        onOnline={() => setPhase('mp-select')}
+        onStart={() => setPhase('deck-select')}
+        onDecks={() => setPhase('deck-manage')}
         onCodex={() => setPhase('codex')}
       />
     )
   } else if (phase === 'codex') {
     screen = <CodexScreen onBack={toTitle} />
-  } else if (phase === 'select') {
-    screen = <CharacterSelect onConfirm={confirmChar} onBack={toTitle} />
-  } else if (phase === 'bracket' && gauntlet) {
+  } else if (phase === 'deck-manage') {
     screen = (
-      <BracketScreen gauntlet={gauntlet} onFight={() => setPhase('fight')} onMenu={toTitle} />
-    )
-  } else if (phase === 'fight' && gauntlet) {
-    const opp = gauntlet.opponents[gauntlet.index]
-    screen = (
-      <BattleScreen
-        key={`${gauntlet.index}-${opp.charId}`}
-        p0CharId={gauntlet.playerCharId}
-        p1CharId={opp.charId}
-        localSide={0}
-        getOpponentPlan={(_localPlan, b) =>
-          Promise.resolve(decideAI(b.state, 1, b.chars[1], opp.difficulty))
-        }
-        onEnd={onFightEnd}
-        onQuit={() => setPhase('bracket')}
+      <DeckManagerScreen
+        onNew={() => {
+          setEditingDeck(undefined)
+          setPhase('deck-build')
+        }}
+        onEdit={(d) => {
+          setEditingDeck(d)
+          setPhase('deck-build')
+        }}
+        onBack={toTitle}
       />
     )
-  } else if (phase === 'result' && gauntlet) {
+  } else if (phase === 'deck-build') {
+    screen = (
+      <DeckBuilderScreen
+        editing={editingDeck}
+        onSave={onSaveDeck}
+        onCancel={() => setPhase('deck-manage')}
+      />
+    )
+  } else if (phase === 'deck-select') {
+    screen = (
+      <DeckSelectScreen
+        onSelect={pickDeck}
+        onManage={() => setPhase('deck-manage')}
+        onBack={toTitle}
+      />
+    )
+  } else if (phase === 'mode-select' && deck) {
+    screen = (
+      <ModeSelectScreen
+        deck={deck}
+        onBot={startBot}
+        onOnline={() => setPhase('mp-lobby')}
+        onBack={() => setPhase('deck-select')}
+      />
+    )
+  } else if (phase === 'fight' && deck && localCards && botMatch) {
+    screen = (
+      <BattleScreen
+        key={`bot-${deck.id}-${botMatch.oppCharId}`}
+        p0CharId={deck.charId}
+        p1CharId={botMatch.oppCharId}
+        localSide={0}
+        deck={localCards}
+        getOpponentPlan={(_localPlan, b) =>
+          Promise.resolve(decideAI(b.state, 1, b.chars[1], 'hard', botMatch.oppDeckCards))
+        }
+        onEnd={onFightEnd}
+        onQuit={toTitle}
+      />
+    )
+  } else if (phase === 'result' && deck) {
     screen = (
       <ResultScreen
         outcome={outcome}
-        playerCharId={gauntlet.playerCharId}
-        onNext={resultNext}
-        onRetry={resultRetry}
+        playerCharId={deck.charId}
+        variant="single"
+        onNext={startBot}
+        onRetry={startBot}
         onMenu={toTitle}
       />
     )
-  } else if (phase === 'mp-select') {
-    screen = <CharacterSelect onConfirm={mpConfirmChar} onBack={toTitle} />
-  } else if (phase === 'mp-lobby' && mpCharId) {
-    screen = (
-      <MultiplayerLobby myCharId={mpCharId} onReady={mpOnReady} onBack={leaveMp} />
-    )
-  } else if (phase === 'mp-fight' && mpMatch && mpExchange) {
+  } else if (phase === 'mp-lobby' && deck) {
+    screen = <MultiplayerLobby myCharId={deck.charId} onReady={mpOnReady} onBack={() => setPhase('mode-select')} />
+  } else if (phase === 'mp-fight' && mpMatch && mpExchange && localCards) {
     screen = (
       <BattleScreen
         key={`mp-${mpMatch.p0CharId}-${mpMatch.p1CharId}`}
         p0CharId={mpMatch.p0CharId}
         p1CharId={mpMatch.p1CharId}
         localSide={mpMatch.localSide}
+        deck={localCards}
         getOpponentPlan={mpExchange.getOpponentPlan}
         turnSeconds={MP_TURN_SECONDS}
         onEnd={mpFightEnd}
@@ -192,7 +234,7 @@ export default function App() {
     screen = (
       <ResultScreen
         outcome={mpOutcome}
-        playerCharId={mpCharId ?? mpMatch.p0CharId}
+        playerCharId={deck?.charId ?? mpMatch.p0CharId}
         variant="versus"
         onNext={leaveMp}
         onRetry={leaveMp}

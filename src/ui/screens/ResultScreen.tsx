@@ -16,8 +16,8 @@ export function ResultScreen({
   onNext: () => void
   onRetry: () => void
   onMenu: () => void
-  /** 'gauntlet' shows next/retry; 'versus' (online 1:1) shows only the menu. */
-  variant?: 'gauntlet' | 'versus'
+  /** 'gauntlet' 다음상대/재도전, 'single'(봇 단판) 다시 대전, 'versus'(온라인) 메뉴만. */
+  variant?: 'gauntlet' | 'single' | 'versus'
 }) {
   const player = getChar(playerCharId)
   const cfg = {
@@ -47,6 +47,11 @@ export function ResultScreen({
           {gauntlet && outcome === 'loss' && (
             <button className="btn" onClick={onRetry}>
               다시 도전
+            </button>
+          )}
+          {variant === 'single' && (
+            <button className="btn" onClick={onRetry}>
+              다시 대전 ▶
             </button>
           )}
           <button className="btn btn--ghost" onClick={onMenu}>

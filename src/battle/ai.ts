@@ -12,12 +12,6 @@ import {
   type MoveDir,
 } from './types'
 
-const common = (id: string) => COMMON_CARDS.find((c) => c.id === id)!
-const GUARD = common('c-guard')
-const ENERGY = common('c-energy')
-const moveCard = (dir: MoveDir, steps: number) =>
-  COMMON_CARDS.find((c) => c.kind === 'move' && c.dir === dir && (c.steps ?? 1) === steps)!
-
 interface AICfg {
   aggression: number // chance to attack when a hit is available
   guardChance: number
@@ -41,12 +35,17 @@ function hits(pos: Cell, facing: number, card: CardDef, opp: Cell): boolean {
   )
 }
 
-/** Build a 3-card plan for the CPU fighter `self` from the current state. */
+/**
+ * Build a 3-card plan for the CPU fighter `self`. `availableCards`가 주어지면
+ * 그 덱(고정+고른 카드)에서만 계획한다 — 봇전 프리셋 덱. 없으면 캐릭터 전체
+ * 카드(공용+고유)로 계획(구 흐름·튜토리얼 호환).
+ */
 export function decideAI(
   state: BattleState,
   self: number,
   char: CharacterDef,
   difficulty: Difficulty,
+  availableCards?: CardDef[],
 ): CardDef[] {
   const cfg = DIFF[difficulty]
   const facing = self === 0 ? 1 : -1
@@ -59,12 +58,17 @@ export function decideAI(
   const cdLeft = (id: string) => state.cooldowns[self][id] ?? 0
   const usable = (c: CardDef) => cdLeft(c.id) === 0 && !locked.has(c.id)
 
-  // attack pool: the character's unique attack cards + the weak common attacks
-  const attacks = [
-    ...char.cards.filter((c) => c.kind === 'attack'),
-    ...COMMON_CARDS.filter((c) => c.kind === 'attack'),
-  ]
-  const cheapest = Math.min(...attacks.map((a) => a.energyCost ?? 0))
+  // 사용 가능한 카드 풀 — 덱이 주어지면 그것만, 아니면 캐릭터 전체 카드
+  const pool = availableCards ?? [...COMMON_CARDS, ...char.cards]
+  const attacks = pool.filter((c) => c.kind === 'attack')
+  // 이동/지원 카드는 풀에서 뽑는다(덱에 없으면 undefined → 스킵)
+  const moveCard = (dir: MoveDir, steps: number): CardDef | undefined =>
+    pool.find((c) => c.kind === 'move' && c.dir === dir && (c.steps ?? 1) === steps)
+  const GUARD = pool
+    .filter((c) => c.kind === 'guard')
+    .sort((a, b) => (b.block ?? 0) - (a.block ?? 0))[0]
+  const ENERGY = pool.find((c) => c.kind === 'energy')
+  const cheapest = attacks.length ? Math.min(...attacks.map((a) => a.energyCost ?? 0)) : 0
   const plan: CardDef[] = []
 
   const take = (c: CardDef) => {
@@ -100,7 +104,7 @@ export function decideAI(
   function approachCards(): CardDef[] {
     const dcol = opp.col - pos.col
     const drow = opp.row - pos.row
-    const wishes: CardDef[] = []
+    const wishes: (CardDef | undefined)[] = []
     const hdir: MoveDir = dcol >= 0 ? 'right' : 'left'
     const vdir: MoveDir = drow >= 0 ? 'down' : 'up'
     // 상대와 겹쳐 있으면 공격이 전부 빗나감 — 한 칸 빠져 공격 위치를 회복
@@ -116,8 +120,9 @@ export function decideAI(
       if (drow !== 0) wishes.push(moveCard(vdir, 1))
       if (dcol !== 0) wishes.push(moveCard(hdir, 1))
     }
-    // 상대 셀에 정확히 올라서는 이동은 제외 — 겹치면 자기 공격이 전부 빗나간다
-    return wishes.filter((w) => {
+    // 덱에 없어 undefined인 이동은 제외 + 상대 셀에 정확히 올라서는 이동도 제외
+    return wishes.filter((w): w is CardDef => {
+      if (!w) return false
       const land = landingOf(w)
       return !(land.col === opp.col && land.row === opp.row)
     })
@@ -129,6 +134,7 @@ export function decideAI(
       slot === 0 &&
       state.hp[self] <= PANIC_HP &&
       Math.random() < cfg.panicGuard &&
+      GUARD &&
       usable(GUARD) &&
       energy >= (GUARD.guardCost ?? 0)
     ) {
@@ -140,7 +146,9 @@ export function decideAI(
     //    (안개에 서서 트레이드하다 둘 다 죽는 사고 방지). 중앙 열 쪽으로 이동.
     if (isFogCell(pos, state.turn) || isFogCell(pos, state.turn + 1)) {
       const toCenter: MoveDir = pos.col <= (GRID_COLS - 1) / 2 ? 'right' : 'left'
-      const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)]
+      const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)].filter(
+        (c): c is CardDef => !!c,
+      )
       const m = esc.find(usable)
       if (m) {
         take(m)
@@ -158,7 +166,7 @@ export function decideAI(
     }
 
     // 3) recharge when starved and the energy card is up
-    if (energy < Math.max(cfg.energyFloor, cheapest) && usable(ENERGY)) {
+    if (ENERGY && energy < Math.max(cfg.energyFloor, cheapest) && usable(ENERGY)) {
       take(ENERGY)
       continue
     }
@@ -171,7 +179,12 @@ export function decideAI(
     }
 
     // 5) occasional guard
-    if (Math.random() < cfg.guardChance && energy >= (GUARD.guardCost ?? 0) && usable(GUARD)) {
+    if (
+      GUARD &&
+      Math.random() < cfg.guardChance &&
+      energy >= (GUARD.guardCost ?? 0) &&
+      usable(GUARD)
+    ) {
       take(GUARD)
       continue
     }
@@ -184,12 +197,12 @@ export function decideAI(
       take(cheap)
       continue
     }
-    const anyMove = COMMON_CARDS.filter((c) => c.kind === 'move').find(usable)
+    const anyMove = pool.filter((c) => c.kind === 'move').find(usable)
     if (anyMove) {
       take(anyMove)
       continue
     }
-    if (usable(ENERGY)) take(ENERGY)
+    if (ENERGY && usable(ENERGY)) take(ENERGY)
     else take(attacks.find(usable) ?? attacks[0]) // last resort (will fizzle on no fuel)
   }
 

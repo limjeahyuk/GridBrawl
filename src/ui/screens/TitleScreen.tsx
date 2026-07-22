@@ -13,13 +13,13 @@ export function TitleScreen({
   user,
   onLogout,
   onStart,
-  onOnline,
+  onDecks,
   onCodex,
 }: {
   user: AuthUser | null
   onLogout: () => void
   onStart: () => void
-  onOnline: () => void
+  onDecks: () => void
   onCodex: () => void
 }) {
   const [showControls, setShowControls] = useState(false)
@@ -60,8 +60,8 @@ export function TitleScreen({
           <button className="btn" onClick={onStart}>
             게임 시작
           </button>
-          <button className="btn btn--online" onClick={onOnline}>
-            온라인 대전
+          <button className="btn btn--online" onClick={onDecks}>
+            덱 만들기
           </button>
           <button className="btn btn--codex" onClick={onCodex}>
             도감

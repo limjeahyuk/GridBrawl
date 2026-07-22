@@ -29,7 +29,8 @@
 ## 전투 모델 (현재 구현 요약) — 2D 격자
 
 - **로그인 게이트(앱 전체)**: 모든 화면 앞에 구글 로그인이 필수(`App.tsx`가 `useAuth`로 게이트). 미로그인 시 `LoginScreen`, 인증 복원 중엔 "접속 중…". 로그인 후에야 아래 흐름 진입. 예외적으로 **Firebase Auth는 SDK 의존**(시그널링용 `net/firebase.ts`는 여전히 REST-only) — `VITE_FIREBASE_API_KEY` 필요, 미설정 시 로그인 화면이 "설정 필요" 안내(`.env.example`). 콘솔에서 Google 공급업체 활성화 필수.
-- 화면 흐름(싱글): `title → select → bracket → fight → result` (`src/App.tsx` 상태 머신). 온라인: `title →(온라인 대전)→ mp-select → mp-lobby → mp-fight → mp-result`. 타이틀의 **도감** 버튼 → `codex`(`src/ui/screens/CodexScreen.tsx`): 영웅별 초상화·패시브·능력치 + 전용/공용 카드 열람(`뒤로`로 복귀). 카드 렌더는 배틀과 공용 컴포넌트 `src/ui/CardFace.tsx` 사용.
+- **덱 빌딩(2026-07-22)**: 전투 전에 **고정 7장 + 고른 7장 = 14장** 덱을 짠다(`src/game/decks.ts`). 고정=이동4방향·스트라이크·브레이스·원기, 선택 풀=대시2·펄스샷·가드+캐릭터 고유4. 덱은 **캐릭터 종속**, localStorage `gb-decks`에 저장(이름/수정/삭제). 모든 덱 카드는 `deckFor(char)`의 부분집합이라 **멀티 플랜 복원(`net/session.ts`)은 그대로 동작**. `PRESET_DECKS`는 봇 상대 덱 + 기본 덱.
+- 화면 흐름: `title →(게임 시작)→ deck-select → mode-select →` **봇전** `fight → result`(1:1 단판, 상대는 랜덤 캐릭터+프리셋 덱) 또는 **온라인** `mp-lobby → mp-fight → mp-result`. 타이틀의 **덱 만들기** → `deck-manage`(목록/삭제) → `deck-build`(캐릭터+7장 선택·저장). **도감** → `codex`. 카드 렌더는 배틀·덱화면 공용 `src/ui/CardFace.tsx`. (건틀릿 `game/tournament.ts`는 단판 전환으로 현재 미사용.)
 - 전장은 **2D 격자 6열 × 3행**(`GRID_COLS/ROWS`). 위치는 셀 `{col,row}`, 시작은 가운뎃줄 양 끝. p0는 오른쪽, p1은 왼쪽을 바라봄(`facing`).
 - 카드 종류: `move / attack / guard / energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수). **공용(약함) + 캐릭터 고유(강함, 각 4장)** 이원화 — 2026-07-03.
   - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 스트라이크(앞뒤1칸 10dmg)·펄스 샷(앞뒤 2칸째 10dmg)** + 가드(실드 50·쿨1)·**브레이스(실드 30·쿨0)** + 원기(기력 +35·쿨1). 턴 시작 패시브 기력 +20. (2026-07-15 "5턴 페이싱" 밸런스 패스 — GDD ④ 참고)

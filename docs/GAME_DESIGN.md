@@ -323,3 +323,28 @@
 - [InuYasha: Demon Tournament — Flash Game (evilgames.eu)](https://evilgames.eu/flashgames/inuyasha-demon-tournament.htm)
 
 *최종 갱신: 2026-07-13 (독안개 — 가장자리 축소 페널티 추가)*
+
+---
+
+## ⑥ 덱 빌딩 (2026-07-22 · 1단계 MVP)
+
+전투 전에 자기 덱을 짜서 캐릭터·플레이어마다 다른 구성으로 싸운다. 구현은 `src/game/decks.ts`.
+
+### 카드 분류
+- **고정(7장, 모든 덱 공통)**: 이동 `m-up/m-down/m-right/m-left`(1칸), 공격 `c-strike`, 지원 `c-brace`(기본 방어)·`c-energy`(원기).
+- **선택 풀(캐릭터별, 이 중 7장)**: 이동 `m-right2`/`m-left2`(대시), 공격 `c-shot` + 그 캐릭터 고유 공격, 지원 `c-guard`(더 좋은 방어) + 고유 지원(AEGIS `aegis-wall`).
+- 전투 덱 = 고정 7 + 고른 7 = **14장**. 모든 덱 카드는 `deckFor(char)`(공용+고유)의 부분집합이므로 **멀티 락스텝의 상대 플랜 복원(`net/session.ts`)은 수정 없이 동작**한다.
+
+### 저장·조립
+- `Deck { id, name, charId, cardIds[7] }`, localStorage 키 `gb-decks` (`loadDecks/saveDeck/deleteDeck`).
+- `assembleDeck(deck)` = `FIXED_CARDS` + 고른 카드 → `BattleScreen`의 `deck` prop(로컬 손패).
+- `PRESET_DECKS`(고유4 + 펄스샷 + 가드 + 오른쪽 대시) = 봇 상대 덱 + 저장된 덱이 없을 때의 기본 덱.
+
+### 화면·흐름
+- `title →(게임 시작)→ deck-select → mode-select →` 봇전 `fight → result` | 온라인 `mp-lobby → mp-fight → mp-result`.
+- `title →(덱 만들기)→ deck-manage`(목록·수정·삭제) `→ deck-build`(캐릭터 선택 + 풀에서 7장 토글 + 이름 저장).
+- **봇전은 1:1 단판** — 상대는 나와 다른 캐릭터를 랜덤으로 뽑고 그 캐릭터의 프리셋 덱을 쓴다(`decideAI`의 `availableCards` 인자).
+
+### 남은 과제 (2단계)
+- 선택 풀 확장: **대각선 이동 4방향**(`MoveDir`·`MOVE_DELTA`·카드 아이콘·멀티 미러링), **HP 힐 지원 카드**(엔진 `resolvePrep`에 회복 처리). 현재 풀은 캐릭터당 ~8장이라 7장 고르기의 선택 폭이 얇다.
+- 건틀릿(`game/tournament.ts`)은 단판 전환으로 미사용 — 정리 또는 별도 모드로 부활 검토.

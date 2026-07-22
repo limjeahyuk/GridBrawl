@@ -153,6 +153,7 @@ export function BattleScreen({
   p0CharId,
   p1CharId,
   localSide,
+  deck,
   getOpponentPlan,
   turnSeconds,
   onEnd,
@@ -164,6 +165,9 @@ export function BattleScreen({
   p1CharId: string
   /** Which side this client controls (0 in single-player). */
   localSide: 0 | 1
+  /** 로컬 플레이어의 손패(고정 7 + 고른 카드). 미지정 시 캐릭터 전체 카드
+   *  (`deckFor`) — 튜토리얼·구 흐름 호환. */
+  deck?: CardDef[]
   getOpponentPlan: OpponentPlanner
   /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
    *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
@@ -179,7 +183,7 @@ export function BattleScreen({
   const c0 = battle.chars[0]
   const c1 = battle.chars[1]
   const local = battle.chars[localSide]
-  const deck = useMemo(() => deckFor(local), [local])
+  const hand = useMemo(() => deck ?? deckFor(local), [deck, local])
 
   // Render from THIS client's perspective: the local fighter always sits on the
   // left facing right, the opponent on the right. The engine stays canonical
@@ -388,7 +392,7 @@ export function BattleScreen({
       void submitPlan(slots as CardDef[])
       return
     }
-    const energyCard = deck.find((c) => c.kind === 'energy')
+    const energyCard = hand.find((c) => c.kind === 'energy')
     if (!energyCard) return
     const padded = slots.map((s) => s ?? energyCard) as CardDef[]
     const ok = planAffordable(
@@ -570,7 +574,7 @@ export function BattleScreen({
           </div>
 
           <div className="cards__hand">
-            {deck.filter((c) => tabOf(c) === handTab).map((c) => {
+            {hand.filter((c) => tabOf(c) === handTab).map((c) => {
               const onCd = cdLeft(c.id) > 0
               const locked = onCd || placedNoRepeat(c)
               const dim = locked || (c.kind === 'attack' && (c.energyCost ?? 0) > energyBudget)

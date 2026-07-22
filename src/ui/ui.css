@@ -3,6 +3,308 @@
    1280x720 .stage surface (which is uniformly scaled to the viewport).
    =========================================================================== */
 
+/* ---- 덱 화면 공통 -------------------------------------------------------- */
+.deckmgr,
+.deckbuild,
+.deckselect,
+.modeselect {
+  display: flex;
+  flex-direction: column;
+}
+.deckmgr__bar,
+.deckbuild__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 26px 10px;
+  z-index: 2;
+}
+.deckmgr__bar h2,
+.deckbuild__bar h2 {
+  font-size: 20px;
+}
+.deckbuild__name {
+  flex: 1;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 8px 14px;
+  background: rgba(10, 16, 28, 0.8);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  text-align: center;
+}
+.btn.is-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* 덱 매니저 */
+.deckmgr__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 26px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 2;
+}
+.deckmgr__empty {
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 40px;
+}
+.deckmgr__card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: rgba(12, 18, 32, 0.75);
+  border: 1px solid var(--panel-edge);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+}
+.deckmgr__portrait {
+  width: 54px;
+  height: 54px;
+  flex: none;
+}
+.deckmgr__info {
+  flex: 1;
+}
+.deckmgr__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--accent);
+}
+.deckmgr__meta {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.deckmgr__actions {
+  display: flex;
+  gap: 8px;
+}
+.deckmgr__del {
+  color: var(--neon-red);
+  border-color: color-mix(in srgb, var(--neon-red) 50%, transparent);
+}
+
+/* 덱 빌더 */
+.deckbuild__chars {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 4px 26px;
+  z-index: 2;
+}
+.deckbuild__char {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(12, 18, 32, 0.5);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+}
+.deckbuild__char.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.deckbuild__charart {
+  width: 40px;
+  height: 40px;
+}
+.deckbuild__tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  padding: 8px 26px 4px;
+  z-index: 2;
+}
+.deckbuild__hint {
+  margin-left: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.deckbuild__grid {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-content: flex-start;
+  padding: 10px 26px 26px;
+  z-index: 2;
+}
+.deckcard {
+  position: relative;
+  width: 130px;
+  height: 172px;
+  padding: 0;
+  border: none;
+  background: none;
+  transition: transform 0.1s ease;
+}
+.deckcard.is-picked {
+  transform: translateY(-4px);
+}
+.deckcard.is-picked .cardface {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.deckcard.is-blocked {
+  opacity: 0.4;
+}
+.deckcard--fixed {
+  opacity: 0.72;
+}
+.deckcard__badge {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.deckcard__badge--fixed {
+  background: #2a3450;
+  color: var(--text-dim);
+}
+.deckcard__badge--on {
+  background: var(--accent);
+  color: #07121a;
+}
+
+/* 덱 선택 */
+.deckselect__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 26px 26px;
+  z-index: 2;
+}
+.deckselect__label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 14px 4px 8px;
+}
+.deckselect__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.deckpick {
+  width: 150px;
+  padding: 14px 10px;
+  border: 1px solid var(--panel-edge);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px;
+  background: rgba(12, 18, 32, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+.deckpick:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+.deckpick__portrait {
+  width: 64px;
+  height: 64px;
+}
+.deckpick__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent);
+  text-align: center;
+}
+.deckpick__meta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* 모드 선택 */
+.modeselect__deck {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+  padding: 10px;
+  z-index: 2;
+}
+.modeselect__portrait {
+  width: 60px;
+  height: 60px;
+}
+.modeselect__deckname {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+.modeselect__meta {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.modeselect__options {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.mode-card {
+  width: 260px;
+  height: 220px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 16px;
+  background: rgba(12, 18, 32, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.mode-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--neon-cyan);
+}
+.mode-card--online:hover {
+  border-color: var(--neon-magenta);
+}
+.mode-card__icon {
+  font-size: 44px;
+}
+.mode-card__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--text);
+}
+.mode-card__desc {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
 .screen {
   /* 무대 폭이 화면 비율에 따라 1280~1600으로 늘어나므로 100%로 따라간다 */
   width: 100%;
@@ -17,7 +319,11 @@
 .bracket__playerart svg,
 .hud__avatar svg,
 .mp__me-art svg,
-.result__portrait svg {
+.result__portrait svg,
+.deckbuild__charart svg,
+.deckmgr__portrait svg,
+.deckpick__portrait svg,
+.modeselect__portrait svg {
   width: 100%;
   height: 100%;
   display: block;
