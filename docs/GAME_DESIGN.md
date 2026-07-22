@@ -128,7 +128,9 @@
 - 한 턴 = 카드 3장. **고른 슬롯 순서(1→2→3)대로** 해소하되, **한 슬롯 안에서** 나·상대 카드는 **타입 우선순위(이동 → 수비 → 공격)** 로 처리한다. 즉 "이동→수비→공격"은 전역 묶음이 아니라 *같은 슬롯 내 둘 중 누가 먼저 처리되는지* 정하는 규칙.
 
 #### 카드 종류 (`CardKind`) — `src/battle/types.ts`
-`move` | `attack` | `guard` | `energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수, 0/없음=재사용 가능).
+`move` | `attack` | `guard` | `energy` | `heal`(2026-07-23). 모든 카드에 `cooldown`(사용 후 잠기는 턴 수, 0/없음=재사용 가능).
+- **이동 방향(`MoveDir`)**: 직교 4방향 + **대각선 4방향**(`up-right/up-left/down-right/down-left`, 2026-07-23). `MOVE_DELTA`가 델타를, `MIRROR_DIR`가 멀티 좌우 반전 짝을 정의(엔진은 정규 좌표, `BattleScreen.faceCard`가 side1 표시 라벨만 미러).
+- **힐(`heal`)**: 기력을 체력으로 바꾸는 지원 카드(`c-repair`: `healCost:20`→`healHp:20`, 쿨1). 엔진 `resolvePrep`에서 처리(기력 부족 시 `nofuel`), 회복량은 `Step.heal`로 실어 초록 `+N` 연출 재사용. `planAffordable`이 `healCost`를 계산 → UI가 못 내는 힐 카드를 선택 불가 처리.
 
 #### 공용 카드 (`COMMON_CARDS`) — `src/battle/cards.ts` (2026-07-03 확장)
 | id | 이름 | kind | 효과 | 에너지 | 쿨타임 |
