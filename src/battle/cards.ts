@@ -18,6 +18,11 @@ export const COMMON_CARDS: CardDef[] = [
   { id: 'm-down', name: '아래', kind: 'move', dir: 'down', steps: 1, cooldown: 0, desc: '아래로 한 칸 이동. (v)' },
   { id: 'm-right2', name: '오른쪽 대시', kind: 'move', dir: 'right', steps: 2, cooldown: 1, desc: '오른쪽으로 두 칸 이동. (>>)' },
   { id: 'm-left2', name: '왼쪽 대시', kind: 'move', dir: 'left', steps: 2, cooldown: 1, desc: '왼쪽으로 두 칸 이동. (<<)' },
+  // 대각선 이동(2026-07-23) — 가로·세로를 한 번에. 줄을 바꾸며 파고들 때 쓴다.
+  { id: 'm-ur', name: '↗ 대각 이동', kind: 'move', dir: 'up-right', steps: 1, cooldown: 0, desc: '오른쪽 위로 한 칸 이동. (↗)' },
+  { id: 'm-ul', name: '↖ 대각 이동', kind: 'move', dir: 'up-left', steps: 1, cooldown: 0, desc: '왼쪽 위로 한 칸 이동. (↖)' },
+  { id: 'm-dr', name: '↘ 대각 이동', kind: 'move', dir: 'down-right', steps: 1, cooldown: 0, desc: '오른쪽 아래로 한 칸 이동. (↘)' },
+  { id: 'm-dl', name: '↙ 대각 이동', kind: 'move', dir: 'down-left', steps: 1, cooldown: 0, desc: '왼쪽 아래로 한 칸 이동. (↙)' },
   {
     id: 'c-strike',
     name: '스트라이크',
@@ -71,6 +76,16 @@ export const COMMON_CARDS: CardDef[] = [
     gain: ENERGY_GAIN,
     cooldown: 1,
     desc: `기력을 ${ENERGY_GAIN} 회복한다.`,
+  },
+  // 힐 지원 카드(2026-07-23) — 기력을 체력으로 바꾼다. 장기전 버티기용.
+  {
+    id: 'c-repair',
+    name: '리페어',
+    kind: 'heal',
+    healHp: 20,
+    healCost: 20,
+    cooldown: 1,
+    desc: '기력 20 소모. 체력을 20 회복한다. 쿨타임 1턴.',
   },
 ]
 

@@ -1871,7 +1871,8 @@
   top: 0;
   bottom: 0;
   left: calc(var(--i) * 11.5%);
-  width: calc(34px + (var(--i) % 3) * 52px);
+  /* ⚠ calc()에는 % 모듈로 연산이 없다 — 폭 변화는 nth-child로 준다 */
+  width: 48px;
   transform: skewX(-18deg);
   background: linear-gradient(180deg, transparent, var(--streak, #1f4dff), transparent);
   opacity: 0.5;
@@ -1880,13 +1881,16 @@
 }
 .cutin__streak:nth-child(3n + 1) {
   --streak: var(--accent);
+  width: 96px;
 }
 .cutin__streak:nth-child(3n + 2) {
   --streak: var(--accent2, #ff3df0);
+  width: 140px;
 }
 .cutin__streak:nth-child(3n) {
   --streak: #06070e;
   opacity: 0.92;
+  width: 62px;
 }
 @keyframes streak-sweep {
   0% { transform: translateX(-170%) skewX(-18deg); opacity: 0; }
@@ -1898,10 +1902,11 @@
 /* 대형 초상 — 발동한 쪽으로 살짝 치우쳐 밀려 들어온다 */
 .cutin__art {
   position: absolute;
-  top: 50%;
-  left: 42%;
-  width: 560px;
-  height: 660px;
+  top: 48%;
+  left: 44%;
+  /* 초상 viewBox(300×340)와 같은 비율 — slice로 잘리지 않고 전신 흉상이 보인다 */
+  width: 424px;
+  height: 480px;
   transform: translate(-50%, -50%);
   animation: cutin-art 1.75s cubic-bezier(0.14, 0.9, 0.2, 1) both;
   filter: drop-shadow(0 0 46px color-mix(in srgb, var(--accent) 70%, transparent)) contrast(1.08);

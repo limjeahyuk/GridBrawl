@@ -31,8 +31,18 @@ export const FIXED_CARDS: CardDef[] = [
   .map(byId)
   .filter((c): c is CardDef => !!c)
 
-/** 공용 선택 풀(캐릭터 무관): 대시 2종 + 견제 사격 + 더 좋은 방어. */
-const COMMON_POOL_IDS = ['m-right2', 'm-left2', 'c-shot', 'c-guard']
+/** 공용 선택 풀(캐릭터 무관): 대시 2종 + 대각 이동 4종 + 견제 사격 + 더 좋은 방어 + 힐. */
+const COMMON_POOL_IDS = [
+  'm-right2',
+  'm-left2',
+  'm-ur',
+  'm-ul',
+  'm-dr',
+  'm-dl',
+  'c-shot',
+  'c-guard',
+  'c-repair',
+]
 
 /** 특정 캐릭터가 덱에 담을 수 있는 선택 풀 = 공용 풀 + 그 캐릭터 고유 카드 4장. */
 export function poolFor(charId: string): CardDef[] {

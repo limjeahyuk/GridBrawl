@@ -13,6 +13,7 @@ import {
   MOVE_DELTA,
   inBounds,
   isFogCell,
+  MIRROR_DIR,
   type ActionResult,
   type Cell,
   type CardDef,
@@ -78,6 +79,7 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   nofuel: '기력부족',
   guard: '가드',
   energy: '원기 +',
+  heal: '회복!',
   move: '이동',
   fog: '피해!',
   revive: '🔥',
@@ -198,9 +200,28 @@ export function BattleScreen({
   // Move cards are absolute (col +/-); when mirrored, relabel left<->right so a
   // card's arrow/name matches the direction the sprite actually goes on screen.
   const faceCard = (c: CardDef): CardDef => {
-    if (!flip || c.kind !== 'move' || (c.dir !== 'left' && c.dir !== 'right')) return c
-    const dir: MoveDir = c.dir === 'left' ? 'right' : 'left'
+    if (!flip || c.kind !== 'move' || !c.dir) return c
+    const dir = MIRROR_DIR[c.dir]
+    if (dir === c.dir) return c // 위/아래는 반전해도 그대로
     const steps = c.steps ?? 1
+    // 대각선은 이름·설명에 방향 화살표를 그대로 쓰므로 라벨만 짝으로 바꾼다
+    if (c.dir.includes('-')) {
+      const arrows: Partial<Record<MoveDir, string>> = {
+        'up-right': '↗',
+        'up-left': '↖',
+        'down-right': '↘',
+        'down-left': '↙',
+      }
+      const arrow = arrows[dir] ?? ''
+      const word = dir.startsWith('up') ? '위' : '아래'
+      const side = dir.endsWith('right') ? '오른쪽' : '왼쪽'
+      return {
+        ...c,
+        dir,
+        name: `${arrow} 대각 이동`,
+        desc: `${side} ${word}로 한 칸 이동. (${arrow})`,
+      }
+    }
     const word = dir === 'right' ? '오른쪽' : '왼쪽'
     const sym = dir === 'right' ? (steps >= 2 ? '>>' : '>') : steps >= 2 ? '<<' : '<'
     const name = steps >= 2 ? `${word} 대시` : word

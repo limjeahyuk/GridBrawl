@@ -78,6 +78,7 @@ export function decideAI(
     if (c.kind === 'attack') energy -= c.energyCost ?? 0
     else if (c.kind === 'guard') energy -= c.guardCost ?? 0
     else if (c.kind === 'energy') energy = Math.min(char.maxEnergy, energy + (c.gain ?? 0))
+    else if (c.kind === 'heal') energy -= c.healCost ?? 0
     else if (c.kind === 'move') applyMove(c)
   }
 

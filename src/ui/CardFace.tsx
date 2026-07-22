@@ -5,11 +5,23 @@ export function cardAccent(c: CardDef, fallback: string): string {
   if (c.kind === 'attack') return c.accent ?? fallback
   if (c.kind === 'guard') return '#9fc2ff'
   if (c.kind === 'energy') return '#ffe14d'
+  if (c.kind === 'heal') return '#3fca87'
   return '#8493bd'
 }
 
+const MOVE_ARROW: Record<string, string> = {
+  right: '▶',
+  left: '◀',
+  up: '▲',
+  down: '▼',
+  'up-right': '↗',
+  'up-left': '↖',
+  'down-right': '↘',
+  'down-left': '↙',
+}
+
 function moveIcon(dir: CardDef['dir'], steps: number): string {
-  const one = dir === 'right' ? '▶' : dir === 'left' ? '◀' : dir === 'up' ? '▲' : '▼'
+  const one = MOVE_ARROW[dir ?? 'right'] ?? '▶'
   return steps >= 2 ? one + one : one
 }
 
@@ -54,7 +66,9 @@ export function CardFace({ card, accent }: { card: CardDef; accent: string }) {
         ? '🛡'
         : card.kind === 'energy'
           ? '⚡'
-          : moveIcon(card.dir, card.steps ?? 1)
+          : card.kind === 'heal'
+            ? '✚'
+            : moveIcon(card.dir, card.steps ?? 1)
   const reach =
     card.kind === 'attack' ? Math.max(0, ...(card.range ?? []).map((o) => o.df)) : 0
   return (
@@ -89,6 +103,12 @@ export function CardFace({ card, accent }: { card: CardDef; accent: string }) {
       {card.kind === 'energy' && (
         <div className="cardface__meta">
           <span>기력 +{card.gain}</span>
+        </div>
+      )}
+      {card.kind === 'heal' && (
+        <div className="cardface__meta">
+          <span>체력 +{card.healHp}</span>
+          <span>⚡{card.healCost}</span>
         </div>
       )}
       {card.kind === 'move' && <div className="cardface__meta cardface__meta--move"><span>{card.desc}</span></div>}

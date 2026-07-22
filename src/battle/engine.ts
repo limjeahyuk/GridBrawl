@@ -161,6 +161,17 @@ export class CardBattle {
       } else if (c.kind === 'energy') {
         s.energy[p] = clamp(s.energy[p] + (c.gain ?? 0), 0, this.chars[p].maxEnergy)
         emit(p, c, 'energy')
+      } else if (c.kind === 'heal') {
+        // 기력을 체력으로 — 실제 회복량만 heal로 실어 초록 +N을 띄운다
+        const cost = c.healCost ?? 0
+        if (s.energy[p] >= cost) {
+          s.energy[p] -= cost
+          const before = s.hp[p]
+          s.hp[p] = Math.min(this.chars[p].maxHp, before + (c.healHp ?? 0))
+          emit(p, c, 'heal', 0, s.hp[p] - before)
+        } else {
+          emit(p, c, 'nofuel')
+        }
       }
     }
 
@@ -346,6 +357,10 @@ export function planAffordable(
       e -= cost
     } else if (c.kind === 'attack') {
       const cost = c.energyCost ?? 0
+      if (e < cost) return false
+      e -= cost
+    } else if (c.kind === 'heal') {
+      const cost = c.healCost ?? 0
       if (e < cost) return false
       e -= cost
     }

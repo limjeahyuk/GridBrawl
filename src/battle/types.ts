@@ -8,10 +8,19 @@
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
-export type CardKind = 'move' | 'attack' | 'guard' | 'energy'
+export type CardKind = 'move' | 'attack' | 'guard' | 'energy' | 'heal'
 
-/** Absolute screen directions, matching the >, <, ^, v arrows on the cards. */
-export type MoveDir = 'right' | 'left' | 'up' | 'down'
+/** Absolute screen directions, matching the arrows on the cards.
+ *  대각선 4방향(2026-07-23)은 세로+가로를 한 번에 움직인다. */
+export type MoveDir =
+  | 'right'
+  | 'left'
+  | 'up'
+  | 'down'
+  | 'up-right'
+  | 'up-left'
+  | 'down-right'
+  | 'down-left'
 
 /** A board cell. col grows rightward (0..GRID_COLS-1), row downward (0..GRID_ROWS-1). */
 export interface Cell {
@@ -62,6 +71,10 @@ export interface CardDef {
   // energy
   gain?: number
 
+  // heal — 기력을 써서 체력을 회복하는 지원 카드
+  healHp?: number // 회복량(최대 체력 cap)
+  healCost?: number // 소모 기력
+
   // visuals / flavour
   accent?: string
   signature?: boolean
@@ -77,6 +90,22 @@ export const MOVE_DELTA: Record<MoveDir, readonly [number, number]> = {
   left: [-1, 0],
   up: [0, -1],
   down: [0, 1],
+  'up-right': [1, -1],
+  'up-left': [-1, -1],
+  'down-right': [1, 1],
+  'down-left': [-1, 1],
+}
+
+/** 화면 좌우 반전(멀티에서 side1을 잡을 때) 시 짝이 되는 방향. */
+export const MIRROR_DIR: Record<MoveDir, MoveDir> = {
+  right: 'left',
+  left: 'right',
+  up: 'up',
+  down: 'down',
+  'up-right': 'up-left',
+  'up-left': 'up-right',
+  'down-right': 'down-left',
+  'down-left': 'down-right',
 }
 
 export const inBounds = (c: Cell): boolean =>
@@ -124,6 +153,7 @@ export type ActionResult =
   | 'move'
   | 'guard'
   | 'energy'
+  | 'heal' // 기력을 써서 체력을 회복(리페어 계열)
   | 'hit'
   | 'blocked' // connected but fully absorbed by the opponent's guard
   | 'whiff' // out of range
