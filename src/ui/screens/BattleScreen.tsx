@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getChar } from '../../data/roster'
-import { buildFighterSvg } from '../../art/art'
+import { buildFighterSvg, buildPortraitSvg } from '../../art/art'
 import { CardBattle, planAffordable } from '../../battle/engine'
-import { deckFor, ENERGY_REGEN } from '../../battle/cards'
+import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
 import {
   FOG_DAMAGE,
@@ -91,6 +91,10 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
 }
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
 const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900, fog: 700, revive: 1100 }
+/** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
+const CUTIN_MS = 1750
+/** 이 피해 이상이면 화면을 흔든다(강타 연출). */
+const SHAKE_DAMAGE = 22
 
 // 손패 탭 — 종류별로 나눠 카드를 크게 보여준다 (가드+원기 = 수비)
 type HandTab = 'move' | 'attack' | 'defense'
@@ -204,6 +208,8 @@ export function BattleScreen({
     return { ...c, dir, name, desc }
   }
   const svgs = useMemo(() => [buildFighterSvg(c0), buildFighterSvg(c1)] as const, [c0, c1])
+  // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
+  const portraits = useMemo(() => [buildPortraitSvg(c0), buildPortraitSvg(c1)] as const, [c0, c1])
 
   const [view, setView] = useState<View>(() => baseView(battle))
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null])
@@ -225,6 +231,10 @@ export function BattleScreen({
   const [hitFlash, setHitFlash] = useState<{ seq: number; target: 0 | 1 } | null>(null)
   // cells the currently-resolving attack covers, with which fighter is attacking
   const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
+  // 필살기 컷인(시그니처 카드 발동 순간 화면을 덮는 연출)
+  const [cutIn, setCutIn] = useState<{ seq: number; actor: 0 | 1; card: CardDef } | null>(null)
+  // 강타 시 보드 흔들림
+  const [shake, setShake] = useState<number>(0)
 
   // ---- plan building -----------------------------------------------------
   const cdLeft = (id: string) => battle.state.cooldowns[localSide][id] ?? 0
@@ -235,7 +245,7 @@ export function BattleScreen({
   const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c)
 
   const addCard = (c: CardDef) => {
-    if (phase !== 'select' || !selectable(c)) return
+    if (phase !== 'select' || !selectable(c) || !canAfford(c)) return
     const i = slots.indexOf(null)
     if (i === -1) return
     const next = slots.slice()
@@ -263,14 +273,21 @@ export function BattleScreen({
     filled &&
     planAffordable(slots as CardDef[], battle.state.energy[localSide], local.maxEnergy, passiveEnergy)
 
-  // rough energy budget to dim unaffordable attack cards while picking
-  const energyBudget = Math.min(
-    local.maxEnergy,
-    battle.state.energy[localSide] +
-      ENERGY_REGEN +
-      passiveEnergy +
-      slots.reduce((e, c) => e + (c?.kind === 'energy' ? (c.gain ?? 0) : 0), 0),
-  )
+  // 이 카드를 다음 빈 슬롯에 넣어도 플랜 전체를 지불할 수 있는가.
+  // 기력은 슬롯 순서대로 오가므로(원기 회복이 중간에 채워줄 수도) 엔진과 같은
+  // `planAffordable`로 정확히 검사한다. 못 내는 카드는 아예 선택 불가(disabled).
+  const canAfford = (c: CardDef): boolean => {
+    const i = slots.indexOf(null)
+    if (i === -1) return true // 슬롯이 가득 — 어차피 추가되지 않는다
+    const next = slots.slice()
+    next[i] = c
+    return planAffordable(
+      next.filter((x): x is CardDef => !!x),
+      battle.state.energy[localSide],
+      local.maxEnergy,
+      passiveEnergy,
+    )
+  }
 
   // Preview the hovered card's effect on my position. `from` = where I stand
   // when this card resolves (start cell shifted by every move card *before* it
@@ -340,6 +357,16 @@ export function BattleScreen({
 
     for (const [si, step] of steps.entries()) {
       if (cancelled.current) return
+
+      // 필살기: 타격을 보여주기 전에 컷인으로 "이게 필살기다"를 못 박는다.
+      // 기력 부족으로 불발된 카드는 연출하지 않는다.
+      if (step.card.signature && step.card.kind === 'attack' && step.result !== 'nofuel') {
+        setCutIn({ seq: si + 1, actor: step.actor as 0 | 1, card: step.card })
+        await wait(CUTIN_MS)
+        setCutIn(null)
+        if (cancelled.current) return
+      }
+
       setPhaseTag(PHASE_TEXT[step.phase])
       setView(stepToView(step, si + 1))
       if (step.card.kind === 'attack' && step.result !== 'nofuel') {
@@ -352,10 +379,13 @@ export function BattleScreen({
       if (step.result === 'hit' && step.damage > 0) {
         const target = (1 - step.actor) as 0 | 1
         setHitFlash((prev) => ({ seq: (prev?.seq ?? 0) + 1, target }))
+        // 묵직한 한 방이면 화면이 흔들린다
+        if (step.damage >= SHAKE_DAMAGE) setShake((n) => n + 1)
       }
       await wait(STEP_MS[step.phase])
       if (cancelled.current) return
     }
+    setCutIn(null)
 
     setView(baseView(battle))
     setResolveHit(null)
@@ -430,6 +460,13 @@ export function BattleScreen({
     }
   }, [])
 
+  // 흔들림은 잠깐이면 된다 — 클래스를 뗐다 붙여야 다음 강타에서 다시 재생된다
+  useEffect(() => {
+    if (!shake) return
+    const id = setTimeout(() => setShake(0), 420)
+    return () => clearTimeout(id)
+  }, [shake])
+
   return (
     <div className="screen battle">
       <div className="grid-bg" />
@@ -444,7 +481,7 @@ export function BattleScreen({
         onQuit={onQuit}
       />
 
-      <div className="board">
+      <div className={`board ${shake ? 'is-shaking' : ''}`}>
         <div className="gridboard">
           {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
             const row = Math.floor(i / GRID_COLS)
@@ -577,22 +614,26 @@ export function BattleScreen({
             {hand.filter((c) => tabOf(c) === handTab).map((c) => {
               const onCd = cdLeft(c.id) > 0
               const locked = onCd || placedNoRepeat(c)
-              const dim = locked || (c.kind === 'attack' && (c.energyCost ?? 0) > energyBudget)
+              // 기력이 모자라 이번 플랜에 넣을 수 없는 카드도 선택 불가로 잠근다
+              const poor = !locked && !canAfford(c)
+              const unusable = locked || poor
               const inSlots = slotNosFor(c.id)
               return (
                 <button
                   key={c.id}
-                  className={`handcard handcard--${c.kind} ${dim ? 'is-dim' : ''} ${locked ? 'is-locked' : ''}`}
+                  className={`handcard handcard--${c.kind} ${unusable ? 'is-dim' : ''} ${
+                    unusable ? 'is-locked' : ''
+                  }`}
                   onClick={() => addCard(c)}
                   onPointerEnter={(e) => {
-                    // 마우스: 올려두면 미리보기(hover). 잠긴 카드는 예측 없음.
-                    if (locked || e.pointerType !== 'mouse') return
+                    // 마우스: 올려두면 미리보기(hover). 못 쓰는 카드는 예측 없음.
+                    if (unusable || e.pointerType !== 'mouse') return
                     setHoveredCard(c)
                     setHoverSlot(null)
                   }}
                   onPointerDown={(e) => {
                     // 터치/펜: 누르는 동안만 미리보기(떼면 배치되며 지워짐).
-                    if (locked || e.pointerType === 'mouse') return
+                    if (unusable || e.pointerType === 'mouse') return
                     setHoveredCard(c)
                     setHoverSlot(null)
                   }}
@@ -601,7 +642,7 @@ export function BattleScreen({
                     if (e.pointerType !== 'mouse') setHoveredCard(null)
                   }}
                   onPointerCancel={() => setHoveredCard(null)}
-                  disabled={locked}
+                  disabled={unusable}
                   style={{ ['--accent' as string]: cardAccent(c, local.accent) }}
                 >
                   <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} />
@@ -626,6 +667,34 @@ export function BattleScreen({
                   .filter(Boolean)
                   .join('     ') || ' '}
           </div>
+        </div>
+      )}
+
+      {cutIn && (
+        <div
+          key={`cutin-${cutIn.seq}`}
+          className={`cutin ${cutIn.actor === localSide ? 'cutin--me' : 'cutin--foe'}`}
+          style={{
+            ['--accent' as string]: battle.chars[cutIn.actor].accent,
+            ['--accent2' as string]: battle.chars[cutIn.actor].accent2,
+          }}
+        >
+          <div className="cutin__streaks">
+            {Array.from({ length: 9 }, (_, i) => (
+              <span key={i} className="cutin__streak" style={{ ['--i' as string]: i }} />
+            ))}
+          </div>
+          <div
+            className="cutin__art"
+            dangerouslySetInnerHTML={{ __html: portraits[cutIn.actor] }}
+          />
+          <div className="cutin__label">
+            <div className="cutin__who">
+              {battle.chars[cutIn.actor].name} · 필살기
+            </div>
+            <div className="cutin__name">{cutIn.card.name}</div>
+          </div>
+          <div className="cutin__flash" />
         </div>
       )}
 
@@ -656,16 +725,17 @@ function FighterSprite({
   // 두 파이터가 같은 셀에 겹치면 화면상 좌우로 살짝 비켜 둘 다 보이게 한다
   const stacked =
     v.pos[0].col === v.pos[1].col && v.pos[0].row === v.pos[1].row
+  const fx = v.fx[idx]
   const cls = [
     'fighter',
     `fighter--${side}`,
     stacked ? `fighter--stacked-${side}` : '',
     isLocal ? 'fighter--me' : '',
-    v.acting[idx] ? 'is-attacking' : '',
+    // 공격 모션은 카드의 fx 종류별로 다르다(베기·사격·돌진·내려찍기…)
+    v.acting[idx] ? `is-attacking is-atk-${fx?.kind ?? 'punch'}` : '',
     v.damage[idx] > 0 ? 'is-hit' : '',
     v.shield[idx] > 0 ? 'is-guard' : '',
   ].join(' ')
-  const fx = v.fx[idx]
   return (
     <div
       className={cls}
