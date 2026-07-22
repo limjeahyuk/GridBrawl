@@ -1253,7 +1253,7 @@
   animation: mepulse 1.4s ease-in-out infinite;
 }
 .fighter__art {
-  width: 104px;
+  width: 88px;
   transform: scaleX(var(--flip)) translateX(var(--lunge));
   transform-origin: bottom center;
   transition: transform 0.26s ease;
@@ -1432,7 +1432,7 @@
 
 /* ---- cards (bottom) ------------------------------------------------------ */
 .cards {
-  height: 330px;
+  height: 348px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -1559,37 +1559,37 @@
 }
 /* 탭당 최대 6장이라 크게 보여줄 수 있다 (이동 6 · 공격 6 · 수비 3~4) */
 .handcard {
-  width: 118px;
-  height: 158px;
+  width: 130px;
+  height: 172px;
   padding: 0;
   border: none;
   background: none;
   transition: transform 0.1s ease;
 }
 .handcard--move {
-  width: 92px;
+  width: 102px;
 }
 .handcard--move .cardface__meta--move {
   display: none; /* 이동 카드는 화살표+이름으로 충분 */
 }
 .handcard .cardface {
-  padding: 9px 10px;
+  padding: 10px 11px;
 }
 .handcard .cardface__icon {
-  font-size: 18px;
+  font-size: 20px;
 }
 .handcard .cardface__name {
-  font-size: 13px;
+  font-size: 15px;
   margin: 6px 0 auto;
 }
 .handcard .cardface__meta {
-  font-size: 12px;
-  gap: 3px 7px;
+  font-size: 13px;
+  gap: 3px 8px;
 }
 .handcard .rangechart {
-  width: 80px;
+  width: 90px;
   gap: 2px;
-  margin: 4px 0 5px;
+  margin: 5px 0 6px;
 }
 .handcard:hover {
   transform: translateY(-4px) scale(1.08);
@@ -1633,7 +1633,7 @@
 .cardface__name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   color: #fff;
   margin: 6px 0 auto;
   line-height: 1.15;
@@ -1642,7 +1642,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-dim);
 }
@@ -1656,7 +1656,7 @@
 }
 /* 특수 능력 칩(관통/기력흡수/흡혈/넉백/방벽/반동) */
 .cardface__tag {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: #fff;
   background: color-mix(in srgb, var(--accent) 35%, #101425);
@@ -1685,7 +1685,7 @@
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 2px;
-  width: 78px;
+  width: 84px;
   margin: 4px 0 5px;
 }
 .rc {
