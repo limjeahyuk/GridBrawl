@@ -220,14 +220,56 @@
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding: 4px 6px 8px;
+  /* overflow-x:auto는 세로도 클리핑하므로, 카드 위로 튀어나온 배지(top:-8px)가
+     잘리지 않도록 위쪽 여백을 충분히 준다 */
+  padding: 14px 6px 6px;
   align-items: flex-start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) rgba(255, 255, 255, 0.08);
+}
+.deckbuild__trayrow::-webkit-scrollbar {
+  height: 8px;
+}
+.deckbuild__trayrow::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+.deckbuild__trayrow::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius: 999px;
 }
 .traycard {
   position: relative;
   flex: none;
   width: 116px;
   height: 158px;
+}
+/* 아이폰 편집 모드처럼 살짝 흔들흔들 — 뺄 수 있는 카드만 */
+@keyframes jiggle {
+  0% {
+    transform: rotate(-1.15deg) translateY(-0.4px);
+  }
+  100% {
+    transform: rotate(1.15deg) translateY(0.4px);
+  }
+}
+.traycard:not(.traycard--fixed) {
+  animation: jiggle 0.28s ease-in-out infinite alternate;
+  transform-origin: 50% 55%;
+}
+/* 카드마다 위상을 조금씩 어긋나게 해 자연스럽게 */
+.traycard:not(.traycard--fixed):nth-child(2n) {
+  animation-duration: 0.32s;
+  animation-delay: -0.11s;
+}
+.traycard:not(.traycard--fixed):nth-child(3n) {
+  animation-duration: 0.26s;
+  animation-delay: -0.19s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .traycard:not(.traycard--fixed) {
+    animation: none;
+  }
 }
 /* 트레이는 훑어보는 용도 — 설명은 2줄까지만 */
 .traycard .cardface__desc {

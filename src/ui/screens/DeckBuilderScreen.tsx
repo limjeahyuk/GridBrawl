@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { ROSTER, getChar } from '../../data/roster'
 import type { CardDef } from '../../battle/types'
 import { CardFace, cardAccent } from '../CardFace'
@@ -40,6 +40,14 @@ export function DeckBuilderScreen({
   const char = getChar(charId)
   const pool = useMemo(() => poolFor(charId), [charId])
   const pickedSet = new Set(picked)
+  const trayRef = useRef<HTMLDivElement>(null)
+
+  // 트레이는 가로 스크롤인데 일반 휠은 세로라 안 움직인다 → 세로 휠을 가로로 변환
+  const onTrayWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = trayRef.current
+    if (!el || el.scrollWidth <= el.clientWidth) return
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY
+  }
 
   const changeChar = (id: string) => {
     if (id === charId) return
@@ -147,7 +155,7 @@ export function DeckBuilderScreen({
         <div className="deckbuild__trayhead">
           내 덱 <b>{deckList.length}</b>장 · 고른 카드 {picked.length}/{DECK_SIZE}
         </div>
-        <div className="deckbuild__trayrow">
+        <div className="deckbuild__trayrow" ref={trayRef} onWheel={onTrayWheel}>
           {deckList.map(({ card, fixed }) => (
             <div key={card.id} className={`traycard ${fixed ? 'traycard--fixed' : ''}`}>
               <button
