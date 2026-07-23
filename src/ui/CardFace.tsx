@@ -71,28 +71,33 @@ export function CardFace({ card, accent }: { card: CardDef; accent: string }) {
             : moveIcon(card.dir, card.steps ?? 1)
   const reach =
     card.kind === 'attack' ? Math.max(0, ...(card.range ?? []).map((o) => o.df)) : 0
+  // 능력 칩이 있으면 수치줄이 한 줄 더 차지 → 설명을 한 줄 줄여 잘리지 않게
+  const tags = abilityTags(card)
   return (
-    <div className={`cardface cardface--${card.kind}`} style={{ ['--accent' as string]: accent }}>
+    <div
+      className={`cardface cardface--${card.kind} ${tags.length > 0 ? 'cardface--tagged' : ''}`}
+      style={{ ['--accent' as string]: accent }}
+    >
       <div className="cardface__top">
         <span className="cardface__icon">{icon}</span>
         {card.signature && <span className="cardface__sig">SP</span>}
         {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>
       <div className="cardface__name">{card.name}</div>
+      {/* 설명이 가장 중요 — 이름 바로 아래에 크게. 범위·수치는 그 밑으로. */}
+      <p className="cardface__desc">{card.desc}</p>
+      {card.kind === 'attack' && <RangeChart card={card} />}
       {card.kind === 'attack' && (
-        <>
-          <RangeChart card={card} />
-          <div className="cardface__meta">
-            <span>⚔{card.damage}</span>
-            <span>↦{reach}</span>
-            <span>⚡{card.energyCost}</span>
-            {abilityTags(card).map((t) => (
-              <span key={t} className="cardface__tag">
-                {t}
-              </span>
-            ))}
-          </div>
-        </>
+        <div className="cardface__meta">
+          <span>⚔{card.damage}</span>
+          <span>↦{reach}</span>
+          <span>⚡{card.energyCost}</span>
+          {tags.map((t) => (
+            <span key={t} className="cardface__tag">
+              {t}
+            </span>
+          ))}
+        </div>
       )}
       {card.kind === 'guard' && (
         <div className="cardface__meta">
@@ -111,7 +116,6 @@ export function CardFace({ card, accent }: { card: CardDef; accent: string }) {
           <span>⚡{card.healCost}</span>
         </div>
       )}
-      {card.kind === 'move' && <div className="cardface__meta cardface__meta--move"><span>{card.desc}</span></div>}
     </div>
   )
 }

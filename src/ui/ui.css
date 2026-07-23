@@ -161,8 +161,8 @@
 }
 .deckcard {
   position: relative;
-  width: 118px;
-  height: 156px;
+  width: 132px;
+  height: 182px;
   padding: 0;
   border: none;
   background: none;
@@ -226,8 +226,14 @@
 .traycard {
   position: relative;
   flex: none;
-  width: 104px;
-  height: 138px;
+  width: 116px;
+  height: 158px;
+}
+/* 트레이는 훑어보는 용도 — 설명은 2줄까지만 */
+.traycard .cardface__desc {
+  font-size: 10.5px;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
 }
 .traycard__btn {
   width: 100%;
@@ -2035,7 +2041,7 @@
 
 /* ---- cards (bottom) ------------------------------------------------------ */
 .cards {
-  height: 348px;
+  height: 378px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -2162,18 +2168,15 @@
 }
 /* 탭당 최대 6장이라 크게 보여줄 수 있다 (이동 6 · 공격 6 · 수비 3~4) */
 .handcard {
-  width: 130px;
-  height: 172px;
+  width: 138px;
+  height: 202px;
   padding: 0;
   border: none;
   background: none;
   transition: transform 0.1s ease;
 }
 .handcard--move {
-  width: 102px;
-}
-.handcard--move .cardface__meta--move {
-  display: none; /* 이동 카드는 화살표+이름으로 충분 */
+  width: 120px;
 }
 .handcard .cardface {
   padding: 10px 11px;
@@ -2183,7 +2186,12 @@
 }
 .handcard .cardface__name {
   font-size: 15px;
-  margin: 6px 0 auto;
+  margin: 6px 0 5px;
+}
+/* 손패는 범위표+수치가 자리를 많이 써서 행간을 좁혀 3줄이 정확히 들어가게 */
+.handcard .cardface__desc {
+  font-size: 12px;
+  line-height: 1.3;
 }
 .handcard .cardface__meta {
   font-size: 13px;
@@ -2238,8 +2246,27 @@
   font-weight: 700;
   font-size: 14px;
   color: #fff;
-  margin: 6px 0 auto;
+  margin: 6px 0 5px;
   line-height: 1.15;
+}
+/* 설명 — 카드에서 가장 중요한 정보라 이름 바로 아래에 읽기 좋은 크기로.
+   남는 공간을 차지해(flex:1) 범위·수치를 카드 아래쪽으로 밀어낸다. */
+.cardface__desc {
+  flex: 1;
+  min-height: 0;
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+  opacity: 0.92;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 카드 높이에 맞춰 3줄 + 말줄임(중간에 잘리지 않게) */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* 능력 칩이 수치줄을 한 줄 더 밀어내므로 설명은 2줄까지 */
+.cardface--tagged .cardface__desc {
+  -webkit-line-clamp: 2;
 }
 .cardface__meta {
   display: flex;
@@ -2251,11 +2278,6 @@
 }
 .cardface--attack .cardface__meta {
   color: var(--accent);
-}
-.cardface__meta--move {
-  font-size: 10px;
-  color: var(--text-faint);
-  line-height: 1.2;
 }
 /* 특수 능력 칩(관통/기력흡수/흡혈/넉백/방벽/반동) */
 .cardface__tag {
@@ -2271,6 +2293,10 @@
 }
 .slot .cardface__name {
   font-size: 12px;
+}
+/* 슬롯은 작은 미리보기 — 설명은 생략하고 이름·범위만 */
+.slot .cardface__desc {
+  display: none;
 }
 .cardface__cd {
   font-family: var(--font-display);
