@@ -137,7 +137,15 @@
   font-size: 12px;
   color: var(--text-faint);
 }
-.deckbuild__grid {
+/* 위: 고를 카드 풀 (남은 카드만, 세로 스크롤) */
+.deckbuild__poolwrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.deckbuild__pool {
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -145,29 +153,26 @@
   gap: 12px;
   justify-content: center;
   align-content: flex-start;
-  padding: 10px 26px 26px;
-  z-index: 2;
+  padding: 8px 26px 14px;
+}
+.deckbuild__poolempty {
+  color: var(--text-faint);
+  margin-top: 24px;
 }
 .deckcard {
   position: relative;
-  width: 130px;
-  height: 172px;
+  width: 118px;
+  height: 156px;
   padding: 0;
   border: none;
   background: none;
   transition: transform 0.1s ease;
 }
-.deckcard.is-picked {
+.deckcard:not(:disabled):hover {
   transform: translateY(-4px);
-}
-.deckcard.is-picked .cardface {
-  box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .deckcard.is-blocked {
   opacity: 0.4;
-}
-.deckcard--fixed {
-  opacity: 0.72;
 }
 .deckcard__badge {
   position: absolute;
@@ -178,14 +183,65 @@
   font-size: 11px;
   padding: 2px 7px;
   border-radius: 999px;
+  z-index: 1;
 }
 .deckcard__badge--fixed {
   background: #2a3450;
   color: var(--text-dim);
 }
-.deckcard__badge--on {
+.deckcard__badge--add {
   background: var(--accent);
   color: #07121a;
+}
+.deckcard__badge--rm {
+  background: var(--neon-red);
+  color: #1a0508;
+}
+
+/* 아래: 내 덱 트레이 (고정+고른 카드, 이동→공격→지원 순, 가로 스크롤) */
+.deckbuild__tray {
+  flex: none;
+  border-top: 1px solid var(--panel-edge);
+  background: linear-gradient(0deg, rgba(6, 9, 16, 0.97), rgba(6, 9, 16, 0.5));
+  padding: 8px 20px 12px;
+  z-index: 3;
+}
+.deckbuild__trayhead {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin: 0 6px 6px;
+}
+.deckbuild__trayhead b {
+  color: var(--accent);
+}
+.deckbuild__trayrow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 6px 8px;
+  align-items: flex-start;
+}
+.traycard {
+  position: relative;
+  flex: none;
+  width: 104px;
+  height: 138px;
+}
+.traycard__btn {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  transition: transform 0.1s ease;
+}
+.traycard:not(.traycard--fixed) .traycard__btn:hover {
+  transform: translateY(-3px);
+}
+.traycard--fixed {
+  opacity: 0.66;
 }
 
 /* 덱 선택 */
