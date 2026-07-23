@@ -78,9 +78,13 @@ export function presetDeck(charId: string): Deck {
 // --- 저장 (localStorage) ----------------------------------------------------
 const STORE_KEY = 'gb-decks'
 
-export function loadDecks(): Deck[] {
+/** 저장 키 — 로그인 계정은 uid로 분리해 같은 브라우저에서 계정끼리 섞이지 않게.
+ *  (uid 없음 = 게스트/로컬 전용) */
+const keyFor = (uid?: string | null) => (uid ? `${STORE_KEY}:${uid}` : STORE_KEY)
+
+export function loadDecks(uid?: string | null): Deck[] {
   try {
-    const raw = localStorage.getItem(STORE_KEY)
+    const raw = localStorage.getItem(keyFor(uid))
     if (!raw) return []
     const arr = JSON.parse(raw)
     if (!Array.isArray(arr)) return []
@@ -93,23 +97,28 @@ export function loadDecks(): Deck[] {
   }
 }
 
-function writeDecks(decks: Deck[]) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(decks))
+/** 목록 전체를 로컬에 덮어쓴다(클라우드 조회 결과 캐싱용). */
+export function writeDecks(decks: Deck[], uid?: string | null): void {
+  try {
+    localStorage.setItem(keyFor(uid), JSON.stringify(decks))
+  } catch {
+    /* storage unavailable — 메모리로만 동작 */
+  }
 }
 
 /** 새 덱은 추가, 기존 id면 갱신(upsert). */
-export function saveDeck(deck: Deck): Deck[] {
-  const decks = loadDecks()
+export function saveDeck(deck: Deck, uid?: string | null): Deck[] {
+  const decks = loadDecks(uid)
   const i = decks.findIndex((d) => d.id === deck.id)
   if (i >= 0) decks[i] = deck
   else decks.push(deck)
-  writeDecks(decks)
+  writeDecks(decks, uid)
   return decks
 }
 
-export function deleteDeck(id: string): Deck[] {
-  const decks = loadDecks().filter((d) => d.id !== id)
-  writeDecks(decks)
+export function deleteDeck(id: string, uid?: string | null): Deck[] {
+  const decks = loadDecks(uid).filter((d) => d.id !== id)
+  writeDecks(decks, uid)
   return decks
 }
 

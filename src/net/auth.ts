@@ -100,6 +100,8 @@ function clearGuest(): void {
 type Listener = (u: AuthUser | null) => void
 const listeners = new Set<Listener>()
 let firebaseUser: AuthUser | null = null
+/** 원본 Firebase User — ID 토큰 발급용(RTDB 보안 규칙 통과에 필요). */
+let firebaseRaw: User | null = null
 let guestUser: AuthUser | null = loadGuest()
 let ready = false
 let started = false
@@ -118,6 +120,7 @@ function ensureStarted(): void {
     return
   }
   onAuthStateChanged(auth(), (u) => {
+    firebaseRaw = u
     firebaseUser = u ? toUser(u) : null
     if (firebaseUser && guestUser) {
       // a real account signed in — retire the local guest identity
@@ -137,6 +140,17 @@ export function subscribeAuth(cb: Listener): () => void {
   if (ready) cb(current())
   return () => {
     listeners.delete(cb)
+  }
+}
+
+/** 현재 구글 계정의 ID 토큰. 게스트·미로그인·미설정이면 null.
+ *  RTDB REST 호출에 `?auth=<token>`으로 붙여 계정별 경로 권한을 얻는다. */
+export async function getIdToken(): Promise<string | null> {
+  if (!firebaseRaw) return null
+  try {
+    return await firebaseRaw.getIdToken()
+  } catch {
+    return null
   }
 }
 

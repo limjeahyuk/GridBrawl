@@ -6,7 +6,8 @@ import { signOutUser } from './net/auth'
 import { ROSTER } from './data/roster'
 import { decideAI } from './battle/ai'
 import type { CardDef } from './battle/types'
-import { assembleDeck, presetDeck, saveDeck, type Deck } from './game/decks'
+import { assembleDeck, presetDeck, type Deck } from './game/decks'
+import { putDeck } from './game/deckSync'
 import { createPlanExchange } from './net/session'
 import { LoginScreen } from './ui/screens/LoginScreen'
 import { TitleScreen } from './ui/screens/TitleScreen'
@@ -79,7 +80,8 @@ export default function App() {
 
   // -- deck build / manage ---------------------------------------------------
   const onSaveDeck = useCallback((d: Deck) => {
-    saveDeck(d)
+    // 로컬은 즉시 반영되고 클라우드 업로드는 뒤따른다(실패해도 로컬엔 남음)
+    void putDeck(d).catch(() => {})
     setPhase('deck-manage')
   }, [])
 

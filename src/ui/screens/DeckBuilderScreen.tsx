@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ROSTER, getChar } from '../../data/roster'
 import type { CardDef } from '../../battle/types'
 import { CardFace, cardAccent } from '../CardFace'
@@ -10,6 +10,7 @@ import {
   newDeckId,
   type Deck,
 } from '../../game/decks'
+import { listDecks } from '../../game/deckSync'
 
 type Tab = 'move' | 'attack' | 'support'
 const TABS: { id: Tab; label: string }[] = [
@@ -18,6 +19,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'support', label: '지원' },
 ]
 const TAB_ORDER: Record<Tab, number> = { move: 0, attack: 1, support: 2 }
+/** 이름을 안 적었을 때 붙는 기본 이름(뒤에 번호가 붙는다). */
+const DEFAULT_NAME_BASE = '내 덱'
 const tabOf = (c: CardDef): Tab =>
   c.kind === 'move' ? 'move' : c.kind === 'attack' ? 'attack' : 'support'
 
@@ -36,6 +39,22 @@ export function DeckBuilderScreen({
   const [name, setName] = useState(editing?.name ?? '')
   const [picked, setPicked] = useState<string[]>(editing?.cardIds ?? [])
   const [tab, setTab] = useState<Tab>('move')
+
+  // 이름을 비워두면 "내 덱 N"으로 자동 저장 — 기존 덱과 겹치지 않는 가장 작은 N
+  const [autoName, setAutoName] = useState(DEFAULT_NAME_BASE + ' 1')
+  useEffect(() => {
+    let alive = true
+    void listDecks().then((ds) => {
+      if (!alive) return
+      const used = new Set(ds.filter((d) => d.id !== editing?.id).map((d) => d.name))
+      let n = 1
+      while (used.has(`${DEFAULT_NAME_BASE} ${n}`)) n++
+      setAutoName(`${DEFAULT_NAME_BASE} ${n}`)
+    })
+    return () => {
+      alive = false
+    }
+  }, [editing?.id])
 
   const char = getChar(charId)
   const pool = useMemo(() => poolFor(charId), [charId])
@@ -58,11 +77,17 @@ export function DeckBuilderScreen({
     setPicked((p) => (p.includes(id) || p.length >= DECK_SIZE ? p : [...p, id]))
   const remove = (id: string) => setPicked((p) => p.filter((x) => x !== id))
 
-  const full = picked.length === DECK_SIZE
-  const canSave = full && name.trim().length > 0
+  // 카드만 다 고르면 저장 가능 — 이름은 비워도 된다(자동 이름).
+  const canSave = picked.length === DECK_SIZE
+  const full = canSave
   const save = () => {
     if (!canSave) return
-    onSave({ id: editing?.id ?? newDeckId(), name: name.trim(), charId, cardIds: picked })
+    onSave({
+      id: editing?.id ?? newDeckId(),
+      name: name.trim() || autoName,
+      charId,
+      cardIds: picked,
+    })
   }
 
   // 아직 안 고른, 현재 탭의 풀 카드 (고른 카드는 아래 트레이로 내려간다)
@@ -89,12 +114,16 @@ export function DeckBuilderScreen({
         </button>
         <input
           className="deckbuild__name"
-          placeholder="덱 이름"
+          placeholder={autoName}
           value={name}
           maxLength={16}
           onChange={(e) => setName(e.target.value)}
         />
-        <button className={`btn ${canSave ? '' : 'is-disabled'}`} disabled={!canSave} onClick={save}>
+        <button
+          className={`btn deckbuild__save ${canSave ? '' : 'is-disabled'}`}
+          disabled={!canSave}
+          onClick={save}
+        >
           저장 ({picked.length}/{DECK_SIZE})
         </button>
       </div>

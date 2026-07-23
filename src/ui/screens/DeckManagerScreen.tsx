@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { PortraitSvg } from '../PortraitSvg'
-import { loadDecks, deleteDeck, type Deck } from '../../game/decks'
+import { cloudEnabled, listDecks, removeDeck } from '../../game/deckSync'
+import type { Deck } from '../../game/decks'
 
-/** 덱 매니저 — 저장된 덱 목록. 새로 만들기 / 수정 / 삭제. */
+/** 덱 매니저 — 저장된 덱 목록. 새로 만들기 / 수정 / 삭제.
+ *  로그인 계정이면 클라우드에서 불러와 기기 간 공유된다. */
 export function DeckManagerScreen({
   onNew,
   onEdit,
@@ -13,9 +15,23 @@ export function DeckManagerScreen({
   onEdit: (deck: Deck) => void
   onBack: () => void
 }) {
-  const [decks, setDecks] = useState<Deck[]>(() => loadDecks())
+  const [decks, setDecks] = useState<Deck[] | null>(null) // null = 불러오는 중
+  const synced = cloudEnabled()
 
-  const remove = (id: string) => setDecks(deleteDeck(id))
+  useEffect(() => {
+    let alive = true
+    void listDecks().then((d) => {
+      if (alive) setDecks(d)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const remove = (id: string) => {
+    setDecks((prev) => prev?.filter((d) => d.id !== id) ?? prev) // 낙관적 반영
+    void removeDeck(id).catch(() => void listDecks().then(setDecks))
+  }
 
   return (
     <div className="screen deckmgr">
@@ -30,13 +46,18 @@ export function DeckManagerScreen({
         </button>
       </div>
 
+      <div className="deckmgr__sync">
+        {synced ? '☁ 계정에 저장 — 다른 기기에서도 같은 덱을 씁니다' : '이 기기에만 저장됩니다 (구글 로그인 시 계정 동기화)'}
+      </div>
+
       <div className="deckmgr__list">
-        {decks.length === 0 && (
+        {decks === null && <p className="deckmgr__empty">덱을 불러오는 중…</p>}
+        {decks?.length === 0 && (
           <p className="deckmgr__empty">
             저장된 덱이 없습니다. [+ 새 덱]으로 나만의 덱을 만들어 보세요.
           </p>
         )}
-        {decks.map((d) => {
+        {decks?.map((d) => {
           const char = getChar(d.charId)
           return (
             <div

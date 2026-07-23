@@ -272,9 +272,9 @@ export function BattleScreen({
     const next = slots.slice()
     next[i] = c
     setSlots(next)
-    // 배치 직후엔 미리보기(고스트·사거리)를 항상 지운다. 특히 터치 기기는
-    // mouseleave가 없어 프리뷰가 남으므로, 방금 놓은 카드 기준으로 유령이
-    // 붙어버리는 것을 막는다.
+    // 배치 후엔 호버 미리보기를 놓는다 — 대신 `planPreview`가 이어받아 고른
+    // 카드 기준 예시가 계속 남는다(터치 기기는 mouseleave가 없어 방금 놓은
+    // 카드가 호버로 남으면 같은 이동이 두 번 반영돼 보인다).
     setHoveredCard(null)
     setHoverSlot(null)
   }
@@ -310,6 +310,27 @@ export function BattleScreen({
     )
   }
 
+  // 지금까지 고른 카드만으로 그리는 **상시 미리보기**. 슬롯을 순서대로 훑으며
+  // 이동은 위치를 옮기고, 공격은 그 시점 위치에서의 타격 셀을 모은다. 카드를
+  // 놓아도 예시가 유지되고, 슬롯이 모두 비어야 사라진다.
+  // ⚠ 카드를 고르는 동안에만 그린다 — 실행을 누르면 슬롯은 그대로지만(해소가
+  //   끝나야 비운다) 예시는 즉시 사라져야 실제 진행과 겹치지 않는다.
+  const planPreview = useMemo(() => {
+    const cur = view.pos[localSide]
+    const none = { ghost: null as Cell | null, cells: [] as Cell[] }
+    if (phase !== 'select') return none
+    const facing = battle.facing(localSide)
+    let at = { ...cur }
+    const cells: Cell[] = []
+    for (const c of slots) {
+      if (!c) continue
+      if (c.kind === 'move') at = applyMovePreview(at, c)
+      else if (c.kind === 'attack') cells.push(...attackCells(at, c, facing))
+    }
+    const moved = at.col !== cur.col || at.row !== cur.row
+    return { ghost: moved ? at : null, cells }
+  }, [slots, view, localSide, battle, phase])
+
   // Preview the hovered card's effect on my position. `from` = where I stand
   // when this card resolves (start cell shifted by every move card *before* it
   // in the plan, so it tracks queued dashes). `ghost` = where I'll actually be
@@ -317,7 +338,10 @@ export function BattleScreen({
   // or null when it doesn't change my cell.
   const preview = useMemo(() => {
     const cur = view.pos[localSide]
-    if (!hoveredCard) return { from: cur, ghost: null as Cell | null }
+    // 위치와 무관한 카드(가드·원기·힐)를 올려보거나 아무것도 안 올려봤으면
+    // 고른 카드 기준 미리보기를 그대로 유지한다 — 예시는 깜빡이지 않는다.
+    const spatial = hoveredCard?.kind === 'move' || hoveredCard?.kind === 'attack'
+    if (!hoveredCard || !spatial) return { from: cur, ghost: planPreview.ghost }
     const nextEmpty = slots.indexOf(null)
     const upto = hoverSlot ?? (nextEmpty === -1 ? slots.length : nextEmpty)
     let from = { ...cur }
@@ -326,22 +350,19 @@ export function BattleScreen({
       if (c?.kind === 'move') from = applyMovePreview(from, c)
     }
     let ghost: Cell | null =
-      hoveredCard.kind === 'move'
-        ? applyMovePreview(from, hoveredCard)
-        : hoveredCard.kind === 'attack'
-          ? from
-          : null
+      hoveredCard.kind === 'move' ? applyMovePreview(from, hoveredCard) : from
     if (ghost && ghost.col === cur.col && ghost.row === cur.row) ghost = null
     return { from, ghost }
-  }, [hoveredCard, hoverSlot, slots, view, localSide])
+  }, [hoveredCard, hoverSlot, slots, view, localSide, planPreview])
 
-  // cells the hovered attack card would hit, from my position at that point
+  // 강조할 타격 셀 — 공격 카드를 올려보는 중이면 그 카드의 사거리, 아니면 고른
+  // 플랜의 공격들이 덮는 셀(그대로 남아 있는 예시).
   const targetCells = useMemo(
     () =>
       hoveredCard?.kind === 'attack'
         ? attackCells(preview.from, hoveredCard, battle.facing(localSide))
-        : [],
-    [hoveredCard, preview, battle, localSide],
+        : planPreview.cells,
+    [hoveredCard, preview, battle, localSide, planPreview],
   )
 
   // which slot numbers (1-based) contain this card id

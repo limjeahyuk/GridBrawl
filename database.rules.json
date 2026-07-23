@@ -3,6 +3,25 @@
     ".read": false,
     ".write": false,
 
+    "decks": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+
+        "$deckId": {
+          ".validate": "newData.hasChildren(['id', 'name', 'charId', 'cardIds'])",
+          "id": { ".validate": "newData.isString() && newData.val() === $deckId" },
+          "name": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "charId": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "cardIds": {
+            ".validate": "newData.hasChildren()",
+            "$i": { ".validate": "newData.isString() && newData.val().length <= 40" }
+          },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+
     "gridbrawl": {
       "$code": {
         ".read": "$code.matches(/^[A-HJ-NP-Z2-9]{4,8}$/)",

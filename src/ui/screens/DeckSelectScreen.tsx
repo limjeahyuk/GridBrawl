@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { getChar, ROSTER } from '../../data/roster'
 import { PortraitSvg } from '../PortraitSvg'
-import { loadDecks, presetDeck, type Deck } from '../../game/decks'
+import { presetDeck, type Deck } from '../../game/decks'
+import { listDecks } from '../../game/deckSync'
 
 /** 덱 선택 — 전투 전에 쓸 덱을 고른다. 저장된 덱 + 캐릭터별 기본 덱(빠른 시작). */
 export function DeckSelectScreen({
@@ -12,7 +14,16 @@ export function DeckSelectScreen({
   onManage: () => void
   onBack: () => void
 }) {
-  const saved = loadDecks()
+  const [saved, setSaved] = useState<Deck[]>([])
+  useEffect(() => {
+    let alive = true
+    void listDecks().then((d) => {
+      if (alive) setSaved(d)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const DeckButton = ({ deck }: { deck: Deck }) => {
     const char = getChar(deck.charId)

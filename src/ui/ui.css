@@ -37,6 +37,16 @@
   font-size: 16px;
   text-align: center;
 }
+/* 저장은 이 화면의 주 동작 — 눌리는 영역을 크게 */
+.btn.deckbuild__save {
+  padding: 18px 34px;
+  font-size: 18px;
+  border-width: 2px;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.btn.deckbuild__save.is-disabled {
+  box-shadow: none;
+}
 .btn.is-disabled {
   opacity: 0.4;
   pointer-events: none;
@@ -56,6 +66,15 @@
   color: var(--text-dim);
   text-align: center;
   margin-top: 40px;
+}
+/* 저장 위치 안내(계정 동기화 / 이 기기 전용) */
+.deckmgr__sync {
+  margin: -6px 26px 8px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  z-index: 2;
 }
 .deckmgr__card {
   display: flex;

@@ -196,6 +196,11 @@
 - **필살기 컷인**: `signature: true` 카드가 발동하면(기력 부족 `nofuel` 제외) 타격 **직전에** 전투 화면 전체를 `CUTIN_MS`(1.75초) 동안 덮는다 — 대각 색띠가 쓸고 지나가며 대형 초상(`buildPortraitSvg`) + "〈캐릭터〉 · 필살기" + 기술명이 꽂힌다. 발동자가 나면 `cutin--me`, 상대면 `cutin--foe`(초상이 반대쪽으로). 구현은 `BattleScreen`의 `cutIn` 상태 + `ui.css`의 `.cutin*`.
 - **멀티 안전**: 컷인·모션은 `resolveTurn` 결과(steps)를 보고 재생만 하므로 양 피어가 동일하게 재생 — 락스텝 결정론에 영향 없음. 다만 한 턴 해소 시간이 필살기당 1.75초 늘어난다(온라인 턴 타이머는 *선택* 단계에만 돌아 무관).
 
+#### 카드 선택 미리보기 — 상시 유지 (2026-07-23)
+카드를 고르는 동안 **지금까지 고른 플랜의 결과**를 보드에 계속 띄운다(`BattleScreen`의 `planPreview`). 슬롯을 1→3 순서로 훑으며 이동 카드는 위치를 옮기고, 공격 카드는 *그 시점 위치* 기준 타격 셀을 모은다 → 유령(`.fighter--ghost`)은 최종 예상 위치에, 빨간 셀은 플랜의 공격이 덮는 칸에 표시.
+- **꺼지는 조건은 슬롯이 전부 빌 때 + 실행(제출) 후**. 카드를 놓아도, 마우스를 떼도, 가드·원기처럼 위치와 무관한 카드를 올려봐도 예시는 남는다(예전엔 호버에만 묶여 배치 즉시 사라졌다). 단 **`phase !== 'select'`면 그리지 않는다** — 실행을 눌러도 슬롯은 해소가 끝날 때까지 채워진 채라, 이 조건이 없으면 진행 중인 전투 위에 예시가 겹쳐 남는다.
+- 카드에 마우스를 올리면 그 카드 기준 미리보기가 **일시적으로 덮어쓰고**, 떼면 플랜 미리보기로 복귀. 호버 시엔 그 카드가 놓일 슬롯(`hoverSlot`) *앞*의 이동만 반영해 "이 카드를 넣으면 어디서 터지는지"를 보여준다.
+
 #### 독안개 — 열(column) 기반 점진 축소 (2026-07-13 도입 → 2026-07-16 열 축소로 개편)
 무한전(도망·회피 반복)을 확실히 끝내는 페이싱 장치. **양 끝 열부터 안쪽으로** 조여들어 결국 판 전체를 덮는다(세로 이동은 끝까지 자유 — 예전 "테두리 전체" 방식이 과했던 점 개선).
 - **진행**: `FOG_START_TURN=6`에 stage 0 = **col 0·5**. `FOG_STEP_TURNS=3`턴마다 한 단계씩 안으로: **9턴** stage 1 = col 0·1·4·5, **12턴** stage 2 = col 0~5(**전부**). `fogStageAt(turn)`이 단계를, `isFogCell(cell, turn)`이 덮임 여부를 계산.
@@ -345,7 +350,11 @@
 - 전투 덱 = 고정 7 + 고른 7 = **14장**. 모든 덱 카드는 `deckFor(char)`(공용+고유)의 부분집합이므로 **멀티 락스텝의 상대 플랜 복원(`net/session.ts`)은 수정 없이 동작**한다.
 
 ### 저장·조립
-- `Deck { id, name, charId, cardIds[7] }`, localStorage 키 `gb-decks` (`loadDecks/saveDeck/deleteDeck`).
+- `Deck { id, name, charId, cardIds[7] }`. 로컬 저장은 `src/game/decks.ts`(localStorage), **계정 동기화는 `src/game/deckSync.ts`**.
+- **계정별 저장(2026-07-23)** — 구글 로그인 사용자는 RTDB `decks/<uid>`가 원본(source of truth)이고 localStorage `gb-decks:<uid>`는 오프라인 캐시. 게스트/DB 미설정은 `gb-decks` 로컬 전용.
+  - UI는 `deckSync`의 `listDecks()/putDeck()/removeDeck()`만 쓴다(비동기). 읽기 실패 시 캐시로 폴백해 오프라인에서도 플레이 가능, 쓰기는 **로컬 먼저 → 클라우드 업로드** 순.
+  - RTDB는 `net/firebase.ts`와 같이 **REST 전용**, 권한은 Auth ID 토큰(`?auth=`, `net/auth.ts`의 `getIdToken()`). 규칙은 `database.rules.json`의 `decks/$uid`(본인만 읽기/쓰기 + 필드 검증) → 규칙 변경 시 `--only database` 배포 필수.
+  - 로그인 직후 1회, 게스트 시절 로컬 덱을 계정으로 올린다(`gb-decks-migrated:<uid>` 플래그).
 - `assembleDeck(deck)` = `FIXED_CARDS` + 고른 카드 → `BattleScreen`의 `deck` prop(로컬 손패).
 - `PRESET_DECKS`(고유4 + 펄스샷 + 가드 + 오른쪽 대시) = 봇 상대 덱 + 저장된 덱이 없을 때의 기본 덱.
 
