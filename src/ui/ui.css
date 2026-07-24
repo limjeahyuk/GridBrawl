@@ -2101,8 +2101,10 @@
 }
 
 /* ---- cards (bottom) ------------------------------------------------------ */
+/* 전투 카드에서 설명을 뺀 만큼(2026-07-23) 카드·손패를 낮추고 그 여유를
+   보드에 돌려준다 — 격자가 넓어야 위치 싸움이 눈에 들어온다. */
 .cards {
-  height: 378px;
+  height: 322px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -2230,7 +2232,7 @@
 /* 탭당 최대 6장이라 크게 보여줄 수 있다 (이동 6 · 공격 6 · 수비 3~4) */
 .handcard {
   width: 138px;
-  height: 202px;
+  height: 146px; /* 설명 없는 압축 카드 기준 — 이름·수치·사거리만 들어간다 */
   padding: 0;
   border: none;
   background: none;
@@ -2329,6 +2331,65 @@
 .cardface--tagged .cardface__desc {
   -webkit-line-clamp: 2;
 }
+/* 전투용 압축 카드 — 이름 → 수치(기력·데미지) → 사거리만. 설명이 없어 남는
+   자리는 이름 아래 auto 마진이 먹고, 수치를 사거리 위로 올린다(요청 순서). */
+.cardface--compact {
+  position: relative; /* 우상단 아이콘 배치 기준 */
+  padding: 7px 9px 8px;
+}
+/* 종류 아이콘은 구석의 작은 표식으로 — 카드의 주역은 이름·수치·범위다 */
+.cardface--compact .cardface__icon {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* 아이콘이 빠져나간 자리 — SP/CD 배지만 남아 왼쪽에 붙는다 */
+.cardface--compact .cardface__top {
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 0;
+  padding-right: 18px; /* 구석 아이콘과 겹치지 않게 */
+}
+/* 이름 — 카드에서 가장 먼저 읽히도록 크고 굵게, 위쪽에 고정 */
+.cardface--compact .cardface__name {
+  margin: 2px 0 auto;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+/* 수치 — 데미지·사거리·기력을 한눈에. 범위표 바로 위에 크게 */
+.cardface--compact .cardface__meta {
+  order: 1;
+  margin-bottom: 5px;
+  font-size: 15px;
+  font-weight: 800;
+  gap: 2px 9px;
+}
+.cardface--compact .cardface__tag {
+  font-size: 10px;
+  font-weight: 700;
+}
+/* 범위표 — 카드 폭을 꽉 채워 형태가 바로 보이게 */
+.cardface--compact .rangechart {
+  order: 2;
+  width: 100%;
+  gap: 2px;
+  margin: 0;
+}
+/* 이동 카드 — 화살표가 곧 정보다. 본문 가운데에 큼직하게. */
+.cardface__moveart {
+  order: 2;
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
+  padding-bottom: 6px;
+}
 .cardface__meta {
   display: flex;
   flex-wrap: wrap;
@@ -2358,6 +2419,28 @@
 /* 슬롯은 작은 미리보기 — 설명은 생략하고 이름·범위만 */
 .slot .cardface__desc {
   display: none;
+}
+/* 슬롯은 손패보다 좁다(116px) — 수치가 두 줄로 접히지 않게 한 단계 줄인다 */
+.slot .cardface--compact {
+  padding: 6px 7px 7px;
+}
+.slot .cardface--compact .cardface__name {
+  font-size: 13px;
+  margin: 0 0 auto;
+}
+.slot .cardface--compact .cardface__meta {
+  font-size: 12px;
+  gap: 1px 6px;
+  margin-bottom: 3px;
+}
+.slot .cardface--compact .cardface__moveart {
+  font-size: 30px;
+  padding-bottom: 2px;
+}
+.slot .cardface--compact .cardface__icon {
+  font-size: 10px;
+  top: 4px;
+  right: 5px;
 }
 .cardface__cd {
   font-family: var(--font-display);

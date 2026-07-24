@@ -321,11 +321,13 @@ export function BattleScreen({
     if (phase !== 'select') return none
     const facing = battle.facing(localSide)
     let at = { ...cur }
-    const cells: Cell[] = []
+    // 공격 범위는 **누적하지 않는다** — 여러 장을 고르면 빨간 칸이 뒤섞여 헷갈리므로
+    // 가장 마지막에 고른 공격의 범위만 남긴다(위치는 앞선 이동까지 반영된 값).
+    let cells: Cell[] = []
     for (const c of slots) {
       if (!c) continue
       if (c.kind === 'move') at = applyMovePreview(at, c)
-      else if (c.kind === 'attack') cells.push(...attackCells(at, c, facing))
+      else if (c.kind === 'attack') cells = attackCells(at, c, facing)
     }
     const moved = at.col !== cur.col || at.row !== cur.row
     return { ghost: moved ? at : null, cells }
@@ -612,7 +614,7 @@ export function BattleScreen({
               >
                 <span className="slot__no">{i + 1}</span>
                 {c ? (
-                  <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} />
+                  <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} compact />
                 ) : (
                   <span className="slot__empty">{i + 1}번째</span>
                 )}
@@ -687,7 +689,7 @@ export function BattleScreen({
                   disabled={unusable}
                   style={{ ['--accent' as string]: cardAccent(c, local.accent) }}
                 >
-                  <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} />
+                  <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} compact />
                   {onCd && <span className="handcard__cd">{cdLeft(c.id)}</span>}
                   {inSlots.length > 0 && (
                     <span className="handcard__slot-badge">{inSlots.join(' ')}</span>

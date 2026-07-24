@@ -58,7 +58,20 @@ export function RangeChart({ card }: { card: CardDef }) {
   )
 }
 
-export function CardFace({ card, accent }: { card: CardDef; accent: string }) {
+/**
+ * 카드 한 장의 앞면. 기본은 설명까지 보여주는 "읽는" 카드(덱 빌더·도감)이고,
+ * `compact`를 주면 전투용 — **이름 · 수치(기력/데미지) · 사거리**만 남긴다.
+ * 전투 중엔 설명을 읽을 새가 없고, 카드를 크게 키워 고르기 쉬운 게 우선.
+ */
+export function CardFace({
+  card,
+  accent,
+  compact,
+}: {
+  card: CardDef
+  accent: string
+  compact?: boolean
+}) {
   const icon =
     card.kind === 'attack'
       ? '⚔'
@@ -75,17 +88,22 @@ export function CardFace({ card, accent }: { card: CardDef; accent: string }) {
   const tags = abilityTags(card)
   return (
     <div
-      className={`cardface cardface--${card.kind} ${tags.length > 0 ? 'cardface--tagged' : ''}`}
+      className={`cardface cardface--${card.kind} ${tags.length > 0 ? 'cardface--tagged' : ''} ${
+        compact ? 'cardface--compact' : ''
+      }`}
       style={{ ['--accent' as string]: accent }}
     >
+      {/* 압축 카드에선 종류 아이콘을 우상단 구석으로 뺀다 — 주역은 이름·수치·범위.
+          단 이동 카드는 화살표 자체가 내용이라 본문에 크게 넣는다(아래). */}
       <div className="cardface__top">
-        <span className="cardface__icon">{icon}</span>
+        {!(compact && card.kind === 'move') && <span className="cardface__icon">{icon}</span>}
         {card.signature && <span className="cardface__sig">SP</span>}
         {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>
       <div className="cardface__name">{card.name}</div>
-      {/* 설명이 가장 중요 — 이름 바로 아래에 크게. 범위·수치는 그 밑으로. */}
-      <p className="cardface__desc">{card.desc}</p>
+      {/* 설명은 카드를 고르며 읽는 화면(덱 빌더·도감)에서만. 전투에선 생략. */}
+      {!compact && <p className="cardface__desc">{card.desc}</p>}
+      {compact && card.kind === 'move' && <div className="cardface__moveart">{icon}</div>}
       {card.kind === 'attack' && <RangeChart card={card} />}
       {card.kind === 'attack' && (
         <div className="cardface__meta">
