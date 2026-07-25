@@ -1610,11 +1610,11 @@
 }
 /* 같은 셀에 겹쳐 선 두 파이터: 좌우로 살짝 비켜 둘 다 보이게 */
 .fighter--stacked-left {
-  margin-left: -26px;
+  margin-left: -9px;
   z-index: 3;
 }
 .fighter--stacked-right {
-  margin-left: 26px;
+  margin-left: 9px;
 }
 /* glowing ground ring under the fighter this client controls */
 .fighter--me::after {

@@ -51,11 +51,16 @@ const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 /** Board cells an attack covers, from the attacker's cell and facing (+1 / -1). */
-function attackCells(from: Cell, card: CardDef, facing: number): Cell[] {
+function attackCells(from: Cell, card: CardDef, facing: number, foe?: Cell): Cell[] {
   if (card.kind !== 'attack') return []
-  return (card.range ?? [])
+  const cells = (card.range ?? [])
     .map((o) => ({ col: from.col + facing * o.df, row: from.row - o.du }))
     .filter(inBounds)
+  // 밀착: 상대가 내 셀에 겹쳐 서 있으면 이 카드로 때릴 수 있는지(pointBlank)에 따라
+  // 내 셀도 타격 범위로 보여 준다 — 엔진 판정과 같은 규칙.
+  if (foe && foe.col === from.col && foe.row === from.row && card.pointBlank !== false)
+    cells.push({ col: from.col, row: from.row })
+  return cells
 }
 
 /** Where a move card lands, mirroring the engine's rule: walls stop you, the
@@ -327,7 +332,7 @@ export function BattleScreen({
     for (const c of slots) {
       if (!c) continue
       if (c.kind === 'move') at = applyMovePreview(at, c)
-      else if (c.kind === 'attack') cells = attackCells(at, c, facing)
+      else if (c.kind === 'attack') cells = attackCells(at, c, facing, view.pos[1 - localSide])
     }
     const moved = at.col !== cur.col || at.row !== cur.row
     return { ghost: moved ? at : null, cells }
@@ -362,7 +367,7 @@ export function BattleScreen({
   const targetCells = useMemo(
     () =>
       hoveredCard?.kind === 'attack'
-        ? attackCells(preview.from, hoveredCard, battle.facing(localSide))
+        ? attackCells(preview.from, hoveredCard, battle.facing(localSide), view.pos[1 - localSide])
         : planPreview.cells,
     [hoveredCard, preview, battle, localSide, planPreview],
   )
@@ -415,7 +420,12 @@ export function BattleScreen({
       setView(stepToView(step, si + 1))
       if (step.card.kind === 'attack' && step.result !== 'nofuel') {
         const actor = step.actor as 0 | 1
-        const cells = attackCells(step.snapshot.pos[actor], step.card, battle.facing(actor))
+        const cells = attackCells(
+          step.snapshot.pos[actor],
+          step.card,
+          battle.facing(actor),
+          step.snapshot.pos[1 - actor],
+        )
         setResolveHit({ cells, actor })
       } else {
         setResolveHit(null)

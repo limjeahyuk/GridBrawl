@@ -187,7 +187,12 @@ export class CardBattle {
       if (c.selfShield) s.shield[p] += c.selfShield
       const recoil = c.recoil ?? 0
       const d = 1 - p
-      const connects = this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
+      // 밀착(같은 셀): 어떤 카드의 range도 자기 셀을 덮지 않으므로 여기서 따로
+      // 판정한다. 대부분의 카드는 겹친 상대를 그대로 때리고, `pointBlank: false`인
+      // "바로 옆이 사각"짜리 원거리 카드만 빗나간다.
+      const connects =
+        (sameCell(s.pos[p], s.pos[d]) && c.pointBlank !== false) ||
+        this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
       if (!connects) return { ...zero, recoil, result: 'whiff' as Step['result'] }
       const atkPas = this.chars[p].passive
       const defPas = this.chars[d].passive

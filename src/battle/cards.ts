@@ -49,7 +49,8 @@ export const COMMON_CARDS: CardDef[] = [
     energyCost: 10,
     cooldown: 0,
     fx: 'bolt',
-    desc: '앞뒤 두 칸째 한 칸씩만 맞히는 견제 사격. 위력은 낮다.',
+    pointBlank: false, // 두 칸째 전용 — 밀착도 사각
+    desc: '앞뒤 두 칸째 한 칸씩만 맞히는 견제 사격. 위력은 낮고, 붙은 상대는 못 맞힌다.',
   },
   {
     id: 'c-guard',

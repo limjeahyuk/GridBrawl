@@ -63,6 +63,12 @@ export interface CardDef {
   push?: number // 적중 시 상대를 (공격자 기준) 뒤로 N칸 밀어냄 — 벽·공격자 셀에서 멈춤
   selfShield?: number // 기력 지불 성공 시 자신에게 보호막 +N (빗나가도 적용)
   recoil?: number // 기력 지불 성공 시 자신이 체력 N 손실 (빗나가도 적용)
+  /**
+   * 같은 셀에 겹쳐 선 상대(밀착)에게도 맞는가. 기본 true — 어떤 카드의 `range`도
+   * 자기 셀 {df:0,du:0}을 덮지 않으므로 이 값이 없으면 밀착 상태에서 명중한다.
+   * `false`는 "바로 옆이 사각"인 원거리 카드 전용(펄스 샷·포크 라이트닝·이온 랜스).
+   */
+  pointBlank?: boolean
 
   // guard
   block?: number // damage absorbed this turn
