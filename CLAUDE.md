@@ -63,7 +63,7 @@
 - **웹 배포**: Firebase Hosting(`https://gridbrawl-9073d.web.app`). `npm run build && npx firebase deploy --only hosting,database`. env는 빌드 시점에 박히므로 배포 빌드 전에 `.env` 확인.
 - **RTDB 규칙**: `database.rules.json`(레포 관리) — `gridbrawl/<코드>` 경로만 열림, 코드 형식·offer/answer 필드 검증. 규칙 바꾸면 `--only database`로 배포.
 - **TURN**: `.env`의 `VITE_TURN_URL/USERNAME/CREDENTIAL`(선택, `webrtc.ts`가 ICE에 자동 추가). 비면 STUN 단독 — 셀룰러/대칭 NAT에서 연결 실패 가능. 관리형 TURN 발급 후 채우고 재빌드·재배포.
-- **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `kr.co.insplanet.gridbrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
+- **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `com.imjaehyeog.GridBrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
 
 ## 컨벤션
 
