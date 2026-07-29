@@ -38,6 +38,7 @@
   - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 스트라이크(앞뒤1칸 10dmg)·펄스 샷(앞뒤 2칸째 10dmg)** + 가드(실드 50·쿨1)·**브레이스(실드 30·쿨0)** + 원기(기력 +35·쿨1). 턴 시작 패시브 기력 +20. (2026-07-15 "5턴 페이싱" 밸런스 패스 — GDD ④ 참고)
   - 공격: `range` 오프셋 `{df,du}`(df=앞, du=위)로 타격 셀 지정. 상대 셀이 들어오면 적중, 실드가 먼저 흡수.
   - **고유 카드 특수 능력**(`roster.ts`의 `CharacterDef.cards` — 공격 외 종류도 가능, 예: AEGIS 전용 가드): `drain`(기력 흡수)·`leech`(흡혈)·`pierce`(실드 관통)·`push`(넉백)·`selfShield`(사용 시 실드)·`recoil`(반동 자해). 발동 조건·적용 순서는 GDD ③/④, 카드 UI엔 능력 칩(`CardFace`의 `abilityTags`).
+  - **밀착 타격**(2026-07-25): 두 파이터는 같은 셀에 겹칠 수 있고, 겹친 상대는 사거리가 아니라 `CardDef.pointBlank`로 판정한다. 기본이 "맞는다"라 공격 25장 중 22장(88%)이 가능하고, `pointBlank: false`인 원거리 3장(`c-shot`·`volt-leech`·`nova-lance`)만 사각(`밀착사각` 칩). 엔진·AI·UI 범위 표시가 같은 규칙을 공유 — 한쪽만 고치면 어긋난다.
 - 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정/KO 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 1회 부활 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
 - 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. **같은 공격 카드는 한 턴에 한 번만**(쿨0이어도 — UI·AI가 강제, 2026-07-15). 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드 — **동시 KO는 턴 시작 HP 비율이 높던 쪽이 승리**(타이브레이크, 랜덤 없음). (`CardBattle.resolveTurn`)
 - **로그라이크 런(개발 중, 2026-07-24)** — 단판 지루함 해결용. 캐릭터+직업카드1 선택으로 시작 → 사다리(층) 전투(약→강) → 승리 보상(카드3·유물1·이벤트1 중 1택 또는 HP회복) → 보스. **유물 = 상시 능력(엔진 Passive 훅 조합)**, 기존 캐릭터 패시브를 시그니처 유물로 이관. 엔진은 `BattleOpts.passives`(유물 merge)·`maxHp` override로 지원(PvP·봇전 불변). Phase 1a(데이터·엔진 토대: `game/relics.ts` 42종·`monsters.ts` 20종·`run.ts` 노드 사다리/이벤트/상점/골드) + Phase 1b(UI: `RunStart/RunMap/Reward/Event/Shop/RunEnd` 화면 + `App.tsx` `run-*` 페이즈, `BattleScreen`의 `battleOpts`) 완료·플레이 검증. 승리 보상=5중1택(일반은 3% 확률로 유물 포함, 엘리트·보스 확정). `BattleScreen`은 `battleOpts`로 유물 merge 패시브·몬스터 스탯 override(PvP·봇전 불변). 다인 전투·스크립트 보스 패턴은 Phase 2. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md).
@@ -64,7 +65,7 @@
 - **웹 배포**: Firebase Hosting(`https://gridbrawl-9073d.web.app`). `npm run build && npx firebase deploy --only hosting,database`. env는 빌드 시점에 박히므로 배포 빌드 전에 `.env` 확인.
 - **RTDB 규칙**: `database.rules.json`(레포 관리) — `gridbrawl/<코드>` 경로만 열림, 코드 형식·offer/answer 필드 검증. 규칙 바꾸면 `--only database`로 배포.
 - **TURN**: `.env`의 `VITE_TURN_URL/USERNAME/CREDENTIAL`(선택, `webrtc.ts`가 ICE에 자동 추가). 비면 STUN 단독 — 셀룰러/대칭 NAT에서 연결 실패 가능. 관리형 TURN 발급 후 채우고 재빌드·재배포.
-- **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `kr.co.insplanet.gridbrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
+- **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `com.imjaehyeog.GridBrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
 
 ## 컨벤션
 

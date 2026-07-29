@@ -1,4 +1,4 @@
-package kr.co.insplanet.gridbrawl;
+package com.imjaehyeog.GridBrawl;
 
 import com.getcapacitor.BridgeActivity;
 

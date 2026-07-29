@@ -30,6 +30,9 @@ const PANIC_HP = 45
 
 /** Does `card` from `self` (at `pos`, given `facing`) cover the opponent cell? */
 function hits(pos: Cell, facing: number, card: CardDef, opp: Cell): boolean {
+  // 밀착(같은 셀)은 range가 아니라 카드의 pointBlank로 판정 — 엔진과 같은 규칙
+  const overlapping = pos.col === opp.col && pos.row === opp.row
+  if (overlapping && card.pointBlank !== false) return true
   return (card.range ?? []).some(
     (o) => pos.col + facing * o.df === opp.col && pos.row - o.du === opp.row,
   )
@@ -61,6 +64,8 @@ export function decideAI(
   // 사용 가능한 카드 풀 — 덱이 주어지면 그것만, 아니면 캐릭터 전체 카드
   const pool = availableCards ?? [...COMMON_CARDS, ...char.cards]
   const attacks = pool.filter((c) => c.kind === 'attack')
+  // 겹친 상대를 때릴 수 있는 카드가 덱에 하나라도 있는가 — 밀착을 노릴지 피할지 결정
+  const canPointBlank = attacks.some((c) => c.pointBlank !== false)
   // 이동/지원 카드는 풀에서 뽑는다(덱에 없으면 undefined → 스킵)
   const moveCard = (dir: MoveDir, steps: number): CardDef | undefined =>
     pool.find((c) => c.kind === 'move' && c.dir === dir && (c.steps ?? 1) === steps)
@@ -108,8 +113,9 @@ export function decideAI(
     const wishes: (CardDef | undefined)[] = []
     const hdir: MoveDir = dcol >= 0 ? 'right' : 'left'
     const vdir: MoveDir = drow >= 0 ? 'down' : 'up'
-    // 상대와 겹쳐 있으면 공격이 전부 빗나감 — 한 칸 빠져 공격 위치를 회복
-    if (dcol === 0 && drow === 0) {
+    // 겹친 상태: 밀착으로 때릴 카드가 하나도 없을 때만 한 칸 빠져 공격 위치를
+    // 회복한다. 대부분의 카드는 겹친 상대를 그대로 때리므로 굳이 자리를 뜨지 않는다.
+    if (dcol === 0 && drow === 0 && !canPointBlank) {
       const back: MoveDir = facing > 0 ? 'left' : 'right'
       wishes.push(moveCard(back, 1), moveCard('up', 1), moveCard('down', 1))
     }
@@ -121,9 +127,11 @@ export function decideAI(
       if (drow !== 0) wishes.push(moveCard(vdir, 1))
       if (dcol !== 0) wishes.push(moveCard(hdir, 1))
     }
-    // 덱에 없어 undefined인 이동은 제외 + 상대 셀에 정확히 올라서는 이동도 제외
+    // 덱에 없어 undefined인 이동은 제외. 상대 셀에 올라서는 이동은 밀착 공격
+    // 수단이 있을 때만 허용한다 — 없으면 올라타 봤자 공격이 전부 빗나간다.
     return wishes.filter((w): w is CardDef => {
       if (!w) return false
+      if (canPointBlank) return true
       const land = landingOf(w)
       return !(land.col === opp.col && land.row === opp.row)
     })

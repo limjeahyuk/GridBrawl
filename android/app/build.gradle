@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "kr.co.insplanet.gridbrawl"
+    namespace = "com.imjaehyeog.GridBrawl"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "kr.co.insplanet.gridbrawl"
+        applicationId "com.imjaehyeog.GridBrawl"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
