@@ -31,6 +31,15 @@ export interface Passive {
   lifesteal?: number
   shieldBreak?: boolean
   revive?: number
+  // --- 로그라이크 유물용 추가 훅(2026-07-24) — 엔진이 결정론적으로 적용 ---
+  /** 매 턴 시작 시 체력 +N(최대치 cap). */
+  regen?: number
+  /** 내 공격이 실제로 겨냥에 들면 피해 +N(맞기 전 raw에 더함). */
+  attackBonus?: number
+  /** 피격해 피해를 실제로 입으면 공격자에게 N 반사. */
+  thorns?: number
+  /** 최대 체력 ±N(전투 시작 시 반영, 최소 1). */
+  maxHpBonus?: number
 }
 
 export interface CharacterDef {

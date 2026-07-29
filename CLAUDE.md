@@ -22,6 +22,7 @@
 | CPU AI             | `src/battle/ai.ts`                                       |
 | 캐릭터·공격 카드   | `src/data/roster.ts`                                     |
 | 토너먼트(건틀릿)   | `src/game/tournament.ts`                                 |
+| 로그라이크(런/유물/몬스터) | `src/game/run.ts`·`relics.ts`·`monsters.ts` — 설계 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) |
 | 온라인 멀티(P2P)   | `src/net/*`, `src/ui/screens/MultiplayerLobby.tsx`       |
 | 로그인(구글 인증)  | `src/net/auth.ts`, `src/ui/useAuth.ts`, `src/ui/screens/LoginScreen.tsx` |
 | 화면 흐름 / UI     | `src/App.tsx`, `src/ui/screens/*`, `src/ui/`, `src/art/` |
@@ -39,6 +40,7 @@
   - **고유 카드 특수 능력**(`roster.ts`의 `CharacterDef.cards` — 공격 외 종류도 가능, 예: AEGIS 전용 가드): `drain`(기력 흡수)·`leech`(흡혈)·`pierce`(실드 관통)·`push`(넉백)·`selfShield`(사용 시 실드)·`recoil`(반동 자해). 발동 조건·적용 순서는 GDD ③/④, 카드 UI엔 능력 칩(`CardFace`의 `abilityTags`).
 - 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정/KO 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 1회 부활 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
 - 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. **같은 공격 카드는 한 턴에 한 번만**(쿨0이어도 — UI·AI가 강제, 2026-07-15). 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드 — **동시 KO는 턴 시작 HP 비율이 높던 쪽이 승리**(타이브레이크, 랜덤 없음). (`CardBattle.resolveTurn`)
+- **로그라이크 런(개발 중, 2026-07-24)** — 단판 지루함 해결용. 캐릭터+직업카드1 선택으로 시작 → 사다리(층) 전투(약→강) → 승리 보상(카드3·유물1·이벤트1 중 1택 또는 HP회복) → 보스. **유물 = 상시 능력(엔진 Passive 훅 조합)**, 기존 캐릭터 패시브를 시그니처 유물로 이관. 엔진은 `BattleOpts.passives`(유물 merge)·`maxHp` override로 지원(PvP·봇전 불변). Phase 1a(데이터·엔진 토대: `game/relics.ts` 42종·`monsters.ts` 20종·`run.ts` 노드 사다리/이벤트/상점/골드) + Phase 1b(UI: `RunStart/RunMap/Reward/Event/Shop/RunEnd` 화면 + `App.tsx` `run-*` 페이즈, `BattleScreen`의 `battleOpts`) 완료·플레이 검증. 승리 보상=5중1택(일반은 3% 확률로 유물 포함, 엘리트·보스 확정). `BattleScreen`은 `battleOpts`로 유물 merge 패시브·몬스터 스탯 override(PvP·봇전 불변). 다인 전투·스크립트 보스 패턴은 Phase 2. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md).
 - **독안개(무한전 억제)** — 2026-07-16 열 축소 개편: **6턴부터 양 끝 열(col 0·5)**에 독안개, **3턴마다 안쪽으로** 한 단계씩(9턴 col 0·1·4·5 → 12턴 전부) 조여들어 결국 판 전체를 덮음. **턴 종료 시** 안개 열에 있으면 **턴당 10 고정 피해**(실드 무시, KO 가능). 상수·판정은 `types.ts`(`FOG_START_TURN/FOG_STEP_TURNS/FOG_DAMAGE/fogStageAt/isFogCell(cell,turn)/fogEscalatesNext`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). AI는 지금/다음 턴 안개면 중앙 열로 이탈. 상세는 GDD ④ "독안개".
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18

@@ -20,6 +20,14 @@ import { BattleScreen } from './ui/screens/BattleScreen'
 import { MultiplayerLobby, type MatchReady } from './ui/screens/MultiplayerLobby'
 import { ResultScreen, type Outcome } from './ui/screens/ResultScreen'
 import { TutorialScreen } from './ui/screens/TutorialScreen'
+import { RunStartScreen } from './ui/screens/RunStartScreen'
+import { RunMapScreen } from './ui/screens/RunMapScreen'
+import { RewardScreen } from './ui/screens/RewardScreen'
+import { EventScreen } from './ui/screens/EventScreen'
+import { ShopScreen } from './ui/screens/ShopScreen'
+import { RunEndScreen } from './ui/screens/RunEndScreen'
+import { startRun, afterWin, afterLoss, currentNode, type RunState } from './game/run'
+import { runFightProps } from './game/runbattle'
 
 const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
 /** 온라인 대전 턴 제한(초). 0이 되면 자동 제출 — 상대를 무한정 기다리지 않게. */
@@ -38,6 +46,13 @@ type Phase =
   | 'mp-lobby'
   | 'mp-fight'
   | 'mp-result'
+  | 'run-start'
+  | 'run-map'
+  | 'run-fight'
+  | 'run-reward'
+  | 'run-event'
+  | 'run-shop'
+  | 'run-end'
 
 interface BotMatch {
   oppCharId: string
@@ -56,6 +71,9 @@ export default function App() {
   // --- online multiplayer ---
   const [mpMatch, setMpMatch] = useState<MatchReady | null>(null)
   const [mpOutcome, setMpOutcome] = useState<Outcome>('win')
+  // --- 로그라이크 런 ---
+  const [run, setRun] = useState<RunState | null>(null)
+  const [runWon, setRunWon] = useState(false)
 
   const toTitle = useCallback(() => setPhase('title'), [])
 
@@ -127,6 +145,44 @@ export default function App() {
     setPhase('mp-result')
   }, [])
 
+  // --- 로그라이크 런 흐름 -----------------------------------------------------
+  const beginRun = useCallback((charId: string, classCardId: string) => {
+    setRun(startRun(charId, classCardId))
+    setPhase('run-map')
+  }, [])
+  // 맵에서 현재 노드로 진입 — 타입에 따라 전투/이벤트/상점으로.
+  const enterNode = useCallback(() => {
+    setRun((r) => {
+      if (!r) return r
+      const t = currentNode(r).type
+      setPhase(t === 'event' ? 'run-event' : t === 'shop' ? 'run-shop' : 'run-fight')
+      return r
+    })
+  }, [])
+  const runFightEnd = useCallback((won: boolean, hpLeft: number) => {
+    setRun((r) => {
+      if (!r) return r
+      if (!won) {
+        setRunWon(false)
+        setPhase('run-end')
+        return afterLoss(r)
+      }
+      const next = afterWin(r, hpLeft)
+      if (next.status === 'won') {
+        setRunWon(true)
+        setPhase('run-end')
+      } else {
+        setPhase('run-reward')
+      }
+      return next
+    })
+  }, [])
+  // 보상/이벤트/상점이 끝나면 이미 다음 층으로 넘어간 run을 받아 맵으로.
+  const runAdvanced = useCallback((next: RunState) => {
+    setRun(next)
+    setPhase(next.status === 'won' ? 'run-end' : 'run-map')
+  }, [])
+
   // one plan-exchange per connected match; disposed when the match changes
   const mpExchange = useMemo(
     () => (mpMatch ? createPlanExchange(mpMatch.transport, mpMatch.localSide) : null),
@@ -145,6 +201,7 @@ export default function App() {
         user={user}
         onLogout={onLogout}
         onStart={() => setPhase('deck-select')}
+        onRoguelike={() => setPhase('run-start')}
         onDecks={() => setPhase('deck-manage')}
         onCodex={() => setPhase('codex')}
       />
@@ -213,6 +270,40 @@ export default function App() {
         variant="single"
         onNext={startBot}
         onRetry={startBot}
+        onMenu={toTitle}
+      />
+    )
+  } else if (phase === 'run-start') {
+    screen = <RunStartScreen onStart={beginRun} onBack={toTitle} />
+  } else if (phase === 'run-map' && run) {
+    screen = <RunMapScreen run={run} onEnter={enterNode} onQuit={toTitle} />
+  } else if (phase === 'run-fight' && run) {
+    const fp = runFightProps(run)
+    screen = (
+      <BattleScreen
+        key={`run-${run.floor}-${fp.p1CharId}`}
+        p0CharId={fp.p0CharId}
+        p1CharId={fp.p1CharId}
+        localSide={0}
+        deck={fp.deck}
+        battleOpts={fp.battleOpts}
+        getOpponentPlan={fp.getOpponentPlan}
+        onEnd={runFightEnd}
+        onQuit={toTitle}
+      />
+    )
+  } else if (phase === 'run-reward' && run) {
+    screen = <RewardScreen run={run} onDone={runAdvanced} />
+  } else if (phase === 'run-event' && run) {
+    screen = <EventScreen run={run} onDone={runAdvanced} />
+  } else if (phase === 'run-shop' && run) {
+    screen = <ShopScreen run={run} onDone={runAdvanced} />
+  } else if (phase === 'run-end' && run) {
+    screen = (
+      <RunEndScreen
+        run={run}
+        won={runWon}
+        onRetry={() => setPhase('run-start')}
         onMenu={toTitle}
       />
     )

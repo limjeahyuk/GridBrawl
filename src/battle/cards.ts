@@ -52,6 +52,17 @@ export const COMMON_CARDS: CardDef[] = [
     desc: '앞뒤 두 칸째 한 칸씩만 맞히는 견제 사격. 위력은 낮다.',
   },
   {
+    id: 'c-jab',
+    name: '잽',
+    kind: 'attack',
+    range: [{ df: 1, du: 0 }],
+    damage: 12,
+    energyCost: 8,
+    cooldown: 0,
+    fx: 'punch',
+    desc: '앞 한 칸만 노리는 값싼 기본 공격. 로그라이크 시작 공용기.',
+  },
+  {
     id: 'c-guard',
     name: '가드',
     kind: 'guard',

@@ -1,4 +1,4 @@
-import { getChar, type CharacterDef } from '../data/roster'
+import { getChar, type CharacterDef, type Passive } from '../data/roster'
 import { ENERGY_REGEN } from './cards'
 import {
   FOG_DAMAGE,
@@ -36,16 +36,39 @@ export interface BattleState {
   winner: number | null
 }
 
+/**
+ * 전투 생성 옵션(로그라이크용, 선택). 미지정이면 기존처럼 `getChar(id)`의
+ * `maxHp`·`passive`를 그대로 쓴다 — PvP·튜토리얼·봇전은 변화 없음.
+ */
+export interface BattleOpts {
+  /** getChar 대신 이 CharacterDef를 쓴다(몬스터처럼 스탯을 갈아끼울 때). */
+  chars?: [CharacterDef, CharacterDef]
+  /** 각 진영의 실효 패시브(장착 유물 merge 결과). 없으면 char.passive. */
+  passives?: [Passive, Passive]
+}
+
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
 export class CardBattle {
   chars: [CharacterDef, CharacterDef]
+  /** 실효 패시브 — 유물이 합쳐진 값(없으면 char.passive). */
+  passive: [Passive, Passive]
+  /** 실효 최대 체력 — char.maxHp + passive.maxHpBonus(최소 1). */
+  maxHp: [number, number]
   state: BattleState
 
-  constructor(playerCharId: string, oppCharId: string) {
-    this.chars = [getChar(playerCharId), getChar(oppCharId)]
+  constructor(playerCharId: string, oppCharId: string, opts?: BattleOpts) {
+    this.chars = opts?.chars ?? [getChar(playerCharId), getChar(oppCharId)]
+    this.passive = [
+      opts?.passives?.[0] ?? this.chars[0].passive,
+      opts?.passives?.[1] ?? this.chars[1].passive,
+    ]
+    this.maxHp = [
+      Math.max(1, this.chars[0].maxHp + (this.passive[0].maxHpBonus ?? 0)),
+      Math.max(1, this.chars[1].maxHp + (this.passive[1].maxHpBonus ?? 0)),
+    ]
     this.state = {
       pos: [cloneCell(START_CELLS[0]), cloneCell(START_CELLS[1])],
-      hp: [this.chars[0].maxHp, this.chars[1].maxHp],
+      hp: [this.maxHp[0], this.maxHp[1]],
       energy: [this.chars[0].startEnergy, this.chars[1].startEnergy],
       shield: [0, 0],
       cooldowns: [{}, {}],
@@ -109,8 +132,8 @@ export class CardBattle {
 
     // 동시 KO 타이브레이크용: 이 턴이 시작될 때의 체력 비율을 기억해 둔다.
     const startHpRatio: [number, number] = [
-      s.hp[0] / this.chars[0].maxHp,
-      s.hp[1] / this.chars[1].maxHp,
+      s.hp[0] / this.maxHp[0],
+      s.hp[1] / this.maxHp[1],
     ]
     // 동시 KO 시 승자: 턴 시작 시점에 체력 비율이 높았던 쪽(같으면 무승부).
     // 랜덤 없음 — 멀티 락스텝 안전.
@@ -121,13 +144,14 @@ export class CardBattle {
     }
 
     // start of turn: clear last turn's guard, apply passive energy regen, then
-    // each fighter's character passive (bonus energy / standing shield).
+    // each fighter's effective passive (bonus energy / standing shield / HP regen).
     s.shield = [0, 0]
     for (let p = 0; p < 2; p++) {
-      const ch = this.chars[p]
-      const bonus = ENERGY_REGEN + (ch.passive.turnEnergy ?? 0)
-      s.energy[p] = clamp(s.energy[p] + bonus, 0, ch.maxEnergy)
-      s.shield[p] += ch.passive.turnShield ?? 0
+      const pas = this.passive[p]
+      const bonus = ENERGY_REGEN + (pas.turnEnergy ?? 0)
+      s.energy[p] = clamp(s.energy[p] + bonus, 0, this.chars[p].maxEnergy)
+      s.shield[p] += pas.turnShield ?? 0
+      if (pas.regen) s.hp[p] = Math.min(this.maxHp[p], s.hp[p] + pas.regen)
     }
 
     const emit = (
@@ -167,7 +191,7 @@ export class CardBattle {
         if (s.energy[p] >= cost) {
           s.energy[p] -= cost
           const before = s.hp[p]
-          s.hp[p] = Math.min(this.chars[p].maxHp, before + (c.healHp ?? 0))
+          s.hp[p] = Math.min(this.maxHp[p], before + (c.healHp ?? 0))
           emit(p, c, 'heal', 0, s.hp[p] - before)
         } else {
           emit(p, c, 'nofuel')
@@ -189,9 +213,10 @@ export class CardBattle {
       const d = 1 - p
       const connects = this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
       if (!connects) return { ...zero, recoil, result: 'whiff' as Step['result'] }
-      const atkPas = this.chars[p].passive
-      const defPas = this.chars[d].passive
-      const raw = c.damage ?? 0
+      const atkPas = this.passive[p]
+      const defPas = this.passive[d]
+      // attackBonus(유물): 겨냥에 든 공격의 raw 피해에 더해진다.
+      const raw = (c.damage ?? 0) + (atkPas.attackBonus ?? 0)
       // EMBER (shieldBreak): a connecting hit wipes the defender's shield first.
       if (atkPas.shieldBreak) s.shield[d] = 0
       // pierce: 보호막을 소모시키지 않고 그대로 통과한다.
@@ -210,7 +235,7 @@ export class CardBattle {
       let heal = 0
       if (dmg > 0) {
         heal += c.leech ?? 0
-        heal += atkPas.lifesteal ?? 0
+        heal += atkPas.lifesteal ?? 0 // CIPHER 패시브 + 송곳니류 유물
       }
       const result = (dmg > 0 ? 'hit' : 'blocked') as Step['result']
       return { ...zero, result, dmg, heal, drain, recoil, push: c.push ?? 0 }
@@ -229,18 +254,22 @@ export class CardBattle {
 
     // apply a measured attack's HP / board consequences
     const applyOutcome = (r: ReturnType<typeof computeAttack>) => {
-      s.hp[1 - r.p] = Math.max(0, s.hp[1 - r.p] - r.dmg)
+      const d = 1 - r.p
+      s.hp[d] = Math.max(0, s.hp[d] - r.dmg)
+      // thorns(유물): 피해를 실제로 입은 방어자가 공격자에게 N 반사
+      const thorns = this.passive[d].thorns ?? 0
+      if (r.dmg > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
       if (r.recoil) s.hp[r.p] = Math.max(0, s.hp[r.p] - r.recoil)
-      if (r.heal) s.hp[r.p] = Math.min(this.chars[r.p].maxHp, s.hp[r.p] + r.heal)
+      if (r.heal) s.hp[r.p] = Math.min(this.maxHp[r.p], s.hp[r.p] + r.heal)
       if (r.push) applyPush(r.p, r.push)
     }
 
     // 부활(EMBER 잿불 부활 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
     const tryRevive = (p: number) => {
-      const amount = this.chars[p].passive.revive ?? 0
+      const amount = this.passive[p].revive ?? 0
       if (s.hp[p] > 0 || amount <= 0 || s.revived[p]) return
       s.revived[p] = true
-      s.hp[p] = Math.min(this.chars[p].maxHp, amount)
+      s.hp[p] = Math.min(this.maxHp[p], amount)
       steps.push({
         phase: 'revive',
         actor: p,

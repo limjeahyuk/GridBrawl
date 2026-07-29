@@ -13,12 +13,14 @@ export function TitleScreen({
   user,
   onLogout,
   onStart,
+  onRoguelike,
   onDecks,
   onCodex,
 }: {
   user: AuthUser | null
   onLogout: () => void
   onStart: () => void
+  onRoguelike: () => void
   onDecks: () => void
   onCodex: () => void
 }) {
@@ -59,6 +61,9 @@ export function TitleScreen({
         <div className="title__buttons">
           <button className="btn" onClick={onStart}>
             게임 시작
+          </button>
+          <button className="btn btn--roguelike" onClick={onRoguelike}>
+            로그라이크
           </button>
           <button className="btn btn--online" onClick={onDecks}>
             덱 만들기

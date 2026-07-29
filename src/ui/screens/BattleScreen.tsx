@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { buildFighterSvg, buildPortraitSvg } from '../../art/art'
-import { CardBattle, planAffordable } from '../../battle/engine'
+import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
 import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
 import {
@@ -160,6 +160,7 @@ export function BattleScreen({
   p1CharId,
   localSide,
   deck,
+  battleOpts,
   getOpponentPlan,
   turnSeconds,
   onEnd,
@@ -174,15 +175,18 @@ export function BattleScreen({
   /** 로컬 플레이어의 손패(고정 7 + 고른 카드). 미지정 시 캐릭터 전체 카드
    *  (`deckFor`) — 튜토리얼·구 흐름 호환. */
   deck?: CardDef[]
+  /** 로그라이크용 — 유물 merge 패시브·몬스터 스탯 override(엔진 BattleOpts). */
+  battleOpts?: BattleOpts
   getOpponentPlan: OpponentPlanner
   /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
    *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
   turnSeconds?: number
-  onEnd: (localWon: boolean) => void
+  /** 전투 종료 콜백 — 로컬 승패 + 로컬 남은 체력(로그라이크 HP 인계용). */
+  onEnd: (localWon: boolean, selfHpLeft: number) => void
   onQuit: () => void
 }) {
   const battleRef = useRef<CardBattle | null>(null)
-  if (!battleRef.current) battleRef.current = new CardBattle(p0CharId, p1CharId)
+  if (!battleRef.current) battleRef.current = new CardBattle(p0CharId, p1CharId, battleOpts)
   const battle = battleRef.current
 
   // canonical (left/right) fighters for rendering + the local one for controls
@@ -288,7 +292,8 @@ export function BattleScreen({
   }
   const reset = () => setSlots([null, null, null])
 
-  const passiveEnergy = local.passive.turnEnergy ?? 0
+  // 실효 패시브(유물 merge 반영) — 유물로 매턴 기력이 붙으면 기력 예산에 반영
+  const passiveEnergy = battle.passive[localSide].turnEnergy ?? 0
   const filled = slots.every((c): c is CardDef => c !== null)
   const affordable =
     filled &&
@@ -441,7 +446,7 @@ export function BattleScreen({
       setPhase('over')
       await wait(1300)
       if (cancelled.current) return
-      onEnd(localWon)
+      onEnd(localWon, battle.state.hp[localSide]) // 남은 체력 인계(로그라이크 HP 캐리)
       return
     }
 
@@ -518,6 +523,7 @@ export function BattleScreen({
       <BattleHud
         c0={c0}
         c1={c1}
+        maxHp={battle.maxHp}
         localSide={localSide}
         view={view}
         turn={battle.state.turn}
@@ -811,6 +817,7 @@ function FighterSprite({
 function BattleHud({
   c0,
   c1,
+  maxHp,
   localSide,
   view,
   turn,
@@ -819,6 +826,8 @@ function BattleHud({
 }: {
   c0: ReturnType<typeof getChar>
   c1: ReturnType<typeof getChar>
+  /** 실효 최대 체력(유물·몬스터 반영) — HP 바 기준. */
+  maxHp: [number, number]
   localSide: 0 | 1
   view: View
   turn: number
@@ -831,7 +840,7 @@ function BattleHud({
   const chars = [c0, c1] as const
   return (
     <div className="bhud">
-      <BhudSide char={chars[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
+      <BhudSide char={chars[li]} maxHp={maxHp[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
       <div className="bhud__turn">
         <div className="bhud__turnno">TURN {turn}</div>
         {remain !== null && (
@@ -851,25 +860,27 @@ function BattleHud({
           ESC · 종료
         </button>
       </div>
-      <BhudSide char={chars[oi]} hp={view.hp[oi]} energy={view.energy[oi]} side="right" />
+      <BhudSide char={chars[oi]} maxHp={maxHp[oi]} hp={view.hp[oi]} energy={view.energy[oi]} side="right" />
     </div>
   )
 }
 
 function BhudSide({
   char,
+  maxHp,
   hp,
   energy,
   side,
   isLocal,
 }: {
   char: ReturnType<typeof getChar>
+  maxHp: number
   hp: number
   energy: number
   side: 'left' | 'right'
   isLocal?: boolean
 }) {
-  const hpPct = Math.max(0, (hp / char.maxHp) * 100)
+  const hpPct = Math.max(0, (hp / maxHp) * 100)
   const ePct = Math.max(0, (energy / char.maxEnergy) * 100)
   const hpLow = hpPct <= 30
   return (
@@ -884,7 +895,7 @@ function BhudSide({
           style={{ width: `${hpPct}%` }}
         />
         <span className="bhud__hpnum">
-          HP {Math.ceil(hp)} / {char.maxHp}
+          HP {Math.ceil(hp)} / {maxHp}
         </span>
       </div>
       <div className="bhud__energy">
