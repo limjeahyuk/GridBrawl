@@ -67,6 +67,9 @@ const SIGNATURE: Record<
 > = {
   volt: {
     id: 'sig-volt', name: '오버차지 코어', icon: '⚡',
+    // ⚠ 회복(regen/lifesteal)을 주지 말 것 — 런에선 지속 회복이 극도로 강해 regen 2도
+    // VOLT를 28.8%→46%로 폭주시켰다(2026-07-31 시뮬). VOLT는 회복 대신 높은 보호막
+    // (turnShield 16)으로 균형을 맞춘다. 28.8%(타이트한 밴드 최하)는 의도된 위치다.
     runEffect: { turnEnergy: 10, turnShield: 16, attackBonus: 4 },
     desc: '오버차지: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +4.',
   },
