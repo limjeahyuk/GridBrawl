@@ -4,6 +4,7 @@ import {
   FOG_DAMAGE,
   FOG_START_TURN,
   GRID_COLS,
+  LOW_HP_FRAC,
   MOVE_DELTA,
   START_CELLS,
   inBounds,
@@ -19,6 +20,8 @@ const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi 
 // 독안개·부활 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
 const FOG_CARD: CardDef = { id: 'fog', name: '독안개', kind: 'guard', desc: '가장자리를 덮는 독안개.' }
 const REVIVE_CARD: CardDef = { id: 'revive', name: '잿불 부활', kind: 'guard', desc: '쓰러진 자리에서 불씨로 되살아난다.' }
+const STUN_CARD: CardDef = { id: 'stun', name: '기절', kind: 'guard', desc: '기절해서 이 턴에 아무것도 못 한다.' }
+const TRIGGER_CARD: CardDef = { id: 'trigger', name: '유물 발동', kind: 'guard', desc: '누적 기력이 유물을 깨웠다.' }
 const cloneCell = (c: Cell): Cell => ({ col: c.col, row: c.row })
 const sameCell = (a: Cell, b: Cell) => a.col === b.col && a.row === b.row
 
@@ -31,6 +34,16 @@ export interface BattleState {
   cooldowns: [Record<string, number>, Record<string, number>]
   /** 부활 패시브를 이미 소모했는가 (전투당 1회). */
   revived: [boolean, boolean]
+  /** 이 전투에서 쓴 누적 기력 — 유물의 `energyTriggers` 판정용. */
+  energySpent: [number, number]
+  /** 트리거를 마지막으로 판정한 시점의 `energySpent`(주기 경계 통과 감지용). */
+  energySeen: [number, number]
+  /** 남은 기절 턴 수. >0이면 그 턴 카드를 못 낸다(턴 시작에 1 감소). */
+  stunned: [number, number]
+  /** `stunOnHit`으로 이번 전투에 기절시킨 횟수(`stunCap` 제한). */
+  stunsUsed: [number, number]
+  /** 카드 `empower`로 이 전투 내내 누적된 공격 피해 보너스. */
+  empowered: [number, number]
   turn: number
   over: boolean
   winner: number | null
@@ -45,6 +58,11 @@ export interface BattleOpts {
   chars?: [CharacterDef, CharacterDef]
   /** 각 진영의 실효 패시브(장착 유물 merge 결과). 없으면 char.passive. */
   passives?: [Passive, Passive]
+  /**
+   * 시작 체력(로그라이크 **HP 이월**). 지정한 쪽만 이 값으로 시작하고(1..maxHp로
+   * 클램프), 미지정(undefined)이면 풀피 — PvP·봇전·튜토리얼은 변화 없음.
+   */
+  startHp?: [number | undefined, number | undefined]
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -66,13 +84,23 @@ export class CardBattle {
       Math.max(1, this.chars[0].maxHp + (this.passive[0].maxHpBonus ?? 0)),
       Math.max(1, this.chars[1].maxHp + (this.passive[1].maxHpBonus ?? 0)),
     ]
+    // 시작 체력 — 로그라이크는 이전 층에서 남은 체력을 이어받는다(startHp).
+    const startHp = (p: number): number => {
+      const want = opts?.startHp?.[p]
+      return want == null ? this.maxHp[p] : clamp(Math.round(want), 1, this.maxHp[p])
+    }
     this.state = {
       pos: [cloneCell(START_CELLS[0]), cloneCell(START_CELLS[1])],
-      hp: [this.maxHp[0], this.maxHp[1]],
+      hp: [startHp(0), startHp(1)],
       energy: [this.chars[0].startEnergy, this.chars[1].startEnergy],
       shield: [0, 0],
       cooldowns: [{}, {}],
       revived: [false, false],
+      energySpent: [0, 0],
+      energySeen: [0, 0],
+      stunned: [0, 0],
+      stunsUsed: [0, 0],
+      empowered: [0, 0],
       turn: 1,
       over: false,
       winner: null,
@@ -151,6 +179,7 @@ export class CardBattle {
       const bonus = ENERGY_REGEN + (pas.turnEnergy ?? 0)
       s.energy[p] = clamp(s.energy[p] + bonus, 0, this.chars[p].maxEnergy)
       s.shield[p] += pas.turnShield ?? 0
+      if (s.turn === 1 && pas.openingShield) s.shield[p] += pas.openingShield
       if (pas.regen) s.hp[p] = Math.min(this.maxHp[p], s.hp[p] + pas.regen)
     }
 
@@ -168,6 +197,64 @@ export class CardBattle {
       steps.push({ phase, actor, card, result, damage, heal, drain, recoil, snapshot: this.snapshot() })
     }
 
+    // 기력 소비를 한 곳으로 모은다 — 유물의 누적 기력 트리거(`energyTriggers`)가
+    // "이 전투에서 쓴 총 기력"을 세기 때문에, 카드 비용은 전부 이 함수를 지나야 한다.
+    const spend = (p: number, amount: number) => {
+      s.energy[p] -= amount
+      s.energySpent[p] += amount
+    }
+
+    /**
+     * 누적 기력 트리거 판정 — 슬롯이 끝날 때마다 호출한다. `per`의 배수를 넘긴 횟수만큼
+     * 발동하고(한 슬롯에 여러 번도 가능), 여러 유물의 트리거는 각자 자기 주기로 따로
+     * 터진다(조합 스택 허용). 랜덤 없음 → 결정론 유지.
+     */
+    const fireEnergyTriggers = () => {
+      for (let p = 0; p < 2; p++) {
+        const list = this.passive[p].energyTriggers
+        if (!list?.length) {
+          s.energySeen[p] = s.energySpent[p]
+          continue
+        }
+        const seen = s.energySeen[p]
+        const now = s.energySpent[p]
+        if (now === seen) continue
+        const d = 1 - p
+        for (const t of list) {
+          if (t.per <= 0) continue
+          const times = Math.floor(now / t.per) - Math.floor(seen / t.per)
+          for (let k = 0; k < times; k++) {
+            let heal = 0
+            let damage = 0
+            if (t.heal) {
+              const before = s.hp[p]
+              s.hp[p] = Math.min(this.maxHp[p], before + t.heal)
+              heal = s.hp[p] - before
+            }
+            if (t.shield) s.shield[p] += t.shield
+            if (t.energy) s.energy[p] = clamp(s.energy[p] + t.energy, 0, this.chars[p].maxEnergy)
+            if (t.damage) {
+              damage = Math.min(s.hp[d], t.damage) // 보호막 무시 고정 피해
+              s.hp[d] -= damage
+            }
+            if (t.stun) s.stunned[d] += t.stun
+            steps.push({
+              phase: t.stun ? 'stun' : 'trigger',
+              actor: p,
+              card: { ...TRIGGER_CARD, name: t.label ?? TRIGGER_CARD.name },
+              result: t.stun ? 'stun' : 'trigger',
+              damage,
+              heal,
+              drain: 0,
+              recoil: 0,
+              snapshot: this.snapshot(),
+            })
+          }
+        }
+        s.energySeen[p] = now
+      }
+    }
+
     // resolve one move/guard/energy card in place
     const resolvePrep = (p: number, c: CardDef) => {
       if (c.kind === 'move') {
@@ -176,7 +263,7 @@ export class CardBattle {
       } else if (c.kind === 'guard') {
         const cost = c.guardCost ?? 0
         if (s.energy[p] >= cost) {
-          s.energy[p] -= cost
+          spend(p, cost)
           s.shield[p] += c.block ?? 0
           emit(p, c, 'guard')
         } else {
@@ -189,7 +276,7 @@ export class CardBattle {
         // 기력을 체력으로 — 실제 회복량만 heal로 실어 초록 +N을 띄운다
         const cost = c.healCost ?? 0
         if (s.energy[p] >= cost) {
-          s.energy[p] -= cost
+          spend(p, cost)
           const before = s.hp[p]
           s.hp[p] = Math.min(this.maxHp[p], before + (c.healHp ?? 0))
           emit(p, c, 'heal', 0, s.hp[p] - before)
@@ -203,12 +290,13 @@ export class CardBattle {
     // shield / drain effects apply immediately; HP · push are returned for the
     // caller to apply (deferred in a simultaneous trade).
     const computeAttack = (p: number, c: CardDef) => {
-      const zero = { p, card: c, dmg: 0, heal: 0, drain: 0, recoil: 0, push: 0 }
+      const zero = { p, card: c, dmg: 0, heal: 0, drain: 0, recoil: 0, push: 0, pull: 0, stun: 0 }
       const cost = c.energyCost ?? 0
       if (s.energy[p] < cost) return { ...zero, result: 'nofuel' as Step['result'] }
-      s.energy[p] -= cost
-      // 기력 지불 성공 시 무조건 발동: 보호막 전개(selfShield) / 반동(recoil)
+      spend(p, cost)
+      // 기력 지불 성공 시 무조건 발동: 보호막 전개(selfShield) / 반동(recoil) / 각성(empower)
       if (c.selfShield) s.shield[p] += c.selfShield
+      if (c.empower) s.empowered[p] += c.empower
       const recoil = c.recoil ?? 0
       const d = 1 - p
       // 밀착(같은 셀): 어떤 카드의 range도 자기 셀을 덮지 않으므로 여기서 따로
@@ -220,12 +308,15 @@ export class CardBattle {
       if (!connects) return { ...zero, recoil, result: 'whiff' as Step['result'] }
       const atkPas = this.passive[p]
       const defPas = this.passive[d]
-      // attackBonus(유물): 겨냥에 든 공격의 raw 피해에 더해진다.
-      const raw = (c.damage ?? 0) + (atkPas.attackBonus ?? 0)
+      // raw 피해 = 카드 + attackBonus(유물) + empowered(이 전투 누적 각성),
+      // 저체력이면 lowHpBonusPct(유물, 합산)만큼 배율. 순서·반올림 고정(결정론).
+      const flat = (c.damage ?? 0) + (atkPas.attackBonus ?? 0) + s.empowered[p]
+      const low = s.hp[p] <= this.maxHp[p] * LOW_HP_FRAC ? (atkPas.lowHpBonusPct ?? 0) : 0
+      const raw = low > 0 ? Math.round(flat * (1 + low / 100)) : flat
       // EMBER (shieldBreak): a connecting hit wipes the defender's shield first.
       if (atkPas.shieldBreak) s.shield[d] = 0
-      // pierce: 보호막을 소모시키지 않고 그대로 통과한다.
-      const absorbed = c.pierce ? 0 : Math.min(s.shield[d], raw)
+      // pierce: 보호막을 소모시키지 않고 그대로 통과한다(유물 alwaysPierce도 같은 효과).
+      const absorbed = c.pierce || atkPas.alwaysPierce ? 0 : Math.min(s.shield[d], raw)
       s.shield[d] -= absorbed
       // TITAN (damageReduction): flat reduction on the damage that gets through.
       const dmg = Math.max(0, raw - absorbed - (defPas.damageReduction ?? 0))
@@ -242,14 +333,23 @@ export class CardBattle {
         heal += c.leech ?? 0
         heal += atkPas.lifesteal ?? 0 // CIPHER 패시브 + 송곳니류 유물
       }
+      // 기절: 카드의 `stun` + 유물 `stunOnHit`(전투당 `stunCap`회). 피해가 실제로
+      // 들어갔을 때만 — 가드에 막힌 타격으로는 기절하지 않는다.
+      let stun = dmg > 0 ? (c.stun ?? 0) : 0
+      const onHit = atkPas.stunOnHit ?? 0
+      if (dmg > 0 && onHit > 0 && s.stunsUsed[p] < (atkPas.stunCap ?? 1)) {
+        s.stunsUsed[p] += 1
+        stun += onHit
+      }
       const result = (dmg > 0 ? 'hit' : 'blocked') as Step['result']
-      return { ...zero, result, dmg, heal, drain, recoil, push: c.push ?? 0 }
+      return { ...zero, result, dmg, heal, drain, recoil, push: c.push ?? 0, pull: c.pull ?? 0, stun }
     }
 
-    // 넉백: 공격자가 바라보는 방향으로 상대를 밀어낸다(벽에서만 멈춤, 겹침 허용).
-    const applyPush = (attacker: number, n: number) => {
+    // 넉백/끌어당김: 공격자가 바라보는 방향(pull은 반대)으로 상대를 옮긴다.
+    // 벽에서만 멈추고 겹침은 허용.
+    const applyShove = (attacker: number, n: number, toward: boolean) => {
       const d = 1 - attacker
-      const f = this.facing(attacker)
+      const f = this.facing(attacker) * (toward ? -1 : 1)
       for (let k = 0; k < n; k++) {
         const next: Cell = { col: s.pos[d].col + f, row: s.pos[d].row }
         if (next.col < 0 || next.col >= GRID_COLS) break
@@ -266,7 +366,10 @@ export class CardBattle {
       if (r.dmg > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
       if (r.recoil) s.hp[r.p] = Math.max(0, s.hp[r.p] - r.recoil)
       if (r.heal) s.hp[r.p] = Math.min(this.maxHp[r.p], s.hp[r.p] + r.heal)
-      if (r.push) applyPush(r.p, r.push)
+      if (r.push) applyShove(r.p, r.push, false)
+      if (r.pull) applyShove(r.p, r.pull, true)
+      // 이 턴 시작에 감소 판정이 이미 끝났으므로, 여기서 더한 값은 다음 턴부터 소모된다.
+      if (r.stun) s.stunned[d] += r.stun
     }
 
     // 부활(EMBER 잿불 부활 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
@@ -282,6 +385,25 @@ export class CardBattle {
         result: 'revive',
         damage: 0,
         heal: amount,
+        drain: 0,
+        recoil: 0,
+        snapshot: this.snapshot(),
+      })
+    }
+
+    // 기절 판정 — 남은 기절 턴이 있으면 이 턴 카드를 통째로 버린다(기력 회복은 받는다).
+    // 감소를 여기서 하므로, 이 턴 중에 새로 걸린 기절은 다음 턴부터 소모된다.
+    for (let p = 0; p < 2; p++) {
+      if (s.stunned[p] <= 0) continue
+      s.stunned[p] -= 1
+      plans[p] = []
+      steps.push({
+        phase: 'stun',
+        actor: p,
+        card: STUN_CARD,
+        result: 'stun',
+        damage: 0,
+        heal: 0,
         drain: 0,
         recoil: 0,
         snapshot: this.snapshot(),
@@ -316,6 +438,10 @@ export class CardBattle {
           }
         }
       }
+
+      // 누적 기력 유물(기력 N마다 기절·회복 등)은 슬롯이 끝날 때 정산한다 — 공격
+      // 트레이드 계산 중간에 끼어들지 않게.
+      fireEnergyTriggers()
 
       if (s.hp[0] <= 0 || s.hp[1] <= 0) {
         tryRevive(0)

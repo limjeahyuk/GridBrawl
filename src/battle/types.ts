@@ -70,6 +70,13 @@ export interface CardDef {
    */
   pointBlank?: boolean
 
+  /** 적중 시 상대를 N턴 기절시킨다(카드를 못 냄). 런 전용 카드에서 쓴다. */
+  stun?: number
+  /** 적중 시 상대를 (공격자 쪽으로) N칸 끌어당긴다. push의 반대. */
+  pull?: number
+  /** 기력 지불 성공 시 이번 **전투 내내** 내 공격 피해 +N(중첩). */
+  empower?: number
+
   // guard
   block?: number // damage absorbed this turn
   guardCost?: number // energy spent to raise the guard
@@ -166,8 +173,13 @@ export type ActionResult =
   | 'nofuel' // could not pay the energy cost
   | 'fog' // took poison-fog damage at the edge of the grid (end of turn)
   | 'revive' // came back from a KO via a revive passive (once per battle)
+  | 'stun' // 기절해 이 턴 카드를 못 냈다 / 유물 트리거로 상대를 기절시켰다
+  | 'trigger' // 누적 기력 트리거 발동(회복·보호막·피해)
 
-export type Phase = 'move' | 'defense' | 'attack' | 'fog' | 'revive'
+export type Phase = 'move' | 'defense' | 'attack' | 'fog' | 'revive' | 'stun' | 'trigger'
+
+/** 체력이 이 비율 이하면 "저체력"으로 보고 `lowHpBonusPct`가 발동한다. */
+export const LOW_HP_FRAC = 0.5
 
 /** One resolved card action, with the post-action snapshot (for animation). */
 export interface Step {

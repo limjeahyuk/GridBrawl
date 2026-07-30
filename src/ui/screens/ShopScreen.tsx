@@ -1,18 +1,14 @@
 // 상점 — 골드로 카드·유물·회복·카드 제거를 구매. 카드 제거/획득은 카드 선택이 필요.
 import { useMemo, useState } from 'react'
-import { COMMON_CARDS } from '../../battle/cards'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
+import { resolveRunCard } from '../../game/runcards'
 import {
   advanceFloor, buyShopItem, rollShop, type RunState, type ShopItem,
 } from '../../game/run'
-import type { CardDef } from '../../battle/types'
 import { CardFace, cardAccent } from '../CardFace'
 import { RunBar } from '../RunBar'
 
-function resolveCard(charId: string, id: string): CardDef | undefined {
-  return [...COMMON_CARDS, ...getChar(charId).cards].find((c) => c.id === id)
-}
 
 export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
   const shop = useMemo(() => rollShop(run), [run])
@@ -49,7 +45,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
         <h2 className="shop__title">{removing ? '제거할 카드를 고르세요' : '버릴 카드를 고르세요'}</h2>
         <div className="reward__deck">
           {cur.deck.map((id, i) => {
-            const c = resolveCard(cur.charId, id)
+            const c = resolveRunCard(cur.charId, id)
             if (!c) return null
             return (
               <button
@@ -83,7 +79,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
           const owned = bought.has(item.id)
           const poor = cur.gold < item.price
           const relic = item.kind === 'relic' ? getRelic(item.relicId) : null
-          const card = item.kind === 'card' ? resolveCard(cur.charId, item.cardId) : null
+          const card = item.kind === 'card' ? resolveRunCard(cur.charId, item.cardId) : null
           return (
             <div key={item.id} className={`shop__item ${owned ? 'is-owned' : ''}`}>
               <div className="shop__item-body">

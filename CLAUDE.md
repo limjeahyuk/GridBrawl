@@ -9,7 +9,10 @@
 ## 기술 스택 / 명령어
 
 - React 19 + TypeScript + Vite. 외부 게임 엔진 없음 — 전투는 순수 TS(`CardBattle`)로 시뮬레이션 후 React 렌더.
-- 개발 `npm run dev` · 빌드 `npm run build` · 타입검사 `npm run typecheck` · **밸런스 시뮬 `npm run sim [판수]`**(`scripts/simulate.ts`, AI vs AI 36매치업 — 수치 조정 후 평균 턴·승률 확인)
+- 개발 `npm run dev` · 빌드 `npm run build` · 타입검사 `npm run typecheck`
+- **밸런스 시뮬 2종** — 수치를 바꾸면 해당 시뮬로 확인한다:
+  - `npm run sim [판수]` — 단판 1:1(`scripts/simulate.ts`, AI vs AI 36매치업 → 평균 턴·승률). 목표는 "5턴 페이싱".
+  - `npm run sim:run [런수] [-- --seed=N --skill=hard|normal|easy --policy=greedy|random --char=volt --class=volt-surge --sweep]` — **로그라이크 런 전체**(`scripts/simrun.ts` → 클리어율·층별 관문·몬스터별 승률·캐릭터별 클리어율). 시드 고정으로 튜닝 전후를 비교한다. 1800런 ≈ 1초. 읽는 법·현재 수치는 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑩.
 - 코드 변경(특히 전투 로직) 후에는 `npm run typecheck`로 확인.
 
 ## 코드 지도
@@ -41,7 +44,10 @@
   - **밀착 타격**(2026-07-25): 두 파이터는 같은 셀에 겹칠 수 있고, 겹친 상대는 사거리가 아니라 `CardDef.pointBlank`로 판정한다. 기본이 "맞는다"라 공격 25장 중 22장(88%)이 가능하고, `pointBlank: false`인 원거리 3장(`c-shot`·`volt-leech`·`nova-lance`)만 사각(`밀착사각` 칩). 엔진·AI·UI 범위 표시가 같은 규칙을 공유 — 한쪽만 고치면 어긋난다.
 - 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정/KO 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 1회 부활 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
 - 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. **같은 공격 카드는 한 턴에 한 번만**(쿨0이어도 — UI·AI가 강제, 2026-07-15). 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 동시 트레이드 — **동시 KO는 턴 시작 HP 비율이 높던 쪽이 승리**(타이브레이크, 랜덤 없음). (`CardBattle.resolveTurn`)
-- **로그라이크 런(개발 중, 2026-07-24)** — 단판 지루함 해결용. 캐릭터+직업카드1 선택으로 시작 → 사다리(층) 전투(약→강) → 승리 보상(카드3·유물1·이벤트1 중 1택 또는 HP회복) → 보스. **유물 = 상시 능력(엔진 Passive 훅 조합)**, 기존 캐릭터 패시브를 시그니처 유물로 이관. 엔진은 `BattleOpts.passives`(유물 merge)·`maxHp` override로 지원(PvP·봇전 불변). Phase 1a(데이터·엔진 토대: `game/relics.ts` 42종·`monsters.ts` 20종·`run.ts` 노드 사다리/이벤트/상점/골드) + Phase 1b(UI: `RunStart/RunMap/Reward/Event/Shop/RunEnd` 화면 + `App.tsx` `run-*` 페이즈, `BattleScreen`의 `battleOpts`) 완료·플레이 검증. 승리 보상=5중1택(일반은 3% 확률로 유물 포함, 엘리트·보스 확정). `BattleScreen`은 `battleOpts`로 유물 merge 패시브·몬스터 스탯 override(PvP·봇전 불변). **보스 스크립트 패턴**(`game/bosses.ts`) — 오버로드 3턴 주기(견제→모으기→대격변)+40% 격노, 선택 화면 예고 배너(`BattleScreen.telegraph`)로 반격 여지. 다인 전투는 Phase 2. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md).
+- **로그라이크 런(개발 중, 2026-07-24 → 밸런스 패스 2026-07-30)** — 단판 지루함 해결용. 캐릭터+직업카드1 선택으로 시작 → 사다리(층) 전투(약→강) → 승리 보상(5중1택 또는 HP회복) → 보스. **유물 = 상시 능력(엔진 Passive 훅 조합)**, 기존 캐릭터 패시브를 시그니처 유물로 이관. 엔진은 `BattleOpts`의 `chars`·`passives`(유물 merge)·**`startHp`(HP 이월)** 로 지원(**PvP·봇전 불변**). Phase 1a(`game/relics.ts` 72종 — 기본 훅 + 조합형(누적 기력 트리거·저체력 폭주·기절·관통)·경제형(상점 할인·골드·보상칸) + 희귀도 가중 추첨·`monsters.ts` 20종·`run.ts`) + Phase 1b(UI: `RunStart/RunMap/Reward/Event/Shop/RunEnd` + `App.tsx` `run-*` 페이즈) + **보스/엘리트 스크립트 패턴**(`game/bosses.ts` — 오버로드·수호기사·화염군주, 3턴 주기 + 40% 격노 + `BattleScreen.telegraph` 예고 배너) 완료. 다인 전투는 Phase 2. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md).
+  - **Phase 1c 밸런스(2026-07-30)** — `npm run sim:run`으로 측정하며 조정. **① HP 이월 배선 수정**(그전엔 `run.hp`가 지도에만 반영되고 전투는 풀피로 시작 — 런 난이도의 핵심이 빠져 있었다). **② 사다리 12→15층**(전투 7·엘리트 2·보스 1·이벤트 3·상점 2 — tier3 몬스터가 9층 한 칸에서만 나오던 문제, 첫 엘리트를 7층으로 물리고 앞에 상점). **③ 층 스케일**: 체력 +7%/층 + **공격력 2차 곡선**(`atkScaleAt`, 4층 +1 → 15층 +19 — 유물로 *합산*되는 방어를 후반에 넘어서게), 엘리트 ×1.2/+3, 보스는 체력 스케일 40%만. **④ 몬스터 패스**(센트리·마녀·수호기사 하향, 가디언 후반 엘리트로, 뱀파이어·팬텀 상향). **⑤ 캐릭터 밸런스**(`relics.ts`의 `SIGNATURE.runEffect` — 시그니처 유물의 **런 실효 수치**를 캐릭터 패시브와 따로 지정. `ROSTER.passive`는 안 건드리므로 **PvP·1:1 시뮬 불변**). 결과: 클리어율 19%→36%, 보스가 가장 어려운 관문(62%), **`--sweep`(캐릭터×시작카드 매트릭스) 103,500런으로 최선 카드 기준 밴드 30%p→4.0%p**(36.5~40.4%).
+  - ⚠ **런 밸런스를 `turnEnergy`로 조정하지 말 것** — AI가 기력 `energyFloor`(hard 30) 아래면 접근보다 원기 회복을 먼저 골라서 클리어율이 계단처럼 20%p 튄다(봇 인공물). 회복·보호막·피해감소 같은 연속적인 훅으로 조정한다.
+  - 시작 직업 카드 후보는 **공격 카드만**(`RunStartScreen`) — 가드로 시작하면 초반 화력 0인 함정이었다. 같은 캐릭터도 시작 카드에 따라 클리어율이 2~3배 차이나므로(사실상 난이도 다이얼), 캐릭터 비교 시엔 `npm run sim:run --char=X --class=Y`로 **둘 다 고정**해야 한다. 상세·설계 판단거리는 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑪.
 - **독안개(무한전 억제)** — 2026-07-16 열 축소 개편: **6턴부터 양 끝 열(col 0·5)**에 독안개, **3턴마다 안쪽으로** 한 단계씩(9턴 col 0·1·4·5 → 12턴 전부) 조여들어 결국 판 전체를 덮음. **턴 종료 시** 안개 열에 있으면 **턴당 10 고정 피해**(실드 무시, KO 가능). 상수·판정은 `types.ts`(`FOG_START_TURN/FOG_STEP_TURNS/FOG_DAMAGE/fogStageAt/isFogCell(cell,turn)/fogEscalatesNext`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). AI는 지금/다음 턴 안개면 중앙 열로 이탈. 상세는 GDD ④ "독안개".
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18

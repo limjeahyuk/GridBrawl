@@ -95,9 +95,15 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
   attack: '공격',
   fog: '독안개',
   revive: '부활',
+  stun: '기절',
+  trigger: '유물',
 }
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
-const STEP_MS: Record<Step['phase'], number> = { move: 540, defense: 560, attack: 900, fog: 700, revive: 1100 }
+const STEP_MS: Record<Step['phase'], number> = {
+  move: 540, defense: 560, attack: 900, fog: 700, revive: 1100,
+  stun: 900, // 기절은 한 턴을 통째로 날리므로 충분히 보여준다
+  trigger: 700,
+}
 /** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
 const CUTIN_MS = 1750
 /** 이 피해 이상이면 화면을 흔든다(강타 연출). */

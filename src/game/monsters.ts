@@ -35,7 +35,7 @@ export const MONSTERS: MonsterDef[] = [
     name: '슬라임',
     baseArtId: 'cipher',
     tier: 1,
-    maxHp: 55,
+    maxHp: 48,
     startEnergy: 40,
     aiLevel: 'easy',
     passive: { revive: 25 }, // 분열: 쓰러지면 작은 몸으로 한 번 되살아난다
@@ -47,11 +47,13 @@ export const MONSTERS: MonsterDef[] = [
     name: '도끼병',
     baseArtId: 'titan',
     tier: 1,
-    maxHp: 70,
+    maxHp: 60,
     startEnergy: 50,
     aiLevel: 'easy',
     passive: {},
-    deckCardIds: ['c-strike', 'titan-hammer', 'c-guard'],
+    // 2026-07-31: 시작 덱이 공용 기본 9장으로 줄면서 해머 핸드(29)를 든 1층 잡졸이
+    // 실제로 런을 끝냈다(1~2층 사망 8%). "몸풀기"라는 정체성에 맞게 약공만 남겼다.
+    deckCardIds: ['c-strike', 'c-jab', 'c-guard'],
     note: '평범한 근접 잡졸. 몸풀기 상대.',
   },
   {
@@ -59,11 +61,14 @@ export const MONSTERS: MonsterDef[] = [
     name: '센트리',
     baseArtId: 'nova',
     tier: 2,
-    maxHp: 65,
+    maxHp: 80,
     startEnergy: 60,
     aiLevel: 'normal',
+    // 2026-07-30 밸런스: 노바 블래스트(40, 같은 줄 끝까지)를 뺐다. tier2가 매 턴
+    // 광역 주포를 쏘니 4~7층에서 가장 많이 죽이는 몬스터가 됐다(시뮬 승률 68%,
+    // 2.8턴 결판). 관통 랜스로 견제하는 원래 정체성에 맞추고 체력을 올려 오래 버틴다.
     passive: { turnEnergy: 8 },
-    deckCardIds: ['nova-lance', 'nova-blast', 'c-shot', 'c-guard'],
+    deckCardIds: ['nova-lance', 'c-shot', 'c-guard'],
     note: '원거리 견제 + 가끔 방어. 접근을 강요당한다.',
   },
   {
@@ -71,7 +76,7 @@ export const MONSTERS: MonsterDef[] = [
     name: '오우거',
     baseArtId: 'titan',
     tier: 2,
-    maxHp: 130,
+    maxHp: 112,
     startEnergy: 50,
     aiLevel: 'normal',
     passive: { damageReduction: 6 },
@@ -95,11 +100,15 @@ export const MONSTERS: MonsterDef[] = [
     name: '뱀파이어',
     baseArtId: 'cipher',
     tier: 3,
-    maxHp: 95,
-    startEnergy: 50,
+    maxHp: 115,
+    startEnergy: 60,
     aiLevel: 'hard',
-    passive: { lifesteal: 8 },
-    deckCardIds: ['cipher-siphon', 'cipher-cross', 'c-strike', 'c-brace'],
+    // 2026-07-30 밸런스: tier3 후반 몬스터인데 체력 95 + 저댐 덱이라 시뮬 승률 99%,
+    // 플레이어가 오히려 체력을 15 벌어가는 샌드백이었다. 흡혈 정체성을 세게 굴린다.
+    // attackBonus는 **한 방의 크기**를 키운다 — 후반 플레이어는 보호막·피해감소를
+    // 겹쳐 쌓아서, 잔챙이 타격 여러 번보다 큰 한 방이 아니면 뚫리지 않는다(시뮬).
+    passive: { lifesteal: 12, attackBonus: 6 },
+    deckCardIds: ['cipher-siphon', 'cipher-cross', 'cipher-phase', 'c-brace'],
     note: '흡혈 지속 — 오래 끌수록 불리하다.',
   },
   {
@@ -119,11 +128,13 @@ export const MONSTERS: MonsterDef[] = [
     name: '팬텀',
     baseArtId: 'volt',
     tier: 3,
-    maxHp: 80,
+    maxHp: 100,
     startEnergy: 60,
     aiLevel: 'hard',
-    passive: { turnEnergy: 8, regen: 4 },
-    deckCardIds: ['cipher-cross', 'volt-leech', 'c-shot'],
+    // 2026-07-30 밸런스: 십자·대각 교란은 좋았지만 화력이 없어 그냥 지나가는 층이었다
+    // (시뮬 승률 100%). 펄스 샷(10)을 아크 볼트(30)로 바꿔 실제로 아프게.
+    passive: { turnEnergy: 10, regen: 6, attackBonus: 6 },
+    deckCardIds: ['cipher-cross', 'volt-leech', 'volt-bolt'],
     note: '십자·대각으로 교란하며 조금씩 아문다.',
   },
   {
@@ -156,7 +167,7 @@ export const MONSTERS: MonsterDef[] = [
     name: '고블린',
     baseArtId: 'ember',
     tier: 1,
-    maxHp: 55,
+    maxHp: 48,
     startEnergy: 45,
     aiLevel: 'easy',
     passive: {},
@@ -192,7 +203,7 @@ export const MONSTERS: MonsterDef[] = [
     name: '기사',
     baseArtId: 'aegis',
     tier: 2,
-    maxHp: 100,
+    maxHp: 90,
     startEnergy: 55,
     aiLevel: 'normal',
     passive: { turnShield: 10 },
@@ -216,10 +227,10 @@ export const MONSTERS: MonsterDef[] = [
     name: '암살자',
     baseArtId: 'cipher',
     tier: 3,
-    maxHp: 75,
-    startEnergy: 60,
+    maxHp: 95, // 75 → 95 (2026-07-30): 급소를 노리기 전에 먼저 죽었다(시뮬 3턴 만에 격파)
+    startEnergy: 70,
     aiLevel: 'hard',
-    passive: { attackBonus: 8 },
+    passive: { attackBonus: 10 },
     deckCardIds: ['cipher-cross', 'ember-blitz', 'c-strike'],
     note: '순식간에 파고들어 급소를 노린다.',
   },
@@ -228,23 +239,27 @@ export const MONSTERS: MonsterDef[] = [
     name: '마녀',
     baseArtId: 'nova',
     tier: 3,
-    maxHp: 90,
-    startEnergy: 65,
+    maxHp: 100,
+    startEnergy: 45,
     aiLevel: 'hard',
-    passive: { turnEnergy: 12 },
+    // 기력을 조인다(2026-07-30 밸런스): 예전엔 매 턴 노바 블래스트(40)를 쏴서
+    // 3턴 만에 런이 끝났다. 이제 한 방 쏘면 모아야 해서 반격·회피 창이 생긴다.
+    passive: { turnEnergy: 8 },
     deckCardIds: ['nova-blast', 'nova-lance', 'c-guard'],
-    note: '화면 끝에서 광역 폭발을 퍼붓는다.',
+    note: '화면 끝에서 광역 폭발을 퍼붓는다. 쏜 직후가 빈틈이다.',
   },
   {
     id: 'splitter',
     name: '분열체',
     baseArtId: 'cipher',
     tier: 3,
-    maxHp: 85,
-    startEnergy: 50,
-    aiLevel: 'normal',
-    passive: { revive: 45 },
-    deckCardIds: ['cipher-cross', 'c-shot', 'c-strike'],
+    maxHp: 100,
+    startEnergy: 60,
+    aiLevel: 'hard',
+    // 2026-07-30 밸런스: "두 번 죽여야 한다"는 정체성인데 두 몸 다 아프지 않아
+    // 시간만 끌었다(시뮬 승률 100%). 되살아난 뒤가 더 무섭게.
+    passive: { revive: 60 },
+    deckCardIds: ['cipher-cross', 'cipher-cut', 'cipher-siphon'],
     note: '쓰러뜨려도 두 번은 죽여야 하는 끈질긴 개체.',
   },
   {
@@ -252,10 +267,12 @@ export const MONSTERS: MonsterDef[] = [
     name: '수호기사',
     baseArtId: 'aegis',
     tier: 4,
-    maxHp: 170,
+    maxHp: 155,
     startEnergy: 65,
     aiLevel: 'hard',
-    passive: { turnShield: 20, damageReduction: 8, turnEnergy: 8 },
+    // 방벽을 낮춘다(2026-07-30 밸런스): 매 턴 보호막 20 + 피해감소 8이면 플레이어
+    // 화력이 통째로 먹혀 15턴 독안개 소모전이 됐다. 뚫리는 벽으로 조정.
+    passive: { turnShield: 12, damageReduction: 8, turnEnergy: 8 },
     deckCardIds: ['aegis-drive', 'aegis-wall', 'aegis-bash'],
     note: '엘리트 — 방벽을 올렸다 열며 반격한다.',
   },

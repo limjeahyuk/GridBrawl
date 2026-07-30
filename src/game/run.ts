@@ -8,8 +8,19 @@
 // 치르고)** + **상점(골드로 구매)**. 일반 전투 보상엔 유물이 없다.
 // ---------------------------------------------------------------------------
 import { getChar } from '../data/roster'
-import { mergeRelics, RELIC_BY_ID, REWARD_RELICS, signatureRelicId, type Rarity } from './relics'
+import {
+  mergeRelics,
+  mergeRunMods,
+  pickWeightedRelic,
+  RELIC_BY_ID,
+  RELIC_PRICE,
+  REWARD_RELICS,
+  signatureRelicId,
+  type Relic,
+  type RunMods,
+} from './relics'
 import { getMonster, monstersOfTier, type MonsterDef } from './monsters'
+import { RUN_CARDS } from './runcards'
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
 export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop'
@@ -17,35 +28,71 @@ export interface RunNode {
   type: NodeType
   monsterId?: string // combat/elite/boss
 }
-/** 층 구성(전투 위주에 이벤트·상점을 섞고, 엘리트 뒤 보스). */
+/**
+ * 층 구성(전투 위주에 이벤트·상점을 섞고, 엘리트 뒤 보스). 15층 = 전투 7 + 엘리트 2
+ * + 보스 1 + 이벤트 3 + 상점 2. **12층에서 늘렸다(2026-07-30)**: 예전 구성은 전투가
+ * 8판뿐이라 tier3 몬스터가 9층 한 칸에서만 나왔다(시뮬에서 팬텀·뱀파이어 조우 60회 vs
+ * 잡졸 600회). 층을 늘려 각 티어에 제 몫의 자리를 준다.
+ * 첫 엘리트(7층) **앞에 상점(5층)**을 둔 것도 시뮬 결과다 — 엘리트가 5층이던 배치에선
+ * 체력 50%·유물 1개로 벽을 만나 그 층이 보스보다 어려웠다(통과 66% vs 보스 79%).
+ */
 const NODE_TEMPLATE: NodeType[] = [
-  'combat', 'combat', 'event', 'combat', 'shop', 'elite',
-  'combat', 'event', 'combat', 'shop', 'elite', 'boss',
+  'combat', 'combat', 'event', 'combat', 'shop', 'combat', 'elite',
+  'event', 'combat', 'elite', 'shop',
+  'combat', 'combat', 'event', 'boss',
 ]
 export const LADDER_FLOORS = NODE_TEMPLATE.length
 
 // --- 튜닝 상수 --------------------------------------------------------------
 export const DECK_CAP = 20
 /** 승리 보상으로 보여주는 선택지 수(5장 중 1택). */
-const REWARD_OPTIONS = 5
+const REWARD_OPTIONS = 6
 /** 일반 전투 보상 5장 중 유물이 섞일 확률(엘리트·보스는 확정). */
 const RELIC_IN_REWARD = 0.03
-/** 층별 몬스터 스케일 — 보스로 갈수록 확실히 벽이 되게 0.07/층. */
+/** 층별 몬스터 체력 스케일 — 보스로 갈수록 확실히 벽이 되게 0.07/층. */
 const HP_SCALE_PER_FLOOR = 0.07
-export const SKIP_HEAL = 22
+/**
+ * 층별 몬스터 **공격력** 스케일(2026-07-30). 체력만 올리면 후반 몬스터가 "두껍지만
+ * 안 아픈" 샌드백이 되어, 유물을 쌓은 플레이어에게 뒤쪽 층이 앞쪽보다 쉬워졌다
+ * (시뮬 `npm run sim:run`: 12·13층 통과율 99%, 플레이어가 오히려 체력을 벌었다).
+ *
+ * **선형이 아니라 가속 곡선**인 이유: 플레이어의 방어는 유물로 *합산*된다(피해감소 +
+ * 매 턴 보호막). 층당 고정 +N으로는 앞쪽 층이 아파지기 전에 뒤쪽 층을 뚫지 못한다.
+ * 1차+2차항으로 초반은 완만하게, 후반은 방어 스택을 넘어서게 올린다.
+ *   4층 +1 · 7층 +3 · 10층 +7 · 13층 +11 · 15층 +14
+ */
+const atkScaleAt = (floor: number): number => {
+  const d = floor - 1
+  return Math.round(0.3 * d + 0.048 * d * d)
+}
+/** 엘리트 보정 — 엘리트 노드는 같은 몬스터라도 더 두껍고 더 아프다. */
+const ELITE_HP_MULT = 1.2
+const ELITE_ATK_BONUS = 2
+/**
+ * 보스 보정 — 보스는 **두꺼워지는 대신 아파진다**. 마지막 층에서 층 스케일을 그대로
+ * 먹으면 체력 400에 육박해 15턴 독안개 소모전이 됐고(시뮬), 그 싸움은 유물로 지속력을
+ * 쌓은 플레이어가 그냥 이긴다(승률 79%). 체력 스케일은 깎고 화력을 얹어 짧고 무섭게.
+ */
+const BOSS_HP_SCALE_FACTOR = 0.4
+/** 보상을 포기하고 받는 회복량. 22 → 32(2026-07-30): 15층 사다리에선 누적 소모가
+ *  훨씬 커서(7층 진입 체력 49%) 22는 "카드를 포기할 이유"가 못 됐다. */
+export const SKIP_HEAL = 36
 const GOLD_BASE = 15
 const GOLD_PER_FLOOR = 4
 const GOLD_ELITE_BONUS = 40
 const GOLD_BOSS_BONUS = 80
-/** 상점 가격(유물 희귀도별 + 서비스). */
-const PRICE: Record<Rarity, number> = { common: 60, rare: 90, epic: 130 }
 const PRICE_CARD = 35
-const PRICE_HEAL = 25
-const PRICE_HEAL_AMOUNT = 35
+const PRICE_HEAL = 30
+const PRICE_HEAL_AMOUNT = 50 // 35 → 50: 상점 회복이 층 사이 회복의 주 수단이 되게
 const PRICE_REMOVE = 40
 
-/** 시작 덱(고정) — 이동4 + 공용 공격3 + 수비2. 여기에 직업 카드 1장을 더한다. */
-const STARTING_DECK = [
+/**
+ * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 브레이스 + 원기). 2026-07-31에
+ * 직업 카드 1장 선택을 없앴다: 런에선 큰 카드가 항상 유리해서 "시그니처로 시작"이
+ * 정답이 되고 나머지 선택이 함정이었으며, 그 시작이 1~6층을 무료로 만들었다.
+ * 이제 직업 카드·강한 런 카드는 **보상으로 번다** — 기획서 ③의 원래 의도다.
+ */
+export const STARTING_DECK = [
   'm-up', 'm-down', 'm-left', 'm-right',
   'c-strike', 'c-shot', 'c-jab',
   'c-brace', 'c-energy',
@@ -77,26 +124,47 @@ const shuffle = <T>(arr: T[]): T[] => {
 }
 
 // --- 사다리 구성 ------------------------------------------------------------
-/** 일반 전투 몬스터 티어(층이 오를수록). */
+/** 일반 전투 몬스터 티어(층이 오를수록). 15층 구성 기준 t1: 1·2층, t2: 4·7층, t3: 9층 이후. */
 function combatTier(floor: number): number {
   if (floor <= 3) return 1
-  if (floor <= 7) return 2
+  if (floor <= 8) return 2
   return 3
 }
-/** 엘리트 후보 — tier4의 엘리트(보스 제외) + 강한 tier3. */
-function elitePool(): MonsterDef[] {
-  const tier4 = monstersOfTier(4).filter((m) => m.id !== 'overlord')
-  return [...tier4, ...monstersOfTier(3).filter((m) => ['golem', 'witch'].includes(m.id))]
+/**
+ * 일반 전투 후보. **12층부터는 tier4(수호기사·화염군주)도 잡몹으로 섞인다**
+ * (2026-07-30): 보스 직전 두 층이 통과율 99%인 공짜 층이었다 — 유물을 다 쌓은
+ * 플레이어에게 tier3는 더 이상 위협이 아니다. 엘리트 보정 없이 나오므로 엘리트보다는
+ * 약하고, 보스 앞 마지막 압박이 된다.
+ */
+const DEEP_COMBAT_FLOOR = 12
+function combatPool(floor: number): MonsterDef[] {
+  const tier = monstersOfTier(combatTier(floor))
+  if (floor < DEEP_COMBAT_FLOOR) return tier
+  return [...tier, ...monstersOfTier(4).filter((m) => m.id !== 'overlord')]
+}
+/**
+ * 엘리트 후보 — **깊이에 따라 다른 풀**. 중반 엘리트(6층)에 스크립트 tier4가
+ * 나오면 그 층이 보스보다 어려운 벽이 됐다(시뮬: 6층 통과 53% vs 보스 61%).
+ * 그래서 중반은 단단한 tier3 브루저에 엘리트 보정을 얹고, 깊은 층에만 tier4를 낸다.
+ */
+const MID_ELITE_IDS = ['golem', 'ogre', 'knight']
+/** 깊은 층 엘리트 — 스크립트 tier4 + 가디언(벽). 가디언은 피해감소·보호막이
+ *  엘리트 보정과 겹쳐 중반엔 뚫을 수 없는 벽이 됐다(시뮬 승률 49%) → 후반으로. */
+const DEEP_ELITE_IDS = ['guardian']
+const DEEP_ELITE_FLOOR = 9
+function elitePool(floor: number): MonsterDef[] {
+  if (floor < DEEP_ELITE_FLOOR) return MID_ELITE_IDS.map(getMonster)
+  return [...monstersOfTier(4).filter((m) => m.id !== 'overlord'), ...DEEP_ELITE_IDS.map(getMonster)]
 }
 
 function buildLadder(): RunNode[] {
   return NODE_TEMPLATE.map((type, i) => {
     const floor = i + 1
     if (type === 'combat') {
-      const poolT = monstersOfTier(combatTier(floor))
+      const poolT = combatPool(floor)
       return { type, monsterId: (poolT.length ? pick(poolT) : pick(monstersOfTier(1))).id }
     }
-    if (type === 'elite') return { type, monsterId: pick(elitePool()).id }
+    if (type === 'elite') return { type, monsterId: pick(elitePool(floor)).id }
     if (type === 'boss') return { type, monsterId: 'overlord' }
     return { type } // event / shop
   })
@@ -114,12 +182,24 @@ export function isEliteFloor(run: RunState): boolean {
   const t = currentNode(run).type
   return t === 'elite' || t === 'boss'
 }
-/** 현재 층의 몬스터(층 스케일 반영). combat/elite/boss 노드에서만 유효. */
+/**
+ * 현재 층의 몬스터(층 스케일 + 엘리트 보정 반영). combat/elite/boss 노드에서만 유효.
+ * 공격력 보정은 패시브 훅 `attackBonus`로 얹으므로 엔진·UI가 따로 알 필요가 없다.
+ * tier4(수호기사·화염군주)는 이미 엘리트 스탯이라 엘리트 보정을 중복 적용하지 않는다.
+ */
 export function currentEnemy(run: RunState): MonsterDef {
   const node = currentNode(run)
   const base = getMonster(node.monsterId ?? 'grunt')
-  const scale = 1 + HP_SCALE_PER_FLOOR * (run.floor - 1)
-  return { ...base, maxHp: Math.round(base.maxHp * scale) }
+  const elite = node.type === 'elite' && base.tier < 4
+  const boss = node.type === 'boss'
+  const depth = (run.floor - 1) * (boss ? BOSS_HP_SCALE_FACTOR : 1)
+  const hpScale = (1 + HP_SCALE_PER_FLOOR * depth) * (elite ? ELITE_HP_MULT : 1)
+  const atk = atkScaleAt(run.floor) + (elite ? ELITE_ATK_BONUS : 0)
+  return {
+    ...base,
+    maxHp: Math.round(base.maxHp * hpScale),
+    passive: { ...base.passive, attackBonus: (base.passive.attackBonus ?? 0) + atk },
+  }
 }
 function statusForNode(node: RunNode): RunStatus {
   if (node.type === 'event') return 'event'
@@ -128,20 +208,31 @@ function statusForNode(node: RunNode): RunStatus {
 }
 
 // --- 런 시작 ----------------------------------------------------------------
-export function startRun(charId: string, classCardId: string): RunState {
+export function startRun(charId: string): RunState {
   const relicIds = [signatureRelicId(charId)].filter(Boolean)
   const maxHp = computeMaxHp(charId, relicIds)
+  const ladder = buildLadder()
   return {
     charId,
     relicIds,
-    deck: [...STARTING_DECK, classCardId],
+    deck: [...STARTING_DECK],
     hp: maxHp,
     maxHp,
     gold: 0,
     floor: 1,
-    ladder: buildLadder(),
-    status: 'fighting',
+    ladder,
+    status: statusForNode(ladder[0]), // 1층이 전투가 아닌 템플릿으로 바뀌어도 안전하게
   }
+}
+
+// --- 유물의 전투 밖 효과 ----------------------------------------------------
+/** 장착 유물의 메타 효과 묶음(상점 할인·골드·보상 칸·회복량·덱 상한). */
+export function runMods(run: RunState): RunMods {
+  return mergeRunMods(run.relicIds)
+}
+/** 유물 보정이 들어간 덱 상한. */
+export function deckCap(run: RunState): number {
+  return DECK_CAP + (runMods(run).deckCapBonus ?? 0)
 }
 
 // --- 전투 결과 --------------------------------------------------------------
@@ -150,7 +241,8 @@ function goldForWin(run: RunState): number {
   let g = GOLD_BASE + GOLD_PER_FLOOR * run.floor
   if (node.type === 'elite') g += GOLD_ELITE_BONUS
   if (node.type === 'boss') g += GOLD_BOSS_BONUS
-  return g
+  const bonus = runMods(run).goldBonusPct ?? 0
+  return Math.round(g * (1 + bonus / 100))
 }
 /** 승리 — 남은 체력 인계 + 골드 획득 → 보상 단계(보스면 클리어). */
 export function afterWin(run: RunState, hpLeft: number): RunState {
@@ -164,8 +256,18 @@ export function afterLoss(run: RunState): RunState {
 }
 
 // --- 유물·카드·골드 뮤테이터(순수) -----------------------------------------
+function availableRelicDefs(run: RunState): Relic[] {
+  return REWARD_RELICS.filter((r) => !run.relicIds.includes(r.id))
+}
 function availableRelics(run: RunState): string[] {
-  return REWARD_RELICS.map((r) => r.id).filter((id) => !run.relicIds.includes(id))
+  return availableRelicDefs(run).map((r) => r.id)
+}
+/**
+ * 미보유 유물 하나를 **희귀도 가중**으로 고른다. 가중치는 층에 따라 좋아진다 —
+ * 판을 부수는 조합은 깊이 살아남은 대가로 얻는다(relics.ts `rarityWeightAt`).
+ */
+function rollRelicId(run: RunState): string | undefined {
+  return pickWeightedRelic(availableRelicDefs(run), run.floor)?.id
 }
 /** 유물 장착(최대체력 증가분만큼 현재 체력도 함께 오른다). */
 export function grantRelic(run: RunState, relicId: string): RunState {
@@ -178,9 +280,8 @@ export function grantRelic(run: RunState, relicId: string): RunState {
 }
 /** 무작위(미보유) 유물 하나를 준다. 다 가졌으면 소량 회복으로 대체. */
 export function grantRandomRelic(run: RunState): { run: RunState; relicId?: string } {
-  const pool = availableRelics(run)
-  if (!pool.length) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
-  const relicId = pick(pool)
+  const relicId = rollRelicId(run)
+  if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
   return { run: grantRelic(run, relicId), relicId }
 }
 /** 카드 획득. 덱이 꽉 찼는데 removeId가 없으면 needsReplace로 UI에 교체를 넘긴다. */
@@ -189,7 +290,7 @@ export function grantCard(
   cardId: string,
   removeId?: string,
 ): { run: RunState; needsReplace?: boolean } {
-  if (run.deck.length >= DECK_CAP && !removeId) return { run, needsReplace: true }
+  if (run.deck.length >= deckCap(run) && !removeId) return { run, needsReplace: true }
   let deck = run.deck
   if (removeId) {
     const i = deck.indexOf(removeId)
@@ -202,8 +303,10 @@ export function removeCard(run: RunState, cardId: string): RunState {
   if (i < 0) return run
   return { ...run, deck: [...run.deck.slice(0, i), ...run.deck.slice(i + 1)] }
 }
+/** 회복 — 유물의 `healBonusPct`(치유 향유 등)가 여기 전부에 적용된다. */
 export function healHp(run: RunState, amount: number): RunState {
-  return { ...run, hp: Math.min(run.maxHp, run.hp + amount) }
+  const boost = 1 + (runMods(run).healBonusPct ?? 0) / 100
+  return { ...run, hp: Math.min(run.maxHp, run.hp + Math.round(amount * boost)) }
 }
 export function loseHp(run: RunState, amount: number): RunState {
   return { ...run, hp: Math.max(1, run.hp - amount) } // 이벤트로는 죽지 않는다(최소 1)
@@ -214,24 +317,36 @@ export type Reward =
   | { kind: 'card'; cardId: string }
   | { kind: 'relic'; relicId: string }
 
-function cardRewardPool(charId: string): string[] {
+/** 그 캐릭터의 미보유 직업(고유) 카드 — 시작 덱에서 빠졌으므로 런에서 번다. */
+function missingClassCards(run: RunState): string[] {
+  return getChar(run.charId)
+    .cards.map((c) => c.id)
+    .filter((id) => !run.deck.includes(id))
+}
+/** 보상·상점에 나올 수 있는 카드 전체 풀(공용 확장 + 직업 + 런 전용). */
+function cardRewardPool(run: RunState): string[] {
   const commonPool = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
-  const classCards = getChar(charId).cards.map((c) => c.id)
-  return [...commonPool, ...classCards]
+  const classCards = getChar(run.charId).cards.map((c) => c.id)
+  return [...commonPool, ...classCards, ...RUN_CARDS.map((c) => c.id)]
 }
 /**
- * 승리 보상 후보 — **5장 중 1택**. 기본은 카드 5장이고, 5장 안에 유물이
- * 섞일 수 있다: 엘리트·보스는 **확정**, 일반 전투는 아주 낮은 확률(RELIC_IN_REWARD).
- * 유물이 들어가면 카드 한 자리를 유물로 바꾸고 순서를 섞는다(항상 특정 위치 X).
+ * 승리 보상 후보 — **5장 중 1택**(유물 `rewardOptions`로 칸이 늘 수 있다). 기본은
+ * 카드지만 유물이 섞일 수 있다: 엘리트·보스는 **확정**, 일반 전투는 낮은 확률
+ * (`RELIC_IN_REWARD` + 유물 보정). 유물은 **희귀도 가중**으로 뽑는다.
+ *
+ * 직업 카드를 아직 못 얻었으면 **한 칸은 직업 카드로 보장**한다(2026-07-31) — 시작
+ * 덱에서 직업 카드를 뺀 뒤로는 그걸 못 주우면 런이 성립하지 않기 때문이다.
  */
 export function rollRewards(run: RunState): Reward[] {
-  const out: Reward[] = shuffle(cardRewardPool(run.charId))
-    .slice(0, REWARD_OPTIONS)
-    .map((cardId) => ({ kind: 'card', cardId }))
-  const wantRelic = isEliteFloor(run) || Math.random() < RELIC_IN_REWARD
-  if (wantRelic) {
-    const relics = availableRelics(run)
-    if (relics.length) out[out.length - 1] = { kind: 'relic', relicId: pick(relics) }
+  const slots = REWARD_OPTIONS + (runMods(run).rewardOptions ?? 0)
+  const cards = shuffle(cardRewardPool(run)).slice(0, slots)
+  const missing = missingClassCards(run)
+  if (missing.length && !cards.some((id) => missing.includes(id))) cards[0] = pick(missing)
+  const out: Reward[] = cards.map((cardId) => ({ kind: 'card', cardId }))
+  const chance = RELIC_IN_REWARD + (runMods(run).relicChanceBonus ?? 0)
+  if (isEliteFloor(run) || Math.random() < chance) {
+    const relicId = rollRelicId(run)
+    if (relicId) out[out.length - 1] = { kind: 'relic', relicId }
   }
   return shuffle(out)
 }
@@ -275,7 +390,7 @@ export const EVENTS: RunEvent[] = [
   {
     id: 'spring', name: '치유의 샘', icon: '⛲',
     desc: '맑은 샘물이 상처를 씻어준다.',
-    options: [{ label: '쉬어간다 (HP +45)', effect: { type: 'heal', amount: 45 } }, skip],
+    options: [{ label: '쉬어간다 (HP +55)', effect: { type: 'heal', amount: 55 } }, skip],
   },
   {
     id: 'gambler', name: '떠돌이 도박꾼', icon: '🎲',
@@ -352,17 +467,32 @@ export type ShopItem =
   | { id: string; kind: 'heal'; price: number; amount: number }
   | { id: string; kind: 'removeCard'; price: number }
 
-/** 상점 진열 — 카드 3 + 유물 2 + 회복 1 + 카드 제거 서비스 1. */
+/**
+ * 상점 진열 — 카드 3 + 유물 1 + 회복 1 + 카드 제거 서비스 1.
+ * 유물은 2 → **1칸**(2026-07-30): 상점 2곳에서 유물 4개를 사들이면 후반이 무력화됐다
+ * (시뮬: 보스 도달 시 유물 6개, 12·13층 통과율 99%). 유물은 엘리트·이벤트가 주 경로.
+ */
 export function rollShop(run: RunState): ShopItem[] {
   const items: ShopItem[] = []
-  shuffle(cardRewardPool(run.charId)).slice(0, 3).forEach((cardId, i) =>
-    items.push({ id: `card-${i}`, kind: 'card', cardId, price: PRICE_CARD }),
+  // 유물 할인(상인의 인증패 등)은 **모든 상점 가격**에 적용된다.
+  const off = 1 - (runMods(run).shopDiscountPct ?? 0) / 100
+  const price = (n: number) => Math.max(1, Math.round(n * off))
+  shuffle(cardRewardPool(run)).slice(0, 3).forEach((cardId, i) =>
+    items.push({ id: `card-${i}`, kind: 'card', cardId, price: price(PRICE_CARD) }),
   )
-  shuffle(availableRelics(run)).slice(0, 2).forEach((relicId, i) =>
-    items.push({ id: `relic-${i}`, kind: 'relic', relicId, price: PRICE[RELIC_BY_ID[relicId]?.rarity ?? 'common'] }),
-  )
-  items.push({ id: 'heal', kind: 'heal', price: PRICE_HEAL, amount: PRICE_HEAL_AMOUNT })
-  items.push({ id: 'remove', kind: 'removeCard', price: PRICE_REMOVE })
+  const relicId = rollRelicId(run) // 희귀도 가중 — legend는 드물고 아주 비싸다
+  if (relicId)
+    items.push({
+      id: 'relic-0',
+      kind: 'relic',
+      relicId,
+      price: price(RELIC_PRICE[RELIC_BY_ID[relicId]?.rarity ?? 'common']),
+    })
+  // 회복 2칸(2026-07-30) — 시뮬에서 보스 도달 시 골드 300이 남았다(살 게 없었다).
+  // 골드를 체력으로 바꾸는 창구를 넓혀 남는 골드가 생존으로 이어지게.
+  items.push({ id: 'heal', kind: 'heal', price: price(PRICE_HEAL), amount: PRICE_HEAL_AMOUNT })
+  items.push({ id: 'heal-2', kind: 'heal', price: price(PRICE_HEAL), amount: PRICE_HEAL_AMOUNT })
+  items.push({ id: 'remove', kind: 'removeCard', price: price(PRICE_REMOVE) })
   return items
 }
 

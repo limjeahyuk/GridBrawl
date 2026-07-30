@@ -1,18 +1,14 @@
 // 런 이벤트 — 대가를 치르고 보상을 얻는 선택. 카드 제거형은 버릴 카드를 고른다.
 import { useMemo, useState } from 'react'
-import { COMMON_CARDS } from '../../battle/cards'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
+import { resolveRunCard } from '../../game/runcards'
 import {
   advanceFloor, resolveEventEffect, rollEvent, type EventEffect, type RunState,
 } from '../../game/run'
-import type { CardDef } from '../../battle/types'
 import { CardFace, cardAccent } from '../CardFace'
 import { RunBar } from '../RunBar'
 
-function resolveCard(charId: string, id: string): CardDef | undefined {
-  return [...COMMON_CARDS, ...getChar(charId).cards].find((c) => c.id === id)
-}
 
 export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
   const ev = useMemo(() => rollEvent(), [run])
@@ -64,7 +60,7 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
         <h2 className="event__title">녹일 카드를 고르세요</h2>
         <div className="reward__deck">
           {run.deck.map((id, i) => {
-            const c = resolveCard(run.charId, id)
+            const c = resolveRunCard(run.charId, id)
             if (!c) return null
             return (
               <button

@@ -34,6 +34,9 @@ export function abilityTags(c: CardDef): string[] {
   if (c.push) t.push(`넉백${c.push}`)
   if (c.selfShield) t.push(`방벽+${c.selfShield}`)
   if (c.recoil) t.push(`반동${c.recoil}`)
+  if (c.stun) t.push(`기절${c.stun}턴`)
+  if (c.pull) t.push(`끌기${c.pull}`)
+  if (c.empower) t.push(`각성+${c.empower}`)
   // 겹친 상대를 못 때리는 원거리 카드만 따로 알려준다(대부분의 카드는 때릴 수 있다)
   if (c.kind === 'attack' && c.pointBlank === false) t.push('밀착사각')
   return t

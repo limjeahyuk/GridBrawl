@@ -146,8 +146,8 @@ export default function App() {
   }, [])
 
   // --- 로그라이크 런 흐름 -----------------------------------------------------
-  const beginRun = useCallback((charId: string, classCardId: string) => {
-    setRun(startRun(charId, classCardId))
+  const beginRun = useCallback((charId: string) => {
+    setRun(startRun(charId))
     setPhase('run-map')
   }, [])
   // 맵에서 현재 노드로 진입 — 타입에 따라 전투/이벤트/상점으로.

@@ -1,9 +1,18 @@
 import { useState } from 'react'
 import { ROSTER, type CharacterDef } from '../../data/roster'
 import { COMMON_CARDS } from '../../battle/cards'
+import { RELICS, type Rarity } from '../../game/relics'
+import { RUN_CARDS } from '../../game/runcards'
 import { PortraitSvg } from '../PortraitSvg'
 import { CardFace, cardAccent } from '../CardFace'
 import { statBars } from '../statBars'
+
+const RARITY_LABEL: Record<Rarity, string> = {
+  common: '일반',
+  rare: '희귀',
+  epic: '영웅',
+  legend: '전설',
+}
 
 /** 도감: 영웅과 각 영웅의 전용 공격 카드 + 공용 카드를 열람하는 화면. */
 export function CodexScreen({ onBack }: { onBack: () => void }) {
@@ -77,6 +86,28 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
                 <div className="codex__card" key={c.id}>
                   <CardFace card={c} accent={cardAccent(c, sel.accent)} />
                   <p className="codex__card-desc">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="codex__cards-title">로그라이크 전용 카드 (런 보상·상점)</div>
+            <div className="codex__deck">
+              {RUN_CARDS.map((c) => (
+                <div className="codex__card" key={c.id}>
+                  <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                  <p className="codex__card-desc">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="codex__cards-title">유물 (로그라이크)</div>
+            <div className="codex__relics">
+              {RELICS.filter((r) => !r.signatureOf).map((r) => (
+                <div className={`codex__relic is-${r.rarity}`} key={r.id}>
+                  <span className="codex__relic-icon">{r.icon}</span>
+                  <b>{r.name}</b>
+                  <span className="codex__relic-rarity">{RARITY_LABEL[r.rarity]}</span>
+                  <p>{r.desc}</p>
                 </div>
               ))}
             </div>

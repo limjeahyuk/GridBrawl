@@ -9,6 +9,7 @@ import type { BattleOpts, CardBattle } from '../battle/engine'
 import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
+import { RUN_CARDS } from './runcards'
 import { bossPlan, bossTelegraph, isScriptedBoss } from './bosses'
 import { currentEnemy, type RunState } from './run'
 
@@ -28,13 +29,16 @@ export function runFightProps(run: RunState): RunFightProps {
   const enemy = currentEnemy(run)
   const pChar = getChar(run.charId)
   const eChar = monsterChar(enemy)
-  const all: CardDef[] = [...COMMON_CARDS, ...pChar.cards]
+  // 런 덱은 공용 + 그 캐릭터 고유 + **런 전용 카드**에서 해석한다(PvP 덱빌더는 불변).
+  const all: CardDef[] = [...COMMON_CARDS, ...pChar.cards, ...RUN_CARDS]
   const deck = run.deck
     .map((id) => all.find((c) => c.id === id))
     .filter((c): c is CardDef => !!c)
   const battleOpts: BattleOpts = {
     chars: [pChar, eChar],
     passives: [mergeRelics(run.relicIds), eChar.passive],
+    // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
+    startHp: [run.hp, undefined],
   }
   const scripted = isScriptedBoss(enemy.id)
   return {

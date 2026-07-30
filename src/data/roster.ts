@@ -40,6 +40,40 @@ export interface Passive {
   thorns?: number
   /** 최대 체력 ±N(전투 시작 시 반영, 최소 1). */
   maxHpBonus?: number
+  // --- 조합형 유물 훅(2026-07-31) — 로그라이크 전용, 전부 결정론적 ---
+  /**
+   * **누적 기력 소비 트리거**. 이 전투에서 쓴 기력이 `per`의 배수를 넘길 때마다 발동.
+   * 여러 유물의 트리거는 배열로 **누적**된다(각자 자기 주기로 따로 발동) — 유물을
+   * 겹쳐 쌓는 조합 플레이를 막지 않기 위한 설계. 순서는 유물 장착 순서(랜덤 없음).
+   */
+  energyTriggers?: EnergyTrigger[]
+  /** 체력이 절반(`LOW_HP_FRAC`) 이하일 때 내 공격 피해 +N%. 유물끼리 합산된다. */
+  lowHpBonusPct?: number
+  /** 상대 보호막을 무시하고 피해를 관통시킨다(카드의 `pierce`를 상시화). */
+  alwaysPierce?: boolean
+  /** 내 공격이 적중하면 상대를 N턴 기절시킨다(전투당 `stunCap`회까지). */
+  stunOnHit?: number
+  /** `stunOnHit`이 전투당 발동할 수 있는 횟수(합산). 없으면 1회. */
+  stunCap?: number
+  /** 첫 턴에 얻는 보호막(선공 방어형). */
+  openingShield?: number
+}
+
+/** 누적 기력 소비 트리거 한 개. `per`만큼 쓸 때마다 아래 효과가 한 번씩 터진다. */
+export interface EnergyTrigger {
+  per: number
+  /** 상대를 N턴 기절시킨다(카드를 못 냄). */
+  stun?: number
+  /** 내 체력 +N. */
+  heal?: number
+  /** 내 보호막 +N. */
+  shield?: number
+  /** 상대에게 즉시 N 고정 피해(보호막 무시). */
+  damage?: number
+  /** 내 기력 +N(무한 순환은 아니다 — 소비량보다 작게 잡는다). */
+  energy?: number
+  /** 표시용 이름(연출 로그·툴팁). */
+  label?: string
 }
 
 export interface CharacterDef {

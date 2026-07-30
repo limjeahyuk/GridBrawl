@@ -1,19 +1,15 @@
 // 승리 보상 — 5장 중 1택(아주 낮은 확률로 유물 포함). 또는 회복하고 지나가기.
 // 덱이 꽉 찬 상태로 카드를 받으면 버릴 카드를 고른다.
 import { useMemo, useState } from 'react'
-import { COMMON_CARDS } from '../../battle/cards'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
+import { resolveRunCard } from '../../game/runcards'
 import {
   advanceFloor, grantCard, grantRelic, rollRewards, skipRewardForHeal,
   SKIP_HEAL, type Reward, type RunState,
 } from '../../game/run'
-import type { CardDef } from '../../battle/types'
 import { CardFace, cardAccent } from '../CardFace'
 
-function resolveCard(charId: string, id: string): CardDef | undefined {
-  return [...COMMON_CARDS, ...getChar(charId).cards].find((c) => c.id === id)
-}
 
 export function RewardScreen({
   run,
@@ -48,7 +44,7 @@ export function RewardScreen({
         <h2 className="reward__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
         <div className="reward__deck">
           {run.deck.map((id, i) => {
-            const c = resolveCard(run.charId, id)
+            const c = resolveRunCard(run.charId, id)
             if (!c) return null
             return (
               <button
@@ -87,7 +83,7 @@ export function RewardScreen({
               </button>
             )
           }
-          const c = resolveCard(run.charId, r.cardId)
+          const c = resolveRunCard(run.charId, r.cardId)
           if (!c) return null
           return (
             <button

@@ -7,7 +7,26 @@
 import type { Passive } from '../data/roster'
 import { ROSTER } from '../data/roster'
 
-export type Rarity = 'common' | 'rare' | 'epic'
+export type Rarity = 'common' | 'rare' | 'epic' | 'legend'
+
+/**
+ * 전투 밖(런 메타)에 작용하는 유물 효과 — 상점 할인·골드·보상 칸처럼 엔진이 알 필요
+ * 없는 것들. `run.ts`가 `mergeRunMods`로 합쳐서 읽는다.
+ */
+export interface RunMods {
+  /** 상점 가격 -N%(합산, 최대 80%). */
+  shopDiscountPct?: number
+  /** 전투 승리 골드 +N%(합산). */
+  goldBonusPct?: number
+  /** 승리 보상 선택지 +N칸. */
+  rewardOptions?: number
+  /** 모든 회복 효과(보상 포기·이벤트·상점) +N%. */
+  healBonusPct?: number
+  /** 일반 전투 보상에 유물이 섞일 확률 +N포인트(0.01 = +1%p). */
+  relicChanceBonus?: number
+  /** 덱 상한 +N장. */
+  deckCapBonus?: number
+}
 
 export interface Relic {
   id: string
@@ -17,31 +36,77 @@ export interface Relic {
   rarity: Rarity
   /** 이 유물이 부여하는 패시브 훅(desc는 안 씀 — Relic.desc가 설명). */
   effect: Omit<Passive, 'desc'>
+  /** 전투 밖에 작용하는 효과(상점·골드·보상). */
+  mods?: RunMods
   /** 시작 시그니처 유물이면 해당 캐릭터 id. 일반 보상 풀엔 넣지 않는다. */
   signatureOf?: string
 }
 
 // --- 캐릭터별 시그니처 유물 (옛 passive를 이관) -----------------------------
 // 각 캐릭터의 roster passive를 그대로 유물화한다. 이름/아이콘은 캐릭터 콘셉트에 맞춰.
-const SIGNATURE: Record<string, { id: string; name: string; icon: string }> = {
-  volt: { id: 'sig-volt', name: '오버차지 코어', icon: '⚡' },
-  titan: { id: 'sig-titan', name: '장갑판', icon: '🛡' },
-  nova: { id: 'sig-nova', name: '플라스마 코어', icon: '☀' },
-  cipher: { id: 'sig-cipher', name: '데이터 드레인', icon: '🩸' },
-  aegis: { id: 'sig-aegis', name: '상시 방벽', icon: '🧱' },
-  ember: { id: 'sig-ember', name: '불사조 깃털', icon: '🔥' },
+//
+// **런 보정(runEffect, 2026-07-30)**: 캐릭터 패시브를 그대로 유물화하면 런 클리어율이
+// 27~57%로 벌어진다(캐릭터별 대량 시뮬 — docs/ROGUELIKE.md ⑪). 이유는 구조적이다:
+//   ① 체력이 층 사이에 이어지는 런에선 **지속회복 > 피해감소**다(감소는 출혈을 늦추고,
+//      회복은 되돌린다) → 회복 수단이 없는 캐릭터가 누적 출혈로 죽는다.
+//   ② 런의 제약은 기력이 아니라 **슬롯 3칸**이다(쿨0 공격은 턴당 1회, 기력은 턴마다
+//      쌓임) → 매 턴 기력을 크게 주는 패시브가 큰 카드를 매 턴 쏘게 해 압도한다.
+// 그래서 시그니처 유물은 패시브에서 출발하되 **런 수치를 따로 지정**한다(가감 모두).
+// roster의 `passive`는 건드리지 않으므로 **PvP·봇전·1:1 시뮬은 불변**이다.
+const SIGNATURE: Record<
+  string,
+  {
+    id: string
+    name: string
+    icon: string
+    /** 런에서의 실효 수치 — 캐릭터 패시브 위에 덮어쓴다. 비우면 패시브 그대로. */
+    runEffect?: Omit<Passive, 'desc'>
+    /** runEffect가 있으면 설명도 실제 수치로 다시 쓴다(UI가 거짓말하지 않게). */
+    desc?: string
+  }
+> = {
+  volt: {
+    id: 'sig-volt', name: '오버차지 코어', icon: '⚡',
+    runEffect: { turnEnergy: 10, turnShield: 16, attackBonus: 4 },
+    desc: '오버차지: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +4.',
+  },
+  titan: {
+    id: 'sig-titan', name: '장갑판', icon: '🛡',
+    runEffect: { damageReduction: 9, regen: 5 },
+    desc: '장갑판: 받는 공격 피해 -9, 매 턴 체력 +5.',
+  },
+  nova: {
+    id: 'sig-nova', name: '플라스마 코어', icon: '☀',
+    runEffect: { turnEnergy: 14, attackBonus: 10, regen: 3 },
+    desc: '플라스마 코어: 매 턴 기력 +14, 체력 +3. 플라스마를 실어 내 공격 피해 +10.',
+  },
+  cipher: {
+    id: 'sig-cipher', name: '데이터 드레인', icon: '🩸',
+    runEffect: { lifesteal: 11, regen: 2 },
+    desc: '데이터 흡수: 공격으로 피해를 주면 체력 +11. 매 턴 체력 +2.',
+  },
+  aegis: {
+    id: 'sig-aegis', name: '상시 방벽', icon: '🧱',
+    runEffect: { turnShield: 18, regen: 3 },
+    desc: '상시 방벽: 매 턴 보호막 +18, 체력 +3.',
+  },
+  ember: {
+    id: 'sig-ember', name: '불사조 깃털', icon: '🔥',
+    runEffect: { revive: 45, lifesteal: 8 },
+    desc: '잿불 부활: 전투당 한 번 체력 45로 되살아난다. 공격으로 피해를 주면 체력 +8.',
+  },
 }
 
 const signatureRelics: Relic[] = ROSTER.map((c) => {
   const meta = SIGNATURE[c.id]
-  const { desc, ...effect } = c.passive
+  const { desc, ...base } = c.passive
   return {
     id: meta.id,
     name: meta.name,
-    desc,
+    desc: meta.desc ?? desc,
     icon: meta.icon,
     rarity: 'rare' as Rarity,
-    effect,
+    effect: meta.runEffect ?? base,
     signatureOf: c.id,
   }
 })
@@ -85,6 +150,183 @@ const genericRelics: Relic[] = [
   { id: 'razor', name: '면도날 칩', icon: '🔪', rarity: 'rare', desc: '내 공격 피해 +5, 적중 시 상대 보호막 제거.', effect: { attackBonus: 5, shieldBreak: true } },
   { id: 'juggernaut', name: '저거너트', icon: '🚂', rarity: 'epic', desc: '최대 체력 +30, 내 공격 피해 +7.', effect: { maxHpBonus: 30, attackBonus: 7 } },
   { id: 'sanctuary', name: '성역의 문장', icon: '⛩', rarity: 'epic', desc: '매 턴 보호막 +14, 체력 +5.', effect: { turnShield: 14, regen: 5 } },
+
+  // --- 조합형 세트(2026-07-31) — 누적 기력 트리거 / 저체력 폭주 / 경제 -------
+  // "말도 안 되는 뽕맛"을 내는 재료들. 하나만 끼면 준수하고, 서로 물리면 폭발한다
+  // (예: 기력 강탈 카드로 기력을 굴리며 과충전 축전기 + 방전 코일 + 순환 회로).
+  // 대신 재료가 다 모이려면 희귀도 가중 추첨을 여러 번 통과해야 한다(⑫ 참고).
+  {
+    id: 'capacitor', name: '과충전 축전기', icon: '🔌', rarity: 'epic',
+    desc: '기력을 200 쓸 때마다 상대를 1턴 기절시킨다.',
+    effect: { energyTriggers: [{ per: 200, stun: 1, label: '과충전 방전' }] },
+  },
+  {
+    id: 'coil', name: '방전 코일', icon: '⚡', rarity: 'legend',
+    desc: '기력을 120 쓸 때마다 상대를 1턴 기절시키고 25 고정 피해를 준다.',
+    effect: { energyTriggers: [{ per: 120, stun: 1, damage: 25, label: '코일 방전' }] },
+  },
+  {
+    id: 'circuit', name: '순환 회로', icon: '♻️', rarity: 'rare',
+    desc: '기력을 100 쓸 때마다 체력을 25 회복한다.',
+    effect: { energyTriggers: [{ per: 100, heal: 25, label: '순환 회복' }] },
+  },
+  {
+    id: 'condenser', name: '응축 셀', icon: '🔆', rarity: 'rare',
+    desc: '기력을 80 쓸 때마다 보호막 +30.',
+    effect: { energyTriggers: [{ per: 80, shield: 30, label: '응축 전개' }] },
+  },
+  {
+    id: 'flywheel', name: '플라이휠', icon: '🌀', rarity: 'epic',
+    desc: '기력을 90 쓸 때마다 기력 +45. 큰 카드를 계속 쏘게 해준다.',
+    effect: { energyTriggers: [{ per: 90, energy: 45, label: '플라이휠 회전' }] },
+  },
+  {
+    id: 'reservoir', name: '심층 저수조', icon: '🛢', rarity: 'legend',
+    desc: '기력을 60 쓸 때마다 체력 +12, 보호막 +12, 기력 +20.',
+    effect: { energyTriggers: [{ per: 60, heal: 12, shield: 12, energy: 20, label: '저수조 방출' }] },
+  },
+  {
+    id: 'lastditch', name: '벼랑의 각오', icon: '🔥', rarity: 'epic',
+    desc: '체력이 절반 이하면 내 공격 피해 +50%.',
+    effect: { lowHpBonusPct: 50 },
+  },
+  {
+    id: 'deathwish', name: '사경의 광기', icon: '💀', rarity: 'legend',
+    desc: '체력이 절반 이하면 내 공격 피해 +100%. 최대 체력 -25.',
+    effect: { lowHpBonusPct: 100, maxHpBonus: -25 },
+  },
+  {
+    id: 'emberheart', name: '잿불 심장', icon: '🫀', rarity: 'rare',
+    desc: '체력이 절반 이하면 내 공격 피해 +25%, 매 턴 체력 +4.',
+    effect: { lowHpBonusPct: 25, regen: 4 },
+  },
+  {
+    id: 'voidedge', name: '공허의 날', icon: '🗡', rarity: 'legend',
+    desc: '내 모든 공격이 상대 보호막을 무시하고 관통한다.',
+    effect: { alwaysPierce: true },
+  },
+  {
+    id: 'concussor', name: '충격 증폭기', icon: '💥', rarity: 'epic',
+    desc: '전투당 두 번, 내 공격이 피해를 주면 상대를 1턴 기절시킨다.',
+    effect: { stunOnHit: 1, stunCap: 2 },
+  },
+  {
+    id: 'firstguard', name: '선제 방벽', icon: '🚧', rarity: 'common',
+    desc: '전투 첫 턴에 보호막 +40.',
+    effect: { openingShield: 40 },
+  },
+  {
+    id: 'warmup', name: '예열 장치', icon: '🔥', rarity: 'common',
+    desc: '전투 첫 턴에 보호막 +20, 매 턴 기력 +6.',
+    effect: { openingShield: 20, turnEnergy: 6 },
+  },
+
+  // --- 확장 세트 2 (2026-07-31) — 빈 메커니즘 보강(기절·반사·관통·저체력·지속회복) --
+  {
+    id: 'taser', name: '테이저 셀', icon: '🔋', rarity: 'rare',
+    desc: '기력을 150 쓸 때마다 상대를 1턴 기절시킨다.',
+    effect: { energyTriggers: [{ per: 150, stun: 1, label: '테이저 방전' }] },
+  },
+  {
+    id: 'dischargelens', name: '방출 렌즈', icon: '🔦', rarity: 'epic',
+    desc: '기력을 110 쓸 때마다 상대에게 35 고정 피해(보호막 무시).',
+    effect: { energyTriggers: [{ per: 110, damage: 35, label: '렌즈 방출' }] },
+  },
+  {
+    id: 'thorncrown', name: '가시 왕관', icon: '👑', rarity: 'epic',
+    desc: '피해를 입으면 공격자에게 16 반사.', effect: { thorns: 16 },
+  },
+  {
+    id: 'hedgehog', name: '고슴도치 갑주', icon: '🦔', rarity: 'rare',
+    desc: '받는 피해 -5, 피격 시 공격자에게 8 반사.', effect: { damageReduction: 5, thorns: 8 },
+  },
+  {
+    id: 'sanctum', name: '재생의 성소', icon: '🌿', rarity: 'epic',
+    desc: '매 턴 체력 +11.', effect: { regen: 11 },
+  },
+  {
+    id: 'reaperscythe', name: '수확자의 낫', icon: '🌾', rarity: 'rare',
+    desc: '공격으로 피해를 주면 체력 6 회복. 내 공격 피해 +5.', effect: { lifesteal: 6, attackBonus: 5 },
+  },
+  {
+    id: 'lastresort', name: '배수진', icon: '🩸', rarity: 'epic',
+    desc: '체력이 절반 이하면 내 공격 피해 +40%. 피격 시 공격자에게 8 반사.',
+    effect: { lowHpBonusPct: 40, thorns: 8 },
+  },
+  {
+    id: 'piercecore', name: '관통 코어', icon: '🗜', rarity: 'epic',
+    desc: '내 모든 공격이 상대 보호막을 관통한다. 최대 체력 -25.',
+    effect: { alwaysPierce: true, maxHpBonus: -25 },
+  },
+  {
+    id: 'chainshock', name: '연쇄 충격기', icon: '⚡', rarity: 'epic',
+    desc: '전투당 세 번, 내 공격이 피해를 주면 상대를 1턴 기절시킨다.',
+    effect: { stunOnHit: 1, stunCap: 3 },
+  },
+  {
+    id: 'vanguard', name: '선봉대장', icon: '🎖', rarity: 'rare',
+    desc: '전투 첫 턴에 보호막 +30. 내 공격 피해 +5.', effect: { openingShield: 30, attackBonus: 5 },
+  },
+  {
+    id: 'meditation', name: '명상의 룬', icon: '🧘', rarity: 'common',
+    desc: '매 턴 체력 +6, 보호막 +6.', effect: { regen: 6, turnShield: 6 },
+  },
+  {
+    id: 'giantserum', name: '거인 혈청', icon: '🧪', rarity: 'legend',
+    desc: '최대 체력 +85.', effect: { maxHpBonus: 85 },
+  },
+  {
+    id: 'tinder', name: '불씨 심지', icon: '🪔', rarity: 'rare',
+    desc: '전투당 한 번 체력 25로 되살아난다. 매 턴 체력 +3.', effect: { revive: 25, regen: 3 },
+  },
+  {
+    id: 'bloodpact-relic', name: '피의 계약', icon: '🩸', rarity: 'legend',
+    desc: '내 공격 피해 +12. 공격으로 피해를 주면 체력 8 회복. 최대 체력 -15.',
+    effect: { attackBonus: 12, lifesteal: 8, maxHpBonus: -15 },
+  },
+
+  // --- 경제형(전투 밖에 작용) -------------------------------------------------
+  {
+    id: 'coupon', name: '상인의 인증패', icon: '🏷', rarity: 'common',
+    desc: '상점 가격 20% 할인.', effect: {}, mods: { shopDiscountPct: 20 },
+  },
+  {
+    id: 'blackcard', name: '암시장 카드', icon: '💳', rarity: 'epic',
+    desc: '상점 가격 40% 할인, 골드 획득 +20%.', effect: {}, mods: { shopDiscountPct: 40, goldBonusPct: 20 },
+  },
+  {
+    id: 'purse', name: '두툼한 지갑', icon: '💰', rarity: 'common',
+    desc: '전투 승리 골드 +35%.', effect: {}, mods: { goldBonusPct: 35 },
+  },
+  {
+    id: 'compass', name: '탐색가의 나침반', icon: '🧭', rarity: 'rare',
+    desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 },
+  },
+  {
+    id: 'divining', name: '점술 수정구', icon: '🔮', rarity: 'legend',
+    desc: '승리 보상 선택지 +2칸, 일반 전투 보상에 유물이 섞일 확률 +12%p.',
+    effect: {}, mods: { rewardOptions: 2, relicChanceBonus: 0.12 },
+  },
+  {
+    id: 'satchel', name: '확장 가방', icon: '🎒', rarity: 'common',
+    desc: '덱 상한 +4장.', effect: {}, mods: { deckCapBonus: 4 },
+  },
+  {
+    id: 'balm', name: '치유 향유', icon: '🧴', rarity: 'rare',
+    desc: '모든 회복 효과 +50%(보상 포기·이벤트·상점).', effect: {}, mods: { healBonusPct: 50 },
+  },
+  {
+    id: 'midastouch', name: '황금손', icon: '🖐', rarity: 'rare',
+    desc: '전투 승리 골드 +55%.', effect: {}, mods: { goldBonusPct: 55 },
+  },
+  {
+    id: 'luckycharm', name: '행운의 편자', icon: '🍀', rarity: 'rare',
+    desc: '일반 전투 보상에 유물이 섞일 확률 +8%p.', effect: {}, mods: { relicChanceBonus: 0.08 },
+  },
+  {
+    id: 'lockpick', name: '만능 열쇠', icon: '🗝', rarity: 'epic',
+    desc: '상점 가격 30% 할인, 덱 상한 +3장.', effect: {}, mods: { shopDiscountPct: 30, deckCapBonus: 3 },
+  },
 ]
 
 export const RELICS: Relic[] = [...signatureRelics, ...genericRelics]
@@ -127,7 +369,74 @@ export function mergeRelics(ids: string[]): Passive {
     addNum('attackBonus', e.attackBonus)
     addNum('thorns', e.thorns)
     addNum('maxHpBonus', e.maxHpBonus)
+    addNum('lowHpBonusPct', e.lowHpBonusPct)
+    addNum('stunOnHit', e.stunOnHit)
+    addNum('stunCap', e.stunCap)
+    addNum('openingShield', e.openingShield)
     if (e.shieldBreak) out.shieldBreak = true
+    if (e.alwaysPierce) out.alwaysPierce = true
+    // 누적 기력 트리거는 **합치지 않고 이어 붙인다** — 주기가 다른 트리거들이 각자
+    // 따로 터져야 조합이 성립한다(주기를 더하면 조합이 오히려 약해진다).
+    if (e.energyTriggers?.length)
+      out.energyTriggers = [...(out.energyTriggers ?? []), ...e.energyTriggers]
   }
   return out
+}
+
+/** 전투 밖 효과(상점 할인·골드·보상 칸)를 합친다. 퍼센트는 합산, 할인은 80%로 캡. */
+export function mergeRunMods(ids: string[]): RunMods {
+  const out: RunMods = {}
+  const acc = out as unknown as Record<string, number>
+  for (const id of ids) {
+    const m = RELIC_BY_ID[id]?.mods
+    if (!m) continue
+    for (const [k, v] of Object.entries(m)) acc[k] = (acc[k] ?? 0) + (v as number)
+  }
+  if (out.shopDiscountPct) out.shopDiscountPct = Math.min(80, out.shopDiscountPct)
+  return out
+}
+
+/**
+ * 희귀도 가중 추첨(2026-07-31) — **깊이에 따라 좋아진다**.
+ *
+ * 유물 조합으로 판을 부수는 플레이는 **막지 않는다**(사용자 요구). 대신 재료가 모이려면
+ * 깊이 살아남아야 한다: 얕은 층에선 전설이 거의 안 나오고, 깊은 층일수록 영웅·전설
+ * 비중이 올라간다. 고정 가중치(전설=일반의 1/10)로 해봤더니 전설 2개 이상을 모으는 런이
+ * 0.1%로, "매우 어렵게"가 아니라 사실상 막는 수준이었다(시뮬).
+ *
+ * 층 1: 일반 9.6 · 희귀 6 · 영웅 3.3 · 전설 1.2   (전설 ≈ 6%)
+ * 층 15: 일반 4.0 · 희귀 6 · 영웅 7.5 · 전설 3.5  (전설 ≈ 17%)
+ */
+export function rarityWeightAt(rarity: Rarity, floor: number): number {
+  switch (rarity) {
+    case 'common':
+      return Math.max(4, 10 - 0.4 * floor)
+    case 'rare':
+      return 6
+    case 'epic':
+      return 3 * (1 + floor / 10)
+    case 'legend':
+      return 1 + floor / 6
+  }
+}
+
+/** 후보 유물 중 하나를 희귀도 가중으로 고른다(랜덤 — 런은 싱글 전용). */
+export function pickWeightedRelic(pool: Relic[], floor = 1): Relic | undefined {
+  if (!pool.length) return undefined
+  const w = (r: Relic) => rarityWeightAt(r.rarity, floor)
+  const total = pool.reduce((s, r) => s + w(r), 0)
+  let roll = Math.random() * total
+  for (const r of pool) {
+    roll -= w(r)
+    if (roll <= 0) return r
+  }
+  return pool[pool.length - 1]
+}
+
+/** 상점 가격 기준(희귀도별). legend는 아주 비싸다. */
+export const RELIC_PRICE: Record<Rarity, number> = {
+  common: 60,
+  rare: 95,
+  epic: 145,
+  legend: 230,
 }

@@ -73,6 +73,7 @@ export function decideAI(
     .filter((c) => c.kind === 'guard')
     .sort((a, b) => (b.block ?? 0) - (a.block ?? 0))[0]
   const ENERGY = pool.find((c) => c.kind === 'energy')
+  const HEAL = pool.find((c) => c.kind === 'heal')
   const cheapest = attacks.length ? Math.min(...attacks.map((a) => a.energyCost ?? 0)) : 0
   const plan: CardDef[] = []
 
@@ -174,7 +175,27 @@ export function decideAI(
       continue
     }
 
+    // 2.5) 회복 — 체력이 낮은데 이번 슬롯에 때릴 게 없으면 기력을 체력으로 바꾼다.
+    //      한 방은 남겨두려고 (힐 비용 + 최저가 공격)만큼 기력이 있을 때만 쓴다.
+    //      (로그라이크는 체력이 층 사이에 이어져 회복 가치가 크다 — c-repair·주술사)
+    if (
+      HEAL &&
+      usable(HEAL) &&
+      state.hp[self] <= char.maxHp * 0.55 &&
+      energy >= (HEAL.healCost ?? 0) + cheapest
+    ) {
+      take(HEAL)
+      continue
+    }
+
     // 3) recharge when starved and the energy card is up
+    //    ⚠ 이 판단은 ④ 접근보다 **먼저** 온다 — 기력이 `energyFloor`(hard 30) 바로
+    //    아래면 접근 대신 원기 회복에 슬롯을 쓴다. 그래서 "턴당 기력"이 그 문턱에
+    //    걸치는지에 따라 캐릭터 강도가 계단처럼 튄다(런 시뮬에서 VOLT 기력 8 vs 10이
+    //    클리어율 20%p 차). ③④를 맞바꿔 없애 봤지만 1:1 밸런스가 무너져(VOLT 46%→67%,
+    //    평균 5.8→6.1턴) 되돌렸다 — 이 순서가 캐릭터 간 기력 격차를 눌러주고 있다.
+    //    ⇒ **런 밸런스를 `turnEnergy`로 조정하지 말 것**(문턱 인공물). 회복·보호막·
+    //      피해감소 같은 연속적인 훅으로 조정한다. 근본 해결은 AI 회피·자원 판단 개선.
     if (ENERGY && energy < Math.max(cfg.energyFloor, cheapest) && usable(ENERGY)) {
       take(ENERGY)
       continue
