@@ -40,6 +40,7 @@ interface View {
   acting: [boolean, boolean] // attack lunge
   damage: [number, number]
   heal: [number, number]
+  stunned: [boolean, boolean] // 이 턴을 통째로 버리는 기절
   fx: [Fx | null, Fx | null]
   say: [string, string]
   /** step sequence — keys the floating -N/+N so the animation restarts every step */
@@ -129,6 +130,7 @@ function baseView(b: CardBattle): View {
     acting: [false, false],
     damage: [0, 0],
     heal: [0, 0],
+    stunned: [false, false],
     fx: [null, null],
     say: ['', ''],
     seq: 0,
@@ -142,13 +144,18 @@ function stepToView(step: Step, seq: number): View {
   const acting: [boolean, boolean] = [false, false]
   acting[a] = isAtk(step.result)
   const damage: [number, number] = [0, 0]
-  if (isAtk(step.result) && step.damage > 0) damage[d] = step.damage
-  if (step.recoil > 0) damage[a] = step.recoil // 반동: 자기 자신에게 -N 표시
+  // 상대에게 준 피해 — 공격뿐 아니라 유물 트리거(방전 코일 등)도 -N을 띄운다.
+  if (step.damage > 0) damage[d] = step.damage
+  if (step.recoil > 0) damage[a] = step.recoil // 반동·독안개: 자기 자신에게 -N 표시
   const heal: [number, number] = [0, 0]
   if (step.heal > 0) heal[a] = step.heal
+  const stunned: [boolean, boolean] = [false, false]
+  if (step.card.id === 'stun') stunned[a] = true // 이 턴을 통째로 버리는 기절
   const fx: [Fx | null, Fx | null] = [null, null]
   if (step.card.kind === 'attack' && step.result !== 'nofuel')
     fx[a] = { kind: step.card.fx ?? 'punch', result: step.result }
+  else if (step.card.id === 'trigger')
+    fx[a] = { kind: 'trigger', result: 'trigger' } // 유물 트리거 발동 팝
   const say: [string, string] = ['', '']
   say[a] = `${step.card.name} ${RESULT_TEXT[step.result] ?? ''}`.trim()
   if (step.drain > 0) say[a] += ` ⚡+${step.drain}`
@@ -160,6 +167,7 @@ function stepToView(step: Step, seq: number): View {
     acting,
     damage,
     heal,
+    stunned,
     fx,
     say,
     seq,
@@ -444,7 +452,8 @@ export function BattleScreen({
       } else {
         setResolveHit(null)
       }
-      if (step.result === 'hit' && step.damage > 0) {
+      // 상대에게 피해가 들어간 스텝(공격·유물 트리거 공통)에 히트플래시·흔들림
+      if (step.damage > 0) {
         const target = (1 - step.actor) as 0 | 1
         setHitFlash((prev) => ({ seq: (prev?.seq ?? 0) + 1, target }))
         // 묵직한 한 방이면 화면이 흔들린다
@@ -811,6 +820,7 @@ function FighterSprite({
     v.acting[idx] ? `is-attacking is-atk-${fx?.kind ?? 'punch'}` : '',
     v.damage[idx] > 0 ? 'is-hit' : '',
     v.shield[idx] > 0 ? 'is-guard' : '',
+    v.stunned[idx] ? 'is-stunned' : '',
   ].join(' ')
   return (
     <div
@@ -832,6 +842,7 @@ function FighterSprite({
         </div>
       )}
       {v.say[idx] && <div className="fighter__say">{v.say[idx]}</div>}
+      {v.stunned[idx] && <div className="fighter__stun">💫 기절</div>}
       {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}
       {isLocal && <div className="fighter__me">나</div>}
