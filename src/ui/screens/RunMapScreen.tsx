@@ -56,6 +56,8 @@ export function RunMapScreen({
           return (
             <div key={i} className={`runnode runnode--${n.type} runnode--${st}`}>
               <span className="runnode__icon">{NODE_ICON[n.type]}</span>
+              {/* 앞으로 만날 적/노드를 미리 보여준다 — 몬스터 칸은 이름, 그 외는 종류 */}
+              <span className="runnode__label">{nodeName(n)}</span>
               <span className="runnode__floor">{i + 1}</span>
             </div>
           )

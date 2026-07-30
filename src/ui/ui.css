@@ -2981,14 +2981,22 @@
   background: rgba(8, 12, 20, 0.5);
 }
 .runnode {
-  position: relative; width: 54px; height: 54px; flex: none;
-  display: grid; place-items: center; border-radius: 10px;
-  border: 1px solid var(--panel-edge); background: #0d1322; opacity: 0.5;
+  position: relative; width: 88px; height: 66px; flex: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-edge); background: #0d1322; opacity: 0.55;
+  padding: 4px 3px 8px;
 }
-.runnode__icon { font-size: 22px; }
+.runnode__icon { font-size: 20px; line-height: 1; }
+.runnode__label {
+  font-size: 10px; font-weight: 700; color: var(--text-dim);
+  text-align: center; line-height: 1.1; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .runnode__floor {
-  position: absolute; bottom: 2px; right: 4px; font-size: 9px; color: var(--text-faint);
+  position: absolute; bottom: 2px; right: 5px; font-size: 9px; color: var(--text-faint);
 }
+.runnode--cur .runnode__label { color: #fff; }
 .runnode--done { opacity: 0.32; }
 .runnode--cur { opacity: 1; border-color: var(--neon-cyan); box-shadow: 0 0 14px rgba(47, 243, 255, 0.4); }
 .runnode--elite { border-color: #ff8a3c; }
