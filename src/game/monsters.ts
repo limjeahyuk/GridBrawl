@@ -255,9 +255,9 @@ export const MONSTERS: MonsterDef[] = [
     maxHp: 170,
     startEnergy: 65,
     aiLevel: 'hard',
-    passive: { turnShield: 20, damageReduction: 8 },
+    passive: { turnShield: 20, damageReduction: 8, turnEnergy: 8 },
     deckCardIds: ['aegis-drive', 'aegis-wall', 'aegis-bash'],
-    note: '엘리트 — 뚫기 힘든 방벽과 반격.',
+    note: '엘리트 — 방벽을 올렸다 열며 반격한다.',
   },
   {
     id: 'pyrelord',
@@ -267,9 +267,9 @@ export const MONSTERS: MonsterDef[] = [
     maxHp: 180,
     startEnergy: 65,
     aiLevel: 'hard',
-    passive: { attackBonus: 8, revive: 50 },
+    passive: { attackBonus: 8, revive: 50, turnEnergy: 10 },
     deckCardIds: ['ember-inferno', 'ember-fan', 'ember-blitz'],
-    note: '엘리트 — 불꽃 화력으로 순식간에 태워버린다.',
+    note: '엘리트 — 불길을 모았다 인페르노로 폭발시킨다.',
   },
 ]
 

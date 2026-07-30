@@ -1578,6 +1578,32 @@
   opacity: 0.7;
   animation: meter-pulse 0.7s ease-in-out infinite;
 }
+/* 보스 예고 — 선택 화면 상단 중앙 경고 배너 */
+.board__telegraph {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 82%;
+  text-align: center;
+  padding: 8px 20px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(226, 85, 99, 0.95), rgba(150, 30, 45, 0.92));
+  border: 1px solid #ff7a88;
+  border-radius: 10px;
+  box-shadow: 0 0 24px rgba(255, 77, 94, 0.5);
+  animation: telegraph-pulse 0.9s ease-in-out infinite;
+  z-index: 6;
+  pointer-events: none;
+}
+@keyframes telegraph-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 77, 94, 0.4); }
+  50% { box-shadow: 0 0 34px rgba(255, 77, 94, 0.75); }
+}
 .board__hitflash {
   position: absolute;
   inset: 0;

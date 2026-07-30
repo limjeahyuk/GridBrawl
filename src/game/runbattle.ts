@@ -9,6 +9,7 @@ import type { BattleOpts, CardBattle } from '../battle/engine'
 import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
+import { bossPlan, bossTelegraph, isScriptedBoss } from './bosses'
 import { currentEnemy, type RunState } from './run'
 
 export interface RunFightProps {
@@ -18,6 +19,9 @@ export interface RunFightProps {
   battleOpts: BattleOpts
   getOpponentPlan: (localPlan: CardDef[], b: CardBattle) => Promise<CardDef[] | null>
   enemyName: string
+  /** 보스 예고(선택 화면 배너). turn·상대 체력비율을 받아 문구 or null. 스크립트
+   *  보스가 아니면 undefined. */
+  telegraph?: (turn: number, oppHpFrac: number) => string | null
 }
 
 export function runFightProps(run: RunState): RunFightProps {
@@ -32,13 +36,22 @@ export function runFightProps(run: RunState): RunFightProps {
     chars: [pChar, eChar],
     passives: [mergeRelics(run.relicIds), eChar.passive],
   }
+  const scripted = isScriptedBoss(enemy.id)
   return {
     p0CharId: run.charId,
     p1CharId: enemy.baseArtId, // 아트 재활용
     deck,
     battleOpts,
-    getOpponentPlan: (_local, b) =>
-      Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, eChar.cards)),
+    getOpponentPlan: (_local, b) => {
+      // 보스는 스크립트 패턴으로, 그 외엔 일반 AI로.
+      if (scripted) {
+        const ctx = { turn: b.state.turn, hpFrac: b.state.hp[1] / b.maxHp[1] }
+        const plan = bossPlan(enemy.id, ctx)
+        if (plan) return Promise.resolve(plan)
+      }
+      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, eChar.cards))
+    },
     enemyName: enemy.name,
+    telegraph: scripted ? (turn, frac) => bossTelegraph(enemy.id, { turn, hpFrac: frac }) : undefined,
   }
 }

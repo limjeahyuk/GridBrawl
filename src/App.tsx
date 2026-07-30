@@ -287,6 +287,7 @@ export default function App() {
         localSide={0}
         deck={fp.deck}
         battleOpts={fp.battleOpts}
+        telegraph={fp.telegraph}
         getOpponentPlan={fp.getOpponentPlan}
         onEnd={runFightEnd}
         onQuit={toTitle}

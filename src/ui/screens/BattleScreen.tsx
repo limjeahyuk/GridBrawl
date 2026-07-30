@@ -166,6 +166,7 @@ export function BattleScreen({
   localSide,
   deck,
   battleOpts,
+  telegraph,
   getOpponentPlan,
   turnSeconds,
   onEnd,
@@ -182,6 +183,8 @@ export function BattleScreen({
   deck?: CardDef[]
   /** 로그라이크용 — 유물 merge 패시브·몬스터 스탯 override(엔진 BattleOpts). */
   battleOpts?: BattleOpts
+  /** 보스 예고 — 선택 화면에 상대(side 1)의 이번 턴 행동을 미리 알린다. */
+  telegraph?: (turn: number, oppHpFrac: number) => string | null
   getOpponentPlan: OpponentPlanner
   /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
    *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
@@ -601,6 +604,13 @@ export function BattleScreen({
         )}
         {banner && <div className="board__banner">{banner}</div>}
         {phaseTag && !banner && <div className="board__turnflash">{phaseTag}</div>}
+        {phase === 'select' &&
+          telegraph &&
+          (() => {
+            const opp = (1 - localSide) as 0 | 1
+            const msg = telegraph(battle.state.turn, battle.state.hp[opp] / battle.maxHp[opp])
+            return msg ? <div className="board__telegraph">{msg}</div> : null
+          })()}
       </div>
 
       {phase === 'select' ? (
