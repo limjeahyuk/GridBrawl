@@ -60,9 +60,16 @@ export function assembleDeck(deck: Deck): CardDef[] {
 }
 
 // --- 프리셋(봇 덱 + 저장된 덱이 없을 때의 기본 덱) --------------------------
-// 각 캐릭터: 고유 4장 + 견제 사격 + 더 좋은 방어 + 오른쪽 대시 = 7장.
+// 직업 카드를 전부 넣고, 남는 자리를 공용 보강 카드로 채워 정확히 DECK_SIZE장을 만든다.
+// ⚠ 직업마다 고유 카드 수가 다르다(전사는 전용 가드가 있어 5장, 나머지 4장) —
+// 예전처럼 "고유 + 공용 3장"으로 고정하면 전사만 8장이 돼 덱 상한을 넘는다.
+const PRESET_FILLERS = ['c-shot', 'c-guard', 'm-right2', 'c-repair', 'm-left2']
 export const PRESET_DECKS: Record<string, string[]> = Object.fromEntries(
-  ROSTER.map((c) => [c.id, [...c.cards.map((k) => k.id), 'c-shot', 'c-guard', 'm-right2']]),
+  ROSTER.map((c) => {
+    const classIds = c.cards.map((k) => k.id).slice(0, DECK_SIZE)
+    const fill = PRESET_FILLERS.filter((id) => !classIds.includes(id))
+    return [c.id, [...classIds, ...fill].slice(0, DECK_SIZE)]
+  }),
 )
 
 /** 캐릭터의 기본(프리셋) 덱 객체 — 봇전 상대·첫 사용자 시작용. */

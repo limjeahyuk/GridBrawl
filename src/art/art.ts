@@ -52,43 +52,24 @@ function circle(cx: number, cy: number, r: number, fill: string, line = 'none', 
 function helmet(id: string, p: Pal): string {
   const eye = `<rect x="106" y="72" width="26" height="9" rx="3" fill="${p.accent}" filter="url(#g-${id})"/>`
   switch (id) {
-    case 'volt':
-      return [
-        poly([[86, 70], [120, 56], [136, 74], [128, 96], [96, 98], [84, 84]], p.light, p.line, 4),
-        poly([[120, 56], [150, 40], [138, 70], [128, 70]], p.accent, p.line, 3), // fin
-        eye,
-      ].join('')
-    case 'titan':
-      return [
-        poly([[80, 72], [96, 52], [128, 54], [140, 76], [132, 100], [88, 100]], p.light, p.line, 5),
-        poly([[88, 96], [132, 96], [128, 110], [92, 110]], p.mid, p.line, 4), // heavy jaw
-        `<rect x="104" y="74" width="30" height="8" rx="2" fill="${p.accent}" filter="url(#g-${id})"/>`,
-      ].join('')
-    case 'nova':
+    case 'mage':
       return [
         `<ellipse cx="110" cy="80" rx="30" ry="32" fill="${p.light}" stroke="${p.line}" stroke-width="4"/>`,
         `<circle cx="110" cy="78" r="40" fill="none" stroke="${p.accent}" stroke-width="3" opacity="0.8" filter="url(#g-${id})"/>`, // halo
         eye,
       ].join('')
-    case 'cipher':
+    case 'archer':
       return [
         poly([[84, 78], [104, 52], [134, 64], [132, 96], [100, 102], [82, 92]], p.dark, p.line, 4),
         poly([[100, 74], [126, 70], [120, 82], [102, 84]], p.accent, p.line, 0), // single eye slit
         `<polygon points="104,52 112,40 116,56" fill="${p.accent2}" opacity="0.9"/>`,
       ].join('')
-    case 'aegis':
+    case 'warrior':
       return [
         poly([[84, 74], [98, 50], [126, 50], [138, 74], [130, 100], [92, 100]], p.light, p.line, 5),
         `<rect x="106" y="58" width="9" height="40" rx="3" fill="${p.dark}" stroke="${p.line}" stroke-width="2"/>`, // visor slit
         poly([[104, 50], [114, 30], [120, 50]], p.accent, p.line, 2), // crest
         `<rect x="108" y="64" width="5" height="26" fill="${p.accent}" filter="url(#g-${id})"/>`,
-      ].join('')
-    case 'ember':
-      return [
-        poly([[84, 76], [102, 54], [132, 58], [138, 80], [126, 100], [90, 98]], p.light, p.line, 4),
-        poly([[96, 56], [86, 30], [108, 52]], p.accent, p.line, 2), // horn
-        poly([[126, 58], [142, 34], [134, 62]], p.accent, p.line, 2), // horn
-        eye,
       ].join('')
     default:
       return [circle(110, 80, 30, p.light, p.line, 4), eye].join('')
@@ -97,14 +78,8 @@ function helmet(id: string, p: Pal): string {
 
 function signatureBack(id: string, p: Pal): string {
   switch (id) {
-    case 'volt':
-      return `<g opacity="0.85" filter="url(#g-${id})"><polygon points="44,150 70,140 58,168 78,162 50,200 62,176 40,182" fill="${p.accent}"/></g>`
-    case 'nova':
+    case 'mage':
       return `<g filter="url(#g-${id})"><circle cx="60" cy="170" r="26" fill="${p.accent}" opacity="0.5"/><circle cx="60" cy="170" r="15" fill="${p.accent2}" opacity="0.85"/></g>`
-    case 'ember':
-      return `<g opacity="0.8" filter="url(#g-${id})"><path d="M60 210 Q48 170 64 150 Q60 184 78 196 Q86 168 96 156 Q92 196 74 220 Z" fill="${p.accent}"/></g>`
-    case 'titan':
-      return `<polygon points="60,118 92,108 96,150 64,158" fill="${p.mid}" stroke="${p.line}" stroke-width="4"/>` // rear shoulder bulk
     default:
       return ''
   }
@@ -112,19 +87,13 @@ function signatureBack(id: string, p: Pal): string {
 
 function signatureFront(id: string, p: Pal): string {
   switch (id) {
-    case 'nova':
+    case 'mage':
       // floating plasma orb at the lead hand
       return `<g filter="url(#g-${id})"><circle cx="176" cy="150" r="22" fill="${p.accent}" opacity="0.55"/><circle cx="176" cy="150" r="12" fill="#fff" opacity="0.9"/><circle cx="176" cy="150" r="19" fill="none" stroke="${p.accent2}" stroke-width="2"/></g>`
-    case 'cipher':
+    case 'archer':
       return `<g filter="url(#g-${id})"><polygon points="168,150 210,138 176,158" fill="${p.accent}" stroke="${p.line}" stroke-width="2"/><polygon points="150,108 142,84 158,104" fill="${p.accent}"/></g>`
-    case 'aegis':
+    case 'warrior':
       return `<g><rect x="150" y="116" width="24" height="74" rx="8" fill="${p.mid}" stroke="${p.accent}" stroke-width="3"/><rect x="156" y="128" width="10" height="50" rx="4" fill="${p.accent}" opacity="0.55" filter="url(#g-${id})"/></g>`
-    case 'volt':
-      return `<g filter="url(#g-${id})"><polygon points="168,140 192,134 178,154 198,150 172,176 182,156 166,158" fill="${p.accent2}"/></g>`
-    case 'ember':
-      return `<g opacity="0.9" filter="url(#g-${id})"><path d="M170 150 Q160 128 176 116 Q172 140 188 146 Q196 126 202 120 Q198 150 182 166 Z" fill="${p.accent}"/></g>`
-    case 'titan':
-      return `<circle cx="178" cy="152" r="20" fill="${p.light}" stroke="${p.line}" stroke-width="5"/>` // oversized fist
     default:
       return ''
   }

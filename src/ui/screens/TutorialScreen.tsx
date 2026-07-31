@@ -23,8 +23,8 @@ export function TutorialScreen({ onDone }: { onDone: () => void }) {
   return (
     <>
       <BattleScreen
-        p0CharId="volt"
-        p1CharId="cipher"
+        p0CharId="warrior"
+        p1CharId="archer"
         localSide={0}
         getOpponentPlan={dummyPlanner}
         onEnd={onDone}

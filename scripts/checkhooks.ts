@@ -26,8 +26,8 @@ const card = (id: string): CardDef => {
 }
 /** 서로 붙어 서서(같은 칸) 시작하는 테스트용 전투 — 사거리 변수를 없앤다. */
 function battleWith(p0: Partial<Passive>, p1: Partial<Passive> = {}, chars?: [CharacterDef, CharacterDef]) {
-  const b = new CardBattle('titan', 'titan', {
-    chars: chars ?? [getChar('titan'), getChar('titan')],
+  const b = new CardBattle('warrior', 'warrior', {
+    chars: chars ?? [getChar('warrior'), getChar('warrior')],
     passives: [{ desc: '', ...p0 }, { desc: '', ...p1 }],
   })
   b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }] // 서로 앞 한 칸
@@ -156,13 +156,13 @@ console.log('\n전투 밖 효과(RunMods)')
 // --- 런 진행 규칙(보상·상점·덱 상한) ----------------------------------------
 console.log('\n런 진행 규칙')
 {
-  const run = startRun('volt')
+  const run = startRun('archer')
   check('시작 덱은 공용 기본 9장', run.deck.length, 9)
-  check('시작 덱에 직업 카드 없음', run.deck.some((id) => id.startsWith('volt-')), false)
-  check('시그니처 유물만 들고 시작', run.relicIds, ['sig-volt'])
+  check('시작 덱에 직업 카드 없음', run.deck.some((id) => id.startsWith('arc-')), false)
+  check('시그니처 유물만 들고 시작', run.relicIds, ['sig-archer'])
 
   // 직업 카드를 하나도 못 얻은 상태에선 보상 한 칸이 직업 카드로 보장된다.
-  const classIds = getChar('volt').cards.map((c) => c.id)
+  const classIds = getChar('archer').cards.map((c) => c.id)
   let guaranteed = 0
   for (let i = 0; i < 50; i++) {
     const rewards = rollRewards(run)
@@ -282,15 +282,18 @@ console.log('\n상태이상 — 지속피해·빙결·시너지')
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------
 console.log('\n회귀 — 옵션을 안 주면 예전과 같아야 한다')
 {
-  const b = new CardBattle('volt', 'titan')
+  const b = new CardBattle('archer', 'warrior')
   check('풀피로 시작(startHp 미지정)', [b.state.hp[0], b.state.hp[1]], [b.maxHp[0], b.maxHp[1]])
-  check('패시브는 캐릭터 것', b.passive[0].turnEnergy, getChar('volt').passive.turnEnergy)
+  check('패시브는 각자 자기 캐릭터 것', [b.passive[0].attackBonus, b.passive[1].damageReduction], [
+    getChar('archer').passive.attackBonus,
+    getChar('warrior').passive.damageReduction,
+  ])
   check('누적 기력·기절 상태는 0에서 시작', [b.state.energySpent, b.state.stunned], [[0, 0], [0, 0]])
 }
 {
-  const b = new CardBattle('titan', 'titan', { startHp: [77, undefined] })
+  const b = new CardBattle('warrior', 'warrior', { startHp: [77, undefined] })
   check('startHp — 지정한 쪽만 이월', [b.state.hp[0], b.state.hp[1]], [77, b.maxHp[1]])
-  const c = new CardBattle('titan', 'titan', { startHp: [99999, -5] })
+  const c = new CardBattle('warrior', 'warrior', { startHp: [99999, -5] })
   check('startHp는 1..maxHp로 클램프', [c.state.hp[0], c.state.hp[1]], [c.maxHp[0], 1])
 }
 

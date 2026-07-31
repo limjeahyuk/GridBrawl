@@ -65,40 +65,30 @@ const SIGNATURE: Record<
     desc?: string
   }
 > = {
-  volt: {
-    id: 'sig-volt', name: '뇌운의 인장', icon: '⚡',
-    // ⚠ 회복(regen/lifesteal)을 주지 말 것 — 런에선 지속 회복이 극도로 강해 regen 2도
-    // VOLT를 28.8%→46%로 폭주시켰다(2026-07-31 시뮬). VOLT는 회복 대신 높은 보호막
-    // (turnShield 16)으로 균형을 맞춘다. 28.8%(타이트한 밴드 최하)는 의도된 위치다.
-    runEffect: { turnEnergy: 10, turnShield: 16, attackBonus: 9 },
-    desc: '뇌운의 가호: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +9.',
+  warrior: {
+    id: 'sig-warrior', name: '서약의 돌무덤', icon: '🪦',
+    // 전사는 "안 죽는 쪽"이라 방어·회복을 준다. ⚠ 회복은 런에서 극도로 강하니
+    // (GDD ⑪) regen은 아주 작게 잡고, 부족한 생존력은 반사(thorns)로 메운다.
+    runEffect: { damageReduction: 8, regen: 3, thorns: 6 },
+    desc: '서약의 돌무덤: 받는 공격 피해 -8, 매 턴 체력 +3, 피격 시 6 반사.',
   },
-  titan: {
-    id: 'sig-titan', name: '무쇠 비늘', icon: '🛡',
-    runEffect: { damageReduction: 9, regen: 5 },
-    desc: '무쇠 비늘: 받는 공격 피해 -9, 매 턴 체력 +5.',
+  archer: {
+    id: 'sig-archer', name: '독니 화살통', icon: '🏹',
+    // 궁수는 물렁하고 카드 4장 중 3장이 밀착 사각이라, 몬스터가 접근하기 시작한
+    // 뒤로는 붙으면 아무것도 못 하고 녹는다(2026-08-01 재조정 전 클리어율 0.7%).
+    // ⚠ 화력·독을 올리는 건 답이 아니었다 — 오히려 떨어졌다(독 위력 +45% 실험에서
+    // 24.7%→22.2%). 필요한 건 **버티는 힘**이라 흡혈·피해감소·최대체력으로 준다.
+    // 그중 lifesteal이 지배 변수다(4→5만으로 +5%p) — 손대면 반드시 스윕 재측정.
+    runEffect: { attackBonus: 9, poisonOnHit: 4, statusPowerPct: 25, damageReduction: 7, maxHpBonus: 48, lifesteal: 5 },
+    desc: '독니 화살통: 최대 체력 +48, 받는 피해 -7. 내 공격 피해 +9, 피해를 주면 체력 5 흡수 + 독 4, 내 지속피해 위력 +25%.',
   },
-  nova: {
-    id: 'sig-nova', name: '혼백의 등불', icon: '🕯',
-    // 몬스터 이동 도입(2026-08-01) 후 카이팅이 막혀 최하로 떨어짐 → 보호막으로 생존력
-    // 보강(회복은 폭주하니 턴마다 리셋되는 turnShield로).
-    runEffect: { turnEnergy: 14, attackBonus: 10, regen: 3, turnShield: 8 },
-    desc: '혼백의 등불: 매 턴 기력 +14, 보호막 +8, 체력 +3. 혼백을 실어 내 공격 피해 +10.',
-  },
-  cipher: {
-    id: 'sig-cipher', name: '피의 성배', icon: '🩸',
-    runEffect: { lifesteal: 11, regen: 2, attackBonus: 2 },
-    desc: '피의 갈증: 공격으로 피해를 주면 체력 +11. 매 턴 체력 +2. 내 공격 피해 +2.',
-  },
-  aegis: {
-    id: 'sig-aegis', name: '불침의 서약', icon: '🧱',
-    runEffect: { turnShield: 18, regen: 3 },
-    desc: '불침의 서약: 매 턴 보호막 +18, 체력 +3.',
-  },
-  ember: {
-    id: 'sig-ember', name: '불사조 깃털', icon: '🔥',
-    runEffect: { revive: 45, lifesteal: 8, attackBonus: 3 },
-    desc: '잿불 부활: 전투당 한 번 체력 45로 되살아난다. 공격으로 피해를 주면 체력 +8, 내 공격 피해 +3.',
+  mage: {
+    id: 'sig-mage', name: '혼백의 등불', icon: '🕯',
+    // 마법사는 기력으로 큰 주문을 계속 돌리고 보호막으로 버틴다.
+    // ⚠ turnEnergy는 봇 인공물을 만들어 측정이 튄다(GDD ⑪) — 조정은 체력·보호막으로
+    // 하고 이 값은 고정해 둘 것. 실제로 turnEnergy 10은 최대체력 14와 맞먹었다.
+    runEffect: { turnEnergy: 10, turnShield: 16, burnOnHit: 3, damageReduction: 6, maxHpBonus: 38 },
+    desc: '혼백의 등불: 최대 체력 +38, 받는 피해 -6. 매 턴 기력 +10·보호막 +16, 피해를 주면 화상 3을 묻힌다.',
   },
 }
 
@@ -332,6 +322,19 @@ const genericRelics: Relic[] = [
     id: 'lockpick', name: '만능 열쇠', icon: '🗝', rarity: 'epic',
     desc: '상점 가격 30% 할인, 덱 상한 +3장.', effect: {}, mods: { shopDiscountPct: 30, deckCapBonus: 3 },
   },
+
+  // --- 상태이상 계열 (2026-08-01, 3직업 개편) -------------------------------
+  // 8개 빌드를 "유물로 완성"시키는 재료. 하나만 주우면 미지근하고, **겹쳐야**
+  // 빌드가 선다: 부여(poisonOnHit/burnOnHit) → 증폭(statusPowerPct) → 시너지
+  // (bonusVsAfflicted) 세 층이 다 모여야 곱이 터진다.
+  { id: 'venomflask', name: '독약 플라스크', icon: '🧪', rarity: 'common', desc: '공격으로 피해를 주면 독 3을 묻힌다.', effect: { poisonOnHit: 3 } },
+  { id: 'emberbrand', name: '잉걸 낙인', icon: '🔥', rarity: 'common', desc: '공격으로 피해를 주면 화상 3을 묻힌다.', effect: { burnOnHit: 3 } },
+  { id: 'coldiron', name: '차가운 쇠', icon: '❄️', rarity: 'common', desc: '상태이상에 걸린 상대에게 주는 피해 +6.', effect: { bonusVsAfflicted: 6 } },
+  { id: 'wickedmortar', name: '사악한 절구', icon: '⚗️', rarity: 'rare', desc: '내가 거는 독·화상 위력 +40%.', effect: { statusPowerPct: 40 } },
+  { id: 'plaguebearer', name: '역병 운반자', icon: '🐀', rarity: 'rare', desc: '피해를 주면 독 5를 묻히고, 내 지속피해 위력 +20%.', effect: { poisonOnHit: 5, statusPowerPct: 20 } },
+  { id: 'pyremark', name: '화형의 표식', icon: '🕯', rarity: 'epic', desc: '피해를 주면 화상 6을 묻히고, 상태이상에 걸린 상대에게 피해 +8.', effect: { burnOnHit: 6, bonusVsAfflicted: 8 } },
+  { id: 'hunterspite', name: '사냥꾼의 앙심', icon: '🎯', rarity: 'epic', desc: '상태이상에 걸린 상대에게 피해 +14. 보호막을 무시한다.', effect: { bonusVsAfflicted: 14, alwaysPierce: true } },
+  { id: 'rotcrown', name: '부패의 왕관', icon: '👑', rarity: 'legend', desc: '피해를 주면 독 6·화상 6을 함께 묻히고, 지속피해 위력 +50%, 상태이상 상대에게 피해 +10.', effect: { poisonOnHit: 6, burnOnHit: 6, statusPowerPct: 50, bonusVsAfflicted: 10 } },
 ]
 
 export const RELICS: Relic[] = [...signatureRelics, ...genericRelics]

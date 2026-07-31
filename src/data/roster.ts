@@ -163,101 +163,40 @@ function atk(over: Partial<CardDef> & { id: string; name: string }): CardDef {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 로스터 — 전사 / 궁수 / 마법사 3직업 (2026-08-01, 6종에서 개편)
+//
+// 6종은 성격이 서로 겹쳐 "무엇을 노리는 캐릭터인가"가 흐렸다. 3종으로 줄이되
+// **각자 못 하는 것을 확실히** 준다 — 전사는 느리고, 궁수는 물렁하고, 마법사는
+// 한 방이 약하다. 빌드는 유물이 완성한다(`game/relics.ts`).
+//
+//   전사  내구·회복·기절·넉백·반사   / 느린 기동, 원거리 없음
+//   궁수  기동·한방·관통·독          / 낮은 체력, 밀착 사각
+//   마법사 넓은 범위·화상·빙결·보호막 / 낮은 단일 화력, 비싼 기력
+//
+// ⚠ **id는 새로 팠다**(`warrior`/`archer`/`mage`). 옛 6종 id를 가리키는 저장 덱은
+// 마이그레이션하지 않고 기본 덱으로 떨어뜨린다(사용자 결정, 2026-08-01).
+// ---------------------------------------------------------------------------
 export const ROSTER: CharacterDef[] = [
   {
-    id: 'volt',
-    name: 'VESPER',
-    title: 'Stormbound Knight',
-    accent: '#8fb6d6',
-    accent2: '#d9b463',
-    description:
-      '폭풍에 서약한 방랑 기사. 갑주는 얇지만 뇌명이 흐르는 룬검으로 줄 하나를 통째로 지배하고, 베어낼 때마다 상대의 마력을 빨아들여 제 연료로 쓴다.',
-    maxHp: 157,
-    maxEnergy: 100,
-    startEnergy: 60,
-    passive: { desc: '뇌운의 가호: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
-    cards: [
-      atk({ id: 'volt-jab', name: '스파크 잽', range: both(1), damage: 24, energyCost: 10, fx: 'punch', desc: '앞뒤 한 칸을 동시에 지지는 약공격. 빠르고 저렴하다.' }),
-      atk({ id: 'volt-leech', name: '포크 라이트닝', range: FORK, damage: 20, energyCost: 20, drain: 10, pointBlank: false, fx: 'bolt', desc: '앞뒤 대각선 네 갈래(X자)로 갈라지는 번개. 정면과 밀착은 사각. 적중 시 상대 기력 10 흡수.' }),
-      atk({ id: 'volt-bolt', name: '아크 볼트', range: beamBoth(1, 2), damage: 30, energyCost: 29, fx: 'bolt', desc: '같은 줄 앞뒤 2칸씩 뻗는 전격 빔.' }),
-      atk({ id: 'volt-surge', name: '체인 서지', range: beamBoth(1, 3), damage: 40, energyCost: 50, drain: 10, fx: 'bolt', signature: true, accent: '#29b6cf', desc: '시그니처. 같은 줄 전체(앞뒤 3칸씩)를 훑는 전격 — 적중 시 기력 10까지 흡수.' }),
-    ],
-  },
-  {
-    id: 'titan',
-    name: 'MAUL',
-    title: 'Ruin Berserker',
-    accent: '#c9713a',
-    accent2: '#d9a45e',
-    description:
-      '성문을 부수라고 사슬에서 풀어놓은 광전사. 느리지만 한 방이 산을 무너뜨리고, 대지를 가르는 강타와 밀어내기로 제 사거리를 강요한다.',
-    maxHp: 172,
-    maxEnergy: 100,
-    startEnergy: 60,
-    passive: { desc: '무쇠 비늘: 받는 공격 피해 -9.', damageReduction: 9 },
-    cards: [
-      atk({ id: 'titan-hammer', name: '해머 핸드', range: both(1), damage: 29, energyCost: 10, fx: 'punch', desc: '앞뒤 한 칸을 후려치는 강타. 싸고 묵직하다.' }),
-      atk({ id: 'titan-ram', name: '램 프레스', range: [fwd(1)], damage: 30, energyCost: 20, push: 2, fx: 'punch', desc: '앞 한 칸을 밀쳐 두 칸 넉백. 전방 전용 — 들러붙는 상대를 떼어낸다.' }),
-      atk({ id: 'titan-crush', name: '크러셔', range: [...bar(1), ...bar(-1)], damage: 30, energyCost: 25, fx: 'quake', desc: '앞뒤 한 칸의 위·중·아래(세로 3줄)를 동시에 부순다.' }),
-      atk({ id: 'titan-slam', name: '사이즈믹 슬램', range: [...bar(1), ...bar(-1), fwd(2), fwd(-2)], damage: 50, energyCost: 50, push: 1, fx: 'quake', signature: true, accent: '#e8863a', desc: '시그니처. 몸 주변 앞뒤 세로 3줄 + 앞뒤 2칸째를 부수는 지진파 — 적중한 상대를 한 칸 밀어낸다.' }),
-    ],
-  },
-  {
-    id: 'nova',
-    name: 'DIRGE',
-    title: 'Hollow Oracle',
-    accent: '#a578cf',
-    accent2: '#6fc0b0',
-    description:
-      '만가를 읊는 원령 무녀. 마르지 않는 혼백을 태워 전장 반대편에서 상대를 사르고, 뼈를 꿰뚫는 창은 방패조차 소용없다.',
-    maxHp: 162,
-    maxEnergy: 100,
-    startEnergy: 60,
-    passive: { desc: '혼백의 등불: 매 턴 기력 +20.', turnEnergy: 20 },
-    cards: [
-      atk({ id: 'nova-palm', name: '팜 펄스', range: both(1), damage: 22, energyCost: 10, fx: 'orb', desc: '앞뒤 한 칸을 튕겨내는 견제 펄스.' }),
-      atk({ id: 'nova-lance', name: '이온 랜스', range: beam(2, 4), damage: 30, energyCost: 25, pierce: true, pointBlank: false, fx: 'orb', desc: '앞 2~4칸 관통 광선. 전방 전용 저격 — 상대 보호막을 무시하고, 바로 앞과 밀착은 사각.' }),
-      atk({ id: 'nova-blast', name: '노바 블래스트', range: beam(1, 5), damage: 40, energyCost: 32, fx: 'orb', desc: '같은 줄 끝까지 닿는 최장 구체. 전방 전용 주포.' }),
-      atk({ id: 'nova-flare', name: '라이징 플레어', range: [...bar(1), ...bar(2), fwd(-1), fwd(-2)], damage: 50, energyCost: 45, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞 두 칸 × 세 줄의 대폭발 + 등 뒤 2칸까지 후폭풍이 휩쓴다.' }),
-    ],
-  },
-  {
-    id: 'cipher',
-    name: 'SABLE',
-    title: 'Bloodletter',
-    accent: '#5aa06d',
-    accent2: '#3f9a90',
-    description:
-      '그림자에 스며드는 흡혈 도적. 독을 먹인 쌍검으로 상하좌우를 동시에 베고, 베어낸 만큼 상대의 피와 기력을 제 것으로 만든다.',
-    maxHp: 145,
-    maxEnergy: 100,
-    startEnergy: 50,
-    passive: { desc: '피의 갈증: 공격으로 피해를 주면 체력 +10.', lifesteal: 10 },
-    cards: [
-      atk({ id: 'cipher-cut', name: '엣지 컷', range: both(1), damage: 20, energyCost: 10, fx: 'slash', desc: '앞뒤 한 칸을 스치는 빠른 베기.' }),
-      atk({ id: 'cipher-siphon', name: '널 사이펀', range: bar(1), damage: 20, energyCost: 20, leech: 10, drain: 10, fx: 'slash', desc: '앞 한 칸의 세 줄을 베며 체력 10 회복 + 상대 기력 10 흡수. 전방 전용.' }),
-      atk({ id: 'cipher-cross', name: '크로스 슬래시', range: CROSS, damage: 30, energyCost: 24, fx: 'slash', desc: '상·하·좌·우 네 칸을 동시에 베는 십자 범위. 등 뒤도 벤다.' }),
-      atk({ id: 'cipher-phase', name: '페이즈 스트라이크', range: [...beamBoth(1, 2), ...FORK], damage: 50, energyCost: 45, leech: 10, fx: 'slash', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞뒤 2칸 + 대각선 네 방향을 한 번에 관통하는 순간이동 난무 — 체력 10 회복.' }),
-    ],
-  },
-  {
-    id: 'aegis',
+    id: 'warrior',
     name: 'CAIRN',
     title: 'Oathbound Warden',
     accent: '#6d8ac4',
     accent2: '#a7b8d4',
     description:
-      '무너진 성채에 홀로 남은 파수꾼. 때리는 동안에도 방패를 거두지 않고, 전용 방벽은 웬만한 강타를 통째로 삼킨다.',
-    maxHp: 164,
+      '무너진 성채에 홀로 남은 파수꾼. 느리지만 좀처럼 쓰러지지 않고, 대지를 가르는 강타로 상대의 숨통을 끊어 놓는다. 방벽을 올리고 버티다가 한 번에 갚아 주는 싸움을 한다.',
+    maxHp: 205,
     maxEnergy: 100,
     startEnergy: 50,
-    passive: { desc: '불침의 서약: 매 턴 보호막 +15.', turnShield: 15 },
+    passive: { desc: '불침의 서약: 받는 공격 피해 -6, 매 턴 체력 +4.', damageReduction: 6, regen: 4 },
     cards: [
-      atk({ id: 'aegis-jab', name: '실드 잽', range: both(1), damage: 20, energyCost: 10, selfShield: 5, fx: 'shield', desc: '앞뒤 한 칸 방패 견제. 사용 시 보호막 +5.' }),
-      atk({ id: 'aegis-bash', name: '실드 배시', range: bar(1), damage: 30, energyCost: 28, push: 1, fx: 'shield', desc: '앞 한 칸의 세 줄을 방패로 후려쳐 한 칸 밀어낸다. 전방 전용.' }),
+      atk({ id: 'war-cleave', name: '파쇄 베기', range: both(1), damage: 26, energyCost: 10, fx: 'slash', desc: '앞뒤 한 칸을 후려치는 기본 근접. 싸고 묵직하다.' }),
+      atk({ id: 'war-bash', name: '방패 밀치기', range: bar(1), damage: 28, energyCost: 22, push: 2, fx: 'punch', desc: '앞 한 칸의 세 줄을 방패로 밀어 두 칸 넉백. 들러붙는 상대를 떼어낸다.' }),
+      atk({ id: 'war-quake', name: '대지 가르기', range: [...bar(1), ...bar(-1)], damage: 28, energyCost: 24, stun: 1, cooldown: 2, fx: 'quake', desc: '몸 주변 앞뒤 세로 3줄을 쪼갠다. 피해를 입히면 상대를 1턴 기절 — 쿨타임 2턴.' }),
       {
-        id: 'aegis-wall',
-        name: '아이언 커튼',
+        id: 'war-wall',
+        name: '불침의 벽',
         kind: 'guard',
         block: 70,
         guardCost: 20,
@@ -265,26 +204,45 @@ export const ROSTER: CharacterDef[] = [
         fx: 'shield',
         desc: '전용 방벽. 기력 20 소모, 이번 턴 받는 피해를 최대 70 막는다. 쿨타임 2턴.',
       },
-      atk({ id: 'aegis-drive', name: '벌워크 드라이브', range: [fwd(-1), fwd(1), fwd(2)], damage: 50, energyCost: 50, selfShield: 20, fx: 'shield', signature: true, accent: '#5b7ee0', desc: '시그니처. 같은 줄의 뒤 한 칸 + 앞 두 칸을 쓸어버리는 돌진 — 사용 시 보호막 +20.' }),
+      atk({ id: 'war-oath', name: '서약의 파쇄', range: [...bar(1), ...bar(-1), fwd(2), fwd(-2)], damage: 46, energyCost: 48, push: 1, selfShield: 20, fx: 'quake', signature: true, accent: '#5b7ee0', desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째를 무너뜨리는 지진파 — 상대를 한 칸 밀고 보호막 +20.' }),
     ],
   },
   {
-    id: 'ember',
-    name: 'PYRE',
-    title: 'Ashen Devil',
-    accent: '#cf5347',
-    accent2: '#e0913f',
+    id: 'archer',
+    name: 'SABLE',
+    title: 'Ashen Fletcher',
+    accent: '#5aa06d',
+    accent2: '#3f9a90',
     description:
-      '제 몸을 장작 삼아 싸우는 잿불 마귀. 반동을 감수한 초화력으로 단기 결전을 노리고, 쓰러져도 재 속에서 한 번 되살아난다.',
-    maxHp: 156,
+      '재를 뒤집어쓴 채 그림자에서 활을 겨누는 사냥꾼. 갑주가 얇아 붙으면 죽지만, 거리를 유지하는 한 독과 관통으로 확실히 갉아낸다. 밀어내며 물러서는 싸움이 본령.',
+    maxHp: 162,
     maxEnergy: 100,
-    startEnergy: 50,
-    passive: { desc: '잿불 부활: 쓰러져도 전투당 한 번, HP 50으로 되살아난다.', revive: 50 },
+    startEnergy: 55,
+    passive: { desc: '독니: 내 공격 피해 +6, 피해를 주면 독 3을 묻힌다.', attackBonus: 6, poisonOnHit: 3 },
     cards: [
-      atk({ id: 'ember-claw', name: '신더 클로', range: both(1), damage: 20, energyCost: 10, fx: 'flame', desc: '앞뒤 한 칸을 긋는 빠른 할퀴기.' }),
-      atk({ id: 'ember-fan', name: '플레임 팬', range: [...bar(1), fwd(-1)], damage: 30, energyCost: 20, fx: 'flame', desc: '앞 한 칸의 세 줄 + 등 뒤 한 칸을 도는 회전 불꽃차기.' }),
-      atk({ id: 'ember-blitz', name: '오버히트 블리츠', range: beam(1, 2), damage: 38, energyCost: 26, recoil: 5, fx: 'rush', desc: '과열 돌진. 전방 전용 — 싸고 강하지만 자신도 화상으로 체력 5를 잃는다.' }),
-      atk({ id: 'ember-inferno', name: '인페르노 러시', range: beamBoth(1, 2), damage: 60, energyCost: 50, recoil: 10, fx: 'rush', signature: true, accent: '#e25563', desc: '시그니처. 같은 줄 앞뒤 2칸씩을 불태우는 최대 화력 — 반동으로 체력 10을 잃는다.' }),
+      atk({ id: 'arc-shot', name: '잿빛 화살', range: beam(1, 3), damage: 24, energyCost: 14, pointBlank: false, fx: 'bolt', desc: '앞 1~3칸을 노리는 기본 사격. 싸지만 겹쳐 선 상대는 못 맞힌다.' }),
+      atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 22, energyCost: 20, poison: 6, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 독 6(3턴) — 겹칠수록 위력이 쌓인다. 밀착 사각.' }),
+      atk({ id: 'arc-pin', name: '말뚝 화살', range: beam(1, 3), damage: 28, energyCost: 32, pierce: true, push: 1, fx: 'bolt', desc: '앞 1~3칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
+      atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 40, energyCost: 45, poison: 8, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 독 8(3턴). 밀착 사각.' }),
+    ],
+  },
+  {
+    id: 'mage',
+    name: 'DIRGE',
+    title: 'Hollow Oracle',
+    accent: '#a578cf',
+    accent2: '#6fc0b0',
+    description:
+      '만가를 읊는 원령 무녀. 한 방은 가볍지만 판을 통째로 덮는 주문으로 도망칠 자리를 지운다. 태우고 얼려 놓은 뒤 천천히 조여드는 싸움을 한다.',
+    maxHp: 155,
+    maxEnergy: 100,
+    startEnergy: 60,
+    passive: { desc: '혼백의 등불: 매 턴 기력 +12, 보호막 +7.', turnEnergy: 12, turnShield: 7 },
+    cards: [
+      atk({ id: 'mag-spark', name: '혼불', range: CROSS, damage: 18, energyCost: 14, burn: 4, fx: 'flame', desc: '상·하·좌·우 네 칸에 도깨비불을 흩뿌린다. 피해를 입히면 화상 4(2턴).' }),
+      atk({ id: 'mag-frost', name: '서리 결계', range: bar(1), damage: 18, energyCost: 24, freeze: 1, selfShield: 10, fx: 'orb', desc: '앞 한 칸의 세 줄을 얼린다. 피해를 입히면 상대를 1턴 빙결(이동 불가) — 사용 시 보호막 +10.' }),
+      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...bar(1), ...bar(2)], damage: 26, energyCost: 36, burn: 6, fx: 'flame', desc: '앞 두 칸 × 세 줄을 태우는 광역 화염. 피해를 입히면 화상 6(2턴).' }),
+      atk({ id: 'mag-doom', name: '종언의 만가', range: [...bar(1), ...bar(2), ...bar(-1)], damage: 44, energyCost: 50, burn: 8, freeze: 1, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞 두 칸 + 등 뒤 한 칸의 세 줄을 통째로 덮는 만가 — 화상 8 + 1턴 빙결.' }),
     ],
   },
 ]

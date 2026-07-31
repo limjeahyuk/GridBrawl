@@ -31,14 +31,14 @@ const overlord: BossScript = ({ turn, hpFrac }) => {
   if (enraged) {
     const beat = (turn - 1) % 2
     if (beat === 0)
-      return { plan: ['nova-flare', 'nova-blast', 'm-left'], telegraph: '☠ 격노 — 연속 폭격! 가드로 버텨라' }
-    return { plan: ['nova-blast', 'm-left', 'm-left'], telegraph: '격노한 오버로드가 짓쳐든다…' }
+      return { plan: ['mag-doom', 'arc-pin', 'm-left'], telegraph: '☠ 격노 — 연속 폭격! 가드로 버텨라' }
+    return { plan: ['arc-pin', 'm-left', 'm-left'], telegraph: '격노한 오버로드가 짓쳐든다…' }
   }
   const beat = (turn - 1) % 3
-  if (beat === 0) return { plan: ['nova-blast', 'm-left', 'c-guard'], telegraph: null } // 견제·접근
+  if (beat === 0) return { plan: ['arc-pin', 'm-left', 'c-guard'], telegraph: null } // 견제·접근
   if (beat === 1)
     return { plan: ['c-guard', 'm-left', 'm-left'], telegraph: '오버로드가 힘을 모은다… 다음 턴 대격변!' } // 힘 모으기
-  return { plan: ['titan-slam', 'nova-flare', 'm-left'], telegraph: '☠ 대격변! 이번 턴 전방위 폭격 — 막거나 멀리 피하라' } // 대격변
+  return { plan: ['war-oath', 'mag-doom', 'm-left'], telegraph: '☠ 대격변! 이번 턴 전방위 폭격 — 막거나 멀리 피하라' } // 대격변
 }
 
 // 수호기사(엘리트) — 방패 반격수. 3턴: 방벽 올리기(예고 "지금 공격은 막힌다") →
@@ -46,9 +46,9 @@ const overlord: BossScript = ({ turn, hpFrac }) => {
 const warden: BossScript = ({ turn }) => {
   const beat = (turn - 1) % 3
   if (beat === 0)
-    return { plan: ['aegis-wall', 'm-left', 'm-left'], telegraph: '🛡 수호기사가 방벽을 올린다 — 이번 턴 공격은 대부분 막힌다' }
-  if (beat === 1) return { plan: ['aegis-bash', 'm-left', 'm-left'], telegraph: null } // 견제·접근
-  return { plan: ['aegis-drive', 'm-left', 'm-left'], telegraph: '⚔ 커튼을 열고 돌진 반격!' }
+    return { plan: ['war-wall', 'm-left', 'm-left'], telegraph: '🛡 수호기사가 방벽을 올린다 — 이번 턴 공격은 대부분 막힌다' }
+  if (beat === 1) return { plan: ['war-bash', 'm-left', 'm-left'], telegraph: null } // 견제·접근
+  return { plan: ['war-oath', 'm-left', 'm-left'], telegraph: '⚔ 커튼을 열고 돌진 반격!' }
 }
 
 // 화염군주(엘리트) — 폭딜. 3턴: 접근·견제 → 불길 모으기(예고) → 인페르노(예고).
@@ -57,14 +57,14 @@ const pyrelord: BossScript = ({ turn, hpFrac }) => {
   if (hpFrac <= 0.4) {
     const beat = (turn - 1) % 2
     if (beat === 0)
-      return { plan: ['ember-inferno', 'ember-blitz', 'm-left'], telegraph: '🔥 격노 — 연속 화염! 막거나 피하라' }
-    return { plan: ['ember-blitz', 'ember-fan', 'm-left'], telegraph: '격노한 화염군주가 불타오른다…' }
+      return { plan: ['mag-doom', 'arc-pin', 'm-left'], telegraph: '🔥 격노 — 연속 화염! 막거나 피하라' }
+    return { plan: ['arc-pin', 'mag-flame', 'm-left'], telegraph: '격노한 화염군주가 불타오른다…' }
   }
   const beat = (turn - 1) % 3
-  if (beat === 0) return { plan: ['ember-blitz', 'm-left', 'ember-fan'], telegraph: null } // 접근·견제
+  if (beat === 0) return { plan: ['arc-pin', 'm-left', 'mag-flame'], telegraph: null } // 접근·견제
   if (beat === 1)
-    return { plan: ['ember-fan', 'm-left', 'm-left'], telegraph: '불길이 치솟는다… 다음 턴 인페르노!' } // 모으기
-  return { plan: ['ember-inferno', 'm-left', 'm-left'], telegraph: '🔥 인페르노 러시 — 화염 폭발! 막거나 피하라' } // 폭발
+    return { plan: ['mag-flame', 'm-left', 'm-left'], telegraph: '불길이 치솟는다… 다음 턴 인페르노!' } // 모으기
+  return { plan: ['mag-doom', 'm-left', 'm-left'], telegraph: '🔥 인페르노 러시 — 화염 폭발! 막거나 피하라' } // 폭발
 }
 
 const SCRIPTS: Record<string, BossScript> = {

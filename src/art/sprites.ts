@@ -118,7 +118,7 @@ const sheet = (id: string, over: Partial<SheetDef> = {}): SheetDef => ({
  */
 export const SHEETS: Record<string, SheetDef> = {
   // Hero Knight (Sven Thole) — 측정: frameW 90, frameH 50, footY 50, anchorX 29
-  volt: sheet('hero-knight', {
+  warrior: sheet('hero-knight', {
     frameW: 90,
     frameH: 50,
     footY: 50,
@@ -136,7 +136,7 @@ export const SHEETS: Record<string, SheetDef> = {
   // Bandits (Sven Thole) — 한 팩에 경장·중장 두 캐릭터. 측정값은 `npm run sprites` 출력.
   // 이 팩은 프레임 구성이 Hero Knight와 달라(대기 4·달리기 8·공격 8) STD_CLIPS를
   // 통째로 갈아 끼운다.
-  cipher: sheet('bandit-light', {
+  archer: sheet('bandit-light', {
     frameW: 43,
     frameH: 47,
     footY: 46,
@@ -144,7 +144,7 @@ export const SHEETS: Record<string, SheetDef> = {
     scale: 3,
     clips: banditClips(56), // 경장 = 빠른 손놀림
   }),
-  aegis: sheet('bandit-heavy', {
+  mage: sheet('bandit-heavy', {
     frameW: 45,
     frameH: 47,
     footY: 46,
@@ -152,9 +152,10 @@ export const SHEETS: Record<string, SheetDef> = {
     scale: 3,
     clips: banditClips(66), // 중장 = 크게 휘두르는 만큼 느리게
   }),
-  // 나머지는 팩이 도착하는 대로 채운다(그전까진 SVG 폴백).
-  //   titan → berserker · nova → wraith · ember → flame-demon
-  //   (지금은 커버 이미지 한 장뿐이라 애니메이션 시트가 아니다)
+  // ⚠ 3직업 개편(2026-08-01) 이후 시트가 직업과 딱 맞지는 않는다. 특히 마법사에
+  // 중장 도적 시트를 임시로 붙였다 — 활·지팡이 팩이 없어서다. 로스터가 6→3으로
+  // 줄면서 필요한 시트도 6→3이 됐으니, 궁수(활)·마법사(지팡이) 팩만 구하면 끝난다.
+  // 그때까지는 **셋 다 픽셀**인 편이 한 명만 SVG로 남는 것보다 덜 어색하다.
 }
 
 export const sheetFor = (charId: string): SheetDef | undefined => SHEETS[charId]
