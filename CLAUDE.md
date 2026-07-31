@@ -30,6 +30,30 @@
 - **궁수는 수치가 아니라 구조가 문제였다** — 카드 4장 중 3장이 밀착 사각인데 몬스터가 이동하게 된 뒤(2026-08-01) 계속 붙어 버린다. ⚠ **화력·독을 올리면 오히려 나빠진다**(독 위력 +45% 실험에서 24.7%→22.2%). 필요한 건 버티는 힘이라 흡혈·피해감소·최대체력으로 줬다.
 - ⚠ **훅마다 민감도가 다르다** — 궁수는 `lifesteal`이 지배 변수(4→5만으로 +5%p)고 `maxHpBonus`는 48 근처에서 포화한다(55→62에서 +0.1%p). 마법사는 `turnEnergy` 10 ≈ `maxHpBonus` 14. 하나라도 건드리면 스윕을 다시 돌린다.
 
+## 지금 어디까지 왔나 (2026-08-01 기준)
+
+이어서 작업할 때 여기부터 읽으면 된다. 세부는 각 절에 있다.
+
+**끝난 것**
+- 로스터 6종 → **3직업**(warrior/archer/mage), id 새로 팜. 저장 덱은 마이그레이션 안 함(기본 덱 폴백)
+- 로그라이크 밸런스 재조정 — 밴드 30.3%p → **2.3%p**, 클리어율 ~26%
+- **버프 카드**(atkUp/defUp/freeCast) + **이동공격**(dashForward) 엔진 메커니즘
+- 직업 카드 4~5장 → **8~9장**(신규 12장). 덱 상한 7장을 넘어 덱 빌딩이 실제 선택이 됨
+- **픽셀 스프라이트 전면 이관** — 직업 3종 + 몬스터 시트 6종(20종 중 17종). 메뉴 초상까지
+- 다크 판타지 리스킨 마무리 — 전장·공용 배경·팔레트 우회 리터럴 38곳
+
+**남은 것 (다음 후보)**
+1. **대형 몬스터 3종** — `sentry`·`ogre`·`golem`이 아직 직업 시트를 빌려 쓴다. 팩을 `assets-raw/`에 풀고 → `scripts/packsprites.mjs`의 `JOBS`에 추가 → `npm run sprites` → `SHEETS`에 측정값 → `MonsterDef.spriteId` 한 줄. 절차는 [public/sprites/README.md](public/sprites/README.md)
+2. **PvP 밸런스** — 3직업 개편 이후 **한 번도 안 맞췄다**(사용자 결정으로 후순위). `npm run sim`의 매치업 승률로 본다. ⚠ 이 시뮬은 시드가 없어 ±0.05턴 흔들리니 큰 차이만 신뢰할 것
+3. **타이틀 로고** — 글자 그라디언트가 아직 사이버 시절 청록→보라다(`ui.css`의 `.title__word`)
+4. **보스 연출** — 보스 3종이 일반 몬스터와 같은 스크립트 틀만 쓴다. 컷인·전용 배경 등
+5. **다인 전투(Phase 2)** — 엔진이 엄격히 1:1(`pos/hp/chars`)이라 코어 재작성이 필요. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md)
+
+**작업 시작 전 확인**
+```bash
+npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=12345
+```
+
 ## 기술 스택 / 명령어
 
 - React 19 + TypeScript + Vite. 외부 게임 엔진 없음 — 전투는 순수 TS(`CardBattle`)로 시뮬레이션 후 React 렌더.
@@ -54,6 +78,8 @@
 | 로그인(구글 인증)  | `src/net/auth.ts`, `src/ui/useAuth.ts`, `src/ui/screens/LoginScreen.tsx` |
 | 화면 흐름 / UI     | `src/App.tsx`, `src/ui/screens/*`, `src/ui/`, `src/art/` |
 | 전투 연출(손맛)    | `src/ui/sfx.ts`(효과음 합성)·`src/ui/battlefx.css` — 아래 "전투 연출" 참고 |
+| 픽셀 스프라이트    | `src/art/sprites.ts`(시트 정의·클립 폴백)·`scripts/packsprites.mjs`(원본→스트립 굽기, `npm run sprites`) — 규격 [public/sprites/README.md](public/sprites/README.md) |
+| 에셋 원본(배포 제외) | `assets-raw/` — ⚠ 원본을 `public/`에 두면 EULA·프리뷰·미사용 애니메이션까지 배포된다 |
 
 ## 전투 모델 (현재 구현 요약) — 2D 격자
 
