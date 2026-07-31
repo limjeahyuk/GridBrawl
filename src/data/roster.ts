@@ -1,4 +1,4 @@
-import type { CardDef, Offset } from '../battle/types'
+import type { BuffKind, CardDef, Offset } from '../battle/types'
 
 // ---------------------------------------------------------------------------
 // 로스터. **테마는 다크 판타지**(2026-07-31 리스킨 — 사이버 아레나에서 전환).
@@ -163,6 +163,27 @@ function atk(over: Partial<CardDef> & { id: string; name: string }): CardDef {
   }
 }
 
+/**
+ * 자기 강화 카드(2026-08-01). 수비 티어라 **같은 슬롯의 공격보다 먼저** 걸리므로,
+ * 1번 슬롯에 버프 + 2·3번에 공격을 넣으면 그 턴부터 바로 효과를 본다.
+ * ⚠ 버프는 여러 턴을 가는 대신 슬롯 하나를 통째로 쓴다 — 한 턴 3장 제약이 곧
+ * 비용이라, 지속·위력을 올릴 땐 반드시 `npm run sim:run -- --sweep`으로 확인할 것.
+ */
+function buff(
+  over: Partial<CardDef> & { id: string; name: string; buff: BuffKind },
+): CardDef {
+  return {
+    kind: 'buff',
+    desc: '',
+    cooldown: 2,
+    buffTurns: 3,
+    buffPower: 0,
+    buffCost: 20,
+    fx: 'shield',
+    ...over,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 로스터 — 전사 / 궁수 / 마법사 3직업 (2026-08-01, 6종에서 개편)
 //
@@ -205,6 +226,12 @@ export const ROSTER: CharacterDef[] = [
         desc: '전용 방벽. 기력 20 소모, 이번 턴 받는 피해를 최대 70 막는다. 쿨타임 2턴.',
       },
       atk({ id: 'war-oath', name: '서약의 파쇄', range: [...bar(1), ...bar(-1), fwd(2), fwd(-2)], damage: 46, energyCost: 48, push: 1, selfShield: 20, fx: 'quake', signature: true, accent: '#5b7ee0', desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째를 무너뜨리는 지진파 — 상대를 한 칸 밀고 보호막 +20.' }),
+      // 전사는 원거리가 없어 **붙는 것 자체가 과제**다. 돌진으로 거리를 지우고,
+      // 버프로 버티거나 한 번에 갚는 두 갈래를 준다.
+      atk({ id: 'war-charge', name: '방패 돌진', range: bar(1), damage: 30, energyCost: 24, push: 1, cooldown: 1, dashForward: 2, fx: 'rush', desc: '앞으로 두 칸 파고든 뒤 앞 세로 3줄을 후려친다. 상대를 한 칸 넉백 — 쿨타임 1턴.' }),
+      atk({ id: 'war-grudge', name: '응보의 일격', range: both(1), damage: 20, energyCost: 18, selfShield: 30, fx: 'slash', desc: '앞뒤 한 칸을 치면서 몸을 사린다 — 사용 시 보호막 +30. 맞고 버티며 갚는 카드.' }),
+      buff({ id: 'war-cry', name: '불굴의 함성', buff: 'defUp', buffPower: 9, buffTurns: 3, buffCost: 20, accent: '#8fb6d6', desc: '3턴간 받는 공격 피해 -9. 버티는 구간을 통째로 사 온다 — 쿨타임 2턴.' }),
+      buff({ id: 'war-blood', name: '피의 맹세', buff: 'atkUp', buffPower: 13, buffTurns: 3, buffCost: 26, fx: 'quake', accent: '#c9713a', desc: '3턴간 내 공격 피해 +13. 방벽을 올리고 버틴 뒤 한 번에 갚을 때.' }),
     ],
   },
   {
@@ -224,6 +251,12 @@ export const ROSTER: CharacterDef[] = [
       atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 22, energyCost: 20, poison: 6, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 독 6(3턴) — 겹칠수록 위력이 쌓인다. 밀착 사각.' }),
       atk({ id: 'arc-pin', name: '말뚝 화살', range: beam(1, 3), damage: 28, energyCost: 32, pierce: true, push: 1, fx: 'bolt', desc: '앞 1~3칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
       atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 40, energyCost: 45, poison: 8, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 독 8(3턴). 밀착 사각.' }),
+      // ⚠ 궁수의 구조적 약점: 카드 대부분이 밀착 사각인데 몬스터가 접근한다.
+      // 아래 두 장이 그 해법이다 — 물러나며 쏘고(카이팅), 붙은 적을 얼려 떼어낸다.
+      atk({ id: 'arc-kite', name: '물러서며 쏘기', range: beam(1, 3), damage: 22, energyCost: 18, dashForward: -1, pointBlank: false, fx: 'bolt', desc: '뒤로 한 칸 물러난 **뒤에** 앞 1~3칸을 쏜다. 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),
+      atk({ id: 'arc-snare', name: '가시 올가미', range: [...bar(1), ...bar(2)], damage: 16, energyCost: 24, freeze: 1, push: 1, cooldown: 2, fx: 'orb', desc: '앞 1~2칸 × 세 줄에 올가미를 깐다. 상대를 한 칸 밀고 1턴 빙결(이동 불가) — 쿨타임 2턴.' }),
+      buff({ id: 'arc-focus', name: '사냥꾼의 집중', buff: 'atkUp', buffPower: 11, buffTurns: 3, buffCost: 22, fx: 'bolt', accent: '#3cbf7a', desc: '3턴간 내 공격 피해 +11. 거리를 벌어 둔 턴에 깔아 두는 카드.' }),
+      buff({ id: 'arc-veil', name: '잿빛 장막', buff: 'defUp', buffPower: 8, buffTurns: 3, buffCost: 20, accent: '#5aa06d', desc: '3턴간 받는 공격 피해 -8. 갑주가 얇은 궁수가 붙잡혔을 때 버는 시간.' }),
     ],
   },
   {
@@ -243,6 +276,12 @@ export const ROSTER: CharacterDef[] = [
       atk({ id: 'mag-frost', name: '서리 결계', range: bar(1), damage: 18, energyCost: 24, freeze: 1, selfShield: 10, fx: 'orb', desc: '앞 한 칸의 세 줄을 얼린다. 피해를 입히면 상대를 1턴 빙결(이동 불가) — 사용 시 보호막 +10.' }),
       atk({ id: 'mag-flame', name: '화염 폭풍', range: [...bar(1), ...bar(2)], damage: 26, energyCost: 36, burn: 6, fx: 'flame', desc: '앞 두 칸 × 세 줄을 태우는 광역 화염. 피해를 입히면 화상 6(2턴).' }),
       atk({ id: 'mag-doom', name: '종언의 만가', range: [...bar(1), ...bar(2), ...bar(-1)], damage: 44, energyCost: 50, burn: 8, freeze: 1, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞 두 칸 + 등 뒤 한 칸의 세 줄을 통째로 덮는 만가 — 화상 8 + 1턴 빙결.' }),
+      // 마법사의 제약은 기력이다. 무아지경이 그 제약을 2턴간 통째로 없앤다 —
+      // 선불이 비싸고 쿨이 길지만, 켜진 동안 종언의 만가를 매 턴 쏠 수 있다.
+      buff({ id: 'mag-trance', name: '무아지경', buff: 'freeCast', buffTurns: 2, buffCost: 40, cooldown: 3, fx: 'flame', accent: '#d45fae', desc: '2턴간 **모든 카드의 기력 소모가 0**이 된다. 켜진 동안 가장 비싼 주문을 매 턴 퍼부을 수 있다 — 쿨타임 3턴.' }),
+      buff({ id: 'mag-ward', name: '혼백의 장막', buff: 'defUp', buffPower: 10, buffTurns: 3, buffCost: 24, accent: '#6fc0b0', desc: '3턴간 받는 공격 피해 -10. 큰 주문을 모으는 동안 몸을 지킨다.' }),
+      atk({ id: 'mag-blink', name: '그림자 도약', range: CROSS, damage: 20, energyCost: 22, burn: 4, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 **뒤에** 상·하·좌·우를 태운다 — 화상 4(2턴). 포위를 빠져나오는 카드.' }),
+      atk({ id: 'mag-hex', name: '속박의 저주', range: [...bar(1), ...bar(-1)], damage: 22, energyCost: 28, freeze: 1, pull: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 세로 3줄을 저주해 상대를 한 칸 **끌어당기고** 1턴 빙결. 도망치는 적을 광역 사거리 안으로 잡아 온다 — 쿨타임 2턴.' }),
     ],
   },
 ]

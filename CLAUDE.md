@@ -86,6 +86,13 @@
     - 시트 매핑: `warrior`→hero-knight · `archer`→bandit-light · `mage`→bandit-heavy. ⚠ **마법사에 중장 도적 시트를 임시로 붙여 놨다**(지팡이 팩이 없어서). 활·지팡이 팩을 구하면 `SHEETS`만 갈아 끼우면 된다. 팩마다 프레임 구성이 달라 Bandits 계열은 `banditClips()`로 `STD_CLIPS`를 통째로 교체한다.
   - ⚠ **좌우 반전은 두 겹이고 절대 합치면 안 된다**(`placeSprite`). ① `--flip`은 **진영**(왼쪽 1·오른쪽 -1)으로, 공격 키프레임의 `translateX(+N)`가 "상대 방향"이 되게 하는 값이다. ② `--artflip`은 **시트 원본이 보는 방향**을 바로잡는 값(지금 팩 셋은 전부 원본이 왼쪽을 봐서 -1). 둘을 곱해 `--flip` 하나로 합치면 원본이 왼쪽을 보는 캐릭터가 **상대 반대쪽으로 파고든다**. 그리고 실제로 뒤집히는 쪽은 `anchorX`도 프레임 반대편(`frameW - anchorX`)으로 옮겨야 한다 — 안 하면 그쪽만 셀에서 밀려 선다(hero-knight 96px).
   - **에셋은 `public/sprites/`를 손으로 만들지 않는다.** 원본 팩을 `assets-raw/`에 두고 `npm run sprites`(`scripts/packsprites.mjs`, 의존성 0)로 가로 스트립을 굽고, 출력된 `frameW/frameH/footY/anchorX`를 `SHEETS`에 옮긴다. 절차·클립 규격·시트별 상태표는 [public/sprites/README.md](public/sprites/README.md).
+- **버프 카드 · 이동공격(2026-08-01)** — 직업 카드를 4~5장에서 **8~9장**으로 늘리며 두 메커니즘을 추가했다.
+  - **버프(`kind: 'buff'`)** — 자신에게 N턴 지속효과를 건다. `StatusKind`에 `atkUp`(피해 +N)·`defUp`(받는 피해 −N)·`freeCast`(기력 소모 0)를 얹어 **독·화상·빙결과 같은 목록·같은 정산 자리**를 쓴다(랜덤 없음 → 멀티 락스텝 안전). 수비 티어(`prio` 1)라 **같은 슬롯의 공격보다 먼저** 걸린다 — 1번 슬롯 버프 + 2·3번 공격이면 그 턴부터 효과를 본다.
+  - ⚠ **`freeCast`는 세 곳이 같은 규칙을 봐야 한다** — 엔진 `costOf`, UI 선택 판정 `planAffordable`, AI 예산. 하나만 빠뜨리면 "낼 수 있다고 표시되는데 불발"이 난다. 비용 필드가 종류마다 다르므로 `baseCostOf()` 한 곳에 모아 두었다.
+  - **이동공격(`dashForward`)** — 공격 직전 **facing 기준** N칸 이동(+전진/−후퇴). 절대 방향이 아니라 상대 방향이라 **멀티 미러링(`faceCard`)이 필요 없다**. 공격 페이즈에 해소되므로 상대가 이동을 마친 뒤에 움직인다 — 궁수 카이팅(`arc-kite`)의 핵심.
+  - 버프 지속은 **걸린 턴에 바로 1턴 소모**한다(그 턴 공격에 이미 얹혔으므로). `since` 유예를 받는 건 여전히 **빙결뿐**이다.
+  - 검증 `npm run check` — atkUp 지속/소멸, defUp 감산, freeCast 3자 일치, dashForward 사거리·벽 처리까지 10건.
+  - 카드가 늘어 **덱 상한(선택 7장)을 넘었다** → 덱 빌딩이 실제 선택이 됐고, `PRESET_DECKS`는 자동 생성을 버리고 **직업별로 손으로 골랐다**(자동으로 앞에서 자르면 뒤에 붙인 버프·기동 카드가 통째로 빠진다). 프리셋 id·장수는 모듈 로드 시 검증한다.
 - **지속 상태이상(2026-08-01)** — 독·화상·빙결. 3직업 개편의 1단계로 엔진에 먼저 넣었고, **2단계에서 카드에 연결됐다**(궁수=독 / 마법사=화상·빙결, 위 "로스터" 참고). 그래서 **더 이상 밸런스 중립이 아니다** — 상태이상 수치를 건드리면 `npm run sim:run -- --sweep`을 다시 돌려야 한다. 독안개와 같은 자리(턴 종료·보호막 무시·랜덤 없음)에서 돌아 멀티 락스텝 안전. 타입 `types.ts`(`StatusKind/StatusEffect/STATUS_TURNS`), 정산 `engine.resolveTurn`의 `tickStatuses`, 유물 훅 `poisonOnHit/burnOnHit/statusPowerPct/bonusVsAfflicted`. 검증 `npm run check`.
   - ⚠ **지속피해와 빙결은 시간 규칙이 다르다** — 독·화상은 걸린 턴에 바로 갉고 지속도 같이 깎지만, **빙결은 걸린 턴엔 안 깎는다**(이동이 공격보다 먼저 해소돼 그 턴엔 온전한 한 턴을 못 막으므로). 기준은 `StatusEffect.since`. 상세·근거는 GDD ④ "지속 상태이상".
   - ⚠ **빙결 ≠ 기절** — 빙결은 이동만 무효(공격·가드는 나감), 기절은 그 턴 카드를 통째로 버린다.

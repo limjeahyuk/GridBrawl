@@ -1,6 +1,6 @@
 import type { CharacterDef } from '../data/roster'
 import { COMMON_CARDS } from './cards'
-import type { BattleState } from './engine'
+import { baseCostOf, type BattleState } from './engine'
 import {
   GRID_COLS,
   MOVE_DELTA,
@@ -74,6 +74,10 @@ export function decideAI(
     .sort((a, b) => (b.block ?? 0) - (a.block ?? 0))[0]
   const ENERGY = pool.find((c) => c.kind === 'energy')
   const HEAL = pool.find((c) => c.kind === 'heal')
+  // 버프는 **한 판에 오래 남는 카드**라 싼 것부터 깔고 시작하는 게 이득이다.
+  const BUFFS = pool
+    .filter((c) => c.kind === 'buff')
+    .sort((a, b) => (a.buffCost ?? 0) - (b.buffCost ?? 0))
   const cheapest = attacks.length ? Math.min(...attacks.map((a) => a.energyCost ?? 0)) : 0
   const plan: CardDef[] = []
 
@@ -81,11 +85,9 @@ export function decideAI(
     plan.push(c)
     // 쿨타임 카드 + 모든 공격 카드는 한 턴에 한 번만 (같은 공격 반복 금지 룰)
     if ((c.cooldown ?? 0) >= 1 || c.kind === 'attack') locked.add(c.id)
-    if (c.kind === 'attack') energy -= c.energyCost ?? 0
-    else if (c.kind === 'guard') energy -= c.guardCost ?? 0
-    else if (c.kind === 'energy') energy = Math.min(char.maxEnergy, energy + (c.gain ?? 0))
-    else if (c.kind === 'heal') energy -= c.healCost ?? 0
+    if (c.kind === 'energy') energy = Math.min(char.maxEnergy, energy + (c.gain ?? 0))
     else if (c.kind === 'move') applyMove(c)
+    else energy -= baseCostOf(c) // 공격·가드·힐·버프는 비용 필드만 다르고 같은 처리
   }
 
   // 이동 카드가 도착할 셀 — 엔진 applyMove와 동일 규칙(벽에서 멈춤, 겹침 허용)
@@ -216,6 +218,17 @@ export function decideAI(
       usable(GUARD)
     ) {
       take(GUARD)
+      continue
+    }
+
+    // 5-bis) 이번 턴에 딱히 할 게 없으면 버프를 깐다. 버프는 여러 턴을 가므로
+    // "지금 때릴 수 없는 턴"에 거는 게 가장 이득이다(때릴 수 있으면 위에서 이미
+    // 공격을 골랐다). 같은 버프가 이미 걸려 있으면 덧씌우지 않는다.
+    const buff = BUFFS.find(
+      (b) => usable(b) && energy >= (b.buffCost ?? 0) && !state.status[self].some((e) => e.kind === b.buff),
+    )
+    if (buff) {
+      take(buff)
       continue
     }
 

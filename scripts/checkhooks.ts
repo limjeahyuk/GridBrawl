@@ -5,8 +5,8 @@
 //
 // 실행: npm run check
 // ---------------------------------------------------------------------------
-import { CardBattle } from '../src/battle/engine'
-import { COMMON_CARDS } from '../src/battle/cards'
+import { CardBattle, planAffordable } from '../src/battle/engine'
+import { COMMON_CARDS, ENERGY_REGEN } from '../src/battle/cards'
 import { getChar, type CharacterDef, type Passive } from '../src/data/roster'
 import { mergeRelics, mergeRunMods } from '../src/game/relics'
 import { deckCap, grantRelic, healHp, rollRewards, rollShop, startRun } from '../src/game/run'
@@ -277,6 +277,92 @@ console.log('\n상태이상 — 지속피해·빙결·시너지')
   b.state.hp[1] = 12 // 타격 10을 견디고 2 남은 뒤 독 8에 쓰러진다
   b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], HOLD)
   check('독으로 KO — 전투가 끝난다', [b.state.over, b.state.winner], [true, 0])
+}
+
+// --- 버프 카드 + 이동공격 (2026-08-01) ---------------------------------------
+console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForward)')
+{
+  // 버프는 수비 티어라 **같은 턴 뒤 슬롯의 공격**에 이미 얹힌다.
+  const atkBuff: CardDef = {
+    id: 'test-atkup', name: '테스트 공버프', kind: 'buff', desc: '',
+    buff: 'atkUp', buffPower: 15, buffTurns: 2, buffCost: 0, cooldown: 0,
+  }
+  const plain = battleWith({}, {})
+  const hp0 = plain.state.hp[1]
+  plain.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const base = hp0 - plain.state.hp[1]
+
+  const b = battleWith({}, {})
+  const h0 = b.state.hp[1]
+  b.resolveTurn([atkBuff, card('c-strike'), card('c-energy')], HOLD)
+  check('atkUp — 같은 턴 뒤 슬롯 공격에 바로 얹힌다', h0 - b.state.hp[1], base + 15)
+  const h1 = b.state.hp[1]
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('atkUp — 다음 턴에도 남아 있다', h1 - b.state.hp[1], base + 15)
+  const h2 = b.state.hp[1]
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('atkUp — 2턴이 지나면 사라진다', h2 - b.state.hp[1], base)
+}
+{
+  const defBuff: CardDef = {
+    id: 'test-defup', name: '테스트 방버프', kind: 'buff', desc: '',
+    buff: 'defUp', buffPower: 6, buffTurns: 3, buffCost: 0, cooldown: 0,
+  }
+  const plain = battleWith({}, {})
+  const hp0 = plain.state.hp[0]
+  plain.resolveTurn(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  const base = hp0 - plain.state.hp[0]
+
+  const b = battleWith({}, {})
+  const h0 = b.state.hp[0]
+  b.resolveTurn([defBuff, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-energy'), card('c-energy')])
+  check('defUp — 받는 피해가 줄어든다', h0 - b.state.hp[0], Math.max(0, base - 6))
+}
+{
+  // freeCast: 켜진 동안 기력을 한 톨도 안 쓴다.
+  const free: CardDef = {
+    id: 'test-free', name: '테스트 무아지경', kind: 'buff', desc: '',
+    buff: 'freeCast', buffTurns: 2, buffCost: 0, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.energy[0] = 30 // 스트라이크(10) 3장도 빠듯한 양
+  b.resolveTurn([free, card('c-strike'), card('c-guard')], HOLD)
+  check('freeCast — 켠 턴의 뒤 카드가 기력을 안 쓴다', b.state.energy[0], 30 + ENERGY_REGEN)
+  // 엔진과 UI 판정이 같아야 한다(안 그러면 "낼 수 있다는데 불발")
+  check(
+    'freeCast — planAffordable도 공짜로 본다',
+    planAffordable([card('c-guard'), card('c-guard'), card('c-guard')], 0, 100, 0, true),
+    true,
+  )
+  check(
+    'freeCast 없으면 같은 플랜은 불가',
+    planAffordable([card('c-guard'), card('c-guard'), card('c-guard')], 0, 100, 0, false),
+    false,
+  )
+}
+{
+  // dashForward: 사거리를 재기 **전에** 움직인다. 뒤로 물러나며 쏘는 궁수 카드.
+  const kite: CardDef = {
+    id: 'test-kite', name: '테스트 카이팅', kind: 'attack', desc: '',
+    range: [{ df: 2, du: 0 }], damage: 10, energyCost: 0, dashForward: -1, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }] // 바로 앞 — 사거리 2칸은 원래 빗나간다
+  const hp0 = b.state.hp[1]
+  b.resolveTurn([kite, card('c-energy'), card('c-energy')], HOLD)
+  check('dashForward — 물러난 뒤 쏘므로 2칸 사거리가 맞는다', hp0 - b.state.hp[1], 10)
+  check('dashForward — 실제로 한 칸 물러나 있다', b.state.pos[0].col, 1)
+}
+{
+  // 벽에 막히면 갈 수 있는 만큼만 — 좌표가 판 밖으로 나가면 안 된다.
+  const back: CardDef = {
+    id: 'test-back', name: '테스트 후퇴', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 10, energyCost: 0, dashForward: -3, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
+  b.resolveTurn([back, card('c-energy'), card('c-energy')], HOLD)
+  check('dashForward — 벽에서 멈춘다(판 밖으로 안 나감)', b.state.pos[0].col, 0)
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------

@@ -369,3 +369,49 @@
     animation: none;
   }
 }
+
+/* ---- 상태 칩 --------------------------------------------------------------
+   파이터 발밑에 지금 걸린 지속효과를 늘어놓는다. 독·화상·빙결은 그전까지 아예
+   화면에 안 나와서 "왜 체력이 줄지?"가 보이지 않았다. 버프도 같은 자리에 둔다 —
+   디버프와 버프가 한 줄에 있어야 판이 한눈에 읽힌다. */
+.fighter__status {
+  position: absolute;
+  left: 50%;
+  bottom: -34px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  white-space: nowrap;
+  z-index: 5;
+  pointer-events: none;
+}
+.fighter--sprite .fighter__status {
+  left: calc(var(--anchorpx, 0) * 1px);
+}
+.stchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #fff;
+  background: rgba(8, 12, 20, 0.88);
+  border: 1px solid currentColor;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+/* 남은 턴 수는 항상 마지막에, 흐리게 — 위력과 헷갈리지 않게 */
+.stchip b {
+  margin-left: 2px;
+  opacity: 0.65;
+  font-size: 9px;
+}
+.stchip--poison { color: #7bd88f; }
+.stchip--burn { color: #ff9a3d; }
+.stchip--frozen { color: #9fd8ff; }
+.stchip--atkUp { color: #ffb84d; }
+.stchip--defUp { color: #9fc2ff; }
+.stchip--freeCast { color: #e07ad0; }

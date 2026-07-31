@@ -60,17 +60,29 @@ export function assembleDeck(deck: Deck): CardDef[] {
 }
 
 // --- 프리셋(봇 덱 + 저장된 덱이 없을 때의 기본 덱) --------------------------
-// 직업 카드를 전부 넣고, 남는 자리를 공용 보강 카드로 채워 정확히 DECK_SIZE장을 만든다.
-// ⚠ 직업마다 고유 카드 수가 다르다(전사는 전용 가드가 있어 5장, 나머지 4장) —
-// 예전처럼 "고유 + 공용 3장"으로 고정하면 전사만 8장이 돼 덱 상한을 넘는다.
-const PRESET_FILLERS = ['c-shot', 'c-guard', 'm-right2', 'c-repair', 'm-left2']
-export const PRESET_DECKS: Record<string, string[]> = Object.fromEntries(
-  ROSTER.map((c) => {
-    const classIds = c.cards.map((k) => k.id).slice(0, DECK_SIZE)
-    const fill = PRESET_FILLERS.filter((id) => !classIds.includes(id))
-    return [c.id, [...classIds, ...fill].slice(0, DECK_SIZE)]
-  }),
-)
+// **손으로 고른다.** 카드 확장(2026-08-01) 전에는 직업 카드가 4~5장이라 "전부 + 공용
+// 필러"로 자동 생성했지만, 이제 직업마다 8~9장이라 7칸에 다 못 들어간다. 자동으로
+// 앞에서 자르면 뒤에 붙인 버프·기동 카드가 통째로 빠져 프리셋이 예전 덱과 똑같아진다.
+//
+// 각 덱은 **그 직업의 기본 전략 한 갈래**를 보여 주도록 짰다(빌드는 유물이 완성한다):
+//   전사   붙어서 버티고 갚는다 — 돌진으로 거리 지우고 방벽 + 기절
+//   궁수   거리를 지킨다 — 물러서며 쏘고, 붙으면 올가미로 떼어낸다
+//   마법사 판을 덮는다 — 광역 + 화상/빙결, 장막으로 버티며 큰 주문
+// ⚠ 여기 없는 카드도 덱 빌더·런 보상에는 전부 나온다. 프리셋은 "시작점"일 뿐이다.
+export const PRESET_DECKS: Record<string, string[]> = {
+  warrior: ['war-cleave', 'war-bash', 'war-quake', 'war-wall', 'war-charge', 'war-cry', 'c-guard'],
+  archer: ['arc-shot', 'arc-venom', 'arc-pin', 'arc-kite', 'arc-snare', 'arc-focus', 'm-left2'],
+  mage: ['mag-spark', 'mag-frost', 'mag-flame', 'mag-hex', 'mag-ward', 'mag-blink', 'c-guard'],
+}
+
+// 프리셋이 실제 카드·덱 상한과 맞는지 개발 중에 바로 터뜨린다(오타·id 변경 방지).
+for (const [id, ids] of Object.entries(PRESET_DECKS)) {
+  const pool = poolFor(id).map((c) => c.id)
+  const bad = ids.filter((c) => !pool.includes(c))
+  if (bad.length) throw new Error(`PRESET_DECKS[${id}]에 없는 카드: ${bad.join(', ')}`)
+  if (ids.length !== DECK_SIZE)
+    throw new Error(`PRESET_DECKS[${id}]는 ${DECK_SIZE}장이어야 한다 (현재 ${ids.length})`)
+}
 
 /** 캐릭터의 기본(프리셋) 덱 객체 — 봇전 상대·첫 사용자 시작용. */
 export function presetDeck(charId: string): Deck {

@@ -30,6 +30,7 @@ import {
   type CardDef,
   type MoveDir,
   type Step,
+  type StatusEffect,
 } from '../../battle/types'
 
 /** Produce the opponent's 3-card plan for a turn (local AI, or a remote peer in
@@ -55,6 +56,8 @@ interface View {
   damage: [number, number]
   heal: [number, number]
   stunned: [boolean, boolean] // 이 턴을 통째로 버리는 기절
+  /** 지금 걸려 있는 지속효과(독·화상·빙결 + 강화 버프) — 파이터 발밑 칩으로 표시 */
+  status: [StatusEffect[], StatusEffect[]]
   fx: [Fx | null, Fx | null]
   say: [string, string]
   /** step sequence — keys the floating -N/+N so the animation restarts every step */
@@ -104,6 +107,7 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   fog: '피해!',
   revive: '🔥',
   status: '피해!',
+  buff: '강화!',
   frozen: '얼어붙음',
 }
 const PHASE_TEXT: Record<Step['phase'], string> = {
@@ -116,6 +120,16 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
   trigger: '유물',
   status: '상태이상',
 }
+/** 파이터 발밑 상태 칩 — 지금 뭐가 걸려 있는지 숫자를 안 읽어도 보이게. */
+const STATUS_CHIP: Record<string, string> = {
+  poison: '☠',
+  burn: '🔥',
+  frozen: '❄',
+  atkUp: '🔺',
+  defUp: '🔷',
+  freeCast: '🌀',
+}
+
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
 const STEP_MS: Record<Step['phase'], number> = {
   move: 540, defense: 560, attack: 900, fog: 700, revive: 1100,
@@ -171,6 +185,7 @@ function baseView(b: CardBattle): View {
     damage: [0, 0],
     heal: [0, 0],
     stunned: [false, false],
+    status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
     fx: [null, null],
     say: ['', ''],
     seq: 0,
@@ -208,6 +223,7 @@ function stepToView(step: Step, seq: number): View {
     shield: [s.shield[0], s.shield[1]],
     acting,
     actFx,
+    status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
     damage,
     heal,
     stunned,
@@ -233,6 +249,8 @@ function stepSfx(step: Step): void {
       return playSfx('energy')
     case 'heal':
       return playSfx('heal')
+    case 'buff':
+      return playSfx('guard')
   }
 }
 
@@ -435,10 +453,18 @@ export function BattleScreen({
 
   // 실효 패시브(유물 merge 반영) — 유물로 매턴 기력이 붙으면 기력 예산에 반영
   const passiveEnergy = battle.passive[localSide].turnEnergy ?? 0
+  // 무아지경(freeCast)이 걸려 있으면 이번 턴 모든 카드가 공짜다 — 엔진과 같은 규칙
+  const freeCastOn = !!battle.statusOf(localSide, 'freeCast')
   const filled = slots.every((c): c is CardDef => c !== null)
   const affordable =
     filled &&
-    planAffordable(slots as CardDef[], battle.state.energy[localSide], local.maxEnergy, passiveEnergy)
+    planAffordable(
+      slots as CardDef[],
+      battle.state.energy[localSide],
+      local.maxEnergy,
+      passiveEnergy,
+      freeCastOn,
+    )
 
   // 이 카드를 다음 빈 슬롯에 넣어도 플랜 전체를 지불할 수 있는가.
   // 기력은 슬롯 순서대로 오가므로(원기 회복이 중간에 채워줄 수도) 엔진과 같은
@@ -453,6 +479,7 @@ export function BattleScreen({
       battle.state.energy[localSide],
       local.maxEnergy,
       passiveEnergy,
+      freeCastOn,
     )
   }
 
@@ -716,6 +743,7 @@ export function BattleScreen({
       battle.state.energy[localSide],
       local.maxEnergy,
       passiveEnergy,
+      freeCastOn,
     )
     void submitPlan(ok ? padded : [energyCard, energyCard, energyCard])
   }
@@ -1142,6 +1170,17 @@ function FighterSprite({
       )}
       {v.say[idx] && <div className="fighter__say">{v.say[idx]}</div>}
       {v.stunned[idx] && <div className="fighter__stun">💫 기절</div>}
+      {v.status[idx].length > 0 && (
+        <div className="fighter__status">
+          {v.status[idx].map((e) => (
+            <span key={e.kind} className={`stchip stchip--${e.kind}`}>
+              {STATUS_CHIP[e.kind]}
+              {e.power > 0 ? e.power : ''}
+              <b>{e.turns}</b>
+            </span>
+          ))}
+        </div>
+      )}
       {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}
       {isLocal && <div className="fighter__me">나</div>}

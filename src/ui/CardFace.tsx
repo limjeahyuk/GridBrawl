@@ -6,6 +6,7 @@ export function cardAccent(c: CardDef, fallback: string): string {
   if (c.kind === 'guard') return '#9fc2ff'
   if (c.kind === 'energy') return '#ffe14d'
   if (c.kind === 'heal') return '#3fca87'
+  if (c.kind === 'buff') return c.accent ?? '#e0a94a'
   return '#8493bd'
 }
 
@@ -18,6 +19,14 @@ const MOVE_ARROW: Record<string, string> = {
   'up-left': '↖',
   'down-right': '↘',
   'down-left': '↙',
+}
+
+/** 버프 종류별 아이콘·표기. 셋의 성격이 완전히 달라 한눈에 갈려야 한다. */
+const BUFF_ICON: Record<string, string> = { atkUp: '🔺', defUp: '🔷', freeCast: '🌀' }
+const BUFF_LABEL: Record<string, (n: number) => string> = {
+  atkUp: (n) => `공격 +${n}`,
+  defUp: (n) => `받는 피해 -${n}`,
+  freeCast: () => '기력 소모 0',
 }
 
 function moveIcon(dir: CardDef['dir'], steps: number): string {
@@ -37,6 +46,11 @@ export function abilityTags(c: CardDef): string[] {
   if (c.stun) t.push(`기절${c.stun}턴`)
   if (c.pull) t.push(`끌기${c.pull}`)
   if (c.empower) t.push(`각성+${c.empower}`)
+  if (c.poison) t.push(`독${c.poison}`)
+  if (c.burn) t.push(`화상${c.burn}`)
+  if (c.freeze) t.push(`빙결${c.freeze}턴`)
+  // 쏘면서 움직이는 카드 — 앞뒤 어느 쪽으로 몇 칸인지가 카드의 정체다
+  if (c.dashForward) t.push(c.dashForward > 0 ? `전진${c.dashForward}` : `후퇴${-c.dashForward}`)
   // 겹친 상대를 못 때리는 원거리 카드만 따로 알려준다(대부분의 카드는 때릴 수 있다)
   if (c.kind === 'attack' && c.pointBlank === false) t.push('밀착사각')
   return t
@@ -86,7 +100,9 @@ export function CardFace({
           ? '⚡'
           : card.kind === 'heal'
             ? '✚'
-            : moveIcon(card.dir, card.steps ?? 1)
+            : card.kind === 'buff'
+              ? BUFF_ICON[card.buff ?? 'atkUp']
+              : moveIcon(card.dir, card.steps ?? 1)
   const reach =
     card.kind === 'attack' ? Math.max(0, ...(card.range ?? []).map((o) => o.df)) : 0
   // 능력 칩이 있으면 수치줄이 한 줄 더 차지 → 설명을 한 줄 줄여 잘리지 않게
@@ -137,6 +153,13 @@ export function CardFace({
         <div className="cardface__meta">
           <span>체력 +{card.healHp}</span>
           <span>⚡{card.healCost}</span>
+        </div>
+      )}
+      {card.kind === 'buff' && (
+        <div className="cardface__meta">
+          <span>{BUFF_LABEL[card.buff ?? 'atkUp'](card.buffPower ?? 0)}</span>
+          <span>{card.buffTurns}턴</span>
+          <span>⚡{card.buffCost}</span>
         </div>
       )}
     </div>

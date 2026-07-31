@@ -172,6 +172,23 @@ export class CardBattle {
   }
 
   /**
+   * 공격 카드에 딸린 이동(`dashForward`). **facing 기준 상대 이동**이라
+   * (+ 전진 / − 후퇴) 멀티에서 좌우 미러링이 필요 없다 — 절대 방향 이동 카드와
+   * 달리 `faceCard`가 손댈 게 없다. 벽에 막히면 갈 수 있는 만큼만 간다.
+   */
+  private applyDash(p: number, forward: number) {
+    const s = this.state
+    const step = this.facing(p) * Math.sign(forward)
+    let cur = cloneCell(s.pos[p])
+    for (let k = 0; k < Math.abs(forward); k++) {
+      const next: Cell = { col: cur.col + step, row: cur.row }
+      if (!inBounds(next)) break
+      cur = next
+    }
+    s.pos[p] = cur
+  }
+
+  /**
    * Resolve a full turn. Cards play in the SELECTED slot order (1→2→3). Within
    * a single slot, the two fighters' cards resolve by type priority — move,
    * then defense (guard/energy), then attack — so moving/guarding sets up
@@ -297,6 +314,17 @@ export class CardBattle {
       }
     }
 
+    /** 지금 걸려 있는 버프의 위력(없으면 0). */
+    const buffPower = (p: number, kind: StatusKind): number => this.statusOf(p, kind)?.power ?? 0
+
+    /**
+     * 이 카드가 실제로 낼 기력. `freeCast` 버프가 걸려 있으면 **공짜**다.
+     * ⚠ 엔진과 `planAffordable`(UI 선택 가능 판정)·AI 예산이 같은 규칙을 봐야 한다 —
+     * 한쪽만 고치면 "낼 수 있다고 표시되는데 불발"이 난다.
+     */
+    const costOf = (p: number, c: CardDef): number =>
+      this.statusOf(p, 'freeCast') ? 0 : baseCostOf(c)
+
     /** 유물 `statusPowerPct`를 **거는 순간** 한 번 반영한다(틱마다 다시 계산하지 않는다). */
     const scaledPower = (p: number, power: number): number => {
       const pct = this.passive[p].statusPowerPct ?? 0
@@ -315,7 +343,7 @@ export class CardBattle {
         this.applyMove(p, c)
         emit(p, c, 'move')
       } else if (c.kind === 'guard') {
-        const cost = c.guardCost ?? 0
+        const cost = costOf(p, c)
         if (s.energy[p] >= cost) {
           spend(p, cost)
           s.shield[p] += c.block ?? 0
@@ -328,12 +356,23 @@ export class CardBattle {
         emit(p, c, 'energy')
       } else if (c.kind === 'heal') {
         // 기력을 체력으로 — 실제 회복량만 heal로 실어 초록 +N을 띄운다
-        const cost = c.healCost ?? 0
+        const cost = costOf(p, c)
         if (s.energy[p] >= cost) {
           spend(p, cost)
           const before = s.hp[p]
           s.hp[p] = Math.min(this.maxHp[p], before + (c.healHp ?? 0))
           emit(p, c, 'heal', 0, s.hp[p] - before)
+        } else {
+          emit(p, c, 'nofuel')
+        }
+      } else if (c.kind === 'buff') {
+        // 자기 강화. 수비 티어(prio 1)라 **같은 슬롯의 공격보다 먼저** 걸린다 —
+        // 1번 슬롯에 버프, 2·3번에 공격을 넣으면 그 턴부터 바로 효과를 본다.
+        const cost = costOf(p, c)
+        if (s.energy[p] >= cost) {
+          spend(p, cost)
+          applyStatus(p, c.buff ?? 'atkUp', c.buffPower ?? 0, c.buffTurns ?? 1)
+          emit(p, c, 'buff')
         } else {
           emit(p, c, 'nofuel')
         }
@@ -358,12 +397,16 @@ export class CardBattle {
         burn: 0,
         freeze: 0,
       }
-      const cost = c.energyCost ?? 0
+      const cost = costOf(p, c)
       if (s.energy[p] < cost) return { ...zero, result: 'nofuel' as Step['result'] }
       spend(p, cost)
       // 기력 지불 성공 시 무조건 발동: 보호막 전개(selfShield) / 반동(recoil) / 각성(empower)
       if (c.selfShield) s.shield[p] += c.selfShield
       if (c.empower) s.empowered[p] += c.empower
+      // 쏘면서 움직이는 카드 — **사거리를 재기 전에** 옮긴다. 공격 페이즈라 상대가
+      // 이미 이동을 끝낸 뒤이고, 빙결에도 막히지 않는다(이동 카드가 아니라 공격의
+      // 일부다). 벽에 막히면 갈 수 있는 만큼만 간다.
+      if (c.dashForward) this.applyDash(p, c.dashForward)
       const recoil = c.recoil ?? 0
       const d = 1 - p
       // 밀착(같은 셀): 어떤 카드의 range도 자기 셀을 덮지 않으므로 여기서 따로
@@ -381,7 +424,12 @@ export class CardBattle {
       // 이 공격이 새로 거는 상태이상은 아직 안 걸린 것으로 본다 — 자기 자신을 조건으로
       // 삼으면 카드 한 장이 스스로 보너스를 켜 버린다.
       const synergy = this.afflicted(d) ? (atkPas.bonusVsAfflicted ?? 0) : 0
-      const flat = (c.damage ?? 0) + (atkPas.attackBonus ?? 0) + s.empowered[p] + synergy
+      const flat =
+        (c.damage ?? 0) +
+        (atkPas.attackBonus ?? 0) +
+        s.empowered[p] +
+        synergy +
+        buffPower(p, 'atkUp') // 공격 강화 버프(N턴 한정) — empowered(영구 누적)와 별개
       const low = s.hp[p] <= this.maxHp[p] * LOW_HP_FRAC ? (atkPas.lowHpBonusPct ?? 0) : 0
       const raw = low > 0 ? Math.round(flat * (1 + low / 100)) : flat
       // EMBER (shieldBreak): a connecting hit wipes the defender's shield first.
@@ -389,8 +437,11 @@ export class CardBattle {
       // pierce: 보호막을 소모시키지 않고 그대로 통과한다(유물 alwaysPierce도 같은 효과).
       const absorbed = c.pierce || atkPas.alwaysPierce ? 0 : Math.min(s.shield[d], raw)
       s.shield[d] -= absorbed
-      // TITAN (damageReduction): flat reduction on the damage that gets through.
-      const dmg = Math.max(0, raw - absorbed - (defPas.damageReduction ?? 0))
+      // 방어 감소: 유물·패시브의 상시 damageReduction + 방어 버프(N턴 한정).
+      const dmg = Math.max(
+        0,
+        raw - absorbed - (defPas.damageReduction ?? 0) - buffPower(d, 'defUp'),
+      )
       // drain: 적중하면(가드로 막혀도) 상대 기력을 빼앗아 흡수.
       let drain = 0
       if (c.drain) {
@@ -522,10 +573,11 @@ export class CardBattle {
             snapshot: this.snapshot(),
           })
         }
-        // 지속피해는 방금 갉았으니 이 턴을 소모한 것으로 친다. 빙결은 걸린 턴엔
-        // 온전히 한 턴을 막지 못했으므로 깎지 않는다(`StatusEffect.since` 참고).
+        // 지속피해는 방금 갉았으니, 버프는 이 턴 공격에 이미 얹혔으니(수비 티어라
+        // 같은 슬롯의 공격보다 먼저 걸린다) 둘 다 이 턴을 소모한 것으로 친다.
+        // **빙결만** 예외 — 걸린 턴엔 온전히 한 턴을 막지 못한다(`StatusEffect.since`).
         s.status[p] = s.status[p]
-          .map((e) => (isDot(e.kind) || e.since < s.turn ? { ...e, turns: e.turns - 1 } : e))
+          .map((e) => (e.kind !== 'frozen' || e.since < s.turn ? { ...e, turns: e.turns - 1 } : e))
           .filter((e) => e.turns > 0)
       }
     }
@@ -632,29 +684,45 @@ export class CardBattle {
  * so energy gains / guard costs / attack costs apply in that order (after the
  * start-of-turn passive regen). Returns false if any card can't be afforded.
  */
+/**
+ * 카드가 요구하는 기력(버프·할인 미반영 원가). 종류마다 비용 필드 이름이 달라
+ * 여기 한 곳에 모은다 — 엔진·`planAffordable`·AI가 **같은 값**을 봐야 한다.
+ */
+export function baseCostOf(c: CardDef): number {
+  switch (c.kind) {
+    case 'attack':
+      return c.energyCost ?? 0
+    case 'guard':
+      return c.guardCost ?? 0
+    case 'heal':
+      return c.healCost ?? 0
+    case 'buff':
+      return c.buffCost ?? 0
+    default:
+      return 0
+  }
+}
+
 export function planAffordable(
   plan: CardDef[],
   startEnergy: number,
   maxEnergy: number,
   extraRegen = 0,
+  /** 이번 턴 시작 시점에 `freeCast` 버프가 남아 있는가(플랜 전체가 공짜가 된다). */
+  freeCast = false,
 ): boolean {
   let e = Math.min(maxEnergy, startEnergy + ENERGY_REGEN + extraRegen)
+  // 플랜 안에서 버프 카드로 freeCast를 켜면 **그 뒤 카드부터** 공짜다.
+  let free = freeCast
   for (const c of plan) {
     if (c.kind === 'energy') {
       e = Math.min(maxEnergy, e + (c.gain ?? 0))
-    } else if (c.kind === 'guard') {
-      const cost = c.guardCost ?? 0
-      if (e < cost) return false
-      e -= cost
-    } else if (c.kind === 'attack') {
-      const cost = c.energyCost ?? 0
-      if (e < cost) return false
-      e -= cost
-    } else if (c.kind === 'heal') {
-      const cost = c.healCost ?? 0
-      if (e < cost) return false
-      e -= cost
+      continue
     }
+    const cost = free ? 0 : baseCostOf(c)
+    if (e < cost) return false
+    e -= cost
+    if (c.kind === 'buff' && c.buff === 'freeCast') free = true
   }
   return true
 }

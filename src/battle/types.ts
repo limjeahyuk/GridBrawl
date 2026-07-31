@@ -8,7 +8,7 @@
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
-export type CardKind = 'move' | 'attack' | 'guard' | 'energy' | 'heal'
+export type CardKind = 'move' | 'attack' | 'guard' | 'energy' | 'heal' | 'buff'
 
 /** Absolute screen directions, matching the arrows on the cards.
  *  대각선 4방향(2026-07-23)은 세로+가로를 한 번에 움직인다. */
@@ -50,7 +50,17 @@ export interface Offset {
 //      빙결은 이동만 막는다. `stun`(카드를 통째로 못 냄)과는 별개 개념이다.
 // ---------------------------------------------------------------------------
 
-export type StatusKind = 'poison' | 'burn' | 'frozen'
+/**
+ * 지속 효과. 앞의 셋은 상대에게 거는 **디버프**, 뒤의 셋은 자신에게 거는
+ * **버프**다(2026-08-01). 같은 목록·같은 정산 자리를 쓰므로 지속·중첩·스냅샷
+ * 규칙이 하나로 유지되고, 랜덤이 없어 멀티 락스텝도 그대로 안전하다.
+ */
+export type StatusKind = 'poison' | 'burn' | 'frozen' | 'atkUp' | 'defUp' | 'freeCast'
+
+/** 버프 종류만 추린 것 — 카드가 거는 대상. */
+export type BuffKind = 'atkUp' | 'defUp' | 'freeCast'
+export const isBuff = (k: StatusKind): boolean =>
+  k === 'atkUp' || k === 'defUp' || k === 'freeCast'
 
 export interface StatusEffect {
   kind: StatusKind
@@ -133,6 +143,20 @@ export interface CardDef {
   pull?: number
   /** 기력 지불 성공 시 이번 **전투 내내** 내 공격 피해 +N(중첩). */
   empower?: number
+  /**
+   * 공격 **직전에** 내 facing 기준으로 N칸 이동한다(+ 전진 / − 후퇴).
+   * 절대 방향이 아니라 **상대 방향**이라 멀티에서 미러링이 필요 없다(`faceCard` 무관).
+   * 공격 페이즈에 해소되므로 **상대가 이동을 마친 뒤에** 움직인다 — 궁수가 붙은
+   * 상대에게서 물러나며 쏘는(카이팅) 수단이다. 벽에 막히면 갈 수 있는 만큼만 간다.
+   */
+  dashForward?: number
+
+  // buff — 자신에게 N턴짜리 지속 효과를 건다
+  buff?: BuffKind
+  /** atkUp = 피해 +N, defUp = 받는 피해 −N, freeCast는 쓰지 않는다(0). */
+  buffPower?: number
+  buffTurns?: number
+  buffCost?: number // 소모 기력
 
   // guard
   block?: number // damage absorbed this turn
@@ -226,6 +250,7 @@ export type ActionResult =
   | 'guard'
   | 'energy'
   | 'heal' // 기력을 써서 체력을 회복(리페어 계열)
+  | 'buff' // 자신에게 N턴 강화를 걸었다(공격력·방어력·기력 면제)
   | 'hit'
   | 'blocked' // connected but fully absorbed by the opponent's guard
   | 'whiff' // out of range

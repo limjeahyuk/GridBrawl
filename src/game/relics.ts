@@ -69,8 +69,8 @@ const SIGNATURE: Record<
     id: 'sig-warrior', name: '서약의 돌무덤', icon: '🪦',
     // 전사는 "안 죽는 쪽"이라 방어·회복을 준다. ⚠ 회복은 런에서 극도로 강하니
     // (GDD ⑪) regen은 아주 작게 잡고, 부족한 생존력은 반사(thorns)로 메운다.
-    runEffect: { damageReduction: 8, regen: 3, thorns: 6 },
-    desc: '서약의 돌무덤: 받는 공격 피해 -8, 매 턴 체력 +3, 피격 시 6 반사.',
+    runEffect: { damageReduction: 8, regen: 3, thorns: 6, maxHpBonus: 8 },
+    desc: '서약의 돌무덤: 최대 체력 +8, 받는 공격 피해 -8, 매 턴 체력 +3, 피격 시 6 반사.',
   },
   archer: {
     id: 'sig-archer', name: '독니 화살통', icon: '🏹',
@@ -79,16 +79,16 @@ const SIGNATURE: Record<
     // ⚠ 화력·독을 올리는 건 답이 아니었다 — 오히려 떨어졌다(독 위력 +45% 실험에서
     // 24.7%→22.2%). 필요한 건 **버티는 힘**이라 흡혈·피해감소·최대체력으로 준다.
     // 그중 lifesteal이 지배 변수다(4→5만으로 +5%p) — 손대면 반드시 스윕 재측정.
-    runEffect: { attackBonus: 9, poisonOnHit: 4, statusPowerPct: 25, damageReduction: 7, maxHpBonus: 48, lifesteal: 5 },
-    desc: '독니 화살통: 최대 체력 +48, 받는 피해 -7. 내 공격 피해 +9, 피해를 주면 체력 5 흡수 + 독 4, 내 지속피해 위력 +25%.',
+    runEffect: { attackBonus: 9, poisonOnHit: 4, statusPowerPct: 25, damageReduction: 7, maxHpBonus: 44, lifesteal: 5 },
+    desc: '독니 화살통: 최대 체력 +44, 받는 피해 -7. 내 공격 피해 +9, 피해를 주면 체력 5 흡수 + 독 4, 내 지속피해 위력 +25%.',
   },
   mage: {
     id: 'sig-mage', name: '혼백의 등불', icon: '🕯',
     // 마법사는 기력으로 큰 주문을 계속 돌리고 보호막으로 버틴다.
     // ⚠ turnEnergy는 봇 인공물을 만들어 측정이 튄다(GDD ⑪) — 조정은 체력·보호막으로
     // 하고 이 값은 고정해 둘 것. 실제로 turnEnergy 10은 최대체력 14와 맞먹었다.
-    runEffect: { turnEnergy: 10, turnShield: 16, burnOnHit: 3, damageReduction: 6, maxHpBonus: 38 },
-    desc: '혼백의 등불: 최대 체력 +38, 받는 피해 -6. 매 턴 기력 +10·보호막 +16, 피해를 주면 화상 3을 묻힌다.',
+    runEffect: { turnEnergy: 10, turnShield: 16, burnOnHit: 3, damageReduction: 6, maxHpBonus: 46 },
+    desc: '혼백의 등불: 최대 체력 +46, 받는 피해 -6. 매 턴 기력 +10·보호막 +16, 피해를 주면 화상 3을 묻힌다.',
   },
 }
 
