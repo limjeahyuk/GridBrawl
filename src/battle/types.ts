@@ -39,6 +39,53 @@ export interface Offset {
   du: number
 }
 
+// ---------------------------------------------------------------------------
+// 지속 상태이상 (2026-08-01) — 3직업 개편의 토대.
+//
+// 설계 원칙 두 가지:
+//   ① **독안개와 같은 자리**(턴 종료 정산·보호막 무시·랜덤 없음)에서 처리한다.
+//      독안개가 이미 그 자리에서 결정론적으로 도는 걸 검증했으므로, 같은 규칙을
+//      따르면 멀티 락스텝이 그대로 안전하다.
+//   ② 종류를 늘리지 않는다. 독·화상은 **출처만 다른 같은 지속피해**(궁수/마법사),
+//      빙결은 이동만 막는다. `stun`(카드를 통째로 못 냄)과는 별개 개념이다.
+// ---------------------------------------------------------------------------
+
+export type StatusKind = 'poison' | 'burn' | 'frozen'
+
+export interface StatusEffect {
+  kind: StatusKind
+  /** 남은 턴 수. 턴 종료 정산 뒤 1 감소하고, 0이 되면 사라진다. */
+  turns: number
+  /** 턴당 고정 피해(poison·burn). frozen은 안 쓰므로 0. */
+  power: number
+  /**
+   * 걸린(또는 갱신된) 턴 번호. **빙결의 지속을 세는 기준**이다.
+   *
+   * 지속피해와 빙결은 시간 규칙이 다르다. 독·화상은 걸린 턴에 바로 갉으므로 그
+   * 턴에 지속도 같이 깎는 게 맞다. 빙결은 다르다 — 이동은 슬롯 우선순위상 공격보다
+   * 먼저 해소되므로, 빙결을 건 그 턴에는 남은 슬롯의 이동만 막을 뿐 온전한 한 턴을
+   * 막지 못한다. 그런데도 같이 깎으면 "1턴 빙결"이 슬롯 몇 개만 막고 사라져 카드
+   * 설명과 어긋난다. 그래서 빙결은 **걸린 턴에는 지속을 깎지 않는다**(기절이 턴
+   * 시작에 감소하는 것과 같은 이유).
+   */
+  since: number
+}
+
+/**
+ * 지속피해의 기본 지속 턴. 카드마다 따로 적지 않고 여기서 고정한다 — 카드가
+ * 정하는 건 "얼마나 아픈가"(power)뿐이라 밸런스 손잡이가 하나로 모인다.
+ */
+export const STATUS_TURNS: Record<'poison' | 'burn', number> = {
+  poison: 3, // 길고 약하게 — 쌓아서 조이는 궁수 쪽
+  burn: 2, // 짧고 강하게 — 순간 화력을 얹는 마법사 쪽
+}
+
+/** 같은 종류가 겹칠 때 위력 상한. 무한 중첩으로 판이 터지는 걸 막는다. */
+export const STATUS_POWER_CAP = 30
+
+/** 지속피해 종류인가(빙결 제외) — 정산 대상을 가른다. */
+export const isDot = (k: StatusKind): boolean => k === 'poison' || k === 'burn'
+
 export interface CardDef {
   id: string
   name: string
@@ -72,6 +119,16 @@ export interface CardDef {
 
   /** 적중 시 상대를 N턴 기절시킨다(카드를 못 냄). 런 전용 카드에서 쓴다. */
   stun?: number
+  /**
+   * 적중 시 상대에게 독을 건다 — 값은 **턴당 피해**, 지속은 `STATUS_TURNS.poison`.
+   * 같은 종류가 이미 걸려 있으면 위력이 합산되고(상한 `STATUS_POWER_CAP`) 지속은
+   * 갱신된다. 기절과 같은 규칙으로 **피해가 실제로 들어갔을 때만** 걸린다.
+   */
+  poison?: number
+  /** 적중 시 화상 — 값은 턴당 피해, 지속은 `STATUS_TURNS.burn`. */
+  burn?: number
+  /** 적중 시 상대를 N턴 빙결(이동 카드가 무효가 된다 — 카드는 소모됨). */
+  freeze?: number
   /** 적중 시 상대를 (공격자 쪽으로) N칸 끌어당긴다. push의 반대. */
   pull?: number
   /** 기력 지불 성공 시 이번 **전투 내내** 내 공격 피해 +N(중첩). */
@@ -160,6 +217,8 @@ export interface BattleSnapshot {
   hp: [number, number]
   energy: [number, number]
   shield: [number, number] // remaining guard absorption for the current turn
+  /** 현재 걸려 있는 지속 상태이상. UI가 아이콘·남은 턴을 그리는 근거. */
+  status: [StatusEffect[], StatusEffect[]]
 }
 
 export type ActionResult =
@@ -175,8 +234,18 @@ export type ActionResult =
   | 'revive' // came back from a KO via a revive passive (once per battle)
   | 'stun' // 기절해 이 턴 카드를 못 냈다 / 유물 트리거로 상대를 기절시켰다
   | 'trigger' // 누적 기력 트리거 발동(회복·보호막·피해)
+  | 'status' // 독·화상이 턴 종료에 갉았다(보호막 무시)
+  | 'frozen' // 빙결이라 이동 카드가 무효가 됐다
 
-export type Phase = 'move' | 'defense' | 'attack' | 'fog' | 'revive' | 'stun' | 'trigger'
+export type Phase =
+  | 'move'
+  | 'defense'
+  | 'attack'
+  | 'fog'
+  | 'revive'
+  | 'stun'
+  | 'trigger'
+  | 'status'
 
 /** 체력이 이 비율 이하면 "저체력"으로 보고 `lowHpBonusPct`가 발동한다. */
 export const LOW_HP_FRAC = 0.5

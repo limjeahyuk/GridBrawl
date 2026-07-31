@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './ui/ui.css'
+// ui.css 뒤에 와야 한다 — 전투 연출 레이어가 같은 특이도에서 이겨야 하므로.
+import './ui/battlefx.css'
 import { useStageScale } from './ui/useStageScale'
 import { useAuth } from './ui/useAuth'
 import { signOutUser } from './net/auth'

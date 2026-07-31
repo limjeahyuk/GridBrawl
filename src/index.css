@@ -1,31 +1,40 @@
+/* ---------------------------------------------------------------------------
+   테마 = **다크 판타지**(2026-07-31 리스킨). 그을린 돌·재 배경 위에 횃불 금과
+   핏빛, 글자는 낡은 양피지색.
+   ⚠ `--neon-*` **변수 이름은 일부러 남겨 뒀다** — ui.css 200곳 이상이 참조해서,
+   이름을 바꾸면 리스킨이 색 교체가 아니라 전면 수정이 된다. **값만** 갈았고
+   각 색의 역할(위험=빨강, 회복=초록, 기력=노랑)은 그대로다.
+   --------------------------------------------------------------------------- */
 :root {
-  /* Surfaces */
-  --bg-0: #05060d;
-  --bg-1: #0a0e1a;
-  --bg-2: #111726;
-  --panel: rgba(16, 22, 38, 0.82);
-  --panel-edge: rgba(82, 120, 200, 0.28);
-  --grid-line: rgba(64, 96, 180, 0.16);
+  /* Surfaces — 그을린 돌과 재 */
+  --bg-0: #06050a;
+  --bg-1: #0c0a11;
+  --bg-2: #17131d;
+  --panel: rgba(26, 21, 31, 0.84);
+  --panel-edge: rgba(184, 150, 90, 0.26); /* 낡은 황동 테두리 */
+  --grid-line: rgba(156, 124, 72, 0.11); /* 바닥에 새긴 룬 격자 */
 
-  /* Neon palette (per-character accents live in data) */
-  --neon-cyan: #2ff3ff;
-  --neon-magenta: #ff3df0;
-  --neon-yellow: #ffe14d;
-  --neon-green: #57ffa0;
-  --neon-red: #ff4d5e;
-  --neon-blue: #4d7cff;
-  --neon-orange: #ff9a3d;
+  /* Palette (per-character accents live in data) */
+  --neon-cyan: #c9a86a; /* 횃불 금 — 기본 강조 */
+  --neon-magenta: #9b6bbf; /* 마법 보라 */
+  --neon-yellow: #f0c94c; /* 호박 — 기력 */
+  --neon-green: #6faf7d; /* 이끼 초록 — 회복 */
+  --neon-red: #c8483f; /* 핏빛 — 위험 */
+  --neon-blue: #6d8ac4; /* 차가운 강철 */
+  --neon-orange: #d9793a; /* 잉걸불 */
 
-  /* Text */
-  --text: #e8f0ff;
-  --text-dim: #8493bd;
-  --text-faint: #4a5680;
+  /* Text — 낡은 양피지 */
+  --text: #ece2cf;
+  --text-dim: #9c9080;
+  --text-faint: #61594a;
 
   --accent: var(--neon-cyan);
   --danger: var(--neon-red);
 
-  --font-display: 'Orbitron', system-ui, sans-serif;
-  --font-body: 'Rajdhani', system-ui, sans-serif;
+  /* 라틴 대문자는 Cinzel(로만 캐피털), 한글 제목은 명조. 본문은 가독성 우선으로
+     고운돋움(산세리프) — HUD 수치가 12px까지 내려가 명조는 뭉갠다. */
+  --font-display: 'Cinzel', 'Nanum Myeongjo', 'Gowun Batang', serif;
+  --font-body: 'Gowun Dodum', system-ui, sans-serif;
 }
 
 * {

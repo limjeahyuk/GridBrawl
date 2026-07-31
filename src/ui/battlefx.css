@@ -1,0 +1,371 @@
+/* ---------------------------------------------------------------------------
+   전투 "손맛" 레이어 — 히트스톱·불꽃·잔상 체력바·아이들 모션.
+   ⚠ ui.css **뒤에** 임포트된다(App.tsx). 같은 특이도면 이 파일이 이긴다.
+   타이밍은 BattleScreen.tsx의 IMPACT_MS / hitstopFor와 짝이므로 한쪽만 바꾸면
+   타격 순간이 어긋난다.
+--------------------------------------------------------------------------- */
+
+/* ---- 히트스톱 -------------------------------------------------------------
+   피해가 꽂히는 순간 판 위의 모든 애니메이션을 몇 프레임 멈춰 세운다. 격투
+   게임의 기본 문법 — 이게 없으면 아무리 이펙트를 얹어도 타격이 미끄러진다. */
+.battle.is-hitstop .fighter,
+.battle.is-hitstop .fighter__art,
+.battle.is-hitstop .fighter__dmg,
+.battle.is-hitstop .fighter__heal,
+.battle.is-hitstop .fighter__stun,
+.battle.is-hitstop .fx,
+.battle.is-hitstop .fx::before,
+.battle.is-hitstop .fx::after,
+.battle.is-hitstop .spark,
+.battle.is-hitstop .board__hitflash,
+.battle.is-hitstop .cell--target,
+.battle.is-hitstop .cell--target-foe {
+  animation-play-state: paused !important;
+}
+
+/* ---- 아이들 모션 ----------------------------------------------------------
+   가만히 선 캐릭터는 "정지 화면"으로 읽힌다. 아주 얕은 호흡만 넣어도 판이 살아
+   있게 보인다. 공격·피격·기절 규칙은 ui.css에서 특이도가 더 높아 그대로 이긴다
+   (animation 단축 속성이 여기 지정을 통째로 덮어쓴다). */
+.fighter__art {
+  animation-name: idle-breathe;
+  animation-duration: 2.8s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-delay: var(--idle-phase, 0s);
+}
+/* 둘이 같은 박자로 숨쉬면 기계처럼 보인다 — 오른쪽만 위상을 어긋내 준다 */
+.fighter--right {
+  --idle-phase: -0.9s;
+}
+/* 미리보기 잔상까지 숨쉬면 산만하다. 스프라이트는 호흡이 `.fighter__art`가 아니라
+   프레임 애니메이션(`.sprite`)이라 따로 세워 둔다 — 첫 프레임에서 멈춘다. */
+.fighter--ghost .fighter__art {
+  animation-name: none;
+}
+.fighter--ghost .sprite {
+  animation-play-state: paused;
+}
+@keyframes idle-breathe {
+  0%,
+  100% {
+    transform: scaleX(var(--flip)) translateX(var(--lunge)) translateY(0) scaleY(1);
+  }
+  50% {
+    transform: scaleX(var(--flip)) translateX(var(--lunge)) translateY(-3.5px) scaleY(1.018);
+  }
+}
+
+/* 접지 그림자 — 캐릭터가 바닥에 붙어 서 있게 만든다(공중에 뜬 느낌 제거) */
+.fighter::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 64px;
+  height: 15px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.6), transparent 72%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- 임팩트 불꽃 ----------------------------------------------------------
+   피격 지점에서 사방으로 튀는 파편. 각도·거리·속도는 BattleScreen이 인덱스에서
+   뽑아 CSS 변수로 넘긴다(난수 없음 → 리렌더에도 그림이 안 튄다). */
+.sparks {
+  position: absolute;
+  width: 0;
+  height: 0;
+  margin-top: -42px; /* 셀 중심이 아니라 몸통 높이에서 터진다 */
+  pointer-events: none;
+  z-index: 6;
+}
+.spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--spark, #fff);
+  box-shadow: 0 0 9px var(--spark, #fff);
+  animation: spark-fly var(--t, 0.4s) cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+.sparks--big .spark {
+  width: 6px;
+  height: 6px;
+}
+@keyframes spark-fly {
+  from {
+    transform: rotate(var(--a)) translateX(6px) scale(1.4);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--a)) translateX(var(--d)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* ---- KO 섬광 -------------------------------------------------------------- */
+.board__koflash {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  background: #fff;
+  animation: koflash 0.5s ease-out forwards;
+}
+@keyframes koflash {
+  0% {
+    opacity: 0.72;
+  }
+  18% {
+    opacity: 0.32;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---- 피해 숫자 ------------------------------------------------------------
+   크기는 인라인 스타일로 피해량을 따라가고, 강타(26+)는 색과 궤적까지 바뀐다. */
+.fighter__dmg--big {
+  color: #ffe14d;
+  text-shadow:
+    -2px -2px 0 rgba(0, 0, 0, 0.9),
+    2px -2px 0 rgba(0, 0, 0, 0.9),
+    -2px 2px 0 rgba(0, 0, 0, 0.9),
+    2px 2px 0 rgba(0, 0, 0, 0.9),
+    0 0 22px rgba(255, 225, 77, 0.75);
+  animation: dmgfloat-big 1.45s ease-out forwards;
+}
+@keyframes dmgfloat-big {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 18px) scale(0.5) rotate(-9deg);
+  }
+  13% {
+    opacity: 1;
+    transform: translate(-50%, -24px) scale(1.5) rotate(4deg);
+  }
+  24% {
+    transform: translate(-50%, -27px) scale(1.16) rotate(-2deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -62px) scale(1.08) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -98px) scale(0.98);
+  }
+}
+
+/* ---- 바닥 분위기 ----------------------------------------------------------
+   빈 격자는 스프레드시트처럼 읽힌다. 빛을 위아래로 갈라 넣으면 무대가 된다:
+   **아래에서 올라오는 횃불(따뜻함) + 위에서 내려오는 달빛(차가움)**. 둘 다
+   테마 변수를 타므로 팔레트를 갈면 여기도 같이 따라온다.
+   스캔광 한 줄(floor-sweep)은 걷어냈다 — 일정한 속도로 지나가는 빛줄기는
+   그 자체가 SF 신호라, 돌바닥 위에서는 계속 기계처럼 읽혔다. 대신 횃불이
+   아주 느리게 밝기만 흔들린다. */
+.boardfloor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 72% at 50% 106%,
+      color-mix(in srgb, var(--neon-orange) 13%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      90% 60% at 50% -12%,
+      color-mix(in srgb, var(--neon-blue) 9%, transparent),
+      transparent 70%
+    );
+}
+/* 횃불 일렁임 — 위치가 아니라 밝기만 흔든다(움직이면 다시 스캔광이 된다). */
+.boardfloor::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    100% 58% at 50% 108%,
+    color-mix(in srgb, var(--neon-orange) 10%, transparent),
+    transparent 72%
+  );
+  animation: torch-flicker 5.5s ease-in-out infinite;
+}
+@keyframes torch-flicker {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  38% {
+    opacity: 0.95;
+  }
+  61% {
+    opacity: 0.7;
+  }
+}
+
+/* ---- HUD 체력바 반응 ------------------------------------------------------
+   잔상 바(lag bar): 방금 깎인 만큼이 흰 띠로 남았다가 0.34초 뒤 따라온다.
+   "얼마나 맞았는지"가 숫자를 읽지 않아도 보인다. */
+.bhud__hplag {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bhud__hpshock {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.bhud__hpshock.is-on {
+  animation: hpshock 0.3s ease-out;
+}
+@keyframes hpshock {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.bhud__side.is-shock {
+  animation: hud-shock 0.3s ease-out;
+}
+@keyframes hud-shock {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-5px, 2px);
+  }
+  55% {
+    transform: translate(4px, -2px);
+  }
+  80% {
+    transform: translate(-2px, 1px);
+  }
+}
+
+.bhud__buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bhud__sfx {
+  padding: 5px 9px;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+/* ---- 픽셀 스프라이트 ------------------------------------------------------
+   프레임 재생은 CSS `steps()`가 전담한다. 프레임 수·길이·이미지는 React가
+   인라인 스타일로 넣고(`SpriteClip`), 여기엔 공통 규칙만 둔다.
+   ⚠ 이게 CSS 애니메이션이라서 위쪽 히트스톱 규칙이 **스프라이트 프레임까지**
+     그대로 멈춘다 — 칼을 휘두르던 그 프레임에서 정지한다. */
+.sprite {
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation-name: sprite-play;
+  animation-fill-mode: none; /* 끝나면 base(=마지막 프레임)가 드러나야 한다 */
+  /* 원본이 왼쪽을 보고 그려진 시트를 한 번 더 뒤집는다(`--artflip: -1`).
+     ⚠ 이건 `.fighter__art`의 `scaleX(var(--flip))`과 **반드시 따로** 있어야 한다.
+     `--flip`은 "어느 쪽이 앞이냐"를 뜻해서 공격 키프레임의 `translateX(+N)`가
+     상대 방향이 되게 하는 값이다 — 여기에 시트 방향을 곱해 버리면 원본이 왼쪽을
+     보는 캐릭터가 공격할 때 상대 반대쪽으로 파고든다. */
+  transform: scaleX(var(--artflip, 1));
+}
+@keyframes sprite-play {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: var(--strip);
+  }
+}
+.battle.is-hitstop .sprite {
+  animation-play-state: paused !important;
+}
+
+/* 스프라이트는 자기 동작을 이미 갖고 있다 — SVG용 포즈 애니메이션(호흡·공격
+   키프레임)은 끄고, 위치·기울기 연출(전진 lunge·피격 흔들림)만 남긴다. */
+.fighter--sprite .fighter__art {
+  width: auto;
+  animation-name: none;
+}
+/* 몸통 기준점(--anchorpx)과 발끝(--footpx)을 셀 좌표에 맞춘다. 두 값 다
+   `npm run sprites`가 실제 픽셀에서 재서 넘긴 값이다(단위 없는 px 수치). */
+.fighter--sprite {
+  --anchor: calc(var(--anchorpx, 0) * -1px);
+  --foot: calc(var(--footpx, 0) * -1px);
+  transform: translate(var(--anchor), var(--foot));
+}
+.fighter--sprite.is-hit {
+  animation-name: hitshake-sprite;
+}
+@keyframes hitshake-sprite {
+  0%,
+  100% {
+    transform: translate(var(--anchor), var(--foot));
+  }
+  15% {
+    transform: translate(calc(var(--anchor) - 13px), var(--foot)) scale(0.94);
+  }
+  35% {
+    transform: translate(calc(var(--anchor) + 11px), var(--foot)) scale(0.94);
+  }
+  55% {
+    transform: translate(calc(var(--anchor) - 9px), var(--foot));
+  }
+  75% {
+    transform: translate(calc(var(--anchor) + 7px), var(--foot));
+  }
+}
+/* 프레임에 붙는 것들(피해 숫자·보호막·그림자·배지)도 프레임 중앙이 아니라
+   몸통 기준점을 따라가야 캐릭터 위에 뜬다. */
+.fighter--sprite::before,
+.fighter--sprite::after,
+.fighter--sprite .fighter__dmg,
+.fighter--sprite .fighter__heal,
+.fighter--sprite .fighter__say,
+.fighter--sprite .fighter__stun,
+.fighter--sprite .fighter__me,
+.fighter--sprite .fighter__shield {
+  left: calc(var(--anchorpx, 0) * 1px);
+}
+.fighter--sprite .fighter__shield {
+  top: calc(var(--footpx, 0) * 1px - 50%);
+}
+/* 픽셀 아트엔 SVG용 부드러운 그림자가 안 어울린다 — 발밑만 또렷하게 */
+.fighter--sprite .fighter__art {
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45));
+}
+
+/* ---- 접근성 --------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .fighter__art {
+    animation-name: none;
+  }
+  .boardfloor::after {
+    animation: none;
+  }
+  .spark {
+    animation-duration: 0.12s;
+  }
+  .bhud__side.is-shock {
+    animation: none;
+  }
+}

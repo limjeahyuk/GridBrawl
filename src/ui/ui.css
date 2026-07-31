@@ -1364,7 +1364,7 @@
   position: relative; /* 필살기 컷인(.cutin)이 전투 화면 전체를 덮는 기준 */
   display: flex;
   flex-direction: column;
-  background: #05060d;
+  background: var(--bg-0);
 }
 
 /* ---- battle HUD (top) ---------------------------------------------------- */
@@ -1506,7 +1506,7 @@
   font-weight: 900;
   font-size: 20px;
   color: #fff;
-  text-shadow: 0 0 14px rgba(47, 243, 255, 0.5);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--neon-cyan) 50%, transparent);
 }
 .bhud__quit {
   padding: 5px 12px;
@@ -1528,11 +1528,15 @@
   grid-template-rows: repeat(3, 1fr);
   gap: 7px;
 }
+/* 바닥에 새긴 룬 격자 — 네온 타일이 아니라 **그을린 돌판**이다.
+   테두리는 횃불에 닿아 반짝이는 황동 선, 면은 위가 밝고 아래로 꺼지는 돌.
+   ⚠ 색을 리터럴로 박지 말 것 — 리스킨은 `--neon-*` **값만** 갈아서 끝내는데,
+   여기 옛 시안(#2ff3ff)이 박혀 있던 탓에 팔레트를 바꿔도 판만 사이버로 남았다. */
 .cell {
-  border: 1px solid rgba(47, 243, 255, 0.14);
+  border: 1px solid color-mix(in srgb, var(--neon-cyan) 15%, transparent);
   border-radius: 7px;
-  background: linear-gradient(180deg, rgba(22, 34, 58, 0.4), rgba(8, 12, 20, 0.22));
-  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, rgba(38, 30, 26, 0.46), rgba(10, 8, 12, 0.26));
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.5);
 }
 .cell--target {
   border-color: rgba(255, 70, 70, 0.85) !important;
@@ -1779,18 +1783,9 @@
   58% { transform: scaleX(var(--flip)) translate(24px, 0) rotate(5deg); }
   100% { transform: scaleX(var(--flip)) translate(0, 0) rotate(0deg); }
 }
-/* 강타가 꽂히면 판 전체가 흔들린다 */
-.board.is-shaking .gridboard {
-  animation: boardshake 0.4s ease-out;
-}
-@keyframes boardshake {
-  0%, 100% { transform: translate(0, 0); }
-  15% { transform: translate(-8px, 5px); }
-  32% { transform: translate(7px, -6px); }
-  50% { transform: translate(-5px, -3px); }
-  68% { transform: translate(4px, 4px); }
-  86% { transform: translate(-2px, 1px); }
-}
+/* 강타가 꽂히면 판 전체가 흔들린다 — 세기별 카메라 펀치는 CSS가 아니라
+   `BattleScreen`의 `punch()`(Web Animations)가 돌린다. 연타가 겹쳐도 매번
+   처음부터 재생되어야 하는데, 클래스 토글로는 같은 클래스가 유지될 때 안 뛴다. */
 .fighter.is-hit {
   animation: hitshake 0.5s ease;
 }
@@ -2604,7 +2599,7 @@
   color: var(--neon-cyan);
   font-family: var(--font-display);
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(47, 243, 255, 0.25);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 25%, transparent);
 }
 .howto__label {
   color: var(--text-dim);
@@ -3075,7 +3070,7 @@
 }
 .runnode--cur .runnode__label { color: #fff; }
 .runnode--done { opacity: 0.32; }
-.runnode--cur { opacity: 1; border-color: var(--neon-cyan); box-shadow: 0 0 14px rgba(47, 243, 255, 0.4); }
+.runnode--cur { opacity: 1; border-color: var(--neon-cyan); box-shadow: 0 0 14px color-mix(in srgb, var(--neon-cyan) 40%, transparent); }
 .runnode--elite { border-color: #ff8a3c; }
 .runnode--boss { border-color: var(--neon-red); }
 .runnode--event { border-color: #c98bff; }
@@ -3183,7 +3178,7 @@
 .runend__banner {
   font-family: var(--font-display); font-weight: 900; font-size: 72px;
 }
-.runend__banner--win { color: var(--neon-cyan); text-shadow: 0 0 40px rgba(47, 243, 255, 0.5); }
+.runend__banner--win { color: var(--neon-cyan); text-shadow: 0 0 40px color-mix(in srgb, var(--neon-cyan) 50%, transparent); }
 .runend__banner--loss { color: var(--neon-red); text-shadow: 0 0 40px rgba(255, 77, 94, 0.5); }
 .runend__stat { color: var(--text-dim); font-size: 16px; }
 .runend__relics { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 700px; }

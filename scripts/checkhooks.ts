@@ -184,6 +184,101 @@ console.log('\n런 진행 규칙')
   )
 }
 
+// --- 상태이상(독·화상·빙결) -------------------------------------------------
+console.log('\n상태이상 — 지속피해·빙결·시너지')
+{
+  // 카드에 직접 붙인 독. 스트라이크(10dmg)를 독 5짜리로 바꿔 때린다.
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-poison', poison: 5 }
+  const b = battleWith({}, {})
+  const hp0 = b.state.hp[1]
+  b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  // 타격 10 + 같은 턴 독 틱 5 = 15
+  check('독 — 맞은 턴에 바로 1틱(10+5)', hp0 - b.state.hp[1], 15)
+  check('독이 3턴짜리로 걸린다(1틱 소모 후 2턴 남음)', b.statusOf(1, 'poison')?.turns, 2)
+  const hp1 = b.state.hp[1]
+  b.resolveTurn(HOLD, HOLD) // 때리지 않아도 계속 갉아야 한다
+  check('독 — 때리지 않은 턴에도 갉는다', hp1 - b.state.hp[1], 5)
+  b.resolveTurn(HOLD, HOLD)
+  check('독 — 지속이 끝나면 사라진다', b.statusOf(1, 'poison'), undefined)
+}
+{
+  // 중첩: 위력은 합산되고 지속은 갱신된다.
+  const p3: CardDef = { ...card('c-strike'), id: 'test-p3', poison: 3 }
+  const b = battleWith({}, {})
+  b.resolveTurn([p3, card('c-energy'), card('c-energy')], HOLD)
+  b.resolveTurn([p3, card('c-energy'), card('c-energy')], HOLD)
+  check('독 중첩 — 위력 합산(3+3)', b.statusOf(1, 'poison')?.power, 6)
+  check('독 중첩 — 지속은 갱신(3턴에서 1틱 소모)', b.statusOf(1, 'poison')?.turns, 2)
+}
+{
+  // 가드에 완전히 막히면 상태이상도 안 묻는다(기절과 같은 규칙).
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pblock', poison: 9 }
+  const b = battleWith({}, {})
+  b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], [card('c-guard'), card('c-energy'), card('c-energy')])
+  check('가드로 완전히 막히면 독이 안 묻는다', b.statusOf(1, 'poison'), undefined)
+}
+{
+  // 빙결 — 이동 카드만 무효. 카드는 소모되고 기절과 달리 공격은 나간다.
+  const freezeJab: CardDef = { ...card('c-strike'), id: 'test-freeze', freeze: 1 }
+  const b = battleWith({}, {})
+  b.resolveTurn([freezeJab, card('c-energy'), card('c-energy')], HOLD)
+  // 걸린 턴엔 지속을 안 깎는다 — 안 그러면 온전한 한 턴을 못 막고 사라진다
+  check('빙결이 걸리고, 걸린 턴엔 지속이 안 깎인다', b.statusOf(1, 'frozen')?.turns, 1)
+  const before = { ...b.state.pos[1] }
+  const steps = b.resolveTurn(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('빙결 — 다음 턴 이동 카드가 무효(위치 그대로)', b.state.pos[1], before)
+  check('빙결 — 결과가 frozen으로 표시된다', steps.some((s) => s.result === 'frozen'), true)
+  check('빙결 — 한 턴을 막고 나면 풀린다', b.statusOf(1, 'frozen'), undefined)
+  const moved = b.resolveTurn(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('빙결이 풀리면 다시 움직인다', b.state.pos[1].col !== before.col, true)
+  void moved
+}
+{
+  // 빙결은 기절과 다르다 — 이동만 막고 공격은 그대로 나간다.
+  const freezeJab: CardDef = { ...card('c-strike'), id: 'test-freeze2', freeze: 1 }
+  const b = battleWith({}, {})
+  b.resolveTurn([freezeJab, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[0]
+  b.resolveTurn(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  check('빙결 — 공격은 막지 않는다(기절과 구별)', b.state.hp[0] < hp0, true)
+}
+{
+  // 유물 훅: poisonOnHit + statusPowerPct + bonusVsAfflicted
+  const b = battleWith({ poisonOnHit: 4 }, {})
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('poisonOnHit — 평범한 카드에도 독이 묻는다', b.statusOf(1, 'poison')?.power, 4)
+}
+{
+  const b = battleWith({ poisonOnHit: 10, statusPowerPct: 50 }, {})
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('statusPowerPct 50% — 위력 10 → 15', b.statusOf(1, 'poison')?.power, 15)
+}
+{
+  // 이미 걸려 있는 상대에게만 보너스. 첫 타격은 아직 안 걸렸으므로 보너스 없음.
+  const plain = battleWith({}, {})
+  const hpPlain = plain.state.hp[1]
+  plain.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const baseDmg = hpPlain - plain.state.hp[1]
+
+  const b = battleWith({ poisonOnHit: 2, bonusVsAfflicted: 7 }, {})
+  const hp0 = b.state.hp[1]
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const t1 = hp0 - b.state.hp[1] // 타격(보너스 없음) + 독 2
+  check('bonusVsAfflicted — 첫 타격엔 안 붙는다', t1, baseDmg + 2)
+  const hp1 = b.state.hp[1]
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  // 2턴째: 이미 중독 → 타격 +7, 독은 2+2=4가 틱
+  check('bonusVsAfflicted — 걸린 뒤엔 +7', hp1 - b.state.hp[1], baseDmg + 7 + 4)
+}
+{
+  // 지속피해로도 KO가 나야 한다(독안개와 같은 자리).
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pko', poison: 8 }
+  const b = battleWith({}, {})
+  b.state.hp[1] = 12 // 타격 10을 견디고 2 남은 뒤 독 8에 쓰러진다
+  b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  check('독으로 KO — 전투가 끝난다', [b.state.over, b.state.winner], [true, 0])
+}
+
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------
 console.log('\n회귀 — 옵션을 안 주면 예전과 같아야 한다')
 {

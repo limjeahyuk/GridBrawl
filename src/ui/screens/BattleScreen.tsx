@@ -1,9 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { buildFighterSvg, buildPortraitSvg } from '../../art/art'
+import {
+  attackClipFor,
+  clipUrl,
+  impactDelayOf,
+  placeSprite,
+  preloadSheet,
+  sheetFor,
+  type ClipName,
+  type SheetDef,
+} from '../../art/sprites'
 import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
 import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
+import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
   FOG_DAMAGE,
   FOG_START_TURN,
@@ -38,6 +49,9 @@ interface View {
   energy: [number, number]
   shield: [number, number]
   acting: [boolean, boolean] // attack lunge
+  /** 지금 내는 공격 카드의 fx 종류. 준비 동작~타격 내내 유지돼야 한다 —
+   *  중간에 바뀌면 CSS animation-name이 갈려 모션이 처음부터 다시 뛴다. */
+  actFx: [string | null, string | null]
   damage: [number, number]
   heal: [number, number]
   stunned: [boolean, boolean] // 이 턴을 통째로 버리는 기절
@@ -89,6 +103,8 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   move: '이동',
   fog: '피해!',
   revive: '🔥',
+  status: '피해!',
+  frozen: '얼어붙음',
 }
 const PHASE_TEXT: Record<Step['phase'], string> = {
   move: '이동',
@@ -98,17 +114,40 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
   revive: '부활',
   stun: '기절',
   trigger: '유물',
+  status: '상태이상',
 }
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
 const STEP_MS: Record<Step['phase'], number> = {
   move: 540, defense: 560, attack: 900, fog: 700, revive: 1100,
   stun: 900, // 기절은 한 턴을 통째로 날리므로 충분히 보여준다
   trigger: 700,
+  status: 620, // 독·화상 틱 — 여러 개가 잇달아 뜰 수 있어 짧게
 }
 /** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
 const CUTIN_MS = 1750
-/** 이 피해 이상이면 화면을 흔든다(강타 연출). */
-const SHAKE_DAMAGE = 22
+
+/**
+ * 공격 모션이 **실제로 상대에게 닿는** 시점(ms). SVG 아트에서는 `ui.css`의
+ * atk-melee/atk-cast/atk-rush/atk-quake 키프레임이 파고드는 순간을 눈대중으로
+ * 맞춘 값이다. ⚠ 키프레임 타이밍을 바꾸면 여기도 같이 맞춰야 한다.
+ * 스프라이트 시트를 쓰는 캐릭터는 이 표 대신 클립의 `impactFrame`에서 정확한
+ * 값이 나온다(`impactDelayOf`) — 추정이 아니라 실제 프레임 번호다.
+ */
+const IMPACT_MS: Record<string, number> = {
+  punch: 265, slash: 265, rush: 250, quake: 345,
+  bolt: 330, orb: 330, flame: 330, shield: 265,
+}
+const impactDelay = (sheet: SheetDef | undefined, fx?: string) =>
+  impactDelayOf(sheet, fx) ?? IMPACT_MS[fx ?? 'punch'] ?? 265
+
+/** 타격 순간 화면을 멈춰 무게를 주는 시간(hitstop). 피해량에 비례. */
+const hitstopFor = (dmg: number, ko: boolean) =>
+  ko ? 420 : Math.round(Math.min(150, 45 + dmg * 3.2))
+/** 피해량 → 흔들림 세기(1 약 · 2 강 · 3 결정타). */
+const shakeLevel = (dmg: number, ko: boolean): 1 | 2 | 3 =>
+  ko ? 3 : dmg >= 26 ? 2 : 1
+/** 사거리 밖에서 날아오는 계열 — 준비 동작 소리가 다르다(차지 vs 바람가르기). */
+const RANGED_FX = new Set(['bolt', 'orb', 'flame'])
 
 // 손패 탭 — 종류별로 나눠 카드를 크게 보여준다 (가드+원기 = 수비)
 type HandTab = 'move' | 'attack' | 'defense'
@@ -128,6 +167,7 @@ function baseView(b: CardBattle): View {
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
     acting: [false, false],
+    actFx: [null, null],
     damage: [0, 0],
     heal: [0, 0],
     stunned: [false, false],
@@ -143,6 +183,8 @@ function stepToView(step: Step, seq: number): View {
   const d = 1 - a
   const acting: [boolean, boolean] = [false, false]
   acting[a] = isAtk(step.result)
+  const actFx: [string | null, string | null] = [null, null]
+  if (acting[a]) actFx[a] = step.card.fx ?? 'punch'
   const damage: [number, number] = [0, 0]
   // 상대에게 준 피해 — 공격뿐 아니라 유물 트리거(방전 코일 등)도 -N을 띄운다.
   if (step.damage > 0) damage[d] = step.damage
@@ -165,12 +207,32 @@ function stepToView(step: Step, seq: number): View {
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
     acting,
+    actFx,
     damage,
     heal,
     stunned,
     fx,
     say,
     seq,
+  }
+}
+
+/** 공격이 아닌 스텝(이동·수비·기력·힐·안개·기절·유물)의 효과음. 공격은 준비
+ *  동작과 타격이 나뉘어 있어 `submitPlan`에서 따로 울린다. */
+function stepSfx(step: Step): void {
+  if (step.result === 'nofuel') return playSfx('nofuel')
+  if (step.card.id === 'stun') return playSfx('stun')
+  if (step.card.id === 'trigger' || step.phase === 'revive') return playSfx('trigger')
+  if (step.phase === 'fog') return playSfx('fog')
+  switch (step.card.kind) {
+    case 'move':
+      return playSfx((step.card.steps ?? 1) >= 2 ? 'dash' : 'move')
+    case 'guard':
+      return playSfx('guard')
+    case 'energy':
+      return playSfx('energy')
+    case 'heal':
+      return playSfx('heal')
   }
 }
 
@@ -255,6 +317,19 @@ export function BattleScreen({
     return { ...c, dir, name, desc }
   }
   const svgs = useMemo(() => [buildFighterSvg(c0), buildFighterSvg(c1)] as const, [c0, c1])
+  // 스프라이트 시트가 있는 캐릭터는 픽셀 애니메이션으로, 없으면 기존 SVG로 그린다
+  // (마이그레이션 도중에도 전투가 깨지지 않게 한 폴백).
+  const sheets = useMemo(
+    () => [sheetFor(c0.id), sheetFor(c1.id)] as const,
+    [c0, c1],
+  )
+  // 첫 공격에서 PNG를 받느라 한 프레임 비는 걸 막는다
+  useEffect(() => {
+    for (const s of sheets) if (s) void preloadSheet(s)
+  }, [sheets])
+  // 이동 미리보기 잔상 — 본체와 같은 몸·같은 방향으로 서야 한다
+  const ghostSheet = sheets[localSide]
+  const ghostPlace = ghostSheet ? placeSprite(ghostSheet, 'left') : null
   // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
   const portraits = useMemo(() => [buildPortraitSvg(c0), buildPortraitSvg(c1)] as const, [c0, c1])
 
@@ -280,8 +355,47 @@ export function BattleScreen({
   const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
   // 필살기 컷인(시그니처 카드 발동 순간 화면을 덮는 연출)
   const [cutIn, setCutIn] = useState<{ seq: number; actor: 0 | 1; card: CardDef } | null>(null)
-  // 강타 시 보드 흔들림
-  const [shake, setShake] = useState<number>(0)
+  // 타격 순간 화면 정지(hitstop) — 켜져 있는 동안 모든 애니메이션이 멈춘다
+  const [hitstop, setHitstop] = useState(false)
+  // 피격 지점에서 터지는 불꽃 파편
+  const [sparks, setSparks] = useState<{
+    seq: number
+    cell: Cell
+    n: number
+    color: string
+    big: boolean
+  } | null>(null)
+  // KO 순간 화면을 덮는 백색 섬광
+  const [koFlash, setKoFlash] = useState(0)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * 카메라 펀치 — 타격이 꽂힐 때 판을 흔들고 살짝 밀어 넣는다.
+   * CSS 클래스가 아니라 Web Animations로 돌린다: 연타가 400ms 안에 겹쳐도
+   * 매번 처음부터 다시 재생된다(클래스 토글은 같은 클래스가 유지되면 안 뛴다).
+   */
+  const punch = (level: 1 | 2 | 3) => {
+    const el = gridRef.current
+    if (!el) return
+    const amp = level === 3 ? 17 : level === 2 ? 10 : 5
+    const zoom = level === 3 ? 1.04 : level === 2 ? 1.018 : 1.007
+    const at = (x: number, y: number, s: number, offset: number) => ({
+      transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${s})`,
+      offset,
+    })
+    el.animate(
+      [
+        at(0, 0, 1, 0),
+        at(-amp, amp * 0.6, zoom, 0.14),
+        at(amp * 0.85, -amp * 0.7, zoom, 0.32),
+        at(-amp * 0.6, -amp * 0.35, 1, 0.5),
+        at(amp * 0.45, amp * 0.45, 1, 0.7),
+        at(-amp * 0.18, amp * 0.12, 1, 0.86),
+        at(0, 0, 1, 1),
+      ],
+      { duration: level === 3 ? 640 : 400, easing: 'ease-out' },
+    )
+  }
 
   // ---- plan building -----------------------------------------------------
   const cdLeft = (id: string) => battle.state.cooldowns[localSide][id] ?? 0
@@ -298,6 +412,7 @@ export function BattleScreen({
     const next = slots.slice()
     next[i] = c
     setSlots(next)
+    playSfx('ui')
     // 배치 후엔 호버 미리보기를 놓는다 — 대신 `planPreview`가 이어받아 고른
     // 카드 기준 예시가 계속 남는다(터치 기기는 mouseleave가 없어 방금 놓은
     // 카드가 호버로 남으면 같은 이동이 두 번 반영돼 보인다).
@@ -305,14 +420,18 @@ export function BattleScreen({
     setHoverSlot(null)
   }
   const clearSlot = (i: number) => {
-    if (phase !== 'select') return
+    if (phase !== 'select' || !slots[i]) return
     const next = slots.slice()
     next[i] = null
     setSlots(next)
+    playSfx('uiBack')
     setHoveredCard(null)
     setHoverSlot(null)
   }
-  const reset = () => setSlots([null, null, null])
+  const reset = () => {
+    setSlots([null, null, null])
+    playSfx('uiBack')
+  }
 
   // 실효 패시브(유물 merge 반영) — 유물로 매턴 기력이 붙으면 기력 예산에 반영
   const passiveEnergy = battle.passive[localSide].turnEnergy ?? 0
@@ -424,7 +543,58 @@ export function BattleScreen({
     // host is side 0, guest side 1 — feed plans in canonical order
     const planA = localSide === 0 ? localPlan : oppPlan
     const planB = localSide === 0 ? oppPlan : localPlan
+    // ⚠ resolveTurn은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
+    //   준비 동작에 쓸 턴 시작 화면은 그 전에 떠 둬야 한다.
+    const turnStart = baseView(battle)
     const steps = battle.resolveTurn(planA, planB)
+
+    /** 이 스텝의 피해로 정말 쓰러졌는가 — 뒤에 부활 스텝이 오면 KO가 아니다. */
+    const koAt = (si: number, target: 0 | 1) =>
+      steps[si].snapshot.hp[target] <= 0 &&
+      !steps.slice(si + 1).some((s) => s.phase === 'revive' && s.actor === target)
+
+    /**
+     * 피해가 꽂히는 순간 한 묶음 — 섬광·불꽃·카메라 펀치·소리, 그리고 화면 정지.
+     * 되돌려주는 값은 정지에 쓴 시간(ms)이라 남은 대기에서 빼면 템포가 유지된다.
+     */
+    const impact = async (
+      step: Step,
+      target: 0 | 1,
+      dmg: number,
+      ko: boolean,
+      opts: { blocked?: boolean; sound?: boolean } = {},
+    ): Promise<number> => {
+      setHitFlash((prev) => ({ seq: (prev?.seq ?? 0) + 1, target }))
+      setSparks((prev) => ({
+        seq: (prev?.seq ?? 0) + 1,
+        cell: step.snapshot.pos[target],
+        n: opts.blocked ? 7 : Math.min(18, 7 + Math.round(dmg / 2.2)),
+        color: opts.blocked ? '#9fc2ff' : dmg >= 26 ? '#fff1a8' : '#ffd9d9',
+        big: dmg >= 26 || ko,
+      }))
+      if (opts.blocked) {
+        playSfx('block')
+        punch(1)
+        return 0
+      }
+      punch(shakeLevel(dmg, ko))
+      if (ko) {
+        playSfx('ko')
+        setKoFlash((n) => n + 1)
+      } else if (opts.sound !== false) {
+        playSfx('hit', dmg / 18)
+      }
+      // 잠깐 얼어붙는 순간이 "묵직함"을 만든다 — 피해가 클수록 길다
+      const ms = hitstopFor(dmg, ko)
+      setHitstop(true)
+      await wait(ms)
+      setHitstop(false)
+      return ms
+    }
+
+    // 이전 스텝까지 화면에 남아 있는 상태. 공격의 **준비 동작** 구간에 그대로
+    // 쓴다 — 몸이 파고드는 동안엔 아직 피해도 HP 감소도 보이면 안 된다.
+    let shown: View = turnStart
 
     for (const [si, step] of steps.entries()) {
       if (cancelled.current) return
@@ -433,44 +603,82 @@ export function BattleScreen({
       // 기력 부족으로 불발된 카드는 연출하지 않는다.
       if (step.card.signature && step.card.kind === 'attack' && step.result !== 'nofuel') {
         setCutIn({ seq: si + 1, actor: step.actor as 0 | 1, card: step.card })
+        playSfx('cutin')
         await wait(CUTIN_MS)
         setCutIn(null)
         if (cancelled.current) return
       }
 
       setPhaseTag(PHASE_TEXT[step.phase])
-      setView(stepToView(step, si + 1))
+      const full = stepToView(step, si + 1)
+      const actor = step.actor as 0 | 1
+      const foe = (1 - actor) as 0 | 1
+
       if (step.card.kind === 'attack' && step.result !== 'nofuel') {
-        const actor = step.actor as 0 | 1
-        const cells = attackCells(
-          step.snapshot.pos[actor],
-          step.card,
-          battle.facing(actor),
-          step.snapshot.pos[1 - actor],
-        )
-        setResolveHit({ cells, actor })
+        setResolveHit({
+          cells: attackCells(
+            step.snapshot.pos[actor],
+            step.card,
+            battle.facing(actor),
+            step.snapshot.pos[foe],
+          ),
+          actor,
+        })
+        // ① 준비 동작 — 카드 이름만 뜨고 판은 아직 그대로다
+        setView({
+          ...shown,
+          acting: full.acting,
+          actFx: full.actFx, // 준비→타격 내내 같은 모션이어야 한다
+          say: full.say,
+          fx: [null, null],
+          damage: [0, 0],
+          heal: [0, 0],
+          stunned: [false, false],
+          seq: si + 1,
+        })
+        playSfx(RANGED_FX.has(step.card.fx ?? '') ? 'cast' : 'swing')
+        const lead = impactDelay(sheets[actor], step.card.fx)
+        await wait(lead)
+        if (cancelled.current) return
+
+        // ② 타격 — 여기서 비로소 피해·HP·불꽃이 한꺼번에 터진다
+        setView(full)
+        let held = 0
+        if (step.result === 'whiff') playSfx('whiff')
+        else held = await impact(step, foe, step.damage, koAt(si, foe), {
+          blocked: step.result === 'blocked',
+        })
+        if (cancelled.current) return
+        await wait(Math.max(150, STEP_MS.attack - lead - held))
       } else {
         setResolveHit(null)
+        setView(full)
+        stepSfx(step)
+        // 공격이 아닌데 피해가 났다 — 유물 트리거(상대에게) 또는 독안개·반동(자신에게).
+        // 독안개는 stepSfx가 이미 치찰음을 내므로 타격음은 겹쳐 울리지 않는다.
+        let held = 0
+        if (step.damage > 0) held = await impact(step, foe, step.damage, koAt(si, foe))
+        else if (step.recoil > 0)
+          held = await impact(step, actor, step.recoil, koAt(si, actor), {
+            sound: step.phase !== 'fog',
+          })
+        if (cancelled.current) return
+        await wait(Math.max(160, STEP_MS[step.phase] - held))
       }
-      // 상대에게 피해가 들어간 스텝(공격·유물 트리거 공통)에 히트플래시·흔들림
-      if (step.damage > 0) {
-        const target = (1 - step.actor) as 0 | 1
-        setHitFlash((prev) => ({ seq: (prev?.seq ?? 0) + 1, target }))
-        // 묵직한 한 방이면 화면이 흔들린다
-        if (step.damage >= SHAKE_DAMAGE) setShake((n) => n + 1)
-      }
-      await wait(STEP_MS[step.phase])
       if (cancelled.current) return
+      shown = full
     }
     setCutIn(null)
 
     setView(baseView(battle))
     setResolveHit(null)
+    setSparks(null)
     setPhaseTag('')
 
     if (battle.state.over) {
       const localWon = battle.state.winner === localSide
       setBanner(battle.state.winner === null ? 'DRAW' : localWon ? 'K.O.' : 'DEFEAT')
+      if (battle.state.winner !== null) playSfx(localWon ? 'win' : 'lose')
       setPhase('over')
       await wait(1300)
       if (cancelled.current) return
@@ -486,6 +694,7 @@ export function BattleScreen({
 
   const confirm = () => {
     if (!filled || !affordable) return
+    playSfx('confirm')
     void submitPlan(slots as CardDef[])
   }
 
@@ -537,15 +746,8 @@ export function BattleScreen({
     }
   }, [])
 
-  // 흔들림은 잠깐이면 된다 — 클래스를 뗐다 붙여야 다음 강타에서 다시 재생된다
-  useEffect(() => {
-    if (!shake) return
-    const id = setTimeout(() => setShake(0), 420)
-    return () => clearTimeout(id)
-  }, [shake])
-
   return (
-    <div className="screen battle">
+    <div className={`screen battle ${hitstop ? 'is-hitstop' : ''}`}>
       <div className="grid-bg" />
 
       <BattleHud
@@ -559,8 +761,9 @@ export function BattleScreen({
         onQuit={onQuit}
       />
 
-      <div className={`board ${shake ? 'is-shaking' : ''}`}>
-        <div className="gridboard">
+      <div className="board">
+        <div className="boardfloor" />
+        <div className="gridboard" ref={gridRef}>
           {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
             const row = Math.floor(i / GRID_COLS)
             // visual column -> canonical column (mirrored when we hold side 1)
@@ -580,19 +783,41 @@ export function BattleScreen({
             return <span className={`cell${cls}`} key={i} />
           })}
           {preview.ghost && (
+            // 잔상도 본체와 **같은 몸**이어야 한다 — 스프라이트 캐릭터인데 잔상만
+            // SVG로 그리면 딴 사람이 서 있고 바닥선까지 어긋난다.
             <div
-              className="fighter fighter--left fighter--ghost"
+              className={`fighter fighter--left fighter--ghost${
+                ghostSheet ? ' fighter--sprite' : ''
+              }`}
               style={{
                 left: `${cellX(dcol(preview.ghost.col))}%`,
                 top: `${cellY(preview.ghost.row)}%`,
                 ['--accent' as string]: local.accent,
+                // 잔상은 언제나 내 쪽 = 왼쪽에 선다
+                ...(ghostPlace
+                  ? {
+                      ['--anchorpx' as string]: ghostPlace.anchorPx,
+                      ['--footpx' as string]: ghostPlace.footPx,
+                      ['--artflip' as string]: ghostPlace.artFlip,
+                    }
+                  : null),
               }}
             >
-              <div className="fighter__art" dangerouslySetInnerHTML={{ __html: svgs[localSide] }} />
+              {ghostSheet ? (
+                <div className="fighter__art">
+                  <SpriteClip sheet={ghostSheet} clip="idle" seq={0} />
+                </div>
+              ) : (
+                <div
+                  className="fighter__art"
+                  dangerouslySetInnerHTML={{ __html: svgs[localSide] }}
+                />
+              )}
             </div>
           )}
           <FighterSprite
             svg={svgs[0]}
+            sheet={sheets[0]}
             side={localSide === 0 ? 'left' : 'right'}
             accent={c0.accent}
             v={view}
@@ -602,6 +827,7 @@ export function BattleScreen({
           />
           <FighterSprite
             svg={svgs[1]}
+            sheet={sheets[1]}
             side={localSide === 1 ? 'left' : 'right'}
             accent={c1.accent}
             v={view}
@@ -609,8 +835,34 @@ export function BattleScreen({
             flip={flip}
             isLocal={localSide === 1}
           />
+          {sparks && (
+            <div
+              key={`sp-${sparks.seq}`}
+              className={`sparks ${sparks.big ? 'sparks--big' : ''}`}
+              style={{
+                left: `${cellX(dcol(sparks.cell.col))}%`,
+                top: `${cellY(sparks.cell.row)}%`,
+                ['--spark' as string]: sparks.color,
+              }}
+            >
+              {Array.from({ length: sparks.n }, (_, i) => (
+                // 방향·거리·속도는 인덱스에서 뽑는다 — 난수 없이도 흩어져 보이고,
+                // 같은 입력이면 같은 그림이라 리렌더에도 튀지 않는다.
+                <span
+                  key={i}
+                  className="spark"
+                  style={{
+                    ['--a' as string]: `${(360 / sparks.n) * i + ((i * 37) % 26) - 13}deg`,
+                    ['--d' as string]: `${34 + ((i * 53) % 48)}px`,
+                    ['--t' as string]: `${0.34 + ((i * 29) % 20) / 100}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
+        {koFlash > 0 && <div key={`ko-${koFlash}`} className="board__koflash" />}
         {hitFlash && (
           <div
             key={hitFlash.seq}
@@ -686,7 +938,10 @@ export function BattleScreen({
                 <button
                   key={t.id}
                   className={`cards__tab ${handTab === t.id ? 'is-active' : ''}`}
-                  onClick={() => setHandTab(t.id)}
+                  onClick={() => {
+                    setHandTab(t.id)
+                    playSfx('ui')
+                  }}
                 >
                   {t.label}
                   {picked > 0 && <span className="cards__tab-count">{picked}</span>}
@@ -790,8 +1045,19 @@ export function BattleScreen({
 
 // ---------------------------------------------------------------------------
 
+/** 지금 이 파이터가 재생해야 할 스프라이트 클립. 우선순위는 "가장 극적인 것"順. */
+function clipOf(v: View, idx: number, moving: boolean): ClipName {
+  if (v.hp[idx] <= 0) return 'death'
+  if (v.damage[idx] > 0) return 'hurt'
+  if (v.acting[idx]) return attackClipFor(v.actFx[idx] ?? 'punch')
+  if (v.shield[idx] > 0) return 'block'
+  if (moving) return 'run'
+  return 'idle'
+}
+
 function FighterSprite({
   svg,
+  sheet,
   side,
   accent,
   v,
@@ -800,6 +1066,8 @@ function FighterSprite({
   isLocal,
 }: {
   svg: string
+  /** 있으면 픽셀 스프라이트로, 없으면 `svg`(절차 아트)로 그린다. */
+  sheet?: SheetDef
   side: 'left' | 'right'
   accent: string
   v: View
@@ -811,13 +1079,28 @@ function FighterSprite({
   const stacked =
     v.pos[0].col === v.pos[1].col && v.pos[0].row === v.pos[1].row
   const fx = v.fx[idx]
+  // 셀이 바뀌는 동안엔 달리는 클립을 재생한다(위치 전환은 CSS transition이 맡는다)
+  const prevCell = useRef(v.pos[idx])
+  const [moving, setMoving] = useState(false)
+  useEffect(() => {
+    const p = prevCell.current
+    const now = v.pos[idx]
+    prevCell.current = now
+    if (p.col === now.col && p.row === now.row) return
+    setMoving(true)
+    const id = setTimeout(() => setMoving(false), 500) // .fighter의 이동 transition과 같은 길이
+    return () => clearTimeout(id)
+  }, [v.pos, idx])
+
+  const place = sheet ? placeSprite(sheet, side) : null
   const cls = [
     'fighter',
     `fighter--${side}`,
     stacked ? `fighter--stacked-${side}` : '',
     isLocal ? 'fighter--me' : '',
+    sheet ? 'fighter--sprite' : '',
     // 공격 모션은 카드의 fx 종류별로 다르다(베기·사격·돌진·내려찍기…)
-    v.acting[idx] ? `is-attacking is-atk-${fx?.kind ?? 'punch'}` : '',
+    v.acting[idx] ? `is-attacking is-atk-${v.actFx[idx] ?? 'punch'}` : '',
     v.damage[idx] > 0 ? 'is-hit' : '',
     v.shield[idx] > 0 ? 'is-guard' : '',
     v.stunned[idx] ? 'is-stunned' : '',
@@ -829,10 +1112,26 @@ function FighterSprite({
         left: `${cellX(flip ? GRID_COLS - 1 - v.pos[idx].col : v.pos[idx].col)}%`,
         top: `${cellY(v.pos[idx].row)}%`,
         ['--accent' as string]: accent,
+        // 캐릭터를 프레임 한가운데가 아니라 **몸통 기준점**으로 세운다
+        // (프레임 폭은 공격 검기까지 담느라 한쪽으로 늘어나 있다).
+        // `--artflip`은 시트 원본이 보는 방향을 바로잡는 값이다(진영 반전
+        // `--flip`과는 별개 — 자세한 이유는 battlefx.css의 `.sprite`).
+        ...(sheet
+          ? {
+              ['--anchorpx' as string]: place!.anchorPx,
+              ['--footpx' as string]: place!.footPx,
+              ['--artflip' as string]: place!.artFlip,
+            }
+          : null),
       }}
     >
       {v.damage[idx] > 0 && (
-        <div key={`dmg-${v.seq}`} className="fighter__dmg">
+        // 숫자 크기가 피해량을 따라간다 — 10과 40이 같은 크기로 뜨면 무게가 안 산다
+        <div
+          key={`dmg-${v.seq}`}
+          className={`fighter__dmg ${v.damage[idx] >= 26 ? 'fighter__dmg--big' : ''}`}
+          style={{ fontSize: `${Math.round(Math.min(66, 28 + v.damage[idx] * 0.9))}px` }}
+        >
           -{v.damage[idx]}
         </div>
       )}
@@ -846,8 +1145,48 @@ function FighterSprite({
       {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}
       {isLocal && <div className="fighter__me">나</div>}
-      <div className="fighter__art" dangerouslySetInnerHTML={{ __html: svg }} />
+      {sheet ? (
+        <div className="fighter__art">
+          <SpriteClip sheet={sheet} clip={clipOf(v, idx, moving)} seq={v.seq} />
+        </div>
+      ) : (
+        <div className="fighter__art" dangerouslySetInnerHTML={{ __html: svg }} />
+      )}
     </div>
+  )
+}
+
+/**
+ * 스프라이트 한 클립을 재생한다. 재생은 전부 CSS `steps()`가 맡고 JS는 프레임을
+ * 세지 않는다 — 덕분에 히트스톱(`animation-play-state: paused`)이 스프라이트
+ * 프레임까지 그대로 얼린다.
+ *
+ * `key`로 remount해 클립을 처음부터 다시 돌린다. animation-name이 계속
+ * `sprite-play`라 클래스만 바꿔서는 재시작되지 않기 때문(이미지는 캐시돼 있어
+ * remount 비용은 사실상 0).
+ */
+function SpriteClip({ sheet, clip, seq }: { sheet: SheetDef; clip: ClipName; seq: number }) {
+  const def = sheet.clips[clip]
+  const w = sheet.frameW * sheet.scale
+  const h = sheet.frameH * sheet.scale
+  return (
+    <div
+      key={`${clip}-${seq}`}
+      className="sprite"
+      style={{
+        width: `${w}px`,
+        height: `${h}px`,
+        backgroundImage: `url(${clipUrl(sheet, clip)})`,
+        backgroundSize: `${w * def.frames}px ${h}px`,
+        // 애니메이션이 끝나면 이 base 값이 드러난다 = 마지막 프레임에서 정지.
+        // (fill:forwards는 프레임 범위를 한 칸 넘어가 빈 칸을 보여 준다.)
+        backgroundPositionX: def.loop ? '0px' : `${-(def.frames - 1) * w}px`,
+        animationTimingFunction: `steps(${def.frames})`,
+        animationDuration: `${def.frames * def.frameMs}ms`,
+        animationIterationCount: def.loop ? 'infinite' : 1,
+        ['--strip' as string]: `${-def.frames * w}px`,
+      }}
+    />
   )
 }
 
@@ -893,12 +1232,37 @@ function BattleHud({
         {turn >= FOG_START_TURN && (
           <div className="bhud__fog">☠ 독안개 위 턴당 -{FOG_DAMAGE}</div>
         )}
-        <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
-          ESC · 종료
-        </button>
+        <div className="bhud__buttons">
+          <SfxToggle />
+          <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
+            ESC · 종료
+          </button>
+        </div>
       </div>
       <BhudSide char={chars[oi]} maxHp={maxHp[oi]} hp={view.hp[oi]} energy={view.energy[oi]} side="right" />
     </div>
+  )
+}
+
+/** 효과음 음소거 토글 — 설정은 localStorage에 남는다(`sfx.ts`). */
+function SfxToggle() {
+  const [off, setOff] = useState(isMuted)
+  return (
+    <button
+      className="btn btn--ghost bhud__sfx"
+      title={off ? '효과음 켜기' : '효과음 끄기'}
+      onClick={() => {
+        const next = !off
+        setMuted(next)
+        setOff(next)
+        if (!next) {
+          unlockAudio()
+          playSfx('ui')
+        }
+      }}
+    >
+      {off ? '🔇' : '🔊'}
+    </button>
   )
 }
 
@@ -920,17 +1284,54 @@ function BhudSide({
   const hpPct = Math.max(0, (hp / maxHp) * 100)
   const ePct = Math.max(0, (energy / char.maxEnergy) * 100)
   const hpLow = hpPct <= 30
+
+  // 잔상 바(lag bar) — 방금 깎인 만큼이 흰 띠로 남았다가 뒤늦게 따라온다.
+  // 격투 게임 체력바의 기본기: "얼마나 맞았는지"가 한눈에 보인다.
+  const [lag, setLag] = useState(hp)
+  const lagRef = useRef(hp)
+  const prevHp = useRef(hp)
+  const [shock, setShock] = useState(false)
+  useEffect(() => {
+    const dropped = hp < prevHp.current
+    prevHp.current = hp
+    if (!dropped) {
+      // 회복은 즉시 따라붙는다 — 잔상은 피해를 보여 주기 위한 장치다
+      lagRef.current = hp
+      setLag(hp)
+      return
+    }
+    setShock(true)
+    const catchUp = setTimeout(() => {
+      lagRef.current = hp
+      setLag(hp)
+    }, 340)
+    const calm = setTimeout(() => setShock(false), 320)
+    return () => {
+      clearTimeout(catchUp)
+      clearTimeout(calm)
+    }
+  }, [hp])
+  const lagPct = Math.max(0, (Math.max(lag, hp) / maxHp) * 100)
+
   return (
-    <div className={`bhud__side bhud__side--${side}`} style={{ ['--accent' as string]: char.accent }}>
+    <div
+      className={`bhud__side bhud__side--${side} ${shock ? 'is-shock' : ''}`}
+      style={{ ['--accent' as string]: char.accent }}
+    >
       <div className="bhud__name">
         {char.name}
         {isLocal && <span className="bhud__you">나</span>}
       </div>
       <div className="bhud__hp">
         <div
+          className={`bhud__hplag bhud__hpfill--${side}`}
+          style={{ width: `${lagPct}%` }}
+        />
+        <div
           className={`bhud__hpfill bhud__hpfill--${side} ${hpLow ? 'bhud__hpfill--low' : ''}`}
           style={{ width: `${hpPct}%` }}
         />
+        <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
         <span className="bhud__hpnum">
           HP {Math.ceil(hp)} / {maxHp}
         </span>

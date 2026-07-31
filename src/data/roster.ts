@@ -1,9 +1,14 @@
 import type { CardDef, Offset } from '../battle/types'
 
 // ---------------------------------------------------------------------------
-// THE GRID roster, rebuilt for 2D card battles. Each avatar keeps its identity
-// (colour, silhouette, art) but is now a distinct "직업" built around unique
-// cards: everyone shares the weak common attack/guard cards (battle/cards.ts),
+// 로스터. **테마는 다크 판타지**(2026-07-31 리스킨 — 사이버 아레나에서 전환).
+// 바뀐 것은 이름·칭호·소개문·색뿐이고 **id·카드·수치는 그대로**다: id는 저장된
+// 덱(RTDB `decks/<uid>`)·유물(`sig-<id>`)·몬스터 `baseArtId`가 참조하고, 수치는
+// 시뮬로 맞춘 밸런스라 건드리면 재측정이 필요하다. 옛 이름 대응표는
+// docs/GAME_DESIGN.md "로스터 리스킨" 참고(밸런스 기록은 옛 이름 그대로 남겼다).
+//
+// 각 캐릭터는 고유 카드로 정체성을 낸다: 공용의 약한 공격/가드는 모두가 쓰고
+// (battle/cards.ts),
 // and the character's own cards carry the exciting abilities — wide ranges,
 // heavy damage, energy drain, lifesteal, pierce, knockback, self-shield,
 // recoil. Unique cards are mostly attacks but can be any kind (AEGIS has a
@@ -57,6 +62,21 @@ export interface Passive {
   stunCap?: number
   /** 첫 턴에 얻는 보호막(선공 방어형). */
   openingShield?: number
+  // --- 상태이상 훅(2026-08-01) — 3직업 개편의 빌드 재료 ---
+  /**
+   * 내 공격이 피해를 입히면 독을 N(턴당 피해) 추가로 건다. 카드의 `poison`과 합산.
+   * 궁수 "독으로 조이기" 빌드의 핵심 — 유물을 겹칠수록 위력이 쌓인다.
+   */
+  poisonOnHit?: number
+  /** 내 공격이 피해를 입히면 화상을 N 추가로 건다(마법사 상태이상 빌드). */
+  burnOnHit?: number
+  /**
+   * 내가 거는 지속피해(독·화상)의 위력 +N%. **거는 순간 한 번 계산해 박아 넣는다**
+   * — 매 틱 다시 계산하면 유물을 도중에 얻었을 때 이미 걸린 것까지 소급돼 어긋난다.
+   */
+  statusPowerPct?: number
+  /** 상대가 상태이상에 하나라도 걸려 있으면 내 공격 피해 +N(상태이상 시너지). */
+  bonusVsAfflicted?: number
 }
 
 /** 누적 기력 소비 트리거 한 개. `per`만큼 쓸 때마다 아래 효과가 한 번씩 터진다. */
@@ -146,16 +166,16 @@ function atk(over: Partial<CardDef> & { id: string; name: string }): CardDef {
 export const ROSTER: CharacterDef[] = [
   {
     id: 'volt',
-    name: 'VOLT',
-    title: 'Arc Runner',
-    accent: '#29b6cf',
-    accent2: '#f7c948',
+    name: 'VESPER',
+    title: 'Stormbound Knight',
+    accent: '#8fb6d6',
+    accent2: '#d9b463',
     description:
-      '전격 흡수형 스피드스터. 체력은 낮지만 긴 빔으로 거리를 지배하고, 맞힐 때마다 상대의 기력을 빨아들여 제 연료로 쓴다.',
+      '폭풍에 서약한 방랑 기사. 갑주는 얇지만 뇌명이 흐르는 룬검으로 줄 하나를 통째로 지배하고, 베어낼 때마다 상대의 마력을 빨아들여 제 연료로 쓴다.',
     maxHp: 157,
     maxEnergy: 100,
     startEnergy: 60,
-    passive: { desc: '오버차지: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
+    passive: { desc: '뇌운의 가호: 매 턴 기력 +10, 보호막 +10.', turnEnergy: 10, turnShield: 10 },
     cards: [
       atk({ id: 'volt-jab', name: '스파크 잽', range: both(1), damage: 24, energyCost: 10, fx: 'punch', desc: '앞뒤 한 칸을 동시에 지지는 약공격. 빠르고 저렴하다.' }),
       atk({ id: 'volt-leech', name: '포크 라이트닝', range: FORK, damage: 20, energyCost: 20, drain: 10, pointBlank: false, fx: 'bolt', desc: '앞뒤 대각선 네 갈래(X자)로 갈라지는 번개. 정면과 밀착은 사각. 적중 시 상대 기력 10 흡수.' }),
@@ -165,16 +185,16 @@ export const ROSTER: CharacterDef[] = [
   },
   {
     id: 'titan',
-    name: 'TITAN',
-    title: 'Siege Frame',
-    accent: '#e8863a',
-    accent2: '#f7c96b',
+    name: 'MAUL',
+    title: 'Ruin Berserker',
+    accent: '#c9713a',
+    accent2: '#d9a45e',
     description:
-      '걸어다니는 공성 병기. 느리지만 한 방이 무겁고, 광역 강타와 넉백으로 제 사거리를 강요한다.',
+      '성문을 부수라고 사슬에서 풀어놓은 광전사. 느리지만 한 방이 산을 무너뜨리고, 대지를 가르는 강타와 밀어내기로 제 사거리를 강요한다.',
     maxHp: 172,
     maxEnergy: 100,
     startEnergy: 60,
-    passive: { desc: '장갑판: 받는 공격 피해 -9.', damageReduction: 9 },
+    passive: { desc: '무쇠 비늘: 받는 공격 피해 -9.', damageReduction: 9 },
     cards: [
       atk({ id: 'titan-hammer', name: '해머 핸드', range: both(1), damage: 29, energyCost: 10, fx: 'punch', desc: '앞뒤 한 칸을 후려치는 강타. 싸고 묵직하다.' }),
       atk({ id: 'titan-ram', name: '램 프레스', range: [fwd(1)], damage: 30, energyCost: 20, push: 2, fx: 'punch', desc: '앞 한 칸을 밀쳐 두 칸 넉백. 전방 전용 — 들러붙는 상대를 떼어낸다.' }),
@@ -184,16 +204,16 @@ export const ROSTER: CharacterDef[] = [
   },
   {
     id: 'nova',
-    name: 'NOVA',
-    title: 'Plasma Oracle',
-    accent: '#d45fae',
-    accent2: '#9b6fd4',
+    name: 'DIRGE',
+    title: 'Hollow Oracle',
+    accent: '#a578cf',
+    accent2: '#6fc0b0',
     description:
-      '초장거리 포격수. 끝없이 차오르는 플라스마로 화면 반대편에서 상대를 태우고, 관통 광선은 가드조차 소용없다.',
+      '만가를 읊는 원령 무녀. 마르지 않는 혼백을 태워 전장 반대편에서 상대를 사르고, 뼈를 꿰뚫는 창은 방패조차 소용없다.',
     maxHp: 162,
     maxEnergy: 100,
     startEnergy: 60,
-    passive: { desc: '플라스마 코어: 매 턴 기력 +20.', turnEnergy: 20 },
+    passive: { desc: '혼백의 등불: 매 턴 기력 +20.', turnEnergy: 20 },
     cards: [
       atk({ id: 'nova-palm', name: '팜 펄스', range: both(1), damage: 22, energyCost: 10, fx: 'orb', desc: '앞뒤 한 칸을 튕겨내는 견제 펄스.' }),
       atk({ id: 'nova-lance', name: '이온 랜스', range: beam(2, 4), damage: 30, energyCost: 25, pierce: true, pointBlank: false, fx: 'orb', desc: '앞 2~4칸 관통 광선. 전방 전용 저격 — 상대 보호막을 무시하고, 바로 앞과 밀착은 사각.' }),
@@ -203,16 +223,16 @@ export const ROSTER: CharacterDef[] = [
   },
   {
     id: 'cipher',
-    name: 'CIPHER',
-    title: 'Null Phantom',
-    accent: '#3cbf7a',
-    accent2: '#2aa7a0',
+    name: 'SABLE',
+    title: 'Bloodletter',
+    accent: '#5aa06d',
+    accent2: '#3f9a90',
     description:
-      '시스템의 버그이자 흡혈 암살자. 상하좌우를 동시에 베고, 베어낸 만큼 체력과 기력을 제 것으로 만든다.',
+      '그림자에 스며드는 흡혈 도적. 독을 먹인 쌍검으로 상하좌우를 동시에 베고, 베어낸 만큼 상대의 피와 기력을 제 것으로 만든다.',
     maxHp: 145,
     maxEnergy: 100,
     startEnergy: 50,
-    passive: { desc: '데이터 흡수: 공격으로 피해를 주면 체력 +10.', lifesteal: 10 },
+    passive: { desc: '피의 갈증: 공격으로 피해를 주면 체력 +10.', lifesteal: 10 },
     cards: [
       atk({ id: 'cipher-cut', name: '엣지 컷', range: both(1), damage: 20, energyCost: 10, fx: 'slash', desc: '앞뒤 한 칸을 스치는 빠른 베기.' }),
       atk({ id: 'cipher-siphon', name: '널 사이펀', range: bar(1), damage: 20, energyCost: 20, leech: 10, drain: 10, fx: 'slash', desc: '앞 한 칸의 세 줄을 베며 체력 10 회복 + 상대 기력 10 흡수. 전방 전용.' }),
@@ -222,16 +242,16 @@ export const ROSTER: CharacterDef[] = [
   },
   {
     id: 'aegis',
-    name: 'AEGIS',
-    title: 'Bulwark Unit',
-    accent: '#5b7ee0',
-    accent2: '#9db8ef',
+    name: 'CAIRN',
+    title: 'Oathbound Warden',
+    accent: '#6d8ac4',
+    accent2: '#a7b8d4',
     description:
-      '부동의 수호자. 공격하면서도 방패를 거두지 않고, 전용 방벽 아이언 커튼은 웬만한 강타를 통째로 삼킨다.',
+      '무너진 성채에 홀로 남은 파수꾼. 때리는 동안에도 방패를 거두지 않고, 전용 방벽은 웬만한 강타를 통째로 삼킨다.',
     maxHp: 164,
     maxEnergy: 100,
     startEnergy: 50,
-    passive: { desc: '상시 방벽: 매 턴 보호막 +15.', turnShield: 15 },
+    passive: { desc: '불침의 서약: 매 턴 보호막 +15.', turnShield: 15 },
     cards: [
       atk({ id: 'aegis-jab', name: '실드 잽', range: both(1), damage: 20, energyCost: 10, selfShield: 5, fx: 'shield', desc: '앞뒤 한 칸 방패 견제. 사용 시 보호막 +5.' }),
       atk({ id: 'aegis-bash', name: '실드 배시', range: bar(1), damage: 30, energyCost: 28, push: 1, fx: 'shield', desc: '앞 한 칸의 세 줄을 방패로 후려쳐 한 칸 밀어낸다. 전방 전용.' }),
@@ -250,12 +270,12 @@ export const ROSTER: CharacterDef[] = [
   },
   {
     id: 'ember',
-    name: 'EMBER',
-    title: 'Cinder Blade',
-    accent: '#e25563',
-    accent2: '#e8863a',
+    name: 'PYRE',
+    title: 'Ashen Devil',
+    accent: '#cf5347',
+    accent2: '#e0913f',
     description:
-      '제 몸을 태워 싸우는 하이리스크 러셔. 반동을 감수한 초화력으로 단기 결전을 노리고, 쓰러져도 잿불에서 한 번 되살아난다.',
+      '제 몸을 장작 삼아 싸우는 잿불 마귀. 반동을 감수한 초화력으로 단기 결전을 노리고, 쓰러져도 재 속에서 한 번 되살아난다.',
     maxHp: 156,
     maxEnergy: 100,
     startEnergy: 50,

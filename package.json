@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "sim": "esbuild scripts/simulate.ts --bundle --platform=node --outfile=node_modules/.cache/sim.cjs --log-level=error && node node_modules/.cache/sim.cjs",
     "sim:run": "esbuild scripts/simrun.ts --bundle --platform=node --outfile=node_modules/.cache/simrun.cjs --log-level=error && node node_modules/.cache/simrun.cjs",
-    "check": "esbuild scripts/checkhooks.ts --bundle --platform=node --outfile=node_modules/.cache/check.cjs --log-level=error && node node_modules/.cache/check.cjs"
+    "check": "esbuild scripts/checkhooks.ts --bundle --platform=node --outfile=node_modules/.cache/check.cjs --log-level=error && node node_modules/.cache/check.cjs",
+    "sprites": "node scripts/packsprites.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

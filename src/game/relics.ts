@@ -66,34 +66,34 @@ const SIGNATURE: Record<
   }
 > = {
   volt: {
-    id: 'sig-volt', name: '오버차지 코어', icon: '⚡',
+    id: 'sig-volt', name: '뇌운의 인장', icon: '⚡',
     // ⚠ 회복(regen/lifesteal)을 주지 말 것 — 런에선 지속 회복이 극도로 강해 regen 2도
     // VOLT를 28.8%→46%로 폭주시켰다(2026-07-31 시뮬). VOLT는 회복 대신 높은 보호막
     // (turnShield 16)으로 균형을 맞춘다. 28.8%(타이트한 밴드 최하)는 의도된 위치다.
     runEffect: { turnEnergy: 10, turnShield: 16, attackBonus: 9 },
-    desc: '오버차지: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +9.',
+    desc: '뇌운의 가호: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +9.',
   },
   titan: {
-    id: 'sig-titan', name: '장갑판', icon: '🛡',
+    id: 'sig-titan', name: '무쇠 비늘', icon: '🛡',
     runEffect: { damageReduction: 9, regen: 5 },
-    desc: '장갑판: 받는 공격 피해 -9, 매 턴 체력 +5.',
+    desc: '무쇠 비늘: 받는 공격 피해 -9, 매 턴 체력 +5.',
   },
   nova: {
-    id: 'sig-nova', name: '플라스마 코어', icon: '☀',
+    id: 'sig-nova', name: '혼백의 등불', icon: '🕯',
     // 몬스터 이동 도입(2026-08-01) 후 카이팅이 막혀 최하로 떨어짐 → 보호막으로 생존력
     // 보강(회복은 폭주하니 턴마다 리셋되는 turnShield로).
     runEffect: { turnEnergy: 14, attackBonus: 10, regen: 3, turnShield: 8 },
-    desc: '플라스마 코어: 매 턴 기력 +14, 보호막 +8, 체력 +3. 플라스마를 실어 내 공격 피해 +10.',
+    desc: '혼백의 등불: 매 턴 기력 +14, 보호막 +8, 체력 +3. 혼백을 실어 내 공격 피해 +10.',
   },
   cipher: {
-    id: 'sig-cipher', name: '데이터 드레인', icon: '🩸',
+    id: 'sig-cipher', name: '피의 성배', icon: '🩸',
     runEffect: { lifesteal: 11, regen: 2, attackBonus: 2 },
-    desc: '데이터 흡수: 공격으로 피해를 주면 체력 +11. 매 턴 체력 +2. 내 공격 피해 +2.',
+    desc: '피의 갈증: 공격으로 피해를 주면 체력 +11. 매 턴 체력 +2. 내 공격 피해 +2.',
   },
   aegis: {
-    id: 'sig-aegis', name: '상시 방벽', icon: '🧱',
+    id: 'sig-aegis', name: '불침의 서약', icon: '🧱',
     runEffect: { turnShield: 18, regen: 3 },
-    desc: '상시 방벽: 매 턴 보호막 +18, 체력 +3.',
+    desc: '불침의 서약: 매 턴 보호막 +18, 체력 +3.',
   },
   ember: {
     id: 'sig-ember', name: '불사조 깃털', icon: '🔥',

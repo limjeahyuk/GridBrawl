@@ -4,7 +4,7 @@
 
 ## 무엇을 만드는가
 
-*이누야샤 데몬 토너먼트*의 룰을 차용한 **1:1 토너먼트 카드 전투 게임**. 한 턴에 카드 3장을 골라 순서대로 실행해 상대 HP를 깎고, 이기면 다음 상대로 진행. 원작 캐릭터 대신 오리지널 사이버 아레나 캐릭터(VOLT/TITAN/NOVA/CIPHER/AEGIS/EMBER)를 사용. 전체 룰/설계는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
+*이누야샤 데몬 토너먼트*의 룰을 차용한 **1:1 토너먼트 카드 전투 게임**. 한 턴에 카드 3장을 골라 순서대로 실행해 상대 HP를 깎고, 이기면 다음 상대로 진행. 원작 캐릭터 대신 오리지널 **다크 판타지** 캐릭터(VESPER/MAUL/DIRGE/SABLE/CAIRN/PYRE)를 사용 — **코드 id는 옛 이름 그대로**(`volt/titan/nova/cipher/aegis/ember`, 저장된 덱·유물 id·몬스터 `baseArtId`가 참조). 대응표는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "로스터 리스킨". 전체 룰/설계는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
 
 ## 기술 스택 / 명령어
 
@@ -29,6 +29,7 @@
 | 온라인 멀티(P2P)   | `src/net/*`, `src/ui/screens/MultiplayerLobby.tsx`       |
 | 로그인(구글 인증)  | `src/net/auth.ts`, `src/ui/useAuth.ts`, `src/ui/screens/LoginScreen.tsx` |
 | 화면 흐름 / UI     | `src/App.tsx`, `src/ui/screens/*`, `src/ui/`, `src/art/` |
+| 전투 연출(손맛)    | `src/ui/sfx.ts`(효과음 합성)·`src/ui/battlefx.css` — 아래 "전투 연출" 참고 |
 
 ## 전투 모델 (현재 구현 요약) — 2D 격자
 
@@ -50,6 +51,18 @@
   - ⚠ **런 밸런스를 `turnEnergy`로 조정하지 말 것** — AI가 기력 `energyFloor`(hard 30) 아래면 접근보다 원기 회복을 먼저 골라서 클리어율이 계단처럼 20%p 튄다(봇 인공물). 회복·보호막·피해감소 같은 연속적인 훅으로 조정한다.
   - **시작 직업 카드 선택은 제거됨(2026-07-31)** — 이제 전 캐릭터가 **공용 기본 9장**으로 시작하고 직업 카드는 보상으로 번다(`RunStartScreen`·`STARTING_DECK`). 그래서 캐릭터 밸런스 차이는 **시그니처 유물(`relics.ts`의 `SIGNATURE.runEffect`)**에서만 나오고, `npm run sim:run -- --sweep`(전 캐릭터 동일 조건)이 밸런스 밴드를 직접 잰다(현재 3.4%p, 28.8~32.2%). ⚠ npm은 `--sweep` 같은 플래그를 `--` 뒤에 둬야 스크립트로 넘긴다. (구 `--class` 플래그는 없어졌다.)
   - ⚠ **런에선 지속 회복(regen/lifesteal)이 극도로 강하다** — VOLT 시그니처에 regen 2만 얹어도 클리어율이 28.8%→46%로 튀었다(2026-07-31 시뮬). 캐릭터 튜닝 시 회복 훅은 아주 작은 값도 크게 움직이니 주의. 밴드 최하 캐릭터라도 회복을 주면 오히려 최상단으로 넘어간다.
+- **전투 연출 / 손맛(2026-07-31)** — 룰에는 영향이 없고 **연출 레이어만** 손댄다(엔진·AI·시뮬 불변).
+  - **타격 타이밍 분리**가 핵심. 한 공격 스텝을 ①준비 동작 → ②타격 두 박자로 나눠 보여준다. 피해·HP 감소·불꽃·소리는 전부 ②에서만 터진다 — 그전엔 공격 모션 시작과 동시에 다 나와서 "맞는 순간"이 없었다. 닿는 시점은 `BattleScreen`의 `IMPACT_MS`(fx별, 250~345ms)가 정하고 이 값은 `ui.css`의 `atk-*` 키프레임과 짝이다. **한쪽만 바꾸면 어긋난다.**
+  - **히트스톱** — 타격 순간 판 위 애니메이션을 전부 멈춘다(`hitstopFor`, 45~150ms·KO 420ms). `.battle.is-hitstop`이 `animation-play-state: paused`를 건다. 멈춘 시간만큼 스텝 뒤 대기에서 빼므로 전체 템포는 그대로다.
+  - **카메라 펀치** — `punch()`가 Web Animations로 `.gridboard`를 흔든다. ⚠ CSS 클래스 토글로 하면 연타에서 같은 클래스가 유지될 때 재생이 안 뛴다.
+  - **효과음(`sfx.ts`)** — Web Audio 절차 합성, **오디오 파일 0개**. 자동재생 정책 탓에 `installAudioUnlock()`(main.tsx)이 첫 입력에서 컨텍스트를 연다. 음소거는 HUD 토글 + localStorage `gb-sfx-muted`.
+  - 그 밖에: 임팩트 불꽃(피해량 비례 개수), 피해 숫자 크기 스케일, HP 잔상 바(lag bar), 아이들 호흡 모션, KO 섬광.
+  - **픽셀 스프라이트(`src/art/sprites.ts`, 3/6 이관 완료 — 2026-08-01)** — 절차 SVG(`art/art.ts`)를 프레임 애니메이션으로 교체 중. `SHEETS`에 있는 캐릭터만 스프라이트, 나머지는 **자동으로 SVG 폴백**(volt·cipher·aegis만 스프라이트, 몬스터는 전부 SVG). 재생은 JS가 아니라 CSS `steps()`라 히트스톱이 스프라이트 프레임까지 그대로 얼린다. 타격 시점은 `IMPACT_MS` 눈대중 대신 클립의 **`impactFrame`**(실제 프레임 번호)에서 나온다 — 시트가 있는 캐릭터는 이쪽이 이긴다.
+  - ⚠ **좌우 반전은 두 겹이고 절대 합치면 안 된다**(`placeSprite`). ① `--flip`은 **진영**(왼쪽 1·오른쪽 -1)으로, 공격 키프레임의 `translateX(+N)`가 "상대 방향"이 되게 하는 값이다. ② `--artflip`은 **시트 원본이 보는 방향**을 바로잡는 값(지금 팩 셋은 전부 원본이 왼쪽을 봐서 -1). 둘을 곱해 `--flip` 하나로 합치면 원본이 왼쪽을 보는 캐릭터가 **상대 반대쪽으로 파고든다**. 그리고 실제로 뒤집히는 쪽은 `anchorX`도 프레임 반대편(`frameW - anchorX`)으로 옮겨야 한다 — 안 하면 그쪽만 셀에서 밀려 선다(hero-knight 96px).
+  - **에셋은 `public/sprites/`를 손으로 만들지 않는다.** 원본 팩을 `assets-raw/`에 두고 `npm run sprites`(`scripts/packsprites.mjs`, 의존성 0)로 가로 스트립을 굽고, 출력된 `frameW/frameH/footY/anchorX`를 `SHEETS`에 옮긴다. 절차·클립 규격·시트별 상태표는 [public/sprites/README.md](public/sprites/README.md).
+- **지속 상태이상(2026-08-01)** — 독·화상·빙결. **3직업(전사/궁수/마법사) 개편의 1단계**로 엔진에만 먼저 넣었고, 아직 쓰는 카드·유물이 없어 **기존 밸런스는 불변**이다. 독안개와 같은 자리(턴 종료·보호막 무시·랜덤 없음)에서 돌아 멀티 락스텝 안전. 타입 `types.ts`(`StatusKind/StatusEffect/STATUS_TURNS`), 정산 `engine.resolveTurn`의 `tickStatuses`, 유물 훅 `poisonOnHit/burnOnHit/statusPowerPct/bonusVsAfflicted`. 검증 `npm run check`.
+  - ⚠ **지속피해와 빙결은 시간 규칙이 다르다** — 독·화상은 걸린 턴에 바로 갉고 지속도 같이 깎지만, **빙결은 걸린 턴엔 안 깎는다**(이동이 공격보다 먼저 해소돼 그 턴엔 온전한 한 턴을 못 막으므로). 기준은 `StatusEffect.since`. 상세·근거는 GDD ④ "지속 상태이상".
+  - ⚠ **빙결 ≠ 기절** — 빙결은 이동만 무효(공격·가드는 나감), 기절은 그 턴 카드를 통째로 버린다.
 - **독안개(무한전 억제)** — 2026-07-16 열 축소 개편: **6턴부터 양 끝 열(col 0·5)**에 독안개, **3턴마다 안쪽으로** 한 단계씩(9턴 col 0·1·4·5 → 12턴 전부) 조여들어 결국 판 전체를 덮음. **턴 종료 시** 안개 열에 있으면 **턴당 10 고정 피해**(실드 무시, KO 가능). 상수·판정은 `types.ts`(`FOG_START_TURN/FOG_STEP_TURNS/FOG_DAMAGE/fogStageAt/isFogCell(cell,turn)/fogEscalatesNext`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). AI는 지금/다음 턴 안개면 중앙 열로 이탈. 상세는 GDD ④ "독안개".
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18

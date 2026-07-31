@@ -7,11 +7,16 @@ import {
   LOW_HP_FRAC,
   MOVE_DELTA,
   START_CELLS,
+  STATUS_POWER_CAP,
+  STATUS_TURNS,
   inBounds,
+  isDot,
   isFogCell,
   type BattleSnapshot,
   type Cell,
   type CardDef,
+  type StatusEffect,
+  type StatusKind,
   type Step,
 } from './types'
 
@@ -22,6 +27,11 @@ const FOG_CARD: CardDef = { id: 'fog', name: '독안개', kind: 'guard', desc: '
 const REVIVE_CARD: CardDef = { id: 'revive', name: '잿불 부활', kind: 'guard', desc: '쓰러진 자리에서 불씨로 되살아난다.' }
 const STUN_CARD: CardDef = { id: 'stun', name: '기절', kind: 'guard', desc: '기절해서 이 턴에 아무것도 못 한다.' }
 const TRIGGER_CARD: CardDef = { id: 'trigger', name: '유물 발동', kind: 'guard', desc: '누적 기력이 유물을 깨웠다.' }
+const STATUS_CARD: Record<'poison' | 'burn', CardDef> = {
+  poison: { id: 'st-poison', name: '중독', kind: 'guard', desc: '독이 몸을 갉는다.' },
+  burn: { id: 'st-burn', name: '화상', kind: 'guard', desc: '불길이 살을 태운다.' },
+}
+const FROZEN_CARD: CardDef = { id: 'st-frozen', name: '빙결', kind: 'guard', desc: '얼어붙어 움직일 수 없다.' }
 const cloneCell = (c: Cell): Cell => ({ col: c.col, row: c.row })
 const sameCell = (a: Cell, b: Cell) => a.col === b.col && a.row === b.row
 
@@ -44,6 +54,8 @@ export interface BattleState {
   stunsUsed: [number, number]
   /** 카드 `empower`로 이 전투 내내 누적된 공격 피해 보너스. */
   empowered: [number, number]
+  /** 걸려 있는 지속 상태이상(독·화상·빙결). 종류당 최대 1개로 합쳐 둔다. */
+  status: [StatusEffect[], StatusEffect[]]
   turn: number
   over: boolean
   winner: number | null
@@ -101,10 +113,21 @@ export class CardBattle {
       stunned: [0, 0],
       stunsUsed: [0, 0],
       empowered: [0, 0],
+      status: [[], []],
       turn: 1,
       over: false,
       winner: null,
     }
+  }
+
+  /** 이 진영에 걸린 상태이상 하나(없으면 undefined). */
+  statusOf(p: number, kind: StatusKind): StatusEffect | undefined {
+    return this.state.status[p].find((e) => e.kind === kind)
+  }
+
+  /** 지속 상태이상이 하나라도 걸려 있는가 — `bonusVsAfflicted` 판정용. */
+  afflicted(p: number): boolean {
+    return this.state.status[p].length > 0
   }
 
   /** + for player (faces right), - for opponent (faces left). */
@@ -123,6 +146,8 @@ export class CardBattle {
       hp: [s.hp[0], s.hp[1]],
       energy: [s.energy[0], s.energy[1]],
       shield: [s.shield[0], s.shield[1]],
+      // 깊은 복사 — 스냅샷은 연출용 과거 기록이라 이후 턴에 같이 변하면 안 된다
+      status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
     }
   }
 
@@ -255,9 +280,38 @@ export class CardBattle {
       }
     }
 
+    /**
+     * 상태이상을 건다. 같은 종류는 **한 칸으로 합친다** — 항목이 늘어나면 스냅샷도
+     * UI도 무한정 자라고, "몇 개 걸렸나"가 아니라 "얼마나 아픈가"가 읽혀야 한다.
+     * 위력은 합산(`STATUS_POWER_CAP` 상한), 지속은 더 긴 쪽으로 갱신.
+     */
+    const applyStatus = (p: number, kind: StatusKind, power: number, turns: number) => {
+      if (turns <= 0) return
+      const cur = s.status[p].find((e) => e.kind === kind)
+      if (cur) {
+        cur.turns = Math.max(cur.turns, turns)
+        cur.power = Math.min(STATUS_POWER_CAP, cur.power + power)
+        cur.since = s.turn // 다시 걸면 유예도 다시 — 계속 얼려 두면 계속 못 움직인다
+      } else {
+        s.status[p].push({ kind, turns, power: Math.min(STATUS_POWER_CAP, power), since: s.turn })
+      }
+    }
+
+    /** 유물 `statusPowerPct`를 **거는 순간** 한 번 반영한다(틱마다 다시 계산하지 않는다). */
+    const scaledPower = (p: number, power: number): number => {
+      const pct = this.passive[p].statusPowerPct ?? 0
+      return pct > 0 ? Math.round(power * (1 + pct / 100)) : power
+    }
+
     // resolve one move/guard/energy card in place
     const resolvePrep = (p: number, c: CardDef) => {
       if (c.kind === 'move') {
+        // 빙결: 이동만 막는다. 카드는 그대로 소모되고 쿨다운도 돈다 — 기절(카드를
+        // 통째로 못 냄)과 구별되는 지점이다.
+        if (this.statusOf(p, 'frozen')) {
+          emit(p, c, 'frozen')
+          return
+        }
         this.applyMove(p, c)
         emit(p, c, 'move')
       } else if (c.kind === 'guard') {
@@ -290,7 +344,20 @@ export class CardBattle {
     // shield / drain effects apply immediately; HP · push are returned for the
     // caller to apply (deferred in a simultaneous trade).
     const computeAttack = (p: number, c: CardDef) => {
-      const zero = { p, card: c, dmg: 0, heal: 0, drain: 0, recoil: 0, push: 0, pull: 0, stun: 0 }
+      const zero = {
+        p,
+        card: c,
+        dmg: 0,
+        heal: 0,
+        drain: 0,
+        recoil: 0,
+        push: 0,
+        pull: 0,
+        stun: 0,
+        poison: 0,
+        burn: 0,
+        freeze: 0,
+      }
       const cost = c.energyCost ?? 0
       if (s.energy[p] < cost) return { ...zero, result: 'nofuel' as Step['result'] }
       spend(p, cost)
@@ -310,7 +377,11 @@ export class CardBattle {
       const defPas = this.passive[d]
       // raw 피해 = 카드 + attackBonus(유물) + empowered(이 전투 누적 각성),
       // 저체력이면 lowHpBonusPct(유물, 합산)만큼 배율. 순서·반올림 고정(결정론).
-      const flat = (c.damage ?? 0) + (atkPas.attackBonus ?? 0) + s.empowered[p]
+      // bonusVsAfflicted: 이미 상태이상에 걸린 상대를 때리면 추가 피해(상태이상 시너지).
+      // 이 공격이 새로 거는 상태이상은 아직 안 걸린 것으로 본다 — 자기 자신을 조건으로
+      // 삼으면 카드 한 장이 스스로 보너스를 켜 버린다.
+      const synergy = this.afflicted(d) ? (atkPas.bonusVsAfflicted ?? 0) : 0
+      const flat = (c.damage ?? 0) + (atkPas.attackBonus ?? 0) + s.empowered[p] + synergy
       const low = s.hp[p] <= this.maxHp[p] * LOW_HP_FRAC ? (atkPas.lowHpBonusPct ?? 0) : 0
       const raw = low > 0 ? Math.round(flat * (1 + low / 100)) : flat
       // EMBER (shieldBreak): a connecting hit wipes the defender's shield first.
@@ -341,8 +412,27 @@ export class CardBattle {
         s.stunsUsed[p] += 1
         stun += onHit
       }
+      // 상태이상: 기절과 같은 규칙 — **피해가 실제로 들어갔을 때만** 걸린다.
+      // 가드에 완전히 막힌 타격으로는 독도 화상도 빙결도 묻지 않는다.
+      // 위력 보정(statusPowerPct)은 여기서 한 번 계산해 확정한다.
+      const poison = dmg > 0 ? scaledPower(p, (c.poison ?? 0) + (atkPas.poisonOnHit ?? 0)) : 0
+      const burn = dmg > 0 ? scaledPower(p, (c.burn ?? 0) + (atkPas.burnOnHit ?? 0)) : 0
+      const freeze = dmg > 0 ? (c.freeze ?? 0) : 0
       const result = (dmg > 0 ? 'hit' : 'blocked') as Step['result']
-      return { ...zero, result, dmg, heal, drain, recoil, push: c.push ?? 0, pull: c.pull ?? 0, stun }
+      return {
+        ...zero,
+        result,
+        dmg,
+        heal,
+        drain,
+        recoil,
+        push: c.push ?? 0,
+        pull: c.pull ?? 0,
+        stun,
+        poison,
+        burn,
+        freeze,
+      }
     }
 
     // 넉백/끌어당김: 공격자가 바라보는 방향(pull은 반대)으로 상대를 옮긴다.
@@ -370,6 +460,11 @@ export class CardBattle {
       if (r.pull) applyShove(r.p, r.pull, true)
       // 이 턴 시작에 감소 판정이 이미 끝났으므로, 여기서 더한 값은 다음 턴부터 소모된다.
       if (r.stun) s.stunned[d] += r.stun
+      // 상태이상 부여도 여기서 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤
+      // 함께 적용돼야 선후가 안 생긴다.
+      if (r.poison) applyStatus(d, 'poison', r.poison, STATUS_TURNS.poison)
+      if (r.burn) applyStatus(d, 'burn', r.burn, STATUS_TURNS.burn)
+      if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze)
     }
 
     // 부활(EMBER 잿불 부활 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
@@ -389,6 +484,50 @@ export class CardBattle {
         recoil: 0,
         snapshot: this.snapshot(),
       })
+    }
+
+    /** KO 정산 — 부활을 먼저 시도하고, 그래도 쓰러졌으면 승부를 끝낸다. */
+    const settleKo = (): boolean => {
+      if (s.hp[0] > 0 && s.hp[1] > 0) return false
+      tryRevive(0)
+      tryRevive(1)
+      if (s.hp[0] > 0 && s.hp[1] > 0) return false
+      s.over = true
+      s.winner = koWinner()
+      return true
+    }
+
+    /**
+     * 지속 상태이상 정산 — 턴 종료. 독안개와 같은 규칙(보호막 무시 고정 피해).
+     * 이 턴에 새로 걸린 것도 함께 틱한다: "맞자마자 타들어간다"가 읽히고, 기절처럼
+     * 한 턴 미루면 지속 2턴짜리 화상이 사실상 1턴이 돼 카드가 죽는다.
+     * 정산 뒤 남은 턴을 1 깎고 0이 된 것은 제거한다. 순서는 p0 → p1 고정(랜덤 없음).
+     */
+    const tickStatuses = () => {
+      for (let p = 0; p < 2; p++) {
+        for (const e of s.status[p]) {
+          if (!isDot(e.kind) || e.power <= 0) continue
+          const dealt = Math.min(s.hp[p], e.power)
+          s.hp[p] -= dealt
+          steps.push({
+            phase: 'status',
+            actor: p,
+            card: STATUS_CARD[e.kind as 'poison' | 'burn'],
+            result: 'status',
+            damage: 0,
+            heal: 0,
+            drain: 0,
+            // 자기 몸에 뜨는 피해라 독안개와 같이 recoil로 싣는다(UI가 -N을 본인에게)
+            recoil: dealt,
+            snapshot: this.snapshot(),
+          })
+        }
+        // 지속피해는 방금 갉았으니 이 턴을 소모한 것으로 친다. 빙결은 걸린 턴엔
+        // 온전히 한 턴을 막지 못했으므로 깎지 않는다(`StatusEffect.since` 참고).
+        s.status[p] = s.status[p]
+          .map((e) => (isDot(e.kind) || e.since < s.turn ? { ...e, turns: e.turns - 1 } : e))
+          .filter((e) => e.turns > 0)
+      }
     }
 
     // 기절 판정 — 남은 기절 턴이 있으면 이 턴 카드를 통째로 버린다(기력 회복은 받는다).
@@ -443,15 +582,14 @@ export class CardBattle {
       // 트레이드 계산 중간에 끼어들지 않게.
       fireEnergyTriggers()
 
-      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
-        tryRevive(0)
-        tryRevive(1)
-      }
-      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
-        s.over = true
-        s.winner = koWinner()
-        break
-      }
+      if (settleKo()) break
+    }
+
+    // 지속 상태이상(독·화상) — 독안개보다 **먼저** 갉는다. 독안개는 무한전을 끊는
+    // 최후의 장치라 마지막에 두는 게 읽기 좋다.
+    if (!s.over) {
+      tickStatuses()
+      settleKo()
     }
 
     // 독안개: FOG_START_TURN부터 턴 종료 시 독안개 위에 서 있으면 피해.
@@ -472,14 +610,7 @@ export class CardBattle {
           snapshot: this.snapshot(),
         })
       }
-      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
-        tryRevive(0)
-        tryRevive(1)
-      }
-      if (s.hp[0] <= 0 || s.hp[1] <= 0) {
-        s.over = true
-        s.winner = koWinner()
-      }
+      settleKo()
     }
 
     // end of turn: advance cooldowns, then lock cards used this turn
