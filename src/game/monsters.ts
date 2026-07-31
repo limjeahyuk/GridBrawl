@@ -12,7 +12,12 @@ import type { CardDef, Difficulty } from '../battle/types'
 export interface MonsterDef {
   id: string
   name: string // 화면에 뜨는 이름(슬라임 등)
-  baseArtId: string // 아트·색을 빌려올 ROSTER 캐릭터 id
+  baseArtId: string // 색·기본 스탯을 빌려올 ROSTER 캐릭터 id
+  /**
+   * 이 몬스터 전용 스프라이트 시트(`SHEETS` 키). 비우면 `baseArtId`의 직업 시트를
+   * 빌려 쓴다 — 20종이 직업 그림 3개를 돌려쓰던 상태의 잔재라, 채울수록 좋다.
+   */
+  spriteId?: string
   tier: number // 1이 가장 약함 — 층이 오를수록 높은 티어가 등장
   maxHp: number
   startEnergy: number
@@ -34,6 +39,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'slime',
     name: '슬라임',
     baseArtId: 'archer',
+    spriteId: 'slime',
     tier: 1,
     maxHp: 48,
     startEnergy: 40,
@@ -46,6 +52,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'grunt',
     name: '도끼병',
     baseArtId: 'warrior',
+    spriteId: 'rat',
     tier: 1,
     maxHp: 60,
     startEnergy: 50,
@@ -87,6 +94,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'berserker',
     name: '버서커',
     baseArtId: 'mage',
+    spriteId: 'martial-hero',
     tier: 2,
     maxHp: 60,
     startEnergy: 50,
@@ -99,6 +107,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'vampire',
     name: '뱀파이어',
     baseArtId: 'archer',
+    spriteId: 'mimic',
     tier: 3,
     maxHp: 115,
     startEnergy: 60,
@@ -115,6 +124,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'guardian',
     name: '가디언',
     baseArtId: 'warrior',
+    spriteId: 'martial-hero',
     tier: 3,
     maxHp: 120,
     startEnergy: 60,
@@ -127,6 +137,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'phantom',
     name: '팬텀',
     baseArtId: 'warrior',
+    spriteId: 'bat',
     tier: 3,
     maxHp: 100,
     startEnergy: 60,
@@ -141,6 +152,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'overlord',
     name: '오버로드',
     baseArtId: 'mage',
+    spriteId: 'evil-wizard',
     tier: 4,
     maxHp: 200,
     startEnergy: 70,
@@ -154,6 +166,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'bat',
     name: '박쥐 떼',
     baseArtId: 'warrior',
+    spriteId: 'bat',
     tier: 1,
     maxHp: 45,
     startEnergy: 50,
@@ -166,6 +179,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'goblin',
     name: '고블린',
     baseArtId: 'mage',
+    spriteId: 'rat',
     tier: 1,
     maxHp: 48,
     startEnergy: 45,
@@ -178,6 +192,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'crossbow',
     name: '석궁병',
     baseArtId: 'mage',
+    spriteId: 'martial-hero',
     tier: 2,
     maxHp: 70,
     startEnergy: 55,
@@ -190,6 +205,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'shaman',
     name: '주술사',
     baseArtId: 'archer',
+    spriteId: 'evil-wizard',
     tier: 2,
     maxHp: 85,
     startEnergy: 55,
@@ -202,6 +218,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'knight',
     name: '기사',
     baseArtId: 'warrior',
+    spriteId: 'martial-hero',
     tier: 2,
     maxHp: 90,
     startEnergy: 55,
@@ -226,6 +243,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'assassin',
     name: '암살자',
     baseArtId: 'archer',
+    spriteId: 'martial-hero',
     tier: 3,
     maxHp: 95, // 75 → 95 (2026-07-30): 급소를 노리기 전에 먼저 죽었다(시뮬 3턴 만에 격파)
     startEnergy: 70,
@@ -238,6 +256,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'witch',
     name: '마녀',
     baseArtId: 'mage',
+    spriteId: 'evil-wizard',
     tier: 3,
     maxHp: 100,
     startEnergy: 45,
@@ -252,6 +271,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'splitter',
     name: '분열체',
     baseArtId: 'archer',
+    spriteId: 'slime',
     tier: 3,
     maxHp: 100,
     startEnergy: 60,
@@ -266,6 +286,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'warden',
     name: '수호기사',
     baseArtId: 'warrior',
+    spriteId: 'martial-hero',
     tier: 4,
     maxHp: 155,
     startEnergy: 65,
@@ -280,6 +301,7 @@ export const MONSTERS: MonsterDef[] = [
     id: 'pyrelord',
     name: '화염군주',
     baseArtId: 'mage',
+    spriteId: 'evil-wizard',
     tier: 4,
     maxHp: 180,
     startEnergy: 65,
@@ -310,6 +332,7 @@ export function monsterChar(m: MonsterDef): CharacterDef {
   const base = getChar(m.baseArtId)
   return {
     ...base,
+    spriteId: m.spriteId ?? base.id,
     name: m.name,
     maxHp: m.maxHp,
     startEnergy: m.startEnergy,

@@ -34,7 +34,7 @@ export function ResultScreen({
         <div className="result__sub neon-text">{cfg.sub}</div>
         <h1 className="result__title">{cfg.title}</h1>
         {outcome === 'champion' && (
-          <div className="result__crown">★ 모든 아바타를 격파했다 ★</div>
+          <div className="result__crown">★ 모든 적을 격파했다 ★</div>
         )}
         <PortraitSvg char={player} className="result__portrait" />
         <div className="result__name neon-text">{player.name}</div>

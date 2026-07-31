@@ -20,7 +20,7 @@ export function CharacterSelect({
         <button className="btn btn--ghost select__back" onClick={onBack}>
           ◀ 뒤로
         </button>
-        <h2 className="neon-text">아바타 선택</h2>
+        <h2 className="neon-text">직업 선택</h2>
         <div style={{ width: 90 }} />
       </div>
 
@@ -61,7 +61,7 @@ export function CharacterSelect({
               ))}
             </div>
             <button className="btn detail__confirm" onClick={() => onConfirm(sel.id)}>
-              이 아바타로 출전
+              이 직업으로 출전
             </button>
           </div>
         </div>

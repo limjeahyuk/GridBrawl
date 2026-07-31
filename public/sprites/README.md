@@ -9,26 +9,21 @@
 
 ## 현재 상태
 
-| 캐릭터 | 시트 id | 출처 팩 | 상태 |
-| --- | --- | --- | --- |
-| volt (VESPER) | `hero-knight` | Hero Knight | ✅ 적용 완료 |
-| cipher (SABLE) | `bandit-light` | Bandits (경장) | ✅ 적용 완료 |
-| aegis (CAIRN) | `bandit-heavy` | Bandits (중장) | ✅ 적용 완료 |
-| titan (MAUL) | — | Chaos Berserker | ⚠ 커버 이미지(48×48 한 장)만 도착 — 애니메이션 시트 필요 |
-| nova (DIRGE) | — | Wraith | ⚠ 커버 이미지(48×48 한 장)만 도착 — 애니메이션 시트 필요 |
-| ember (PYRE) | — | Flame Demons | ⚠ 커버 이미지(64×64 한 장)만 도착 — 애니메이션 시트 필요 |
+| 쓰는 곳 | 시트 id | 출처 팩 |
+| --- | --- | --- |
+| `warrior` | `hero-knight` | Hero Knight (Sven Thole) |
+| `archer` | `huntress` | Huntress (LuizMelo) |
+| `mage` | `wizard` | Wizard Pack (LuizMelo) |
+| 몬스터 slime·splitter | `slime` | Monsters Creatures Fantasy 2 |
+| 몬스터 bat·phantom | `bat` | 〃 |
+| 몬스터 goblin·grunt | `rat` | 〃 |
+| 몬스터 vampire | `mimic` | 〃 |
+| 몬스터 witch·shaman·overlord·pyrelord | `evil-wizard` | Evil Wizard 3 (LuizMelo) |
+| 몬스터 knight·warden·guardian·assassin·berserker·crossbow | `martial-hero` | Martial Hero 3 (LuizMelo) |
 
-> 커버 이미지 3종은 한 장짜리 정지 그림이라 **굽지 않는다.** 예전엔 같은 그림을
-> N번 반복한 가짜 스트립을 `berserker/` · `wraith/` · `flame-demon/`에 만들어
-> 뒀지만, `SHEETS`가 참조하지 않으면서 배포에만 실려 나가 지웠다. 진짜 시트가
-> 도착하면 `JOBS`에 항목을 넣고 다시 굽는다.
-
-Bandits 팩은 Hero Knight와 프레임 구성이 다르다(대기 4·달리기 8·공격 8, 공격
-동작 1종). 그래서 `sprites.ts`가 `STD_CLIPS` 대신 `banditClips()`로 따로 잡고,
-죽는 동작이 없어 패커가 `Recover`를 거꾸로 돌려 만든다.
-
-`SHEETS`에 없는 캐릭터는 **기존 SVG 아트로 그려집니다.** 한 명씩 옮겨도
-게임은 깨지지 않습니다.
+- **아직 직업 시트를 빌려 쓰는 몬스터**: `sentry`·`ogre`·`golem` — 큰 덩치/기계형에 맞는 팩이 없다. `MonsterDef.spriteId`만 채우면 끝난다.
+- `bandit-light`/`bandit-heavy`는 궁수·마법사가 임시로 쓰던 시트다. 지금은 안 쓰지만 몬스터용으로 재활용할 수 있어 남겨 뒀다.
+- 미사용 원본: `Pet Dogs Pack`(assets-raw) — 소환수·펫을 넣게 되면 쓸 수 있다.
 
 ## 파일 배치
 

@@ -56,7 +56,7 @@ export function TitleScreen({
           <span className="title__word title__word--b">BRAWL</span>
         </h1>
         <p className="title__tag">
-          여섯 아바타. 하나의 코어. 사다리를 끝까지 올라 챔피언이 되어라.
+          세 직업. 하나의 사다리. 끝까지 올라 그리드의 주인이 되어라.
         </p>
         <div className="title__buttons">
           <button className="btn" onClick={onStart}>

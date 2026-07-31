@@ -183,9 +183,130 @@ function loadFromGrid(file, fw, fh, clips) {
   return out
 }
 
+/**
+ * 이미 **가로 스트립**으로 배포된 팩을 읽는다(LuizMelo·Monsters Creatures 계열).
+ * 프레임 수는 이미지 폭 / frameW로 나온다 — 팩마다 클립별 프레임 수가 달라서
+ * 손으로 세는 것보다 이쪽이 안전하다.
+ */
+function loadFromStrips(root, frameW, files) {
+  const out = {}
+  for (const [clip, file] of Object.entries(files)) {
+    const img = decodePng(readFileSync(join(root, file)))
+    const n = Math.round(img.w / frameW)
+    if (n < 1) throw new Error(`${file}: 폭 ${img.w}가 frameW ${frameW}보다 작다`)
+    if (img.w % frameW !== 0)
+      throw new Error(`${file}: 폭 ${img.w}가 frameW ${frameW}로 나누어떨어지지 않는다`)
+    out[clip] = Array.from({ length: n }, (_, i) => ({
+      w: frameW,
+      h: img.h,
+      px: crop(img, { x: i * frameW, y: 0, w: frameW, h: img.h }),
+    }))
+  }
+  return out
+}
+
 // ---- 작업 정의 --------------------------------------------------------------
 
+const RAW = 'assets-raw'
+
 const JOBS = [
+  // --- 플레이어 직업 --------------------------------------------------------
+  {
+    id: 'huntress', // 궁수 — 임시로 쓰던 경장 도적을 대체한다
+    load: () =>
+      loadFromStrips(`${RAW}/Huntress/Sprites`, 150, {
+        idle: 'Idle.png',
+        run: 'Run.png',
+        attack1: 'Attack1.png',
+        attack2: 'Attack2.png',
+        attack3: 'Attack3.png',
+        hurt: 'Take hit.png',
+        death: 'Death.png',
+      }),
+  },
+  {
+    id: 'wizard', // 마법사 — 임시로 쓰던 중장 도적을 대체한다
+    load: () =>
+      loadFromStrips(`${RAW}/Wizard Pack`, 231, {
+        idle: 'Idle.png',
+        run: 'Run.png',
+        attack1: 'Attack1.png',
+        attack2: 'Attack2.png',
+        hurt: 'Hit.png',
+        death: 'Death.png',
+      }),
+  },
+  // --- 몬스터 --------------------------------------------------------------
+  // 20종이 직업 시트 3개를 돌려쓰던 걸 여기서 갈라 낸다.
+  {
+    id: 'slime',
+    load: () =>
+      loadFromStrips(`${RAW}/Monsters Creatures Fantasy 2/Slime`, 156, {
+        idle: 'idle.png',
+        run: 'walk.png',
+        attack1: 'attack.png',
+        hurt: 'hurt.png',
+        death: 'death.png',
+      }),
+  },
+  {
+    id: 'bat',
+    load: () =>
+      loadFromStrips(`${RAW}/Monsters Creatures Fantasy 2/Bat`, 87, {
+        idle: 'fly.png',
+        run: 'fly.png',
+        attack1: 'attack.png',
+        hurt: 'hurt.png',
+        death: 'death.png',
+      }),
+  },
+  {
+    id: 'rat',
+    load: () =>
+      loadFromStrips(`${RAW}/Monsters Creatures Fantasy 2/Rat`, 70, {
+        idle: 'idle.png',
+        run: 'run.png',
+        attack1: 'attack_bite.png',
+        hurt: 'hurt.png',
+        death: 'rat-death.png',
+      }),
+  },
+  {
+    id: 'mimic',
+    load: () =>
+      loadFromStrips(`${RAW}/Monsters Creatures Fantasy 2/Mimic`, 146, {
+        idle: 'idle_transformed.png',
+        run: 'walk.png',
+        attack1: 'attack_1.png',
+        attack2: 'attack_2.png',
+        hurt: 'hurt.png',
+        death: 'death.png',
+      }),
+  },
+  {
+    id: 'evil-wizard', // 주술사 계열 몬스터(마녀·주술사·유령·군주)
+    load: () =>
+      loadFromStrips(`${RAW}/Evil Wizard 3/Sprites`, 140, {
+        idle: 'Idle.png',
+        run: 'Run.png',
+        attack1: 'Attack.png',
+        hurt: 'Get hit.png',
+        death: 'Death.png',
+      }),
+  },
+  {
+    id: 'martial-hero', // 인간형 전투 몬스터(기사·수호자·암살자·광전사)
+    load: () =>
+      loadFromStrips(`${RAW}/Martial Hero 3/Sprite`, 126, {
+        idle: 'Idle.png',
+        run: 'Run.png',
+        attack1: 'Attack1.png',
+        attack2: 'Attack2.png',
+        attack3: 'Attack3.png',
+        hurt: 'Take Hit.png',
+        death: 'Death.png',
+      }),
+  },
   {
     id: 'hero-knight',
     load: () =>

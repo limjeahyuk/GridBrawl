@@ -3,9 +3,9 @@
 // 카드가 항상 유리해서 "시그니처로 시작"이 정답이 되고 나머지는 함정이었으며, 그 시작이
 // 1~6층을 무료로 만들었다. 상세는 docs/ROGUELIKE.md ⑪.
 import { useMemo, useState } from 'react'
+import { PortraitSvg } from '../PortraitSvg'
 import { COMMON_CARDS } from '../../battle/cards'
 import { ROSTER, getChar } from '../../data/roster'
-import { buildFighterSvg } from '../../art/art'
 import { getRelic, signatureRelicId } from '../../game/relics'
 import { STARTING_DECK } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
@@ -19,7 +19,6 @@ export function RunStartScreen({
 }) {
   const [charId, setCharId] = useState<string>(ROSTER[0].id)
   const char = getChar(charId)
-  const svgs = useMemo(() => Object.fromEntries(ROSTER.map((c) => [c.id, buildFighterSvg(c)])), [])
   const sigRelic = getRelic(signatureRelicId(charId))
   const startCards = useMemo(
     () => STARTING_DECK.map((id) => COMMON_CARDS.find((c) => c.id === id)).filter((c) => !!c),
@@ -45,7 +44,7 @@ export function RunStartScreen({
             style={{ ['--accent' as string]: c.accent }}
             onClick={() => setCharId(c.id)}
           >
-            <div className="avatar-card__art" dangerouslySetInnerHTML={{ __html: svgs[c.id] }} />
+            <PortraitSvg char={c} className="avatar-card__art" />
             <div className="avatar-card__name">{c.name}</div>
           </button>
         ))}

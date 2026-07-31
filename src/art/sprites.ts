@@ -59,7 +59,12 @@ export interface SheetDef {
    * 이 값과 좌우 진영을 함께 봐야 나온다 — `placeSprite` 참고.
    */
   facesRight?: boolean
-  clips: Record<ClipName, ClipDef>
+  /**
+   * 팩마다 들어 있는 동작이 다르다(가드·3연격이 없는 팩이 흔하다). 없는 클립은
+   * `clipOrFallback`이 대기 동작으로 떨어뜨리므로 **비워 두면 된다** — 억지로
+   * 다른 동작을 채워 넣으면 엉뚱한 모션이 나온다.
+   */
+  clips: Partial<Record<ClipName, ClipDef>>
 }
 
 /** 플레이스홀더/기본 클립 구성 — Hero Knight 계열의 프레임 수에 맞춰 두었다. */
@@ -117,13 +122,10 @@ const sheet = (id: string, over: Partial<SheetDef> = {}): SheetDef => ({
  * 실제 픽셀에서 측정해 출력한 값이다. 에셋을 갈아끼우면 다시 돌려서 옮긴다.
  */
 export const SHEETS: Record<string, SheetDef> = {
-  // Hero Knight (Sven Thole) — 측정: frameW 90, frameH 50, footY 50, anchorX 29
+  // --- 플레이어 직업 --------------------------------------------------------
+  // Hero Knight (Sven Thole)
   warrior: sheet('hero-knight', {
-    frameW: 90,
-    frameH: 50,
-    footY: 50,
-    anchorX: 29,
-    scale: 3,
+    frameW: 90, frameH: 50, footY: 50, anchorX: 29, scale: 3,
     clips: {
       ...STD_CLIPS,
       // 원본 프레임을 눈으로 확인한 값 — 검이 가장 뻗는 프레임에서 피해가 터진다
@@ -133,32 +135,118 @@ export const SHEETS: Record<string, SheetDef> = {
       death: { frames: 10, frameMs: 95, loop: false },
     },
   }),
-  // Bandits (Sven Thole) — 한 팩에 경장·중장 두 캐릭터. 측정값은 `npm run sprites` 출력.
-  // 이 팩은 프레임 구성이 Hero Knight와 달라(대기 4·달리기 8·공격 8) STD_CLIPS를
-  // 통째로 갈아 끼운다.
-  archer: sheet('bandit-light', {
-    frameW: 43,
-    frameH: 47,
-    footY: 46,
-    anchorX: 27,
-    scale: 3,
-    clips: banditClips(56), // 경장 = 빠른 손놀림
+  // Huntress (LuizMelo) — 창을 든 사냥꾼. 궁수의 "거리를 지킨다"와 맞는다.
+  archer: sheet('huntress', {
+    frameW: 91, frameH: 66, footY: 66, anchorX: 42, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 8, frameMs: 120, loop: true },
+      run: { frames: 8, frameMs: 75, loop: true },
+      attack1: { frames: 5, frameMs: 70, loop: false, impactFrame: 2 },
+      attack2: { frames: 5, frameMs: 70, loop: false, impactFrame: 2 },
+      attack3: { frames: 7, frameMs: 65, loop: false, impactFrame: 3 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 8, frameMs: 100, loop: false },
+    },
   }),
-  mage: sheet('bandit-heavy', {
-    frameW: 45,
-    frameH: 47,
-    footY: 46,
-    anchorX: 27,
-    scale: 3,
-    clips: banditClips(66), // 중장 = 크게 휘두르는 만큼 느리게
+  // Wizard Pack (LuizMelo) — 원본이 고해상도라 scale 1로 둔다(정수 배율 규칙).
+  mage: sheet('wizard', {
+    frameW: 186, frameH: 136, footY: 136, anchorX: 66, scale: 1, facesRight: true,
+    clips: {
+      idle: { frames: 6, frameMs: 130, loop: true },
+      run: { frames: 8, frameMs: 80, loop: true },
+      attack1: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
+      attack2: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
+      hurt: { frames: 4, frameMs: 90, loop: false },
+      death: { frames: 7, frameMs: 110, loop: false },
+    },
   }),
-  // ⚠ 3직업 개편(2026-08-01) 이후 시트가 직업과 딱 맞지는 않는다. 특히 마법사에
-  // 중장 도적 시트를 임시로 붙였다 — 활·지팡이 팩이 없어서다. 로스터가 6→3으로
-  // 줄면서 필요한 시트도 6→3이 됐으니, 궁수(활)·마법사(지팡이) 팩만 구하면 끝난다.
-  // 그때까지는 **셋 다 픽셀**인 편이 한 명만 SVG로 남는 것보다 덜 어색하다.
+
+  // --- 몬스터 --------------------------------------------------------------
+  // 20종이 직업 시트를 돌려쓰던 걸 갈라 낸다. `MonsterDef.spriteId`로 고른다.
+  slime: sheet('slime', {
+    frameW: 111, frameH: 35, footY: 35, anchorX: 34, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 14, frameMs: 110, loop: true },
+      run: { frames: 6, frameMs: 110, loop: true },
+      attack1: { frames: 19, frameMs: 55, loop: false, impactFrame: 9 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 11, frameMs: 95, loop: false },
+    },
+  }),
+  bat: sheet('bat', {
+    frameW: 72, frameH: 55, footY: 44, anchorX: 34, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 11, frameMs: 70, loop: true },
+      run: { frames: 11, frameMs: 60, loop: true },
+      attack1: { frames: 11, frameMs: 55, loop: false, impactFrame: 5 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 4, frameMs: 110, loop: false },
+    },
+  }),
+  rat: sheet('rat', {
+    frameW: 59, frameH: 22, footY: 22, anchorX: 32, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 10, frameMs: 110, loop: true },
+      run: { frames: 8, frameMs: 65, loop: true },
+      attack1: { frames: 12, frameMs: 55, loop: false, impactFrame: 6 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 6, frameMs: 100, loop: false },
+    },
+  }),
+  mimic: sheet('mimic', {
+    frameW: 113, frameH: 44, footY: 44, anchorX: 43, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 9, frameMs: 120, loop: true },
+      run: { frames: 6, frameMs: 100, loop: true },
+      attack1: { frames: 14, frameMs: 55, loop: false, impactFrame: 7 },
+      attack2: { frames: 13, frameMs: 55, loop: false, impactFrame: 6 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 6, frameMs: 110, loop: false },
+    },
+  }),
+  'evil-wizard': sheet('evil-wizard', {
+    frameW: 88, frameH: 66, footY: 66, anchorX: 25, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 10, frameMs: 120, loop: true },
+      run: { frames: 8, frameMs: 80, loop: true },
+      attack1: { frames: 13, frameMs: 60, loop: false, impactFrame: 6 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 18, frameMs: 80, loop: false },
+    },
+  }),
+  'martial-hero': sheet('martial-hero', {
+    frameW: 125, frameH: 80, footY: 80, anchorX: 68, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 10, frameMs: 120, loop: true },
+      run: { frames: 8, frameMs: 75, loop: true },
+      attack1: { frames: 7, frameMs: 65, loop: false, impactFrame: 3 },
+      attack2: { frames: 6, frameMs: 65, loop: false, impactFrame: 3 },
+      attack3: { frames: 9, frameMs: 60, loop: false, impactFrame: 4 },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+      death: { frames: 11, frameMs: 95, loop: false },
+    },
+  }),
 }
 
-export const sheetFor = (charId: string): SheetDef | undefined => SHEETS[charId]
+export const sheetFor = (spriteId: string): SheetDef | undefined => SHEETS[spriteId]
+
+/**
+ * 이 시트에서 실제로 재생할 클립. 없는 동작은 단계적으로 떨어진다:
+ *   attack2/3 → attack1 → idle,  block/hurt/death/run → idle.
+ * 대기 동작은 어느 팩에나 있으므로 여기서 반드시 멈춘다.
+ */
+export function clipOrFallback(sheet: SheetDef, want: ClipName): [ClipName, ClipDef] {
+  const chain: ClipName[] =
+    want === 'attack3' || want === 'attack2'
+      ? [want, 'attack1', 'idle']
+      : [want, 'idle']
+  for (const c of chain) {
+    const def = sheet.clips[c]
+    if (def) return [c, def]
+  }
+  // idle조차 없는 시트는 만들 수 없다(패커가 항상 굽는다) — 방어적 기본값.
+  return ['idle', { frames: 1, frameMs: 200, loop: true }]
+}
 
 /**
  * 시트를 셀 위에 세우는 데 필요한 값 셋. 좌우 반전이 **기준점까지 옮기기 때문에**
@@ -201,8 +289,8 @@ export const attackClipFor = (fx?: string): ClipName => FX_CLIP[fx ?? 'punch'] ?
 /** 공격이 상대에게 닿기까지의 시간(ms) — 클립의 impactFrame에서 직접 나온다. */
 export function impactDelayOf(sheet: SheetDef | undefined, fx: string | undefined): number | null {
   if (!sheet) return null
-  const clip = sheet.clips[attackClipFor(fx)]
-  if (clip?.impactFrame === undefined) return null
+  const [, clip] = clipOrFallback(sheet, attackClipFor(fx))
+  if (clip.impactFrame === undefined) return null
   return clip.impactFrame * clip.frameMs
 }
 

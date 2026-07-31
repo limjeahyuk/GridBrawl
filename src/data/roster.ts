@@ -107,6 +107,12 @@ export interface CharacterDef {
   maxEnergy: number
   startEnergy: number
   passive: Passive
+  /**
+   * 어느 스프라이트 시트로 그릴지(`art/sprites.ts`의 `SHEETS` 키). 비우면 `id`를
+   * 쓴다 — 직업은 그래서 지정할 필요가 없고, **몬스터가 자기 그림을 갖는 통로**다
+   * (`monsterChar`가 `MonsterDef.spriteId`를 여기에 실어 보낸다).
+   */
+  spriteId?: string
   /** 고유(전용) 카드. 대부분 공격이지만 어떤 종류든 될 수 있다(예: AEGIS의 전용 가드). */
   cards: CardDef[]
 }

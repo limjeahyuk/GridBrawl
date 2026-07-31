@@ -3,6 +3,7 @@ import { getChar } from '../../data/roster'
 import { buildFighterSvg, buildPortraitSvg } from '../../art/art'
 import {
   attackClipFor,
+  clipOrFallback,
   clipUrl,
   impactDelayOf,
   placeSprite,
@@ -338,7 +339,7 @@ export function BattleScreen({
   // 스프라이트 시트가 있는 캐릭터는 픽셀 애니메이션으로, 없으면 기존 SVG로 그린다
   // (마이그레이션 도중에도 전투가 깨지지 않게 한 폴백).
   const sheets = useMemo(
-    () => [sheetFor(c0.id), sheetFor(c1.id)] as const,
+    () => [sheetFor(c0.spriteId ?? c0.id), sheetFor(c1.spriteId ?? c1.id)] as const,
     [c0, c1],
   )
   // 첫 공격에서 PNG를 받느라 한 프레임 비는 걸 막는다
@@ -1205,17 +1206,18 @@ function FighterSprite({
  * remount 비용은 사실상 0).
  */
 function SpriteClip({ sheet, clip, seq }: { sheet: SheetDef; clip: ClipName; seq: number }) {
-  const def = sheet.clips[clip]
+  // 없는 동작은 대기로 떨어진다 — 팩마다 들어 있는 클립이 다르다
+  const [actual, def] = clipOrFallback(sheet, clip)
   const w = sheet.frameW * sheet.scale
   const h = sheet.frameH * sheet.scale
   return (
     <div
-      key={`${clip}-${seq}`}
+      key={`${actual}-${seq}`}
       className="sprite"
       style={{
         width: `${w}px`,
         height: `${h}px`,
-        backgroundImage: `url(${clipUrl(sheet, clip)})`,
+        backgroundImage: `url(${clipUrl(sheet, actual)})`,
         backgroundSize: `${w * def.frames}px ${h}px`,
         // 애니메이션이 끝나면 이 base 값이 드러난다 = 마지막 프레임에서 정지.
         // (fill:forwards는 프레임 범위를 한 칸 넘어가 빈 칸을 보여 준다.)
