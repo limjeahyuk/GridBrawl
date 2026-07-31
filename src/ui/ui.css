@@ -205,12 +205,12 @@
   z-index: 1;
 }
 .deckcard__badge--fixed {
-  background: #2a3450;
+  background: var(--bg-2);
   color: var(--text-dim);
 }
 .deckcard__badge--add {
   background: var(--accent);
-  color: #07121a;
+  color: var(--ink);
 }
 .deckcard__badge--rm {
   background: var(--neon-red);
@@ -574,7 +574,7 @@
   line-height: 1.7;
 }
 .login__hint code {
-  background: #0d1322;
+  background: var(--bg-2);
   border: 1px solid var(--panel-edge);
   border-radius: 4px;
   padding: 1px 6px;
@@ -605,7 +605,7 @@
 }
 .userchip__avatar--fallback {
   background: var(--neon-cyan);
-  color: #07121a;
+  color: var(--ink);
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 14px;
@@ -682,7 +682,7 @@
   padding: 3px 9px;
   border-radius: 999px;
   background: #2ff3ff;
-  color: #07121a;
+  color: var(--ink);
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 11px;
@@ -746,7 +746,7 @@
   border: 1px solid var(--panel-edge);
   border-bottom-width: 3px;
   border-radius: 6px;
-  background: #0d1322;
+  background: var(--bg-2);
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--neon-cyan);
@@ -799,7 +799,7 @@
   position: relative;
   border: 1px solid var(--panel-edge);
   border-radius: 10px;
-  background: #0b1120;
+  background: var(--bg-1);
   overflow: hidden;
   padding: 0;
   transition: transform 0.1s ease, box-shadow 0.18s ease, border-color 0.18s ease;
@@ -838,7 +838,7 @@
   display: flex;
   border: 1px solid var(--accent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 6%, #0a0e1a);
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-1));
   overflow: hidden;
 }
 .detail__portrait {
@@ -888,7 +888,7 @@
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.12em;
-  color: #07090f;
+  color: var(--ink);
   background: var(--accent);
   border-radius: 4px;
   padding: 2px 7px;
@@ -921,7 +921,7 @@
 .stat__track {
   flex: 1;
   height: 12px;
-  background: #0c1120;
+  background: var(--bg-0);
   border: 1px solid var(--panel-edge);
   border-radius: 3px;
   overflow: hidden;
@@ -969,7 +969,7 @@
 .bracket__player {
   border: 1px solid var(--accent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 7%, #0a0e1a);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-1));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -982,7 +982,7 @@
   padding: 8px;
   font-family: var(--font-display);
   letter-spacing: 0.4em;
-  color: #07090f;
+  color: var(--ink);
   background: var(--accent);
   font-weight: 900;
 }
@@ -1078,7 +1078,7 @@
 
 /* ---- Fight screen + HUD -------------------------------------------------- */
 .fight {
-  background: #05060d;
+  background: var(--bg-0);
 }
 .fight__canvas {
   position: absolute;
@@ -1134,7 +1134,7 @@
   border-radius: 8px;
   overflow: hidden;
   border: 2px solid var(--accent);
-  background: #0a0e1a;
+  background: var(--bg-1);
   flex: none;
 }
 .hud__avatar svg {
@@ -1158,7 +1158,7 @@
   position: relative;
   height: 24px;
   background: #15080c;
-  border: 2px solid #2a3450;
+  border: 2px solid var(--frame);
   transform: skewX(-16deg);
   overflow: hidden;
 }
@@ -1180,8 +1180,8 @@
   height: 9px;
   margin-top: 5px;
   width: 78%;
-  background: #0a1020;
-  border: 1px solid #243150;
+  background: var(--bg-1);
+  border: 1px solid var(--frame);
   transform: skewX(-16deg);
   overflow: hidden;
 }
@@ -1411,7 +1411,7 @@
 .bhud__hp {
   position: relative;
   height: 28px;
-  background: #0c1018;
+  background: var(--bg-0);
   border: 2px solid #46536e;
   transform: skewX(-15deg);
   overflow: hidden;
@@ -1457,7 +1457,7 @@
   position: relative;
   height: 18px;
   margin-top: 6px;
-  background: #0c1018;
+  background: var(--bg-0);
   border: 2px solid #46536e;
   transform: skewX(-15deg);
   overflow: hidden;
@@ -1680,7 +1680,7 @@
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.12em;
-  color: #0b0f18;
+  color: var(--ink);
   background: var(--accent);
   border-radius: 8px;
   padding: 1px 9px;
@@ -2073,7 +2073,7 @@
   width: 140px;
 }
 .cutin__streak:nth-child(3n) {
-  --streak: #06070e;
+  --streak: var(--bg-0);
   opacity: 0.92;
   width: 62px;
 }
@@ -2129,7 +2129,7 @@
   font-weight: 900;
   letter-spacing: 0.22em;
   color: var(--accent);
-  text-shadow: 0 0 16px var(--accent), 2px 2px 0 #05070e;
+  text-shadow: 0 0 16px var(--accent), 2px 2px 0 var(--bg-0);
   margin-bottom: 8px;
 }
 .cutin__name {
@@ -2139,7 +2139,7 @@
   letter-spacing: 0.03em;
   line-height: 1;
   color: #fff;
-  -webkit-text-stroke: 9px #05070e;
+  -webkit-text-stroke: 9px var(--bg-0);
   paint-order: stroke fill;
   text-shadow: 0 0 46px color-mix(in srgb, var(--accent) 85%, transparent),
     7px 9px 0 rgba(0, 0, 0, 0.5);
@@ -2272,14 +2272,14 @@
 .cards__tab.is-active {
   color: var(--neon-cyan);
   border-color: var(--neon-cyan);
-  background: color-mix(in srgb, var(--neon-cyan) 14%, #0b1120);
+  background: color-mix(in srgb, var(--neon-cyan) 14%, var(--bg-1));
   box-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 30%, transparent);
 }
 /* 이 탭의 카드가 슬롯에 몇 장 들어갔는지 */
 .cards__tab-count {
   font-size: 11px;
   font-weight: 900;
-  color: #07090f;
+  color: var(--ink);
   background: var(--neon-cyan);
   border-radius: 8px;
   padding: 0 7px;
@@ -2344,7 +2344,7 @@
   border: 1px solid var(--accent);
   border-left: 4px solid var(--accent);
   border-radius: 10px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, #0b1120), #07090f);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, var(--bg-1)), var(--ink));
   padding: 8px 9px;
   text-align: left;
   overflow: hidden;
@@ -2361,7 +2361,7 @@
   font-family: var(--font-display);
   font-size: 9px;
   font-weight: 900;
-  color: #07090f;
+  color: var(--ink);
   background: var(--accent);
   border-radius: 4px;
   padding: 1px 4px;
@@ -2468,7 +2468,7 @@
   font-size: 10px;
   font-weight: 700;
   color: #fff;
-  background: color-mix(in srgb, var(--accent) 35%, #101425);
+  background: color-mix(in srgb, var(--accent) 35%, var(--bg-2));
   border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
   border-radius: 4px;
   padding: 0 3px;
@@ -2568,7 +2568,7 @@
   font-family: var(--font-display);
   font-size: 9px;
   font-weight: 900;
-  color: #07090f;
+  color: var(--ink);
   background: var(--neon-cyan);
   border-radius: 3px;
   padding: 0 3px;
@@ -2632,7 +2632,7 @@
   gap: 16px;
   border: 1px solid var(--accent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 6%, #0a0e1a);
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-1));
   padding: 18px;
   min-height: 0;
 }
@@ -2766,7 +2766,7 @@
   height: 38px;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 8%, #0a0e1a);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-1));
 }
 .mp__body {
   flex: 1;
@@ -2889,7 +2889,7 @@
   padding: 18px 28px;
   border: 2px solid var(--neon-magenta);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--neon-magenta) 8%, #0a0e1a);
+  background: color-mix(in srgb, var(--neon-magenta) 8%, var(--bg-1));
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 64px;
@@ -2908,7 +2908,7 @@
   padding: 16px 20px;
   border: 2px solid var(--panel-edge);
   border-radius: 10px;
-  background: #0b1020;
+  background: var(--bg-1);
   color: #ffe6fb;
   font-family: var(--font-display);
   font-weight: 900;
@@ -2997,7 +2997,7 @@
   position: relative;
   width: 220px; height: 22px;
   border: 1px solid var(--panel-edge); border-radius: 6px; overflow: hidden;
-  background: #0d1322;
+  background: var(--bg-2);
 }
 .runbar__hpfill {
   position: absolute; inset: 0 auto 0 0;
@@ -3056,7 +3056,7 @@
   position: relative; width: 88px; height: 66px; flex: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   border-radius: 10px;
-  border: 1px solid var(--panel-edge); background: #0d1322; opacity: 0.55;
+  border: 1px solid var(--panel-edge); background: var(--bg-2); opacity: 0.55;
   padding: 4px 3px 8px;
 }
 .runnode__icon { font-size: 20px; line-height: 1; }
@@ -3112,7 +3112,7 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 8px; padding: 14px;
   border: 2px solid #a860ff; border-radius: 12px;
-  background: linear-gradient(160deg, rgba(120, 60, 200, 0.28), #0b0f1a);
+  background: linear-gradient(160deg, rgba(120, 60, 200, 0.28), var(--bg-1));
   position: relative;
 }
 .reward__relic-icon { font-size: 44px; }
@@ -3120,7 +3120,7 @@
 .reward__relic-desc { font-size: 12px; color: #d9c2ff; text-align: center; line-height: 1.35; }
 .reward__relic-tag {
   position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 900;
-  color: #0b0f1a; background: #c98bff; border-radius: 6px; padding: 1px 6px;
+  color: var(--bg-1); background: #c98bff; border-radius: 6px; padding: 1px 6px;
 }
 .reward__card { width: 150px; height: 190px; padding: 0; border: none; background: none; }
 .reward__skip { margin-top: 6px; }
