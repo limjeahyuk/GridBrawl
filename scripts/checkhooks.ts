@@ -163,12 +163,16 @@ console.log('\n런 진행 규칙')
 
   // 직업 카드를 하나도 못 얻은 상태에선 보상 한 칸이 직업 카드로 보장된다.
   const classIds = getChar('archer').cards.map((c) => c.id)
+  // ⚠ 이 검사는 난수를 고정하지 않는다(rollRewards가 Math.random을 쓴다). 표본이
+  // 작으면 **드물게 깨지는 버그를 놓친다** — 실제로 50회로는 0.2%짜리 구멍을
+  // 못 잡아 검사가 가끔 실패하는 것처럼만 보였다. 3000회면 놓칠 확률이 사실상 0.
+  const TRIES = 3000
   let guaranteed = 0
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < TRIES; i++) {
     const rewards = rollRewards(run)
     if (rewards.some((r) => r.kind === 'card' && classIds.includes(r.cardId))) guaranteed++
   }
-  check('직업 카드 미보유 시 보상에 항상 직업 카드가 있다', guaranteed, 50)
+  check('직업 카드 미보유 시 보상에 항상 직업 카드가 있다', guaranteed, TRIES)
 
   // 상점 할인 유물이 모든 가격에 반영된다.
   const plain = rollShop(run).find((i) => i.kind === 'card')!

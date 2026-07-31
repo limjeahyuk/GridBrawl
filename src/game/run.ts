@@ -340,13 +340,22 @@ function cardRewardPool(run: RunState): string[] {
 export function rollRewards(run: RunState): Reward[] {
   const slots = REWARD_OPTIONS + (runMods(run).rewardOptions ?? 0)
   const cards = shuffle(cardRewardPool(run)).slice(0, slots)
-  const missing = missingClassCards(run)
-  if (missing.length && !cards.some((id) => missing.includes(id))) cards[0] = pick(missing)
   const out: Reward[] = cards.map((cardId) => ({ kind: 'card', cardId }))
+
+  // ⚠ 유물 칸을 **직업 카드 보장보다 먼저** 확정한다. 순서를 뒤집으면(2026-08-01
+  // 이전) 보장해 둔 직업 카드가 마지막 칸에 있을 때 유물이 그 칸을 덮어써서
+  // 보장이 조용히 깨진다 — 20,000회 중 40여 회(0.2%)가 그랬다.
   const chance = RELIC_IN_REWARD + (runMods(run).relicChanceBonus ?? 0)
   if (isEliteFloor(run) || Math.random() < chance) {
     const relicId = rollRelicId(run)
     if (relicId) out[out.length - 1] = { kind: 'relic', relicId }
+  }
+
+  // 직업 카드를 아직 못 얻었으면 **남은 카드 칸 하나**를 직업 카드로 바꾼다.
+  const missing = missingClassCards(run)
+  if (missing.length && !out.some((r) => r.kind === 'card' && missing.includes(r.cardId))) {
+    const slot = out.findIndex((r) => r.kind === 'card')
+    if (slot >= 0) out[slot] = { kind: 'card', cardId: pick(missing) }
   }
   return shuffle(out)
 }
