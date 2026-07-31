@@ -50,7 +50,7 @@ const REWARD_OPTIONS = 6
 /** 일반 전투 보상 5장 중 유물이 섞일 확률(엘리트·보스는 확정). */
 const RELIC_IN_REWARD = 0.03
 /** 층별 몬스터 체력 스케일 — 보스로 갈수록 확실히 벽이 되게 0.07/층. */
-const HP_SCALE_PER_FLOOR = 0.07
+const HP_SCALE_PER_FLOOR = 0.03
 /**
  * 층별 몬스터 **공격력** 스케일(2026-07-30). 체력만 올리면 후반 몬스터가 "두껍지만
  * 안 아픈" 샌드백이 되어, 유물을 쌓은 플레이어에게 뒤쪽 층이 앞쪽보다 쉬워졌다
@@ -63,7 +63,7 @@ const HP_SCALE_PER_FLOOR = 0.07
  */
 const atkScaleAt = (floor: number): number => {
   const d = floor - 1
-  return Math.round(0.3 * d + 0.048 * d * d)
+  return Math.round(0.06 * d + 0.008 * d * d)
 }
 /** 엘리트 보정 — 엘리트 노드는 같은 몬스터라도 더 두껍고 더 아프다. */
 const ELITE_HP_MULT = 1.2

@@ -70,8 +70,8 @@ const SIGNATURE: Record<
     // ⚠ 회복(regen/lifesteal)을 주지 말 것 — 런에선 지속 회복이 극도로 강해 regen 2도
     // VOLT를 28.8%→46%로 폭주시켰다(2026-07-31 시뮬). VOLT는 회복 대신 높은 보호막
     // (turnShield 16)으로 균형을 맞춘다. 28.8%(타이트한 밴드 최하)는 의도된 위치다.
-    runEffect: { turnEnergy: 10, turnShield: 16, attackBonus: 4 },
-    desc: '오버차지: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +4.',
+    runEffect: { turnEnergy: 10, turnShield: 16, attackBonus: 9 },
+    desc: '오버차지: 매 턴 기력 +10, 보호막 +16. 내 공격 피해 +9.',
   },
   titan: {
     id: 'sig-titan', name: '장갑판', icon: '🛡',
@@ -80,13 +80,15 @@ const SIGNATURE: Record<
   },
   nova: {
     id: 'sig-nova', name: '플라스마 코어', icon: '☀',
-    runEffect: { turnEnergy: 14, attackBonus: 10, regen: 3 },
-    desc: '플라스마 코어: 매 턴 기력 +14, 체력 +3. 플라스마를 실어 내 공격 피해 +10.',
+    // 몬스터 이동 도입(2026-08-01) 후 카이팅이 막혀 최하로 떨어짐 → 보호막으로 생존력
+    // 보강(회복은 폭주하니 턴마다 리셋되는 turnShield로).
+    runEffect: { turnEnergy: 14, attackBonus: 10, regen: 3, turnShield: 8 },
+    desc: '플라스마 코어: 매 턴 기력 +14, 보호막 +8, 체력 +3. 플라스마를 실어 내 공격 피해 +10.',
   },
   cipher: {
     id: 'sig-cipher', name: '데이터 드레인', icon: '🩸',
-    runEffect: { lifesteal: 11, regen: 2 },
-    desc: '데이터 흡수: 공격으로 피해를 주면 체력 +11. 매 턴 체력 +2.',
+    runEffect: { lifesteal: 11, regen: 2, attackBonus: 2 },
+    desc: '데이터 흡수: 공격으로 피해를 주면 체력 +11. 매 턴 체력 +2. 내 공격 피해 +2.',
   },
   aegis: {
     id: 'sig-aegis', name: '상시 방벽', icon: '🧱',
@@ -95,8 +97,8 @@ const SIGNATURE: Record<
   },
   ember: {
     id: 'sig-ember', name: '불사조 깃털', icon: '🔥',
-    runEffect: { revive: 45, lifesteal: 8 },
-    desc: '잿불 부활: 전투당 한 번 체력 45로 되살아난다. 공격으로 피해를 주면 체력 +8.',
+    runEffect: { revive: 45, lifesteal: 8, attackBonus: 3 },
+    desc: '잿불 부활: 전투당 한 번 체력 45로 되살아난다. 공격으로 피해를 주면 체력 +8, 내 공격 피해 +3.',
   },
 }
 

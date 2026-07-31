@@ -5,6 +5,11 @@
 import { getChar } from '../data/roster'
 import { COMMON_CARDS } from '../battle/cards'
 import { decideAI } from '../battle/ai'
+
+// 이동은 모든 파이터가 쓰는 보편 능력이다. 몬스터의 `deckCardIds`는 정체성(공격·가드)만
+// 담으므로, AI가 접근·회피할 수 있도록 공용 이동 카드를 풀에 주입한다. 이게 없으면
+// `decideAI`의 `moveCard`가 덱에서 이동을 못 찾아 **몬스터가 제자리서 공격만 반복**한다.
+const COMMON_MOVES: CardDef[] = COMMON_CARDS.filter((c) => c.kind === 'move')
 import type { BattleOpts, CardBattle } from '../battle/engine'
 import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
@@ -40,6 +45,8 @@ export function runFightProps(run: RunState): RunFightProps {
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
   }
+  // 몬스터가 실제로 낼 수 있는 카드 = 공용 이동 + 그 몬스터 고유 덱(공격·가드).
+  const enemyCards: CardDef[] = [...COMMON_MOVES, ...eChar.cards]
   const scripted = isScriptedBoss(enemy.id)
   return {
     p0CharId: run.charId,
@@ -53,7 +60,7 @@ export function runFightProps(run: RunState): RunFightProps {
         const plan = bossPlan(enemy.id, ctx)
         if (plan) return Promise.resolve(plan)
       }
-      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, eChar.cards))
+      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards))
     },
     enemyName: enemy.name,
     telegraph: scripted ? (turn, frac) => bossTelegraph(enemy.id, { turn, hpFrac: frac }) : undefined,
