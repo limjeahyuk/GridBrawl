@@ -34,8 +34,10 @@
   animation-iteration-count: infinite;
   animation-delay: var(--idle-phase, 0s);
 }
-/* 둘이 같은 박자로 숨쉬면 기계처럼 보인다 — 오른쪽만 위상을 어긋내 준다 */
-.fighter--right {
+/* 둘이 같은 박자로 숨쉬면 기계처럼 보인다 — 오른쪽만 위상을 어긋내 준다.
+   ⚠ 방향(`.fighter--right`)이 아니라 **자리**(`--seat-`)를 기준으로 한다 —
+   마주 보면 둘의 방향 클래스가 같아져 위상 차이가 사라지기 때문. */
+.fighter--seat-right {
   --idle-phase: -0.9s;
 }
 /* 미리보기 잔상까지 숨쉬면 산만하다. 스프라이트는 호흡이 `.fighter__art`가 아니라

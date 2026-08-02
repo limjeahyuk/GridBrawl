@@ -82,6 +82,22 @@ function attackCells(from: Cell, card: CardDef, facing: number, foe?: Cell): Cel
   return cells
 }
 
+/**
+ * 화면에서 어느 쪽을 보고 설 것인가 — **상대가 있는 쪽**이다.
+ *
+ * 반환값은 `.fighter--left` / `.fighter--right` 클래스와 같은 뜻이라 이름이
+ * 헷갈리기 쉬운데, `left` = "왼쪽에 서서 오른쪽을 본다"(`--flip: 1`)이고
+ * `right` = 그 반대다. 대시로 상대를 지나치면 좌우가 뒤바뀌므로 자리(진영)가
+ * 아니라 **매 프레임 열 위치를 비교해** 정한다.
+ *
+ * 같은 열이면(겹침·수직 정렬) 직전 방향을 유지한다 — 겹칠 때마다 홱홱 도는 것을
+ * 막으려는 것으로, `fallback`에는 그 파이터의 진영을 넣는다.
+ */
+function faceToward(myCol: number, foeCol: number, fallback: 'left' | 'right'): 'left' | 'right' {
+  if (myCol === foeCol) return fallback
+  return myCol < foeCol ? 'left' : 'right'
+}
+
 /** Where a move card lands, mirroring the engine's rule: walls stop you, the
  *  opponent's cell can be passed through or landed on (겹침 허용). Used to
  *  preview an attack's reach *after* earlier move cards in the plan resolve. */
@@ -348,7 +364,6 @@ export function BattleScreen({
   }, [sheets])
   // 이동 미리보기 잔상 — 본체와 같은 몸·같은 방향으로 서야 한다
   const ghostSheet = sheets[localSide]
-  const ghostPlace = ghostSheet ? placeSprite(ghostSheet, 'left') : null
   // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
   const portraits = useMemo(() => [buildPortraitSvg(c0), buildPortraitSvg(c1)] as const, [c0, c1])
 
@@ -540,6 +555,15 @@ export function BattleScreen({
         : planPreview.cells,
     [hoveredCard, preview, battle, localSide, planPreview],
   )
+
+  // 잔상이 **도착 지점에서** 상대를 보는 방향. 본체와 같은 규칙을 쓰되 기준 셀만
+  // 이동 후 위치라, 상대를 지나쳐 가는 이동이면 본체와 반대쪽을 보게 된다.
+  const ghostFace = faceToward(
+    dcol(preview.ghost?.col ?? view.pos[localSide].col),
+    dcol(view.pos[1 - localSide].col),
+    'left',
+  )
+  const ghostPlace = ghostSheet ? placeSprite(ghostSheet, ghostFace) : null
 
   // which slot numbers (1-based) contain this card id
   const slotNosFor = (id: string): number[] =>
@@ -815,14 +839,15 @@ export function BattleScreen({
             // 잔상도 본체와 **같은 몸**이어야 한다 — 스프라이트 캐릭터인데 잔상만
             // SVG로 그리면 딴 사람이 서 있고 바닥선까지 어긋난다.
             <div
-              className={`fighter fighter--left fighter--ghost${
+              className={`fighter fighter--${ghostFace} fighter--seat-left fighter--ghost${
                 ghostSheet ? ' fighter--sprite' : ''
               }`}
               style={{
                 left: `${cellX(dcol(preview.ghost.col))}%`,
                 top: `${cellY(preview.ghost.row)}%`,
                 ['--accent' as string]: local.accent,
-                // 잔상은 언제나 내 쪽 = 왼쪽에 선다
+                // 잔상도 **도착 지점에서** 상대를 바라본다 — 상대를 지나쳐 가는
+                // 이동이면 본체와 반대쪽을 보게 되고, 그게 실제 결과와 맞다.
                 ...(ghostPlace
                   ? {
                       ['--anchorpx' as string]: ghostPlace.anchorPx,
@@ -1121,10 +1146,22 @@ function FighterSprite({
     return () => clearTimeout(id)
   }, [v.pos, idx])
 
-  const place = sheet ? placeSprite(sheet, side) : null
+  // 바라보는 방향은 자리가 아니라 **상대와의 열 관계**로 정한다(대시로 지나치면
+  // 뒤바뀐다). 화면 좌표로 비교해야 멀티에서 좌우 반전(`flip`)까지 맞는다.
+  const dispCol = (c: Cell) => (flip ? GRID_COLS - 1 - c.col : c.col)
+  const face = faceToward(dispCol(v.pos[idx]), dispCol(v.pos[1 - idx]), side)
+
+  // ⚠ 진영(`side`)과 방향(`face`)은 다른 값이다.
+  //   · `fighter--${face}`  — `--flip`(좌우 반전)과 타격 이펙트가 나가는 쪽
+  //   · `fighter--seat-*`   — 숨쉬기 위상. 둘이 같은 박자로 숨쉬지 않게 하는 값이라
+  //                           방향이 아니라 자리를 따라야 한다(마주 보면 방향이 같아진다)
+  //   · `fighter--stacked-*` — 겹쳤을 때 좌우로 비켜 세우는 오프셋. 서로 반대여야
+  //                           둘 다 보이므로 역시 자리 기준이다
+  const place = sheet ? placeSprite(sheet, face) : null
   const cls = [
     'fighter',
-    `fighter--${side}`,
+    `fighter--${face}`,
+    `fighter--seat-${side}`,
     stacked ? `fighter--stacked-${side}` : '',
     isLocal ? 'fighter--me' : '',
     sheet ? 'fighter--sprite' : '',
