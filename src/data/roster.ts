@@ -118,8 +118,16 @@ export interface CharacterDef {
 }
 
 // --- range helpers ---------------------------------------------------------
-// 교차(뛰어넘기) 플레이가 의도된 룰이라 대부분의 공격은 앞뒤를 함께 커버한다.
+// **앞뒤 대칭이 기본이다**(2026-08-03 전면 적용). 겹침·통과·넉백·돌진이 전부
+// 허용되는 격자라 "상대를 지나쳐 버리는" 상황이 상시로 생기는데, 전방 전용 카드는
+// 그때마다 통째로 빗나가서 맞히는 것 자체가 과제가 돼 있었다. 그래서 공격 카드는
+//   뒤 1칸 · 내 칸(밀착) · 앞 1칸
+// 을 기본 골격으로 삼고, 넓은 카드는 그 골격을 앞뒤로 데칼코마니처럼 늘린다.
 // 대신 한쪽 사거리는 짧게 — 예: 앞 3칸 빔 대신 앞뒤 2칸씩.
+//
+// **전방 전용은 "정말 강한 것"에만 남긴다** — 한쪽만 노리는 대신 한 방이 크다는
+// 교환이 성립할 때뿐이다(궁수의 저격 2장 + 런 전용 필살기 4장). 약한 카드를
+// 전방 전용으로 두면 그냥 못 쓰는 카드가 된다.
 const fwd = (n: number): Offset => ({ df: n, du: 0 })
 /** A straight beam: forward cells a..b on the same row. */
 const beam = (a: number, b: number): Offset[] => {
@@ -141,6 +149,8 @@ const bar = (df: number): Offset[] => [
   { df, du: 0 },
   { df, du: -1 },
 ]
+/** 앞뒤 대칭 세로줄: 앞 n칸·뒤 n칸의 세로 3줄(6칸). 근접 광역의 기본형. */
+const barBoth = (n: number): Offset[] => [...bar(n), ...bar(-n)]
 /** The classic cross: the four cells orthogonally adjacent to the attacker. */
 const CROSS: Offset[] = [
   { df: 1, du: 0 },
@@ -219,8 +229,8 @@ export const ROSTER: CharacterDef[] = [
     passive: { desc: '불침의 서약: 받는 공격 피해 -6, 매 턴 체력 +4.', damageReduction: 6, regen: 4 },
     cards: [
       atk({ id: 'war-cleave', name: '파쇄 베기', range: both(1), damage: 26, energyCost: 10, fx: 'slash', desc: '앞뒤 한 칸을 후려치는 기본 근접. 싸고 묵직하다.' }),
-      atk({ id: 'war-bash', name: '방패 밀치기', range: bar(1), damage: 28, energyCost: 22, push: 2, fx: 'punch', desc: '앞 한 칸의 세 줄을 방패로 밀어 두 칸 넉백. 들러붙는 상대를 떼어낸다.' }),
-      atk({ id: 'war-quake', name: '대지 가르기', range: [...bar(1), ...bar(-1)], damage: 28, energyCost: 24, stun: 1, cooldown: 2, fx: 'quake', desc: '몸 주변 앞뒤 세로 3줄을 쪼갠다. 피해를 입히면 상대를 1턴 기절 — 쿨타임 2턴.' }),
+      atk({ id: 'war-bash', name: '방패 밀치기', range: barBoth(1), damage: 28, energyCost: 26, push: 2, fx: 'punch', desc: '몸 앞뒤 세로 3줄을 방패로 후려쳐 두 칸 넉백. 들러붙는 상대를 떼어낸다.' }),
+      atk({ id: 'war-quake', name: '대지 가르기', range: barBoth(1), damage: 28, energyCost: 24, stun: 1, cooldown: 2, fx: 'quake', desc: '몸 주변 앞뒤 세로 3줄을 쪼갠다. 피해를 입히면 상대를 1턴 기절 — 쿨타임 2턴.' }),
       {
         id: 'war-wall',
         name: '불침의 벽',
@@ -231,10 +241,12 @@ export const ROSTER: CharacterDef[] = [
         fx: 'shield',
         desc: '전용 방벽. 기력 20 소모, 이번 턴 받는 피해를 최대 70 막는다. 쿨타임 2턴.',
       },
-      atk({ id: 'war-oath', name: '서약의 파쇄', range: [...bar(1), ...bar(-1), fwd(2), fwd(-2)], damage: 46, energyCost: 48, push: 1, selfShield: 20, fx: 'quake', signature: true, accent: '#5b7ee0', desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째를 무너뜨리는 지진파 — 상대를 한 칸 밀고 보호막 +20.' }),
+      atk({ id: 'war-oath', name: '서약의 파쇄', range: [...barBoth(1), ...both(2)], damage: 46, energyCost: 48, push: 1, selfShield: 20, fx: 'quake', signature: true, accent: '#5b7ee0', desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째를 무너뜨리는 지진파 — 상대를 한 칸 밀고 보호막 +20.' }),
       // 전사는 원거리가 없어 **붙는 것 자체가 과제**다. 돌진으로 거리를 지우고,
       // 버프로 버티거나 한 번에 갚는 두 갈래를 준다.
-      atk({ id: 'war-charge', name: '방패 돌진', range: bar(1), damage: 30, energyCost: 24, push: 1, cooldown: 1, dashForward: 2, fx: 'rush', desc: '앞으로 두 칸 파고든 뒤 앞 세로 3줄을 후려친다. 상대를 한 칸 넉백 — 쿨타임 1턴.' }),
+      // ⚠ 두 칸이나 파고드는 카드라 **지나쳐 버리기 쉽다** — 사거리가 앞쪽뿐이면
+      // 상대를 넘어선 순간 통째로 빗나간다. 지나간 줄을 앞뒤로 훑게 했다.
+      atk({ id: 'war-charge', name: '방패 돌진', range: beamBoth(1, 2), damage: 30, energyCost: 26, push: 1, cooldown: 1, dashForward: 2, fx: 'rush', desc: '앞으로 두 칸 파고들며 지나간 줄을 앞뒤 두 칸씩 훑는다. 상대를 지나쳐도 등 뒤를 때린다 — 넉백 1칸, 쿨타임 1턴.' }),
       atk({ id: 'war-grudge', name: '응보의 일격', range: both(1), damage: 20, energyCost: 18, selfShield: 30, fx: 'slash', desc: '앞뒤 한 칸을 치면서 몸을 사린다 — 사용 시 보호막 +30. 맞고 버티며 갚는 카드.' }),
       buff({ id: 'war-cry', name: '불굴의 함성', buff: 'defUp', buffPower: 9, buffTurns: 3, buffCost: 20, accent: '#8fb6d6', desc: '3턴간 받는 공격 피해 -9. 버티는 구간을 통째로 사 온다 — 쿨타임 2턴.' }),
       buff({ id: 'war-blood', name: '피의 맹세', buff: 'atkUp', buffPower: 13, buffTurns: 3, buffCost: 26, fx: 'quake', accent: '#c9713a', desc: '3턴간 내 공격 피해 +13. 방벽을 올리고 버틴 뒤 한 번에 갚을 때.' }),
