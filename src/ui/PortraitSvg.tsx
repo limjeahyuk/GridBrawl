@@ -40,8 +40,14 @@ export function PortraitSvg({
           backgroundPosition: '0 0',
           backgroundRepeat: 'no-repeat',
           imageRendering: 'pixelated',
-          // 원본이 왼쪽을 보고 그려진 시트는 뒤집어 오른쪽(=상대 방향)을 보게 한다
-          transform: sheet.facesRight ? undefined : 'scaleX(-1)',
+          /**
+           * 초상은 **왼쪽을 보게 통일**한다. 여긴 상대가 없는 화면이라 "적을 향한다"는
+           * 기준이 없고, 셋이 제각각 보면 목록이 어수선하다.
+           * 왼쪽으로 잡은 이유: 시트 원본이 왼쪽을 보고 그려진 전사를 굳이 뒤집으면
+           * 방패와 검이 반대 손으로 가서 그 캐릭터만 어색해진다. 상대를 향해 돌아서는
+           * 것은 **전투 화면에서만** 한다(`faceToward`).
+           */
+          transform: sheet.facesRight ? 'scaleX(-1)' : undefined,
         }}
       />
     )

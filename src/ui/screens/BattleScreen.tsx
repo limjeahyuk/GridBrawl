@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getChar } from '../../data/roster'
-import { buildFighterSvg, buildPortraitSvg } from '../../art/art'
+import { buildFighterSvg } from '../../art/art'
 import {
   attackClipFor,
   clipOrFallback,
@@ -15,6 +15,7 @@ import {
 import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
 import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
+import { PortraitSvg } from '../PortraitSvg'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
   FOG_DAMAGE,
@@ -365,7 +366,6 @@ export function BattleScreen({
   // 이동 미리보기 잔상 — 본체와 같은 몸·같은 방향으로 서야 한다
   const ghostSheet = sheets[localSide]
   // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
-  const portraits = useMemo(() => [buildPortraitSvg(c0), buildPortraitSvg(c1)] as const, [c0, c1])
 
   const [view, setView] = useState<View>(() => baseView(battle))
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null])
@@ -1078,10 +1078,8 @@ export function BattleScreen({
               <span key={i} className="cutin__streak" style={{ ['--i' as string]: i }} />
             ))}
           </div>
-          <div
-            className="cutin__art"
-            dangerouslySetInnerHTML={{ __html: portraits[cutIn.actor] }}
-          />
+          {/* 시트가 있으면 픽셀 초상, 없으면 절차 SVG로 폴백(`PortraitSvg`가 판단). */}
+          <PortraitSvg char={battle.chars[cutIn.actor]} className="cutin__art" />
           <div className="cutin__label">
             <div className="cutin__who">
               {battle.chars[cutIn.actor].name} · 필살기
