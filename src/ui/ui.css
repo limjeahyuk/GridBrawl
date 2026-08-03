@@ -1426,11 +1426,15 @@
 .bhud__hpfill--low {
   background: #ff4d5e;
 }
+/* 체력은 바깥쪽(각자 HUD의 바깥 모서리)에 붙어 남고, 깎이는 쪽은 가운데다.
+   내 바는 오른쪽부터·상대 바는 왼쪽부터 줄어 두 바가 가운데를 향해 만난다 —
+   격투 게임식이라 어느 쪽이 얼마나 깎였는지 한눈에 들어온다.
+   ⚠ 기력 바(.bhud__energyfill)도 같은 방향이어야 한다. */
 .bhud__hpfill--left {
-  right: 0;
+  left: 0;
 }
 .bhud__hpfill--right {
-  left: 0;
+  right: 0;
 }
 .bhud__hpnum {
   position: absolute;
