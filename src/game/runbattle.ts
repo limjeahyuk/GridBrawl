@@ -34,8 +34,8 @@ export function runFightProps(run: RunState): RunFightProps {
   const enemy = currentEnemy(run)
   const pChar = getChar(run.charId)
   const eChar = monsterChar(enemy)
-  // 런 덱은 공용 + 그 캐릭터 고유 + **런 전용 카드**에서 해석한다(PvP 덱빌더는 불변).
-  const all: CardDef[] = [...COMMON_CARDS, ...pChar.cards, ...RUN_CARDS]
+  // 런 덱은 공용 + 직업 기본기 + 그 캐릭터 고유 + **런 전용 카드**에서 해석한다(PvP 덱빌더는 불변).
+  const all: CardDef[] = [...COMMON_CARDS, ...pChar.basics, ...pChar.cards, ...RUN_CARDS]
   const deck = run.deck
     .map((id) => all.find((c) => c.id === id))
     .filter((c): c is CardDef => !!c)

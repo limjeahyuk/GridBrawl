@@ -1,5 +1,5 @@
 import type { CharacterDef } from '../data/roster'
-import { COMMON_CARDS } from './cards'
+import { deckFor } from './cards'
 import { baseCostOf, type BattleState } from './engine'
 import {
   GRID_COLS,
@@ -62,7 +62,7 @@ export function decideAI(
   const usable = (c: CardDef) => cdLeft(c.id) === 0 && !locked.has(c.id)
 
   // 사용 가능한 카드 풀 — 덱이 주어지면 그것만, 아니면 캐릭터 전체 카드
-  const pool = availableCards ?? [...COMMON_CARDS, ...char.cards]
+  const pool = availableCards ?? deckFor(char)
   const attacks = pool.filter((c) => c.kind === 'attack')
   // 겹친 상대를 때릴 수 있는 카드가 덱에 하나라도 있는가 — 밀착을 노릴지 피할지 결정
   const canPointBlank = attacks.some((c) => c.pointBlank !== false)

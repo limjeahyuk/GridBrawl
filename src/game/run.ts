@@ -92,11 +92,21 @@ const PRICE_REMOVE = 40
  * 정답이 되고 나머지 선택이 함정이었으며, 그 시작이 1~6층을 무료로 만들었다.
  * 이제 직업 카드·강한 런 카드는 **보상으로 번다** — 기획서 ③의 원래 의도다.
  */
-export const STARTING_DECK = [
+const STARTING_COMMON = [
   'm-up', 'm-down', 'm-left', 'm-right',
-  'c-strike', 'c-shot', 'c-jab',
   'c-brace', 'c-energy',
 ]
+
+/**
+ * 시작 덱 9장 = 공용 6장(이동4 + 브레이스 + 원기) + **그 직업의 기본기 3장**.
+ * 2026-08-04까지는 세 직업 모두 공용 약공(`c-strike`/`c-shot`/`c-jab`)으로 출발해
+ * 1~5층이 어느 직업이든 똑같은 싸움이었다. 총합 화력은 그대로 두고 **때리는 모양**만
+ * 갈랐다(전사=밀착·강타 / 궁수=긴 사거리 / 마법사=광역) — 수치 근거는 `roster.ts`의
+ * `basics` 주석. 강한 직업 카드는 여전히 보상으로 번다.
+ */
+export function startingDeck(charId: string): string[] {
+  return [...STARTING_COMMON, ...getChar(charId).basics.map((c) => c.id)]
+}
 
 export type RunStatus = 'fighting' | 'reward' | 'event' | 'shop' | 'won' | 'lost'
 
@@ -233,7 +243,7 @@ export function startRun(charId: string): RunState {
   return {
     charId,
     relicIds,
-    deck: [...STARTING_DECK],
+    deck: startingDeck(charId),
     hp: maxHp,
     maxHp,
     gold: 0,

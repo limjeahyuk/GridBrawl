@@ -340,6 +340,10 @@ export function monsterChar(m: MonsterDef): CharacterDef {
     maxHp: m.maxHp,
     startEnergy: m.startEnergy,
     passive: { desc: m.note, ...m.passive },
+    // 직업 기본기는 **플레이어 것이다** — 아트를 빌려온 직업의 기본기까지 딸려 오면
+    // AI 기본 풀(`deckFor`)에 몬스터가 낼 수 없는 카드가 섞인다. 몬스터의 손패는
+    // `deckCardIds`가 전부다(공용 이동은 runbattle.ts가 따로 주입).
+    basics: [],
     cards: resolveCards(m.deckCardIds),
   }
 }

@@ -157,8 +157,14 @@ console.log('\n전투 밖 효과(RunMods)')
 console.log('\n런 진행 규칙')
 {
   const run = startRun('archer')
-  check('시작 덱은 공용 기본 9장', run.deck.length, 9)
-  check('시작 덱에 직업 카드 없음', run.deck.some((id) => id.startsWith('arc-')), false)
+  check('시작 덱은 기본 9장', run.deck.length, 9)
+  // 시작 덱엔 **직업 기본기 3장은 들어가고, 강한 직업 고유 카드는 안 들어간다**
+  // (2026-08-04). 기본기도 `arc-` 접두사를 쓰므로 id 접두사로 판정하면 안 된다 —
+  // 반드시 `char.cards`/`char.basics` 목록으로 가른다.
+  const uniqueIds = getChar('archer').cards.map((c) => c.id)
+  const basicIds = getChar('archer').basics.map((c) => c.id)
+  check('시작 덱에 직업 고유 카드 없음', run.deck.some((id) => uniqueIds.includes(id)), false)
+  check('시작 덱에 직업 기본기 3장', basicIds.filter((id) => run.deck.includes(id)).length, 3)
   check('시그니처 유물만 들고 시작', run.relicIds, ['sig-archer'])
 
   // 직업 카드를 하나도 못 얻은 상태에선 보상 한 칸이 직업 카드로 보장된다.

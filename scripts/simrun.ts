@@ -82,6 +82,7 @@ Math.random = function mulberry32(): number {
 // 런 전용 카드까지 포함해야 한다 — 빠뜨리면 봇이 그 카드들을 0점으로 보고 절대 안 줍는다.
 const ALL_CARDS: CardDef[] = [
   ...COMMON_CARDS,
+  ...ROSTER.flatMap((c) => c.basics),
   ...ROSTER.flatMap((c) => c.cards),
   ...RUN_CARDS,
 ]

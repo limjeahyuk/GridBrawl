@@ -113,6 +113,18 @@ export interface CharacterDef {
    * (`monsterChar`가 `MonsterDef.spriteId`를 여기에 실어 보낸다).
    */
   spriteId?: string
+  /**
+   * **직업 기본기 3장**(2026-08-04). 공용 약공(`c-strike`/`c-shot`/`c-jab`)을 직업별로
+   * 갈라 놓은 것 — 이름·사거리 모양·피해가 조금씩 다르다. 총합 화력은 공용과 거의
+   * 같게 맞춰 뒀다(1층이 여전히 쉬워야 하므로): 차이는 **어디를 때리느냐**에 있다.
+   *   전사   전부 밀착 1칸 — 원거리가 없는 대신 한 대가 제일 아프다
+   *   궁수   가로로 길다(앞뒤 1~2 / 2~3칸) — 대신 제일 약하다
+   *   마법사 십자·X자·세로줄로 넓다 — 대신 기력이 제일 비싸다
+   * 첫 장(`basics[0]`)은 **덱 고정 카드**(`decks.ts`의 `fixedCardsFor`), 세 장 모두가
+   * **런 시작 덱**(`run.ts`의 `startingDeck`)에 들어간다. 몬스터는 공용 약공을 계속
+   * 쓴다 — 직업 기본기는 플레이어 것이다.
+   */
+  basics: CardDef[]
   /** 고유(전용) 카드. 대부분 공격이지만 어떤 종류든 될 수 있다(예: AEGIS의 전용 가드). */
   cards: CardDef[]
 }
@@ -165,6 +177,8 @@ const FORK: Offset[] = [
   { df: -1, du: 1 },
   { df: -1, du: -1 },
 ]
+/** 내 칸을 둘러싼 여덟 칸 전부(십자 + X자). 전사의 "붙어 있으면 맞는다"용. */
+const RING: Offset[] = [...CROSS, ...FORK]
 
 function atk(over: Partial<CardDef> & { id: string; name: string }): CardDef {
   return {
@@ -227,6 +241,12 @@ export const ROSTER: CharacterDef[] = [
     maxEnergy: 100,
     startEnergy: 50,
     passive: { desc: '불침의 서약: 받는 공격 피해 -6, 매 턴 체력 +4.', damageReduction: 6, regen: 4 },
+    // 기본기 — 전부 밀착 1칸. 원거리가 아예 없는 대신 **한 대가 셋 중 제일 아프다**.
+    basics: [
+      atk({ id: 'war-hew', name: '거친 도끼질', range: both(1), damage: 14, energyCost: 10, fx: 'slash', desc: '앞뒤 한 칸을 도끼로 내리찍는다. 기본기 중 가장 아프지만 붙어야 한다.' }),
+      atk({ id: 'war-ring', name: '발치 후리기', range: RING, damage: 10, energyCost: 12, fx: 'quake', desc: '몸을 둘러싼 여덟 칸을 통째로 후려친다. 어느 줄에서 붙든 맞는다.' }),
+      atk({ id: 'war-shove', name: '어깨 밀치기', range: both(1), damage: 9, energyCost: 8, push: 1, fx: 'punch', desc: '앞뒤 한 칸을 어깨로 밀어 한 칸 떨어뜨린다. 값싼 정리용.' }),
+    ],
     cards: [
       atk({ id: 'war-cleave', name: '파쇄 베기', range: both(1), damage: 26, energyCost: 10, fx: 'slash', desc: '앞뒤 한 칸을 후려치는 기본 근접. 싸고 묵직하다.' }),
       atk({ id: 'war-bash', name: '방패 밀치기', range: barBoth(1), damage: 28, energyCost: 26, push: 2, fx: 'punch', desc: '몸 앞뒤 세로 3줄을 방패로 후려쳐 두 칸 넉백. 들러붙는 상대를 떼어낸다.' }),
@@ -264,6 +284,14 @@ export const ROSTER: CharacterDef[] = [
     maxEnergy: 100,
     startEnergy: 55,
     passive: { desc: '독니: 내 공격 피해 +6, 피해를 주면 독 3을 묻힌다.', attackBonus: 6, poisonOnHit: 3 },
+    // 기본기 — 가로로 제일 길다(앞뒤 1~2 / 2~3칸). 대신 한 대가 제일 약하다.
+    // 밀착 사각은 저격(`arc-mark`) 한 장에만 남긴다 — 기본기까지 사각이면 붙인 상대에게
+    // 아무것도 못 하고 1층에서 막힌다(2026-08-01 궁수 구조 문제와 같은 함정).
+    basics: [
+      atk({ id: 'arc-nock', name: '짧은 화살', range: beamBoth(1, 2), damage: 10, energyCost: 10, fx: 'bolt', desc: '앞뒤 1~2칸을 훑는 기본 사격. 붙은 상대도 맞힌다.' }),
+      atk({ id: 'arc-mark', name: '먼 겨냥', range: beamBoth(2, 3), damage: 12, energyCost: 12, pointBlank: false, fx: 'bolt', desc: '앞뒤 2~3칸째를 노리는 견제 사격. 거리를 벌어 둔 만큼 아프다 — 밀착 사각.' }),
+      atk({ id: 'arc-knife', name: '단검 긋기', range: both(1), damage: 11, energyCost: 8, fx: 'slash', desc: '앞뒤 한 칸을 단검으로 긋는다. 붙잡혔을 때의 최후 수단.' }),
+    ],
     cards: [
       atk({ id: 'arc-shot', name: '잿빛 화살', range: beam(1, 3), damage: 24, energyCost: 14, pointBlank: false, fx: 'bolt', desc: '앞 1~3칸을 노리는 기본 사격. 싸지만 겹쳐 선 상대는 못 맞힌다.' }),
       atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 22, energyCost: 20, poison: 6, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 독 6(3턴) — 겹칠수록 위력이 쌓인다. 밀착 사각.' }),
@@ -289,6 +317,13 @@ export const ROSTER: CharacterDef[] = [
     maxEnergy: 100,
     startEnergy: 60,
     passive: { desc: '혼백의 등불: 매 턴 기력 +12, 보호막 +7.', turnEnergy: 12, turnShield: 7 },
+    // 기본기 — 십자·X자·세로줄로 **제일 넓다**. 대신 한 대가 가볍고 기력이 비싸다
+    // (매 턴 기력 +12 패시브가 그 비용을 감당하는 자리다).
+    basics: [
+      atk({ id: 'mag-ember', name: '불티', range: CROSS, damage: 11, energyCost: 12, fx: 'flame', desc: '상·하·좌·우 네 칸에 불티를 튀긴다. 줄이 어긋난 상대도 잡는다.' }),
+      atk({ id: 'mag-shard', name: '서리 조각', range: FORK, damage: 9, energyCost: 10, fx: 'orb', desc: '앞뒤 대각 네 칸에 서릿발을 세운다. 정면·바로 위아래는 사각.' }),
+      atk({ id: 'mag-touch', name: '망령의 손길', range: barBoth(1), damage: 10, energyCost: 14, fx: 'orb', desc: '앞뒤 세로 3줄 여섯 칸을 훑는 망령의 손. 기본기 중 가장 넓고 가장 비싸다.' }),
+    ],
     cards: [
       atk({ id: 'mag-spark', name: '혼불', range: CROSS, damage: 18, energyCost: 14, burn: 4, fx: 'flame', desc: '상·하·좌·우 네 칸에 도깨비불을 흩뿌린다. 피해를 입히면 화상 4(2턴).' }),
       atk({ id: 'mag-frost', name: '서리 결계', range: bar(1), damage: 18, energyCost: 24, freeze: 1, selfShield: 10, fx: 'orb', desc: '앞 한 칸의 세 줄을 얼린다. 피해를 입히면 상대를 1턴 빙결(이동 불가) — 사용 시 보호막 +10.' }),
@@ -303,6 +338,19 @@ export const ROSTER: CharacterDef[] = [
     ],
   },
 ]
+
+// 기본기는 **정확히 3장**이어야 한다 — 시작 덱 9장(`run.ts`)과 고정 카드 7장
+// (`decks.ts`)이 그 수를 전제로 짜여 있다. 카드 id 중복도 여기서 바로 터뜨린다
+// (같은 id가 둘이면 `find`가 앞의 것만 집어 조용히 엉뚱한 카드가 나간다).
+for (const c of ROSTER) {
+  if (c.basics.length !== 3)
+    throw new Error(`${c.id}의 기본기는 3장이어야 한다 (현재 ${c.basics.length})`)
+}
+{
+  const ids = ROSTER.flatMap((c) => [...c.basics, ...c.cards]).map((c) => c.id)
+  const dup = ids.filter((id, i) => ids.indexOf(id) !== i)
+  if (dup.length) throw new Error(`카드 id 중복: ${[...new Set(dup)].join(', ')}`)
+}
 
 export const ROSTER_BY_ID: Record<string, CharacterDef> = Object.fromEntries(
   ROSTER.map((c) => [c.id, c]),
