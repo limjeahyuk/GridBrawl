@@ -226,6 +226,103 @@ export const SHEETS: Record<string, SheetDef> = {
       death: { frames: 11, frameMs: 95, loop: false },
     },
   }),
+
+  // --- Gothicvania 계열 (ansimuz) — 배경과 같은 팩에서 나왔다 ------------------
+  // ⚠ 이 팩들은 **hurt·death 클립이 없다.** `clipOrFallback`이 attack1 → idle로
+  //   대신하므로 게임은 정상 동작하고, 피격·사망 때 대기 자세가 나온다.
+  //   원본이 팔레트 PNG라 패커에 팔레트 디코딩을 넣어야 구워진다(packsprites.mjs).
+  ogre: sheet('ogre', {
+    frameW: 105, frameH: 76, footY: 76, anchorX: 60, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 4, frameMs: 150, loop: true },
+      run: { frames: 6, frameMs: 110, loop: true },
+      // 곤봉이 가장 내려간 프레임 — 원본을 눈으로 보고 정했다
+      attack1: { frames: 7, frameMs: 80, loop: false, impactFrame: 4 },
+    },
+  }),
+  // 센트리 — 떠 있는 눈. 원본에 애니메이션이 하나뿐이라 세 클립이 같은 프레임이다.
+  // `footY`가 프레임 높이보다 작다(27 < 30) — 공중에 떠 있어 발이 바닥에 안 닿는다.
+  'flying-eye': sheet('flying-eye', {
+    frameW: 28, frameH: 30, footY: 27, anchorX: 12, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 8, frameMs: 100, loop: true },
+      run: { frames: 8, frameMs: 80, loop: true },
+      attack1: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
+    },
+  }),
+  // 성당의 날개 달린 수호자. 가디언(엘리트)이라 ×2로 크게 세운다 — 226px는
+  // 판 높이(302px) 안에 들어오고, 다른 몬스터(132~160px)보다 확실히 커 보인다.
+  // `footY`가 프레임보다 위라(96 < 113) 옷자락이 바닥선 아래로 흘러 떠 보인다.
+  angel: sheet('angel', {
+    frameW: 96, frameH: 113, footY: 96, anchorX: 48, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 8, frameMs: 120, loop: true },
+      attack1: { frames: 3, frameMs: 90, loop: false, impactFrame: 1 },
+    },
+  }),
+  // --- 보스 3종 (Gothicvania) ------------------------------------------------
+  // tier4 셋이 일반 몬스터와 같은 시트를 돌려 쓰고 있었다. 보스는 첫인상이 전부라
+  // 갈라 냈다. 셋 다 원본 캔버스가 커서 scale이 작다 — 정수 배율 규칙은 그대로다.
+  // 수호기사 — 이 팩엔 드물게 Hurt까지 있다.
+  'terrible-knight': sheet('terrible-knight', {
+    frameW: 84, frameH: 48, footY: 48, anchorX: 33, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 4, frameMs: 150, loop: true },
+      run: { frames: 12, frameMs: 65, loop: true },
+      attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 3 },
+      attack2: { frames: 6, frameMs: 65, loop: false, impactFrame: 3 },
+      attack3: { frames: 4, frameMs: 70, loop: false, impactFrame: 2 },
+      block: { frames: 2, frameMs: 120, loop: false },
+      hurt: { frames: 3, frameMs: 90, loop: false },
+    },
+  }),
+  // 오버로드(최종 보스) — 원본이 커서 scale 1이어도 157px로 가장 크게 선다.
+  demon: sheet('demon', {
+    frameW: 221, frameH: 170, footY: 157, anchorX: 120, scale: 1, facesRight: true,
+    clips: {
+      idle: { frames: 6, frameMs: 140, loop: true },
+      run: { frames: 6, frameMs: 120, loop: true }, // 걷는 동작이 없다
+      attack1: { frames: 18, frameMs: 55, loop: false, impactFrame: 9 },
+      attack2: { frames: 18, frameMs: 55, loop: false, impactFrame: 10 },
+    },
+  }),
+  // 화염군주 — 붉은 용. 꼬리치기(attack1) + 브레스(attack2).
+  dragon: sheet('dragon', {
+    frameW: 120, frameH: 55, footY: 55, anchorX: 80, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 6, frameMs: 140, loop: true },
+      run: { frames: 6, frameMs: 120, loop: true }, // 걷는 동작이 없다
+      attack1: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
+      attack2: { frames: 7, frameMs: 75, loop: false, impactFrame: 4 },
+    },
+  }),
+
+  // --- Mecha-stone Golem (Kronovi) -----------------------------------------
+  // 마지막까지 직업 시트를 빌려 쓰던 자리. 공격 3종 + **block까지 있는** 몇 안 되는
+  // 시트라 보호막이 올라왔을 때 실제로 몸을 마는 동작이 나온다.
+  // ⚠ `footY`(46)가 `frameH`(71)보다 한참 위다 — 공통 bbox가 원거리 공격의 뻗은
+  //   팔과 파괴 잔해까지 품어 아래로 늘어났기 때문이다. 대기 자세 기준이라 맞다.
+  golem: sheet('golem', {
+    frameW: 71, frameH: 71, footY: 46, anchorX: 25, scale: 3, facesRight: true,
+    clips: {
+      idle: { frames: 4, frameMs: 160, loop: true },
+      run: { frames: 4, frameMs: 130, loop: true }, // 원본에 걷기가 없어 대기를 돌려 쓴다
+      attack1: { frames: 7, frameMs: 70, loop: false, impactFrame: 4 },
+      attack2: { frames: 9, frameMs: 65, loop: false, impactFrame: 5 },
+      attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 4 },
+      block: { frames: 8, frameMs: 80, loop: false },
+      death: { frames: 14, frameMs: 85, loop: false },
+    },
+  }),
+
+  // 성당의 마법사 — 시전 동작(Fire)이 따로 있는 몇 안 되는 Gothicvania 팩.
+  'church-wizard': sheet('church-wizard', {
+    frameW: 64, frameH: 53, footY: 53, anchorX: 36, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 5, frameMs: 140, loop: true },
+      attack1: { frames: 10, frameMs: 70, loop: false, impactFrame: 5 },
+    },
+  }),
 }
 
 export const sheetFor = (spriteId: string): SheetDef | undefined => SHEETS[spriteId]

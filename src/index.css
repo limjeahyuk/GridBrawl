@@ -145,6 +145,9 @@ h3 {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* ⚠ 이 두 기본값이 없으면 `var()`가 무효가 되어 **배경 전체가 사라진다**. */
+  --scrim: none;
+  --scene: none;
   background-image:
     /* ③ 비네트 */
     radial-gradient(125% 95% at 50% 42%, transparent 45%, rgba(0, 0, 0, 0.72) 100%),
@@ -173,8 +176,30 @@ h3 {
       transparent 0 111px,
       var(--grid-line) 111px 112px,
       transparent 112px 190px
-    );
+    ),
+    /* ⓪ 그려진 배경 — 기본은 없음(`none`도 한 층을 차지한다). 아래 `--hall` 참고 */
+    var(--scrim), var(--scene);
+  /* ⚠ 층이 7개로 고정이라 아래 세 목록도 **항상 7개**여야 한다. CSS는 짧은 목록을
+     돌려 쓰기 때문에 하나만 빠뜨려도 엉뚱한 층에 값이 붙는다. */
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat, repeat-x;
+  background-size: auto, auto, auto, auto, auto, auto, auto 608px;
+  background-position: center, center, center, 0 0, 0 0, center, center bottom;
   opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------------------
+   `--hall` — 그려진 배경(고성 내부)을 까는 변종.
+   2026-08-03: 그라디언트만으로는 화면이 계속 "빈 방"이라 실제 그림을 넣었다.
+   에셋은 Gothicvania(ansimuz) — 출처·라이선스는 public/bg/README.md.
+
+   ⚠ **전 화면에 깔면 안 된다.** 도감·덱 빌더·상점처럼 패널이 반투명하고 글자가
+   빽빽한 화면에서는 벽 무늬가 글자 뒤로 비쳐 가독성이 무너진다(실측). 그래서
+   기본 `.grid-bg`는 그대로 두고, **글자가 적은 화면에만** 이 클래스를 더한다.
+   --------------------------------------------------------------------------- */
+.grid-bg--hall {
+  --scrim: linear-gradient(rgba(6, 5, 10, 0.74), rgba(6, 5, 10, 0.74));
+  --scene: url('/bg/dark-castle/wall.png');
+  image-rendering: pixelated; /* 608px = 원본 304px의 정확히 2배 — 소수 배율 금지 */
 }
 
 /* Scanline/CRT overlay removed for a flat matte look. */

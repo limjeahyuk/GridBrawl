@@ -28,7 +28,7 @@ import { RewardScreen } from './ui/screens/RewardScreen'
 import { EventScreen } from './ui/screens/EventScreen'
 import { ShopScreen } from './ui/screens/ShopScreen'
 import { RunEndScreen } from './ui/screens/RunEndScreen'
-import { startRun, afterWin, afterLoss, currentNode, type RunState } from './game/run'
+import { startRun, afterWin, afterLoss, currentNode, sceneFor, type RunState } from './game/run'
 import { runFightProps } from './game/runbattle'
 
 const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
@@ -290,6 +290,7 @@ export default function App() {
         deck={fp.deck}
         battleOpts={fp.battleOpts}
         telegraph={fp.telegraph}
+        scene={sceneFor(run)}
         getOpponentPlan={fp.getOpponentPlan}
         onEnd={runFightEnd}
         onQuit={toTitle}

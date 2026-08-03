@@ -9,6 +9,7 @@
 // method. authDomain / projectId default to the gridbrawl-9073d project but can
 // be overridden via env. See .env.example.
 // ---------------------------------------------------------------------------
+import { Capacitor } from '@capacitor/core'
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app'
 import {
   GoogleAuthProvider,
@@ -26,8 +27,14 @@ const PROJECT_ID =
 const AUTH_DOMAIN =
   (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined) ?? `${PROJECT_ID}.firebaseapp.com`
 
+// 네이티브 앱(WebView)에서는 구글 로그인을 아예 노출하지 않으므로(LoginScreen 주석 참고)
+// Firebase Auth를 시작할 이유가 없다. 그리고 시작해선 안 된다 — capacitor://localhost
+// 오리진에서는 onAuthStateChanged가 끝내 호출되지 않아 `ready`가 영원히 false로 남고,
+// 앱이 "접속 중…" 화면에서 멈춘다(2026-08-03 시뮬레이터에서 확인).
+const NATIVE = Capacitor.isNativePlatform()
+
 /** Is sign-in configured? (the login screen shows setup help otherwise.) */
-export const authConfigured = (): boolean => !!API_KEY
+export const authConfigured = (): boolean => !!API_KEY && !NATIVE
 
 let _auth: Auth | null = null
 function auth(): Auth {
@@ -115,7 +122,7 @@ const emit = (): void => {
 function ensureStarted(): void {
   if (started) return
   started = true
-  if (!API_KEY) {
+  if (!authConfigured()) {
     ready = true // no Firebase to wait on — guest (if any) resolves immediately
     return
   }
@@ -173,6 +180,6 @@ export function signInAsGuest(): void {
 export async function signOutUser(): Promise<void> {
   guestUser = null
   clearGuest()
-  if (API_KEY && firebaseUser) await signOut(auth()) // fires onAuthStateChanged → emit
+  if (authConfigured() && firebaseUser) await signOut(auth()) // fires onAuthStateChanged → emit
   else emit()
 }

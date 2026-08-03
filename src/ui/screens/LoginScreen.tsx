@@ -36,7 +36,7 @@ export function LoginScreen() {
 
   return (
     <div className="screen login">
-      <div className="grid-bg" />
+      <div className="grid-bg grid-bg--hall" />
       <div className="login__content">
         <div className="title__kicker neon-text">THE GRID · DEMON GAUNTLET</div>
         <h1 className="title__logo">

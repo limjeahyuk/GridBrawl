@@ -13,6 +13,7 @@ import {
   type SheetDef,
 } from '../../art/sprites'
 import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
+import type { BattleScene } from '../../game/run'
 import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
@@ -278,6 +279,7 @@ export function BattleScreen({
   deck,
   battleOpts,
   telegraph,
+  scene = 'hall',
   getOpponentPlan,
   turnSeconds,
   onEnd,
@@ -296,6 +298,8 @@ export function BattleScreen({
   battleOpts?: BattleOpts
   /** 보스 예고 — 선택 화면에 상대(side 1)의 이번 턴 행동을 미리 알린다. */
   telegraph?: (turn: number, oppHpFrac: number) => string | null
+  /** 전장 배경. 로그라이크는 층마다 바뀌고(`sceneFor`), 봇전·멀티는 기본 고성. */
+  scene?: BattleScene
   getOpponentPlan: OpponentPlanner
   /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
    *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
@@ -815,7 +819,7 @@ export function BattleScreen({
       />
 
       <div className="board">
-        <div className="boardfloor" />
+        <div className={`boardfloor boardfloor--${scene}`} />
         <div className="gridboard" ref={gridRef}>
           {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
             const row = Math.floor(i / GRID_COLS)

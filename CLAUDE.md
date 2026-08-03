@@ -43,7 +43,7 @@
 - 다크 판타지 리스킨 마무리 — 전장·공용 배경·팔레트 우회 리터럴 38곳
 
 **남은 것 (다음 후보)**
-1. **대형 몬스터 3종** — `sentry`·`ogre`·`golem`이 아직 직업 시트를 빌려 쓴다. 팩을 `assets-raw/`에 풀고 → `scripts/packsprites.mjs`의 `JOBS`에 추가 → `npm run sprites` → `SHEETS`에 측정값 → `MonsterDef.spriteId` 한 줄. 절차는 [public/sprites/README.md](public/sprites/README.md)
+1. ~~대형 몬스터 시트~~ — **2026-08-03 완료.** 20종이 직업 시트 3개를 돌려 쓰던 상태가 끝났다(13개 시트). 새 팩을 더할 때의 절차는 [public/sprites/README.md](public/sprites/README.md)
 2. **PvP 밸런스** — 3직업 개편 이후 **한 번도 안 맞췄다**(사용자 결정으로 후순위). `npm run sim`의 매치업 승률로 본다. ⚠ 이 시뮬은 시드가 없어 ±0.05턴 흔들리니 큰 차이만 신뢰할 것
 3. **타이틀 로고** — 글자 그라디언트가 아직 사이버 시절 청록→보라다(`ui.css`의 `.title__word`)
 4. **보스 연출** — 보스 3종이 일반 몬스터와 같은 스크립트 틀만 쓴다. 컷인·전용 배경 등
@@ -181,6 +181,21 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
   - ⚠ **클래스 이름 `.grid-bg`는 일부러 남겼다** — 18개 화면이 전부 이걸 깔고 있어서, 이름을 바꾸면 배경 교체가 전면 수정이 된다(`--neon-*` 변수와 같은 이유).
   - **어두운 남색 표면 리터럴 38곳**이 팔레트를 우회하고 있었다(`.avatar-card { background: #0b1120 }` 등). `--bg-0/1/2`로 치환. 역할이 없던 두 가지는 변수를 새로 팠다 — `--ink`(밝은 칩 위 어두운 글자, 예전엔 `#07090f` 남색)·`--frame`(게이지의 **불투명** 테두리 — `--panel-edge`는 반투명이라 바 위에서 묻힌다).
   - ⚠ 앞으로도 **표면·테두리 색을 리터럴로 박지 말 것.** 강조색(`--accent`)만은 캐릭터별로 달라야 하므로 예외다.
+- **그려진 배경 도입(2026-08-03)** — 위 정리로 형태는 잡혔지만 여전히 **그라디언트뿐이라 "빈 무대"**로 읽혔다("배경이 밋밋하다"). 이미지 파일 0개 원칙을 여기서 깼다 — 배경만 실제 그림을 쓴다. 에셋은 Gothicvania(ansimuz) 고성 내부 한 장(`public/bg/dark-castle/wall.png`, 960×304). 규격·출처·라이선스는 [public/bg/README.md](public/bg/README.md).
+  - **두 자리에 들어간다** — 전장은 `battlefx.css`의 `.boardfloor`, 화면은 `index.css`의 `.grid-bg--hall`(타이틀·로그인·결과·런 종료 4곳).
+  - ⚠ **전 화면에 깔면 안 된다.** 도감·덱 빌더·상점은 패널이 반투명하고 글자가 빽빽해서, 벽 무늬가 글자 뒤로 비치면 가독성이 무너진다(브라우저로 실측해 확인). 그래서 기본 `.grid-bg`는 그대로 두고 **글자가 적은 화면에만** `--hall`을 더한다. 새 화면에 붙일 땐 반드시 눈으로 확인할 것.
+  - ⚠ **`.grid-bg`의 배경 층이 7개로 고정됐다** — 뒤에 `var(--scrim)`·`var(--scene)` 두 층을 붙이면서 `background-repeat/size/position`도 **7개짜리 목록**이 됐다. CSS는 짧은 목록을 돌려 쓰므로 층을 더하거나 빼면 세 목록을 **같이** 고쳐야 한다. 두 변수의 기본값(`none`)이 빠지면 `var()`가 무효가 되어 **배경이 통째로 사라진다.**
+  - ⚠ **배율은 정수 2배(`auto 608px` = 304×2) 고정.** 캐릭터 스프라이트가 정수 배율이라 배경만 소수 배율이면 픽셀 크기가 어긋난다. `image-rendering: pixelated`와 짝이라 한쪽만 바꾸면 안 된다. 바닥선을 맞추려고 `center bottom`으로 붙인다.
+  - 후보를 실제 전투 화면에 얹어 비교한 결과다 — CraftPix 크리스탈 동굴(민트·분홍)은 예쁘지만 황동 팔레트와 싸우고 결정 장식이 파이터와 겹쳐 읽혔다. 고성 쪽이 **원래 팔레트와 같은 색**이라 리스킨을 거스르지 않는다. 판(`.board`)이 1280×302의 **가로로 매우 긴 띠**라 16:9 그림은 대부분 잘려 나간다는 것도 이유 — 이 에셋은 가로로 이어 붙게 그려져 있어 폭에 상관없이 채워진다.
+- **층별 배경 4종 + Gothicvania 몬스터(2026-08-03)** — 배경 한 장으로 시작한 걸 **장면 4종**으로 늘리고, 같은 팩에서 나온 몬스터로 직업 시트를 빌려 쓰던 자리를 메웠다. 에셋은 전부 ansimuz(Gothicvania 계열) — 팔레트·픽셀 크기가 서로 맞는 게 이 팩을 고른 이유다.
+  - **장면**: `cemetery`(1~5층, 유일한 야외) → `hall`(6~10층, 기본) → `corridor`(11~14층) → `lava`(보스 전용). 고르는 곳은 `run.ts`의 `sceneFor()`, 그리는 곳은 `battlefx.css`의 `.boardfloor--<id>`. **이름이 짝이라 한쪽만 바꾸면 배경이 사라진다.** 봇전·온라인은 기본 `hall`.
+  - ⚠ **`.boardfloor`를 그림과 빛 두 겹으로 갈랐다** — 그림은 `.boardfloor`(장면 클래스가 통째로 덮어씀), 스크림·비네트·달빛·횃불은 `.boardfloor::before`(장면 무관 고정). 합치면 장면마다 광원 4줄을 복사하게 된다. 장면별 밝기 차이는 `--floor-scrim` 변수로만 조절한다(회랑 52% · 묘지 50% · 용암 44% · 기본 40%).
+  - ⚠ **판이 302px뿐이라 배경 대부분이 잘린다** — 어디가 남는지는 `background-position`이 정한다. 묘지의 산맥·무덤은 거의 검은 실루엣이라 바닥에 그냥 붙이면 판이 새까매져서, `calc(100% + N)`으로 화면 아래로 밀어 윗부분만 남겼다. 층을 더하거나 배율을 바꾸면 **반드시 눈으로 확인**할 것.
+  - **몬스터 스프라이트 이관 완료** — `ogre`·`sentry`(flying-eye)·`golem`(Mecha-stone Golem)이 **직업 시트를 빌려 쓰던 마지막 자리**였고, `guardian`(angel)·`shaman`(church-wizard) + **보스 3종**(`overlord`=demon · `pyrelord`=dragon · `warden`=terrible-knight)은 `martial-hero`·`evil-wizard` 한 시트를 4~6종이 돌려 쓰던 걸 갈라 낸 것이다. **20종이 시트 3개를 쓰던 상태 → 13개 시트, 직업 시트를 빌려 쓰는 몬스터 0.**
+  - ⚠ **Gothicvania 원본은 팔레트(colorType 3) PNG다.** 패커가 8bit RGBA만 읽어서 통째로 건너뛰고 있었다 — `packsprites.mjs`의 `decodePng`에 PLTE·tRNS 확장을 넣어 해결했다. **픽셀당 바이트 수가 다르므로 언필터의 "왼쪽 이웃" 거리(`bpp`)도 같이 달라진다** — 이걸 4로 두면 이미지가 조용히 비스듬히 뭉개진다.
+  - ⚠ **클립마다 캔버스 크기가 다른 팩이 있다**(demon: 대기 256×176 · 공격 312×220). 공통 bbox 크롭이 "전 프레임 같은 크기"를 전제해서 그냥 두면 버퍼를 넘겨 읽고 터진다. `padToCommonCanvas()`가 **가로 가운데·세로 아래**로 맞춘다 — 좌상단 정렬로 하면 큰 캔버스 클립에서 캐릭터가 공중에 뜬다.
+  - ⚠ **이 팩들엔 hurt·death 클립이 대부분 없다**(`terrible-knight`만 Hurt 보유). `sprites.ts`의 폴백 사슬(attack1 → idle)이 받아 주므로 동작은 하고, 피격·사망 때 대기 자세가 나온다.
+  - ⚠ **CraftPix "Free Bosses" 팩은 안 썼다** — 이름과 달리 **SF·군용**(골프카트·포탑·군복 병사)이라 다크 판타지와 정면 충돌한다. 보스 3종은 Legacy Collection 안에 이미 있던 것으로 채웠다. 팩을 추천·도입할 땐 **제목 말고 실제 아트를 먼저 볼 것.**
 - **버프 카드 · 이동공격(2026-08-01)** — 직업 카드를 4~5장에서 **8~9장**으로 늘리며 두 메커니즘을 추가했다.
   - **버프(`kind: 'buff'`)** — 자신에게 N턴 지속효과를 건다. `StatusKind`에 `atkUp`(피해 +N)·`defUp`(받는 피해 −N)·`freeCast`(기력 소모 0)를 얹어 **독·화상·빙결과 같은 목록·같은 정산 자리**를 쓴다(랜덤 없음 → 멀티 락스텝 안전). 수비 티어(`prio` 1)라 **같은 슬롯의 공격보다 먼저** 걸린다 — 1번 슬롯 버프 + 2·3번 공격이면 그 턴부터 효과를 본다.
   - ⚠ **`freeCast`는 세 곳이 같은 규칙을 봐야 한다** — 엔진 `costOf`, UI 선택 판정 `planAffordable`, AI 예산. 하나만 빠뜨리면 "낼 수 있다고 표시되는데 불발"이 난다. 비용 필드가 종류마다 다르므로 `baseCostOf()` 한 곳에 모아 두었다.
@@ -215,6 +230,9 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - **RTDB 규칙**: `database.rules.json`(레포 관리) — `gridbrawl/<코드>` 경로만 열림, 코드 형식·offer/answer 필드 검증. 규칙 바꾸면 `--only database`로 배포.
 - **TURN**: `.env`의 `VITE_TURN_URL/USERNAME/CREDENTIAL`(선택, `webrtc.ts`가 ICE에 자동 추가). 비면 STUN 단독 — 셀룰러/대칭 NAT에서 연결 실패 가능. 관리형 TURN 발급 후 채우고 재빌드·재배포.
 - **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `com.imjaehyeog.GridBrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
+  - ⚠ **네이티브에선 Firebase Auth를 아예 시작하지 않는다**(`auth.ts`의 `authConfigured()`가 `!NATIVE`). `capacitor://localhost` 오리진에서는 `onAuthStateChanged`가 **끝내 호출되지 않아** `ready`가 영원히 false로 남고, 앱이 **"접속 중…" 화면에서 멈춘다**(2026-08-03 시뮬레이터에서 확인 — 웹에서는 안 나므로 `npm run dev`로는 절대 못 잡는다). 나중에 네이티브 구글 로그인을 붙일 땐 이 가드를 걷어내는 게 아니라 **네이티브 플러그인 경로로 갈아 끼워야** 한다.
+  - ⚠ **iOS는 iPhone 전용이다**(`TARGETED_DEVICE_FAMILY = 1`, 2026-08-04). iPad를 포함하면 App Store 업로드가 **가로 2방향만으로는 거부된다** — iPad 멀티태스킹은 세로 2방향까지 전부 선언하라고 요구한다. UI에 반응형 대응이 전혀 없고(판이 1280×302 가로 띠) 세로에서는 레이아웃이 무너지므로 iPhone 전용으로 내렸다. iPad를 열려면 **세로 레이아웃을 먼저 만들어야** 한다.
+  - ⚠ **`ios/App/App/public/`은 `npx cap sync`가 굽는 사본이다** — 이걸 빼먹으면 오래된 웹 빌드가 그대로 앱에 담긴다(2026-08-03에 7/26자 사본이 남아 있어 **스프라이트·배경이 통째로 빠진 상태**였다). 아카이브 전에는 반드시 `npm run build && npx cap sync ios`.
 
 ## 컨벤션
 

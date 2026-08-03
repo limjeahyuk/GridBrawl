@@ -170,6 +170,24 @@ function buildLadder(): RunNode[] {
   })
 }
 
+// --- 전장 배경 --------------------------------------------------------------
+/**
+ * 전투 배경 장면. CSS `.boardfloor--<id>`와 **이름이 짝**이다(`battlefx.css`).
+ * 규칙이 아니라 연출이라 엔진·시뮬은 이 값을 모른다 — 밸런스에 영향 없음.
+ */
+export type BattleScene = 'hall' | 'corridor' | 'cemetery' | 'lava'
+/**
+ * 층에 맞는 배경. **바깥 → 성 안 → 지하 → 용암** 순으로 내려간다: 사다리를
+ * 오르는 게 아니라 파고드는 느낌이라야 15층이 길게 느껴지지 않는다.
+ * 보스는 층과 무관하게 용암 — 유일한 붉은 장면이라 그 자체가 "끝" 신호다.
+ */
+export function sceneFor(run: RunState): BattleScene {
+  if (currentNode(run).type === 'boss') return 'lava'
+  if (run.floor <= 5) return 'cemetery'
+  if (run.floor <= 10) return 'hall'
+  return 'corridor'
+}
+
 // --- 파생값 -----------------------------------------------------------------
 export function computeMaxHp(charId: string, relicIds: string[]): number {
   const base = getChar(charId).maxHp

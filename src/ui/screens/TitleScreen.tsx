@@ -27,7 +27,7 @@ export function TitleScreen({
   const [showControls, setShowControls] = useState(false)
   return (
     <div className="screen title">
-      <div className="grid-bg" />
+      <div className="grid-bg grid-bg--hall" />
 
       {user && (
         <div className="userchip">

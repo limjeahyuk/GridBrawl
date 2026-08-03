@@ -19,9 +19,22 @@
 | 몬스터 goblin·grunt | `rat` | 〃 |
 | 몬스터 vampire | `mimic` | 〃 |
 | 몬스터 witch·shaman·overlord·pyrelord | `evil-wizard` | Evil Wizard 3 (LuizMelo) |
-| 몬스터 knight·warden·guardian·assassin·berserker·crossbow | `martial-hero` | Martial Hero 3 (LuizMelo) |
+| 몬스터 knight·assassin·berserker·crossbow | `martial-hero` | Martial Hero 3 (LuizMelo) |
+| 몬스터 ogre | `ogre` | Ansimuz Legacy Collection — Gothicvania |
+| 몬스터 sentry | `flying-eye` | 〃 (flying-eye-demon) |
+| 몬스터 golem | `golem` | Mecha-stone Golem (Kronovi) |
+| 몬스터 guardian | `angel` | GothicVania Church Pack |
+| 몬스터 shaman | `church-wizard` | 〃 |
+| **보스** overlord | `demon` | Ansimuz Legacy Collection — Gothicvania |
+| **보스** pyrelord | `dragon` | 〃 (Grotto Escape 2 보스 용) |
+| **보스** warden | `terrible-knight` | 〃 |
 
-- **아직 직업 시트를 빌려 쓰는 몬스터**: `sentry`·`ogre`·`golem` — 큰 덩치/기계형에 맞는 팩이 없다. `MonsterDef.spriteId`만 채우면 끝난다.
+**20종이 시트 3개를 돌려 쓰던 상태는 끝났다** — 이제 13개 시트를 쓰고 직업 시트를
+빌려 쓰는 몬스터는 없다.
+
+- ⚠ **Gothicvania 계열은 hurt·death 클립이 대부분 없다**(`terrible-knight`만 Hurt 보유). 원본에 그 동작이 없어서다. `clipOrFallback`이 attack1 → idle로 대신하므로 게임은 정상 동작하고, 피격·사망 때 대기 자세가 나온다.
+- ⚠ **Gothicvania 원본은 팔레트(colorType 3) PNG다.** 패커가 원래 8bit RGBA만 읽어서 통째로 건너뛰고 있었다(`✗ … 건너뜀`). `decodePng`에 PLTE·tRNS 확장을 넣어 해결했다 — 앞으로 ansimuz 팩은 그냥 들어온다.
+- ⚠ **클립마다 캔버스 크기가 다른 팩이 있다**(demon: 대기 256×176 · 공격 312×220). 공통 bbox 크롭이 "모든 프레임이 같은 크기"를 전제해서 그냥 두면 버퍼를 넘겨 읽고 터진다. `padToCommonCanvas()`가 **가로 가운데·세로 아래** 기준으로 맞춰 준다 — 서 있는 캐릭터는 발이 닿는 선과 몸통 중심이 기준이라 좌상단 정렬로는 안 된다.
 - `bandit-light`/`bandit-heavy`는 궁수·마법사가 임시로 쓰던 시트다. 지금은 안 쓰지만 몬스터용으로 재활용할 수 있어 남겨 뒀다.
 - 미사용 원본: `Pet Dogs Pack`(assets-raw) — 소환수·펫을 넣게 되면 쓸 수 있다.
 
