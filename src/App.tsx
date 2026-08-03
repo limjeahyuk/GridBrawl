@@ -202,9 +202,8 @@ export default function App() {
       <TitleScreen
         user={user}
         onLogout={onLogout}
-        onStart={() => setPhase('deck-select')}
-        onRoguelike={() => setPhase('run-start')}
-        onDecks={() => setPhase('deck-manage')}
+        onStart={() => setPhase('run-start')}
+        onPvp={() => setPhase('deck-select')}
         onCodex={() => setPhase('codex')}
       />
     )
@@ -221,7 +220,8 @@ export default function App() {
           setEditingDeck(d)
           setPhase('deck-build')
         }}
-        onBack={toTitle}
+        // 덱 관리는 PVP 안(덱 선택)에서만 열린다 — 뒤로는 타이틀이 아니라 그쪽으로.
+        onBack={() => setPhase('deck-select')}
       />
     )
   } else if (phase === 'deck-build') {

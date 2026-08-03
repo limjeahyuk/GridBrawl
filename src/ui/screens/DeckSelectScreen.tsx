@@ -50,7 +50,9 @@ export function DeckSelectScreen({
           ◀ 뒤로
         </button>
         <h2 className="neon-text">덱 선택</h2>
-        <button className="btn btn--ghost" onClick={onManage}>
+        {/* 타이틀에서 내려온 **덱 관리의 유일한 입구**(2026-08-04) — 그래서 ghost가
+            아니라 원래 타이틀 버튼이 쓰던 색(`btn--online`) 그대로 눈에 띄게 둔다. */}
+        <button className="btn btn--online" onClick={onManage}>
           덱 만들기
         </button>
       </div>

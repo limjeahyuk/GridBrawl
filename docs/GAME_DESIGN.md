@@ -477,8 +477,8 @@
 - `PRESET_DECKS`(고유4 + 펄스샷 + 가드 + 오른쪽 대시) = 봇 상대 덱 + 저장된 덱이 없을 때의 기본 덱.
 
 ### 화면·흐름
-- `title →(게임 시작)→ deck-select → mode-select →` 봇전 `fight → result` | 온라인 `mp-lobby → mp-fight → mp-result`.
-- `title →(덱 만들기)→ deck-manage`(목록·수정·삭제) `→ deck-build`(캐릭터 선택 + 풀에서 7장 토글 + 이름 저장).
+- `title →(게임 시작)→ run-start …`(로그라이크 — 2026-08-04부터 타이틀의 **게임 시작**이 곧 로그라이크다) | `title →(PVP)→ deck-select → mode-select →` 봇전 `fight → result` | 온라인 `mp-lobby → mp-fight → mp-result`.
+- `deck-select →(덱 만들기)→ deck-manage`(목록·수정·삭제) `→ deck-build`(캐릭터 선택 + 풀에서 7장 토글 + 이름 저장). ⚠ 2026-08-04부터 **타이틀에는 덱 만들기가 없다** — 덱은 PVP에서만 쓰므로 PVP 안(덱 선택 화면 헤더)으로 옮겼고, `deck-manage`의 뒤로도 `deck-select`로 간다.
 - **봇전은 1:1 단판** — 상대는 나와 다른 캐릭터를 랜덤으로 뽑고 그 캐릭터의 프리셋 덱을 쓴다(`decideAI`의 `availableCards` 인자).
 
 ### 남은 과제 (2단계)
