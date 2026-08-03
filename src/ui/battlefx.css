@@ -466,3 +466,71 @@
     animation: none;
   }
 }
+
+/* ---- 이동 칩 (2026-08-03) --------------------------------------------------
+   이동은 판의 칸을 눌러서 하지만, **쿨타임과 남은 이동 수단**은 한눈에 보여야
+   턴을 계획할 수 있다. 그래서 손패 왼쪽에 화살표만 남긴 최소 칩을 둔다 —
+   공격·수비 카드와 크기를 확실히 갈라 "이건 다른 종류"임이 바로 읽히게. */
+.cards__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 100%;
+  min-width: 0;
+}
+.cards__moves {
+  /* 세로 2줄로 채우고 필요한 만큼 열이 늘어난다 — 이동 카드는 4~10장으로
+     덱마다 달라서, 열 수를 고정하면 어떤 덱에선 너무 높아진다. */
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+  gap: 4px;
+  flex: none;
+  padding-right: 12px;
+  border-right: 1px solid var(--panel-edge);
+}
+.movechip {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--panel-edge);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--neon-yellow) 8%, var(--bg-2));
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
+}
+.movechip:not(:disabled):hover {
+  border-color: var(--neon-yellow);
+  background: color-mix(in srgb, var(--neon-yellow) 22%, var(--bg-2));
+  color: var(--text);
+}
+.movechip:not(:disabled):active {
+  transform: translateY(1px);
+}
+.movechip.is-dim {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+.movechip__arrow {
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.movechip__cd {
+  position: absolute;
+  right: -3px;
+  top: -4px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--bg-0);
+  border: 1px solid var(--panel-edge);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--neon-yellow);
+}

@@ -29,7 +29,8 @@ const BUFF_LABEL: Record<string, (n: number) => string> = {
   freeCast: () => '기력 소모 0',
 }
 
-function moveIcon(dir: CardDef['dir'], steps: number): string {
+/** 이동 카드의 화살표(대시는 두 개). 전투 화면의 작은 이동 칩도 이걸 쓴다. */
+export function moveIcon(dir: CardDef['dir'], steps: number): string {
   const one = MOVE_ARROW[dir ?? 'right'] ?? '▶'
   return steps >= 2 ? one + one : one
 }

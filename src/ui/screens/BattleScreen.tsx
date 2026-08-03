@@ -14,7 +14,7 @@ import {
 } from '../../art/sprites'
 import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
 import { deckFor } from '../../battle/cards'
-import { CardFace, cardAccent } from '../CardFace'
+import { CardFace, cardAccent, moveIcon } from '../CardFace'
 import { PortraitSvg } from '../PortraitSvg'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
@@ -1017,7 +1017,30 @@ export function BattleScreen({
 
           {/* 탭 없음 — 이동은 판을 눌러서 한다(`moveTargets`). 손패에는 공격·수비만
               남으므로 탭을 오갈 이유가 사라졌다. */}
-          <div className="cards__hand">
+          <div className="cards__row">
+            {/* 이동 칩 — 판을 눌러도 되지만, **쿨타임과 남은 이동 수단이 한눈에**
+                보여야 계획을 세울 수 있다. 화살표만 남긴 최소 형태. */}
+            <div className="cards__moves">
+              {hand.filter((c) => c.kind === 'move').map((c) => {
+                const cd = cdLeft(c.id)
+                const usable = selectable(c) && canAfford(c)
+                const f = faceCard(c)
+                return (
+                  <button
+                    key={c.id}
+                    className={`movechip ${usable ? '' : 'is-dim'}`}
+                    onClick={() => addCard(c)}
+                    disabled={!usable}
+                    title={f.name}
+                    aria-label={f.name}
+                  >
+                    <span className="movechip__arrow">{moveIcon(f.dir, f.steps ?? 1)}</span>
+                    {cd > 0 && <span className="movechip__cd">{cd}</span>}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="cards__hand">
             {hand.filter((c) => c.kind !== 'move').map((c) => {
               const onCd = cdLeft(c.id) > 0
               const locked = onCd || placedNoRepeat(c)
@@ -1060,6 +1083,7 @@ export function BattleScreen({
                 </button>
               )
             })}
+            </div>
           </div>
         </div>
       ) : (

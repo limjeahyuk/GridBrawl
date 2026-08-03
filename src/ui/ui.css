@@ -2300,9 +2300,11 @@
 .cards__hand {
   display: flex;
   gap: 8px;
-  justify-content: center;
+  /* ⚠ `center`만 쓰면 넘칠 때 **양쪽 끝이 잘려** 스크롤로도 못 본다.
+     `safe`는 넘치는 순간 시작 정렬로 떨어뜨려 준다. */
+  justify-content: safe center;
   flex-wrap: nowrap;
-  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
@@ -2317,7 +2319,7 @@
 }
 /* 로그라이크에서 덱이 커지면 10장을 넘길 수 있어 줄어들지 않게 고정폭을 준다 */
 .handcard {
-  width: 112px;
+  width: 104px;
   flex: none;
   height: 146px; /* 설명 없는 압축 카드 기준 — 이름·수치·사거리만 들어간다 */
   padding: 0;
