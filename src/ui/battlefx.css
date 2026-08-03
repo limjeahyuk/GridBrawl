@@ -417,3 +417,52 @@
 .stchip--atkUp { color: #ffb84d; }
 .stchip--defUp { color: #9fc2ff; }
 .stchip--freeCast { color: #e07ad0; }
+
+/* ---- 칸을 눌러 이동 (2026-08-03) ------------------------------------------
+   이동 카드를 탭에서 고르는 대신, 갈 수 있는 칸을 밝혀 두고 그걸 누른다.
+   ⚠ 공격 사거리(`cell--target`, 붉은색)와 **반드시 다른 색**이어야 한다 —
+   둘 다 "여기를 노린다"는 뜻이라 같은 색이면 무엇을 누르는지 헷갈린다.
+   이동은 호박(기력과 같은 계열), 공격은 핏빛으로 갈라 둔다. */
+.cell--move {
+  appearance: none;
+  cursor: pointer;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--neon-yellow) 70%, transparent);
+  background: color-mix(in srgb, var(--neon-yellow) 12%, transparent);
+  box-shadow:
+    inset 0 0 16px color-mix(in srgb, var(--neon-yellow) 22%, transparent),
+    0 0 10px color-mix(in srgb, var(--neon-yellow) 22%, transparent);
+  animation: movehint 1.5s ease-in-out infinite;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.cell--move:hover {
+  background: color-mix(in srgb, var(--neon-yellow) 26%, transparent);
+  box-shadow:
+    inset 0 0 20px color-mix(in srgb, var(--neon-yellow) 40%, transparent),
+    0 0 16px color-mix(in srgb, var(--neon-yellow) 45%, transparent);
+  animation: none; /* 올려둔 칸은 깜빡임을 멈춰 "이 칸"이 또렷하게 */
+}
+.cell--move:active {
+  transform: scale(0.97);
+}
+@keyframes movehint {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* 공격 사거리와 겹치면 사거리 표시가 이긴다 — 그 칸은 "때릴 곳"이 더 중요하다. */
+.cell--move.cell--target {
+  border-color: rgba(255, 70, 70, 0.85);
+  background: rgba(255, 40, 40, 0.3);
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell--move {
+    animation: none;
+  }
+}

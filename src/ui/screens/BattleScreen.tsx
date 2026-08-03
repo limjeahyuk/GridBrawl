@@ -181,15 +181,8 @@ const shakeLevel = (dmg: number, ko: boolean): 1 | 2 | 3 =>
 /** 사거리 밖에서 날아오는 계열 — 준비 동작 소리가 다르다(차지 vs 바람가르기). */
 const RANGED_FX = new Set(['bolt', 'orb', 'flame'])
 
-// 손패 탭 — 종류별로 나눠 카드를 크게 보여준다 (가드+원기 = 수비)
-type HandTab = 'move' | 'attack' | 'defense'
-const HAND_TABS: { id: HandTab; label: string }[] = [
-  { id: 'move', label: '이동' },
-  { id: 'attack', label: '공격' },
-  { id: 'defense', label: '수비' },
-]
-const tabOf = (c: CardDef): HandTab =>
-  c.kind === 'move' ? 'move' : c.kind === 'attack' ? 'attack' : 'defense'
+// 손패에는 공격·수비만 둔다 — 이동은 판의 칸을 눌러서 한다(2026-08-03).
+// 탭을 오가는 조작이 특히 "이동 후 공격"에서 번거로웠다.
 
 function baseView(b: CardBattle): View {
   const s = b.state
@@ -380,7 +373,6 @@ export function BattleScreen({
   // bump to re-read cooldowns after a turn resolves
   const [, setTick] = useState(0)
   const [hoveredCard, setHoveredCard] = useState<CardDef | null>(null)
-  const [handTab, setHandTab] = useState<HandTab>('move')
   // where the hovered attack sits in the plan: a slot index, or null = "from hand"
   // (would land in the next empty slot). Drives the move-aware range preview.
   const [hoverSlot, setHoverSlot] = useState<number | null>(null)
@@ -545,6 +537,31 @@ export function BattleScreen({
     if (ghost && ghost.col === cur.col && ghost.row === cur.row) ghost = null
     return { from, ghost }
   }, [hoveredCard, hoverSlot, slots, view, localSide, planPreview])
+
+  /**
+   * **칸을 눌러 이동한다**(2026-08-03). 이동 카드를 탭에서 고르는 대신, 지금
+   * 갈 수 있는 칸을 노란색으로 밝혀 두고 그걸 누르면 해당 이동 카드가 슬롯에
+   * 담긴다 — "이동 탭 → 카드 → 공격 탭 → 카드"를 오가던 걸 없앤다.
+   *
+   * 출발점은 **고른 카드까지 반영된 위치**(`planPreview.ghost`)다. 그래야 두
+   * 번 연속으로 눌러 두 칸을 갈 수 있다.
+   * 같은 칸에 닿는 카드가 둘이면 **적은 걸음 수**를 고른다(대시보다 한 칸짜리를
+   * 먼저 — 대시는 쿨이 있어 아껴 두는 게 보통 이득이다).
+   */
+  const moveTargets = useMemo(() => {
+    const out = new Map<string, CardDef>()
+    if (phase !== 'select' || slots.every((x) => x !== null)) return out
+    const from = planPreview.ghost ?? view.pos[localSide]
+    for (const c of hand) {
+      if (c.kind !== 'move' || !selectable(c) || !canAfford(c)) continue
+      const to = applyMovePreview(from, c)
+      if (to.col === from.col && to.row === from.row) continue // 벽에 막혀 제자리
+      const key = `${to.col},${to.row}`
+      const prev = out.get(key)
+      if (!prev || (c.steps ?? 1) < (prev.steps ?? 1)) out.set(key, c)
+    }
+    return out
+  }, [hand, slots, planPreview, view, localSide, phase, battle.state.cooldowns])
 
   // 강조할 타격 셀 — 공격 카드를 올려보는 중이면 그 카드의 사거리, 아니면 고른
   // 플랜의 공격들이 덮는 셀(그대로 남아 있는 예시).
@@ -833,6 +850,19 @@ export function BattleScreen({
                   : fog
                     ? ' cell--fog'
                     : ''
+            // 이동 가능한 칸이면 눌러서 그 자리로 간다(노란 강조 + 커서)
+            const mv = moveTargets.get(`${ccol},${row}`)
+            if (mv) {
+              return (
+                <button
+                  key={i}
+                  className={`cell cell--move${cls}`}
+                  onClick={() => addCard(mv)}
+                  title={`이동: ${mv.name}`}
+                  aria-label={`이동: ${mv.name}`}
+                />
+              )
+            }
             return <span className={`cell${cls}`} key={i} />
           })}
           {preview.ghost && (
@@ -985,27 +1015,10 @@ export function BattleScreen({
             </div>
           </div>
 
-          <div className="cards__tabs">
-            {HAND_TABS.map((t) => {
-              const picked = slots.filter((s) => s && tabOf(s) === t.id).length
-              return (
-                <button
-                  key={t.id}
-                  className={`cards__tab ${handTab === t.id ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setHandTab(t.id)
-                    playSfx('ui')
-                  }}
-                >
-                  {t.label}
-                  {picked > 0 && <span className="cards__tab-count">{picked}</span>}
-                </button>
-              )
-            })}
-          </div>
-
+          {/* 탭 없음 — 이동은 판을 눌러서 한다(`moveTargets`). 손패에는 공격·수비만
+              남으므로 탭을 오갈 이유가 사라졌다. */}
           <div className="cards__hand">
-            {hand.filter((c) => tabOf(c) === handTab).map((c) => {
+            {hand.filter((c) => c.kind !== 'move').map((c) => {
               const onCd = cdLeft(c.id) > 0
               const locked = onCd || placedNoRepeat(c)
               // 기력이 모자라 이번 플랜에 넣을 수 없는 카드도 선택 불가로 잠근다
@@ -1398,22 +1411,28 @@ function BhudSide({
         {char.name}
         {isLocal && <span className="bhud__you">나</span>}
       </div>
+      {/* ⚠ 채움 막대만 클립한다. 숫자를 overflow:hidden 안에 두면 기울어진(skewX)
+          모서리에 글자가 잘린다 — 예전에 그래서 "HP 205 / 205"의 위아래가 깎였다. */}
       <div className="bhud__hp">
-        <div
-          className={`bhud__hplag bhud__hpfill--${side}`}
-          style={{ width: `${lagPct}%` }}
-        />
-        <div
-          className={`bhud__hpfill bhud__hpfill--${side} ${hpLow ? 'bhud__hpfill--low' : ''}`}
-          style={{ width: `${hpPct}%` }}
-        />
-        <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
+        <div className="bhud__barclip">
+          <div
+            className={`bhud__hplag bhud__hpfill--${side}`}
+            style={{ width: `${lagPct}%` }}
+          />
+          <div
+            className={`bhud__hpfill bhud__hpfill--${side} ${hpLow ? 'bhud__hpfill--low' : ''}`}
+            style={{ width: `${hpPct}%` }}
+          />
+          <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
+        </div>
         <span className="bhud__hpnum">
           HP {Math.ceil(hp)} / {maxHp}
         </span>
       </div>
       <div className="bhud__energy">
-        <div className={`bhud__energyfill bhud__energyfill--${side}`} style={{ width: `${ePct}%` }} />
+        <div className="bhud__barclip">
+          <div className={`bhud__energyfill bhud__energyfill--${side}`} style={{ width: `${ePct}%` }} />
+        </div>
         <span className="bhud__energynum">
           ⚡ {Math.floor(energy)} / {char.maxEnergy}
         </span>
