@@ -7,6 +7,8 @@
 // ---------------------------------------------------------------------------
 import { CardBattle, planAffordable } from '../src/battle/engine'
 import { COMMON_CARDS, ENERGY_REGEN } from '../src/battle/cards'
+import { SHEETS, placeSprite } from '../src/art/sprites'
+import { faceToward } from '../src/ui/screens/BattleScreen'
 import { getChar, type CharacterDef, type Passive } from '../src/data/roster'
 import { mergeRelics, mergeRunMods } from '../src/game/relics'
 import { deckCap, grantRelic, healHp, rollRewards, rollShop, startRun } from '../src/game/run'
@@ -367,6 +369,39 @@ console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForwa
   b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
   b.resolveTurn([back, card('c-energy'), card('c-energy')], HOLD)
   check('dashForward — 벽에서 멈춘다(판 밖으로 안 나감)', b.state.pos[0].col, 0)
+}
+
+// --- 파이터 방향 (2026-08-03) ------------------------------------------------
+console.log('\n파이터 방향 — 자리가 아니라 상대 위치를 따라간다')
+{
+  // `faceToward`는 "내가 상대의 어느 쪽에 있나"를 낸다. 왼쪽에 있으면 'left'이고,
+  // CSS가 그걸 --flip: 1(=오른쪽을 봄)로 옮긴다 — 이름과 보이는 방향이 반대라
+  // 헷갈리기 쉬우니 여기서 못 박는다.
+  check('내가 왼쪽이면 left(→ 오른쪽을 봄)', faceToward(0, 5, 'right'), 'left')
+  check('상대를 지나치면 right로 뒤집힌다', faceToward(5, 3, 'left'), 'right')
+  check('같은 칸이면 직전 방향을 유지(겹칠 때 홱홱 도는 것 방지)', faceToward(2, 2, 'right'), 'right')
+  check('같은 칸 · 반대 fallback도 그대로', faceToward(2, 2, 'left'), 'left')
+}
+{
+  // 뒤집히는 쪽은 기준점도 프레임 반대편으로 가야 한다. 안 하면 그쪽만 셀에서
+  // 옆으로 밀려 선다(hero-knight 기준 96px).
+  const hk = SHEETS.warrior
+  const notMirrored = placeSprite(hk, 'right') // 원본이 왼쪽을 봄 × 오른쪽 자리 → 그대로
+  const mirrored = placeSprite(hk, 'left')
+  check('원본이 왼쪽을 보는 시트는 artFlip -1', hk.facesRight === true, false)
+  check(
+    '뒤집힌 쪽만 기준점이 frameW - anchorX로 간다',
+    [notMirrored.anchorPx, mirrored.anchorPx],
+    [hk.anchorX * hk.scale, (hk.frameW - hk.anchorX) * hk.scale],
+  )
+  // 원본이 오른쪽을 보는 시트(궁수)는 반대로 뒤집힌다 — 방향이 같아도 결과가 다르다.
+  const hu = SHEETS.archer
+  check('원본이 오른쪽을 보는 시트는 반대쪽에서 뒤집힌다', hu.facesRight === true, true)
+  check(
+    '궁수는 right 자리에서 기준점이 옮겨진다',
+    placeSprite(hu, 'right').anchorPx,
+    (hu.frameW - hu.anchorX) * hu.scale,
+  )
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------

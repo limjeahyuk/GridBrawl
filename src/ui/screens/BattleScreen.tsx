@@ -93,7 +93,7 @@ function attackCells(from: Cell, card: CardDef, facing: number, foe?: Cell): Cel
  * 같은 열이면(겹침·수직 정렬) 직전 방향을 유지한다 — 겹칠 때마다 홱홱 도는 것을
  * 막으려는 것으로, `fallback`에는 그 파이터의 진영을 넣는다.
  */
-function faceToward(myCol: number, foeCol: number, fallback: 'left' | 'right'): 'left' | 'right' {
+export function faceToward(myCol: number, foeCol: number, fallback: 'left' | 'right'): 'left' | 'right' {
   if (myCol === foeCol) return fallback
   return myCol < foeCol ? 'left' : 'right'
 }

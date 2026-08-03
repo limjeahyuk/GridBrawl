@@ -2536,6 +2536,12 @@
   background: #fff;
   opacity: 0.85;
 }
+/* 내가 선 칸도 때릴 수 있는 카드 — 겹쳐 선 상대는 사거리가 아니라 `pointBlank`로
+   판정하므로, 사거리 그림에서 이 칸이 비어 보이면 "3칸인데 2칸처럼" 읽힌다.
+   사거리 칸(`rc--on`)과는 구분되게 테두리만 준다 — 여긴 "내 자리"이기도 하다. */
+.rc--pb {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 75%, transparent);
+}
 
 /* cooldown badge + locked state on hand cards */
 .handcard {

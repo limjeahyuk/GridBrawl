@@ -27,6 +27,16 @@ const bar = (df: number): Offset[] => [
   { df, du: 0 },
   { df, du: -1 },
 ]
+// ⚠ 이 파일은 범위 헬퍼를 roster.ts와 **따로** 갖고 있다. 앞뒤 대칭 규약
+// (2026-08-03)을 여기서도 쓰려면 같은 이름으로 추가해 둬야 한다.
+/** 앞뒤 대칭 직선: 같은 줄 양방향 a..b칸. */
+const beamBoth = (a: number, b: number): Offset[] => {
+  const out: Offset[] = []
+  for (let n = a; n <= b; n++) out.push(fwd(n), fwd(-n))
+  return out
+}
+/** 앞뒤 대칭 세로줄: 앞 n칸·뒤 n칸의 세로 3줄(6칸). */
+const barBoth = (n: number): Offset[] => [...bar(n), ...bar(-n)]
 const CROSS: Offset[] = [
   { df: 1, du: 0 },
   { df: -1, du: 0 },
@@ -46,11 +56,11 @@ export const RUN_CARDS: CardDef[] = [
     desc: '앞뒤 한 칸. 피해를 주면 상대를 1턴 기절시킨다(카드를 못 냄). 쿨타임 3턴.',
   }),
   atk({
-    id: 'r-hook', name: '사슬 갈고리', range: beam(2, 3), damage: 16, energyCost: 16, pull: 2, pointBlank: false,
+    id: 'r-hook', name: '사슬 갈고리', range: beamBoth(2, 3), damage: 16, energyCost: 16, pull: 2, pointBlank: false,
     fx: 'rush', desc: '앞 2~3칸의 상대를 두 칸 끌어당긴다. 도망치는 원거리형을 사거리로 끌어온다.',
   }),
   atk({
-    id: 'r-tether', name: '자기 견인', range: bar(2), damage: 22, energyCost: 22, pull: 1, pointBlank: false,
+    id: 'r-tether', name: '자기 견인', range: barBoth(2), damage: 22, energyCost: 22, pull: 1, pointBlank: false,
     fx: 'orb', desc: '앞 두 칸째 세 줄을 훑어 한 칸 끌어당긴다.',
   }),
 
@@ -75,7 +85,7 @@ export const RUN_CARDS: CardDef[] = [
     desc: '피해는 작지만 이번 전투 내내 내 모든 공격 피해 +6(중첩). 쓸수록 뒷 턴이 무거워진다.',
   }),
   atk({
-    id: 'r-resonance', name: '공명 증폭', range: bar(1), damage: 24, energyCost: 32, empower: 4,
+    id: 'r-resonance', name: '공명 증폭', range: barBoth(1), damage: 24, energyCost: 34, empower: 4,
     fx: 'orb', desc: '앞 한 칸 세 줄. 이번 전투 내내 공격 피해 +4(중첩).',
   }),
 
@@ -93,7 +103,7 @@ export const RUN_CARDS: CardDef[] = [
     fx: 'quake', desc: '상·하·좌·우 네 칸을 동시에 터뜨린다.',
   }),
   atk({
-    id: 'r-collapse', name: '지반 붕괴', range: [...bar(1), ...bar(-1)], damage: 34, energyCost: 32,
+    id: 'r-collapse', name: '지반 붕괴', range: barBoth(1), damage: 34, energyCost: 32,
     fx: 'quake', desc: '앞뒤 한 칸의 세 줄을 통째로 무너뜨린다.',
   }),
   atk({

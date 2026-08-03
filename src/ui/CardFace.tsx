@@ -70,7 +70,15 @@ export function RangeChart({ card }: { card: CardDef }) {
         cols.map((df) => {
           const self = df === 0 && du === 0
           const on = hit(df, du)
-          return <span key={`${df},${du}`} className={`rc ${self ? 'rc--self' : on ? 'rc--on' : ''}`} />
+          // 가운데 칸(=내가 선 칸)도 사거리다 — 겹쳐 선 상대는 `pointBlank`로
+          // 판정하므로, 맞힐 수 있는 카드면 그 사실이 보여야 한다(밀착사각 카드만 예외).
+          const pb = self && card.kind === 'attack' && card.pointBlank !== false
+          return (
+            <span
+              key={`${df},${du}`}
+              className={`rc ${self ? 'rc--self' : on ? 'rc--on' : ''}${pb ? ' rc--pb' : ''}`}
+            />
+          )
         }),
       )}
     </div>

@@ -265,14 +265,14 @@ export const ROSTER: CharacterDef[] = [
     startEnergy: 55,
     passive: { desc: '독니: 내 공격 피해 +6, 피해를 주면 독 3을 묻힌다.', attackBonus: 6, poisonOnHit: 3 },
     cards: [
-      atk({ id: 'arc-shot', name: '잿빛 화살', range: beam(1, 3), damage: 24, energyCost: 14, pointBlank: false, fx: 'bolt', desc: '앞 1~3칸을 노리는 기본 사격. 싸지만 겹쳐 선 상대는 못 맞힌다.' }),
+      atk({ id: 'arc-shot', name: '잿빛 화살', range: beamBoth(1, 2), damage: 24, energyCost: 16, fx: 'bolt', desc: '앞뒤 1~2칸을 노리는 기본 사격. 겹쳐 선 상대도 맞힌다.' }),
       atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 22, energyCost: 20, poison: 6, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 독 6(3턴) — 겹칠수록 위력이 쌓인다. 밀착 사각.' }),
-      atk({ id: 'arc-pin', name: '말뚝 화살', range: beam(1, 3), damage: 28, energyCost: 32, pierce: true, push: 1, fx: 'bolt', desc: '앞 1~3칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
+      atk({ id: 'arc-pin', name: '말뚝 화살', range: beamBoth(1, 2), damage: 28, energyCost: 32, pierce: true, push: 1, fx: 'bolt', desc: '앞뒤 1~2칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
       atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 40, energyCost: 45, poison: 8, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 독 8(3턴). 밀착 사각.' }),
       // ⚠ 궁수의 구조적 약점: 카드 대부분이 밀착 사각인데 몬스터가 접근한다.
       // 아래 두 장이 그 해법이다 — 물러나며 쏘고(카이팅), 붙은 적을 얼려 떼어낸다.
-      atk({ id: 'arc-kite', name: '물러서며 쏘기', range: beam(1, 3), damage: 22, energyCost: 18, dashForward: -1, pointBlank: false, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞 1~3칸을 쏜다. 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),
-      atk({ id: 'arc-snare', name: '가시 올가미', range: [...bar(1), ...bar(2)], damage: 16, energyCost: 24, freeze: 1, push: 1, cooldown: 2, fx: 'orb', desc: '앞 1~2칸 × 세 줄에 올가미를 깐다. 상대를 한 칸 밀고 1턴 빙결(이동 불가) — 쿨타임 2턴.' }),
+      atk({ id: 'arc-kite', name: '물러서며 쏘기', range: beamBoth(1, 2), damage: 22, energyCost: 20, dashForward: -1, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞뒤 1~2칸을 쏜다. 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),
+      atk({ id: 'arc-snare', name: '가시 올가미', range: barBoth(1), damage: 16, energyCost: 24, freeze: 1, push: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 한 칸 × 세 줄에 올가미를 깐다. 상대를 한 칸 밀고 1턴 빙결(이동 불가) — 쿨타임 2턴.' }),
       buff({ id: 'arc-focus', name: '사냥꾼의 집중', buff: 'atkUp', buffPower: 11, buffTurns: 3, buffCost: 22, fx: 'bolt', accent: '#3cbf7a', desc: '3턴간 내 공격 피해 +11. 거리를 벌어 둔 턴에 깔아 두는 카드.' }),
       buff({ id: 'arc-veil', name: '잿빛 장막', buff: 'defUp', buffPower: 8, buffTurns: 3, buffCost: 20, accent: '#5aa06d', desc: '3턴간 받는 공격 피해 -8. 갑주가 얇은 궁수가 붙잡혔을 때 버는 시간.' }),
     ],
@@ -291,15 +291,15 @@ export const ROSTER: CharacterDef[] = [
     passive: { desc: '혼백의 등불: 매 턴 기력 +12, 보호막 +7.', turnEnergy: 12, turnShield: 7 },
     cards: [
       atk({ id: 'mag-spark', name: '혼불', range: CROSS, damage: 18, energyCost: 14, burn: 4, fx: 'flame', desc: '상·하·좌·우 네 칸에 도깨비불을 흩뿌린다. 피해를 입히면 화상 4(2턴).' }),
-      atk({ id: 'mag-frost', name: '서리 결계', range: bar(1), damage: 18, energyCost: 24, freeze: 1, selfShield: 10, fx: 'orb', desc: '앞 한 칸의 세 줄을 얼린다. 피해를 입히면 상대를 1턴 빙결(이동 불가) — 사용 시 보호막 +10.' }),
-      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...bar(1), ...bar(2)], damage: 26, energyCost: 36, burn: 6, fx: 'flame', desc: '앞 두 칸 × 세 줄을 태우는 광역 화염. 피해를 입히면 화상 6(2턴).' }),
-      atk({ id: 'mag-doom', name: '종언의 만가', range: [...bar(1), ...bar(2), ...bar(-1)], damage: 44, energyCost: 50, burn: 8, freeze: 1, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞 두 칸 + 등 뒤 한 칸의 세 줄을 통째로 덮는 만가 — 화상 8 + 1턴 빙결.' }),
+      atk({ id: 'mag-frost', name: '서리 결계', range: barBoth(1), damage: 18, energyCost: 28, freeze: 1, selfShield: 10, fx: 'orb', desc: '앞뒤 한 칸의 세 줄을 얼린다. 피해를 입히면 상대를 1턴 빙결(이동 불가) — 사용 시 보호막 +10.' }),
+      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...barBoth(1), ...both(2)], damage: 26, energyCost: 36, burn: 6, fx: 'flame', desc: '앞뒤 한 칸 × 세 줄 + 앞뒤 2칸째를 태우는 광역 화염. 피해를 입히면 화상 6(2턴).' }),
+      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(1), ...barBoth(2)], damage: 44, energyCost: 50, burn: 8, freeze: 1, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 1~2칸의 세 줄을 통째로 덮는 만가 — 화상 8 + 1턴 빙결.' }),
       // 마법사의 제약은 기력이다. 무아지경이 그 제약을 2턴간 통째로 없앤다 —
       // 선불이 비싸고 쿨이 길지만, 켜진 동안 종언의 만가를 매 턴 쏠 수 있다.
       buff({ id: 'mag-trance', name: '무아지경', buff: 'freeCast', buffTurns: 2, buffCost: 40, cooldown: 3, fx: 'flame', accent: '#d45fae', desc: '2턴간 모든 카드의 기력 소모가 0이 된다. 켜진 동안 가장 비싼 주문을 매 턴 퍼부을 수 있다 — 쿨타임 3턴.' }),
       buff({ id: 'mag-ward', name: '혼백의 장막', buff: 'defUp', buffPower: 10, buffTurns: 3, buffCost: 24, accent: '#6fc0b0', desc: '3턴간 받는 공격 피해 -10. 큰 주문을 모으는 동안 몸을 지킨다.' }),
       atk({ id: 'mag-blink', name: '그림자 도약', range: CROSS, damage: 20, energyCost: 22, burn: 4, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 상·하·좌·우를 태운다 — 화상 4(2턴). 포위를 빠져나오는 카드.' }),
-      atk({ id: 'mag-hex', name: '속박의 저주', range: [...bar(1), ...bar(-1)], damage: 22, energyCost: 28, freeze: 1, pull: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 세로 3줄을 저주해 상대를 한 칸 끌어당기고 1턴 빙결. 도망치는 적을 광역 사거리 안으로 잡아 온다 — 쿨타임 2턴.' }),
+      atk({ id: 'mag-hex', name: '속박의 저주', range: barBoth(1), damage: 22, energyCost: 28, freeze: 1, pull: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 세로 3줄을 저주해 상대를 한 칸 끌어당기고 1턴 빙결. 도망치는 적을 광역 사거리 안으로 잡아 온다 — 쿨타임 2턴.' }),
     ],
   },
 ]

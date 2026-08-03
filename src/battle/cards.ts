@@ -56,12 +56,13 @@ export const COMMON_CARDS: CardDef[] = [
     id: 'c-jab',
     name: '잽',
     kind: 'attack',
-    range: [{ df: 1, du: 0 }],
+    // 앞뒤 대칭(2026-08-03) — 지나쳐도 안 놓치게. 대신 기력 8→10.
+    range: [{ df: 1, du: 0 }, { df: -1, du: 0 }],
     damage: 12,
-    energyCost: 8,
+    energyCost: 10,
     cooldown: 0,
     fx: 'punch',
-    desc: '앞 한 칸만 노리는 값싼 기본 공격. 로그라이크 시작 공용기.',
+    desc: '앞뒤 한 칸을 노리는 값싼 기본 공격. 로그라이크 시작 공용기.',
   },
   {
     id: 'c-guard',
