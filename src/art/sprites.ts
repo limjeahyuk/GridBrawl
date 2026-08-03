@@ -53,10 +53,17 @@ export interface SheetDef {
    */
   anchorX: number
   /**
-   * 원본 시트가 **오른쪽을 보고 그려져 있는가.** 지금 쓰는 팩 셋(hero-knight·
-   * bandit-light·bandit-heavy)은 전부 왼쪽을 보므로 기본값 false다.
-   * 게임은 "앞 = 오른쪽"이라 왼쪽 파이터가 오른쪽을 봐야 하고, 그 판정은
-   * 이 값과 좌우 진영을 함께 봐야 나온다 — `placeSprite` 참고.
+   * 원본 시트가 **오른쪽을 보고 그려져 있는가.** 기본값 `true` — 지금까지 받은
+   * 팩(Sven Thole·LuizMelo·Monsters Creatures)은 전부 오른쪽을 본다.
+   *
+   * ⚠ **눈대중으로 정하지 말 것. 무기가 향한 쪽이 앞이 아니다.**
+   * 전사(hero-knight)를 여기서 한 번 틀렸다 — 검이 왼쪽으로 뻗어 있어 "왼쪽을
+   * 본다"고 넣었는데, 실제로는 **방패가 앞**이고 검은 뒤로 당긴 가드 자세다.
+   * 확실한 판정법은 **공격 프레임을 보는 것** — 타격 이펙트(검기)가 나가는 쪽이
+   * 곧 앞이다. `assets-raw`의 Attack 프레임을 확대해 보면 바로 갈린다.
+   *
+   * 게임은 "앞 = 오른쪽"이라 왼쪽 파이터가 오른쪽을 봐야 하고, 그 판정은 이
+   * 값과 좌우 진영을 함께 봐야 나온다 — `placeSprite` 참고.
    */
   facesRight?: boolean
   /**
@@ -110,6 +117,7 @@ const sheet = (id: string, over: Partial<SheetDef> = {}): SheetDef => ({
   scale: 3,
   footY: 45,
   anchorX: 24,
+  facesRight: true, // 받은 팩이 전부 오른쪽을 본다 — 왼쪽 팩이 오면 그때만 false
   clips: STD_CLIPS,
   ...over,
 })
@@ -125,7 +133,7 @@ export const SHEETS: Record<string, SheetDef> = {
   // --- 플레이어 직업 --------------------------------------------------------
   // Hero Knight (Sven Thole)
   warrior: sheet('hero-knight', {
-    frameW: 90, frameH: 50, footY: 50, anchorX: 29, scale: 3,
+    frameW: 90, frameH: 50, footY: 50, anchorX: 29, scale: 3, facesRight: true,
     clips: {
       ...STD_CLIPS,
       // 원본 프레임을 눈으로 확인한 값 — 검이 가장 뻗는 프레임에서 피해가 터진다

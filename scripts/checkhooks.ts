@@ -385,23 +385,25 @@ console.log('\n파이터 방향 — 자리가 아니라 상대 위치를 따라�
 {
   // 뒤집히는 쪽은 기준점도 프레임 반대편으로 가야 한다. 안 하면 그쪽만 셀에서
   // 옆으로 밀려 선다(hero-knight 기준 96px).
-  const hk = SHEETS.warrior
-  const notMirrored = placeSprite(hk, 'right') // 원본이 왼쪽을 봄 × 오른쪽 자리 → 그대로
-  const mirrored = placeSprite(hk, 'left')
-  check('원본이 왼쪽을 보는 시트는 artFlip -1', hk.facesRight === true, false)
-  check(
-    '뒤집힌 쪽만 기준점이 frameW - anchorX로 간다',
-    [notMirrored.anchorPx, mirrored.anchorPx],
-    [hk.anchorX * hk.scale, (hk.frameW - hk.anchorX) * hk.scale],
-  )
-  // 원본이 오른쪽을 보는 시트(궁수)는 반대로 뒤집힌다 — 방향이 같아도 결과가 다르다.
-  const hu = SHEETS.archer
-  check('원본이 오른쪽을 보는 시트는 반대쪽에서 뒤집힌다', hu.facesRight === true, true)
-  check(
-    '궁수는 right 자리에서 기준점이 옮겨진다',
-    placeSprite(hu, 'right').anchorPx,
-    (hu.frameW - hu.anchorX) * hu.scale,
-  )
+  //
+  // ⚠ **특정 시트의 방향을 여기 박지 말 것.** 전에 "전사는 왼쪽 시트"라고 박아
+  //   뒀다가, 그 메타데이터 자체가 틀렸을 때 검사가 오히려 오답을 지켰다.
+  //   규칙만 검사한다 — 시트 방향은 `SHEETS`가 정하고 여기선 양쪽을 다 본다.
+  const faceR = { ...SHEETS.warrior, facesRight: true }
+  const faceL = { ...SHEETS.warrior, facesRight: false }
+  const W = SHEETS.warrior.frameW * SHEETS.warrior.scale
+  const A = SHEETS.warrior.anchorX * SHEETS.warrior.scale
+
+  // 오른쪽을 보고 그려진 시트: 왼쪽 자리는 그대로, 오른쪽 자리에서 뒤집힌다.
+  check('오른쪽 시트 · 왼쪽 자리 → 안 뒤집힘', placeSprite(faceR, 'left').anchorPx, A)
+  check('오른쪽 시트 · 오른쪽 자리 → 뒤집힘', placeSprite(faceR, 'right').anchorPx, W - A)
+  // 왼쪽을 보고 그려진 시트는 정확히 반대다.
+  check('왼쪽 시트 · 왼쪽 자리 → 뒤집힘', placeSprite(faceL, 'left').anchorPx, W - A)
+  check('왼쪽 시트 · 오른쪽 자리 → 안 뒤집힘', placeSprite(faceL, 'right').anchorPx, A)
+
+  // 지금 팩은 전부 오른쪽을 본다 — 하나라도 빠지면 그 캐릭터만 뒤집혀 선다.
+  const wrong = Object.entries(SHEETS).filter(([, sh]) => sh.facesRight !== true)
+  check('모든 시트에 facesRight가 명시돼 있다', wrong.map(([k]) => k), [])
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------
