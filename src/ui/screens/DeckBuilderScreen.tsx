@@ -202,7 +202,6 @@ export function DeckBuilderScreen({
           ))}
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

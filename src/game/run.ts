@@ -20,6 +20,7 @@ import {
   type RunMods,
 } from './relics'
 import { getMonster, monstersOfTier, type MonsterDef } from './monsters'
+import { bossScene } from './bosses'
 import { RUN_CARDS } from './runcards'
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
@@ -319,14 +320,23 @@ function buildMap(): RunNode[][] {
  * 전투 배경 장면. CSS `.boardfloor--<id>`와 **이름이 짝**이다(`battlefx.css`).
  * 규칙이 아니라 연출이라 엔진·시뮬은 이 값을 모른다 — 밸런스에 영향 없음.
  */
-export type BattleScene = 'hall' | 'corridor' | 'cemetery' | 'lava'
+export type BattleScene = 'hall' | 'corridor' | 'cemetery' | 'lava' | 'abyss' | 'sanctum'
 /**
- * 층에 맞는 배경. **바깥 → 성 안 → 지하 → 용암** 순으로 내려간다: 사다리를
- * 오르는 게 아니라 파고드는 느낌이라야 15층이 길게 느껴지지 않는다.
- * 보스는 층과 무관하게 용암 — 유일한 붉은 장면이라 그 자체가 "끝" 신호다.
+ * 층에 맞는 배경. **바깥 → 성 안 → 지하** 순으로 내려간다: 사다리를 오르는 게
+ * 아니라 파고드는 느낌이라야 15층이 길게 느껴지지 않는다.
+ *
+ * ⚠ **스크립트 보스는 층 규칙을 이긴다**(2026-08-05). 셋이 다 용암을 쓰던 걸
+ * 보스마다 전용 무대로 갈랐다 — 오버로드=심연(`abyss`) · 수호기사=성소(`sanctum`) ·
+ * 화염군주=용암(`lava`). 무대를 정하는 건 **노드 종류가 아니라 몬스터 id**다:
+ * 수호기사·화염군주는 `boss` 칸이 아니라 **엘리트 칸**으로 나오므로 종류로 판정하면
+ * 둘은 영영 자기 무대를 못 본다. 배경이 곧 "지금 보스다"라는 신호가 되게 한다.
  */
 export function sceneFor(run: RunState): BattleScene {
-  if (currentNode(run).type === 'boss') return 'lava'
+  const node = currentNode(run)
+  if (node.monsterId) {
+    const boss = bossScene(node.monsterId)
+    if (boss) return boss
+  }
   if (run.floor <= 5) return 'cemetery'
   if (run.floor <= 10) return 'hall'
   return 'corridor'

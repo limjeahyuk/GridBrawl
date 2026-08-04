@@ -60,15 +60,24 @@
 - **타이틀 = 다크 판타지 마무리(2026-08-04)** — 문구와 로고 색이 마지막 사이버 잔재였다. 문구 `THE GRID · DEMON GAUNTLET` → **`THE GRID · DEMON ASCENT`**(건틀릿 모드가 사라지고 15층 사다리를 오르는 게임이 됐다), 로고는 청록→보라에서 **횃불 금(GRID) + 핏빛(BRAWL)**으로. ⚠ 문구는 **타이틀·로그인 두 화면이 공유**하고(한쪽만 고치면 로그인 직후 글자가 깜빡인다), 로고 그라디언트는 **`ui.css`에 폴백 한 줄이 필수다**(`color-mix`를 모르는 WebView에서 로고가 통째로 사라진다). 근거는 GDD ④ "아직 남은 사이버 잔재"
 - **죽은 파일·낡은 기록 정리(2026-08-04)** — 개편을 여러 번 거치며 아무도 안 쓰는 파일과 "6종 시절" 서술이 남아 있었다. 지운 것: 옛 사이버 아이콘 원본(`resources/icon.svg`·`icon.png`) · 건틀릿 3종(`game/tournament.ts`·`BracketScreen`·`CharacterSelect` — 단판 전환 뒤 import 0) · `art/emblem.ts` · 임시 도적 시트(`public/sprites/bandit-*` 16장 + `banditClips()` + 패커 항목) · Capacitor 기본 아이콘 벡터 3종. **되살릴 땐 git 기록에서 짝을 이루는 것들을 함께 꺼낼 것**(시트는 스트립·클립·패커 세 곳)
   - ⚠ **명시적으로 "6종 시절의 기록"이라고 표시된 GDD 표·시뮬 로그는 남겨 뒀다** — 옛 측정치와 대조하려고 일부러 둔 것이다. 고친 건 **현재형으로 잘못 적혀 있던 것들**뿐이다(시트 매핑이 `bandit-*`로 남아 있던 곳, 명세 대조표의 "6직업/6명", 대진표 시절 화면 흐름, `--char=volt` 예시)
+- **사이버 잔재 꼬리 정리 + 이스터에그(2026-08-05)** — 카드·유물 **이름**은 2026-08-04에 다 갈았는데 **이름이 아닌 자리**에 잔재가 남아 있었다. 몬스터 `sentry` 표시명 `센트리`(포탑) → **`감시안`**(그림이 떠 있는 눈) · 결과 화면 `SYSTEM FAILURE` → **`쓰러졌다`** · 도감 능력치 라벨 `HEALTH/POWER/RANGE/ENERGY` → **한국어**(`ui/statBars.ts`) · 죽은 CRT 레이어 `.scanlines`(div 10곳 + CSS) 삭제. 같은 자리에 있던 결과 화면의 `champion` outcome·`gauntlet` variant는 **건틀릿 모드가 사라진 뒤 아무도 설정하지 않는 죽은 분기**여서 통째로 제거(`Outcome`이 `'win'|'loss'`로, `onNext` prop 없어짐). 근거·전후는 GDD ④ "꼬리 정리"
+  - 🎮 ⚠ **유물 `battery`(`예비 배터리` 🔋)와 런 카드 `r-railgun`(`레일건`)은 일부러 되돌린 이스터에그다**(사용자 결정 — "세계관에 안 맞는 물건이 하나쯤 굴러다니는 게 재미있다"). **정리 대상이 아니다** — 다음에 잔재를 훑을 때 빠뜨린 것으로 오해하지 말 것. 두 곳 다 코드에 "고치지 말 것" 주석이 붙어 있다. 표시만 바뀌어 **밸런스 영향 0**
 - **지도 = 사다리 그래프(2026-08-05)** — 층마다 독립된 2택이던 걸 **간선으로 이어진 그래프**로. 직전에 고른 칸에서 **이어진 칸만** 다음 선택지가 되므로 갈래가 1~3개로 달라진다. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑤-bis
 - **독안개 → 전장 붕괴(2026-08-05)** — 이름·색·경고를 "바닥이 무너진다"로 바꾸고 단계별 피해를 **10 / 16 / 24**로 올렸다. **무너진 칸에도 들어갈 수 있다**(소프트 위험지대 — 벽으로 막으면 마지막 단계에 설 자리가 0이 된다). 상세 GDD ④
 - **유물 72 → 158종 · 런 카드 22 → 50장(2026-08-05)** — 새 엔진 훅 여섯(빙결 부여·수비 증폭·치유 증폭·시작 기력·처형·붕괴 저항) 위에 세트를 짰다. 런 카드엔 **버프 카드가 처음 들어갔다**
 - **몬스터 전투 변주(2026-08-05)** — 20종이 단 하나의 `decideAI`를 공유해 "멀면 붙고 닿으면 때린다"만 반복, 매 전투가 똑같이 흘렀다("처음 만나는 슬라임·도끼병이 거의 똑같다"는 신고). 세 축을 넣었다 — ⓐ **성격(archetype)**: `MonsterDef.behavior`(rusher/kiter/turtle/skirmisher/balanced)가 난이도 cfg를 밀고 `keepGap`으로 접근/후퇴를 가른다(카이터는 붙으면 물러나 원거리로 쏨). ⓑ **랜덤 시작 위치**: `BattleOpts.startCells`로 몬스터를 매 전투 다른 줄에 세운다(보스는 가운데 고정). ⓒ **전투별 기분**: `runbattle.ts`가 판 시작 때 `moodAgg`(±0.12)를 한 번 굴려 같은 몬스터도 판마다 공격성이 다르게. 셋 다 **런(싱글) 전용** — 몬스터 AI는 PvP 락스텝에 관여 안 하고 시뮬은 시드 RNG라 재현된다. ⚠ **밴드 영향**: 5시드 스윕에서 3.5→3.6%p로 유지돼(궁수만 +2.6%p — 카이터가 밀착사각을 덜 노출) `runEffect` 재조정 없이 성립. 성격 수치(`ai.ts`의 `ARCH`)를 건드리면 스윕 재측정. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑦
+- **보스 전용 카드·무대·컷인(2026-08-05)** — 보스 3종이 **플레이어 카드를 빌려 쓰고**(`mag-doom`·`war-oath`·`arc-pin`) 배경도 셋이 다 용암 하나여서, 예고 문구만 보스 것이고 실제로 날아오는 건 플레이어가 이미 아는 카드였다. 세 겹을 한꺼번에 갈랐다. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑦-bis
+  - **전용 카드 12장**(`game/bosscards.ts`) — 오버로드=끌어당김+관통 광역(도망칠 수 없다) · 수호기사=두꺼운 방벽+보호막 파괴 반격(때릴 타이밍이 정해져 있다) · 화염군주=**`empower` 충전**→인페르노(길어질수록 무거워진다). 예전엔 "힘을 모은다"가 문구뿐이고 실제로 쌓이는 게 없었다
+  - **전용 무대 3종** — `abyss`(오버로드) · `sanctum`(수호기사) · `lava`(화염군주). ⚠ **노드 종류가 아니라 몬스터 id로 고른다**(`sceneFor`) — 수호기사·화염군주는 보스 칸이 아니라 **엘리트 칸**으로 나와서, 종류로 판정하면 둘은 영영 자기 무대를 못 본다
+  - **컷인 2종** — 등장(전투 시작)·격노(체력이 `enrageAt` 아래로). `BattleScreen`의 `boss` prop. ⚠ 격노 판정은 `battle.state`가 아니라 **그 스텝의 스냅샷**(`full.hp`)으로 한다(엔진이 턴을 통째로 먼저 계산하므로 `battle.state`를 보면 한 턴 일찍 튄다). HUD의 `BOSS` 칩·칭호·**HP바 페이즈 눈금**·`.bossaura`·예고 배너 색이 전부 `bosses.ts`의 `accent` 한 곳에서 `--boss`로 내려온다 — 보스를 추가할 때 CSS는 안 건드린다
+  - ⚠ **밸런스가 움직였다**: 5시드 스윕 클리어율 **35.2 → 32.2%**, 밴드 **4.48 → 2.18%p**. 보스 플랜이 이제 기력 안에서 실제로 나가기 때문이다(예전엔 비싼 플레이어 카드를 못 내고 통째로 불발했다). `SIGNATURE.runEffect`는 **안 건드렸다**
+  - ⚠ **충전 턴은 정말 약해야 한다** — 화염군주의 충전 턴에도 채찍·기둥을 같이 넣었더니 조우 승률이 **44%**로 떨어져 혼자 벽이 됐다(수호기사 71 · 가디언 68). 충전 턴을 한 장으로 줄이고 인페르노 40→32 · 기둥 28→23으로 내려 **59%**. 수치를 건드리면 `npm run sim:run -- --sweep` 재측정
+  - ⚠ **보스 카드는 플레이어 풀에 새어 나가면 안 된다** — `deckFor`·`RUN_CARDS` 어디에도 없고 `monsters.ts`의 카드 해석기에서만 들어간다. `RULES_VERSION`은 **안 올린다**(런 전용이라 멀티 카드 풀에 없다). `npm run check`가 둘 다 지킨다(보스 검사 8건)
 
 **남은 것 (다음 후보)**
 1. ~~대형 몬스터 시트~~ — **2026-08-03 완료.** 20종이 직업 시트 3개를 돌려 쓰던 상태가 끝났다(13개 시트). 새 팩을 더할 때의 절차는 [public/sprites/README.md](public/sprites/README.md)
 2. **PvP 밸런스** — 3직업 개편 이후 **한 번도 안 맞췄다**(사용자 결정으로 후순위). `npm run sim`의 매치업 승률로 본다. ⚠ 이 시뮬은 시드가 없어 ±0.05턴 흔들리니 큰 차이만 신뢰할 것
-3. **보스 연출** — 보스 3종이 일반 몬스터와 같은 스크립트 틀만 쓴다. 컷인·전용 배경 등
+3. ~~보스 연출~~ — **2026-08-05 완료**(아래 "보스 전용 카드·무대·컷인")
 4. **다인 전투(Phase 2)** — 엔진이 엄격히 1:1(`pos/hp/chars`)이라 코어 재작성이 필요. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md)
 
 **작업 시작 전 확인**
@@ -133,6 +142,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 | CPU AI             | `src/battle/ai.ts`                                       |
 | 캐릭터·공격 카드   | `src/data/roster.ts`                                     |
 | 로그라이크(런/유물/몬스터) | `src/game/run.ts`·`relics.ts`·`monsters.ts` — 설계 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) |
+| 보스(패턴·전용 카드·컷인) | `src/game/bosses.ts`(리듬·예고·컷인 메타)·`bosscards.ts`(전용 카드 12장) |
 | 온라인 멀티(P2P)   | `src/net/*`, `src/ui/screens/MultiplayerLobby.tsx`       |
 | 로그인(구글 인증)  | `src/net/auth.ts`, `src/ui/useAuth.ts`, `src/ui/screens/LoginScreen.tsx` |
 | 화면 흐름 / UI     | `src/App.tsx`, `src/ui/screens/*`, `src/ui/`, `src/art/` |
@@ -216,7 +226,8 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18
 
-- **게임 데이터는 항상 P2P(WebRTC).** 연결 성사(시그널링)에만 중개가 필요. **빠른 대전(랜덤 매칭)** — RTDB 대기열 `gridbrawl-mm`을 스캔해 가장 오래된 대기자를 ETag CAS(`lock`)로 원자 선점, 없으면 내 대기표(offer+심장박동)를 걸고 폴링(`src/net/matchmaking.ts`, 2026-07-15). 동시 큐 교착은 "나보다 먼저 온 대기표만 선점" 규칙으로 해소. **6자리 룸 코드** — Firebase RTDB를 *시그널링으로만* 사용(`src/net/firebase.ts`, REST+폴링, SDK 의존성 0). 복붙 초대 코드(`webrtc.ts`의 `createHost/joinAsGuest`)는 무설정 폴백으로 코드만 보존(현재 UI 미노출). STUN만 사용 → 대칭 NAT는 TURN 필요(미구현).
+- ⚠ **빠른 대전(랜덤 매칭)은 UI에서 내렸다(2026-08-04, 사용자 결정).** PVP 로비는 **방 만들기 · 방 찾기** 둘뿐이다. 코드(`net/matchmaking.ts`·RTDB 규칙·대기표 `rules` 필터)는 **지우지 않고 그대로** 뒀고, `MultiplayerLobby`의 **`QUICK_MATCH_ENABLED`** 한 줄만 true로 되돌리면 버튼·"상대를 찾는 중…" 화면이 복원된다.
+- **게임 데이터는 항상 P2P(WebRTC).** 연결 성사(시그널링)에만 중개가 필요. **빠른 대전(랜덤 매칭 — 현재 UI 중단)** — RTDB 대기열 `gridbrawl-mm`을 스캔해 가장 오래된 대기자를 ETag CAS(`lock`)로 원자 선점, 없으면 내 대기표(offer+심장박동)를 걸고 폴링(`src/net/matchmaking.ts`, 2026-07-15). 동시 큐 교착은 "나보다 먼저 온 대기표만 선점" 규칙으로 해소. **6자리 룸 코드** — Firebase RTDB를 *시그널링으로만* 사용(`src/net/firebase.ts`, REST+폴링, SDK 의존성 0). 복붙 초대 코드(`webrtc.ts`의 `createHost/joinAsGuest`)는 무설정 폴백으로 코드만 보존(현재 UI 미노출). STUN만 사용 → 대칭 NAT는 TURN 필요(미구현).
 - **설정 필수**: `.env`의 `VITE_FIREBASE_DB_URL`(미설정 시 로비가 "설정 필요" 안내, 온라인 비활성). 절차는 `.env.example`. ⚠️ 테스트용 `.env.local`을 만들면 실제 `.env`를 덮어쓰니 주의(쓰면 반드시 삭제).
 - **전송 분리**: 게임은 `NetTransport`(`src/net/protocol.ts`)에만 의존. 시그널링/전송을 바꿔도(서버·WebSocket·매치메이킹) 전투·UI 불변.
 - **결정론 락스텝**: `engine.resolveTurn`은 랜덤 없음 → 두 피어가 동일 엔진(**호스트=side0, 게스트=side1 고정**)을 돌리고 매 턴 카드 ID만 교환(`session.ts`). `BattleScreen`은 `localSide` + `getOpponentPlan` 콜백으로 싱글(AI)·멀티(네트워크) 공용. **렌더는 로컬 시점**: 엔진은 정규 좌표(호스트=side0)지만 `BattleScreen`이 side1을 잡으면 화면을 좌우 반전해 **내 캐릭터를 항상 왼쪽(오른쪽 바라봄)·상대를 오른쪽**에 표시(`flip`/`dcol`). 절대좌표 이동 카드는 반전 시 좌↔우 라벨을 바꿔(`faceCard`) 화살표가 실제 화면 이동과 일치. 카드 사정거리·예측 범위는 항상 "앞=오른쪽". 내 쪽엔 "나" 배지.

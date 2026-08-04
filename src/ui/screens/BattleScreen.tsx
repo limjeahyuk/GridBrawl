@@ -159,6 +159,12 @@ const STEP_MS: Record<Step['phase'], number> = {
 }
 /** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
 const CUTIN_MS = 1750
+/**
+ * 보스 컷인 길이. 필살기 컷인보다 **길다** — 이건 카드 하나가 아니라 "누구와
+ * 싸우는지"를 못 박는 연출이라, 이름과 태그라인을 읽을 시간이 필요하다.
+ * ⚠ `ui.css`의 `bosscut-*` 키프레임과 짝이다. 한쪽만 바꾸면 어긋난다.
+ */
+const BOSSCUT_MS = 2300
 
 /**
  * 공격 모션이 **실제로 상대에게 닿는** 시점(ms). SVG 아트에서는 `ui.css`의
@@ -274,6 +280,7 @@ export function BattleScreen({
   deck,
   battleOpts,
   telegraph,
+  boss,
   scene = 'hall',
   getOpponentPlan,
   turnSeconds,
@@ -293,6 +300,13 @@ export function BattleScreen({
   battleOpts?: BattleOpts
   /** 보스 예고 — 선택 화면에 상대(side 1)의 이번 턴 행동을 미리 알린다. */
   telegraph?: (turn: number, oppHpFrac: number) => string | null
+  /**
+   * 보스 컷인(등장·격노). 주면 **전투 시작 직전**에 등장 컷인이 한 번 뜨고,
+   * 보스 체력이 `enrageAt` 아래로 떨어지는 순간 격노 컷인이 한 번 더 뜬다.
+   * 스크립트 보스가 아니면 미지정 = 컷인 없음(봇전·온라인은 항상 미지정).
+   * ⚠ **상대(side 1)가 보스라는 전제**다 — 런은 항상 `localSide === 0`이다.
+   */
+  boss?: BossCinematic
   /** 전장 배경. 로그라이크는 층마다 바뀌고(`sceneFor`), 봇전·멀티는 기본 고성. */
   scene?: BattleScene
   getOpponentPlan: OpponentPlanner
@@ -386,6 +400,14 @@ export function BattleScreen({
   const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
   // 필살기 컷인(시그니처 카드 발동 순간 화면을 덮는 연출)
   const [cutIn, setCutIn] = useState<{ seq: number; actor: 0 | 1; card: CardDef } | null>(null)
+  // 보스 컷인 — 등장(전투 시작)과 격노(페이즈 전환) 두 번뿐이다. 필살기 컷인과
+  // **별개의 레이어**다: 저쪽은 카드 한 장을 못 박고 이쪽은 상대가 누구인지를 못 박는다.
+  const [bossCut, setBossCut] = useState<{ seq: number; kind: 'entrance' | 'enrage' } | null>(null)
+  // 격노 컷인은 전투당 한 번. ref로 두는 이유는 해소 루프(async) 안에서 읽고 쓰기
+  // 때문 — state로 두면 루프가 잡아 둔 옛 값을 계속 본다. state 쪽은 **그리기용**
+  // (격노 뒤에는 무대·HP바가 계속 붉게 남아야 하므로 리렌더가 필요하다).
+  const enragedRef = useRef(false)
+  const [enraged, setEnraged] = useState(false)
   // 타격 순간 화면 정지(hitstop) — 켜져 있는 동안 모든 애니메이션이 멈춘다
   const [hitstop, setHitstop] = useState(false)
   // 피격 지점에서 터지는 불꽃 파편
@@ -741,6 +763,23 @@ export function BattleScreen({
       }
       if (cancelled.current) return
       shown = full
+
+      // 격노 컷인 — 보스 체력이 문턱을 지나는 순간 스텝 사이를 끊고 들어간다.
+      // ⚠ 판정은 `battle.state`가 아니라 **이 스텝의 스냅샷**(`full.hp`)으로 한다:
+      //   엔진은 턴을 통째로 먼저 계산하고 스텝은 그 재생이라, `battle.state`를
+      //   보면 첫 스텝부터 이미 턴 끝 체력이라 컷인이 한 턴 일찍 튄다.
+      if (boss && !enragedRef.current) {
+        const b = (1 - localSide) as 0 | 1
+        if (full.hp[b] > 0 && full.hp[b] / battle.maxHp[b] <= boss.enrageAt) {
+          enragedRef.current = true
+          setEnraged(true)
+          setBossCut({ seq: 2, kind: 'enrage' })
+          playSfx('bossHorn')
+          await wait(BOSSCUT_MS)
+          setBossCut(null)
+          if (cancelled.current) return
+        }
+      }
     }
     setCutIn(null)
 
@@ -821,8 +860,26 @@ export function BattleScreen({
     }
   }, [])
 
+  // 등장 컷인 — 첫 카드를 고르기 전에 "누구와 싸우는지"를 못 박는다.
+  // ⚠ **ref로 한 번만** 돈다. `boss`는 `runFightProps(run)`가 App 렌더마다 새로
+  //   만드는 객체라 의존성 배열만 믿으면 리렌더마다 컷인이 다시 뜬다.
+  const bossIntroRef = useRef(false)
+  useEffect(() => {
+    if (!boss || bossIntroRef.current) return
+    bossIntroRef.current = true
+    setBossCut({ seq: 1, kind: 'entrance' })
+    playSfx('bossHorn')
+    const id = setTimeout(() => setBossCut(null), BOSSCUT_MS)
+    return () => clearTimeout(id)
+  }, [boss])
+
   return (
-    <div className={`screen battle ${hitstop ? 'is-hitstop' : ''}`}>
+    <div
+      className={`screen battle ${hitstop ? 'is-hitstop' : ''} ${boss ? 'battle--boss' : ''}`}
+      // 보스전은 화면 전체가 그 보스의 색을 띤다 — 무대·컷인·예고가 같은 변수를
+      // 읽으므로 보스를 추가할 때 색은 `bosses.ts`의 `accent` 한 곳만 정하면 된다.
+      style={boss ? { ['--boss' as string]: boss.accent } : undefined}
+    >
       <div className="grid-bg" />
 
       <BattleHud
@@ -833,11 +890,15 @@ export function BattleScreen({
         view={view}
         turn={battle.state.turn}
         remain={remain}
+        boss={boss}
         onQuit={onQuit}
       />
 
       <div className="board">
         <div className={`boardfloor boardfloor--${scene}`} />
+        {/* 보스 기운 — 무대 위에 얹히는 보스 색 맥동. 판 위 레이어라 반드시
+            `pointer-events: none`이어야 한다(칸을 눌러 이동하므로). */}
+        {boss && <div className={`bossaura ${enraged ? 'bossaura--enraged' : ''}`} />}
         <div className="gridboard" ref={gridRef}>
           {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
             const row = Math.floor(i / GRID_COLS)
@@ -974,7 +1035,9 @@ export function BattleScreen({
           (() => {
             const opp = (1 - localSide) as 0 | 1
             const msg = telegraph(battle.state.turn, battle.state.hp[opp] / battle.maxHp[opp])
-            return msg ? <div className="board__telegraph">{msg}</div> : null
+            return msg ? (
+              <div className={`board__telegraph ${boss ? 'board__telegraph--boss' : ''}`}>{msg}</div>
+            ) : null
           })()}
       </div>
 
@@ -1141,7 +1204,33 @@ export function BattleScreen({
         </div>
       )}
 
-      <div className="scanlines" />
+      {/* 보스 컷인 — 등장/격노. 필살기 컷인과 달리 **입력을 삼킨다**(pointer-events),
+          연출이 도는 동안 카드가 눌리면 안 되기 때문이다. */}
+      {boss && bossCut && (
+        <div
+          key={`bosscut-${bossCut.seq}`}
+          className={`bosscut bosscut--${bossCut.kind}`}
+          style={{ ['--boss' as string]: boss.accent }}
+        >
+          <div className="bosscut__rays">
+            {Array.from({ length: 7 }, (_, i) => (
+              <span key={i} className="bosscut__ray" style={{ ['--i' as string]: i }} />
+            ))}
+          </div>
+          <PortraitSvg char={battle.chars[(1 - localSide) as 0 | 1]} className="bosscut__art" />
+          <div className="bosscut__label">
+            <div className="bosscut__kicker">
+              {bossCut.kind === 'entrance' ? boss.title : '페이즈 2'}
+            </div>
+            <div className="bosscut__name">{boss.name}</div>
+            <div className="bosscut__line">
+              {bossCut.kind === 'entrance' ? boss.entrance : boss.enrage}
+            </div>
+          </div>
+          <div className="bosscut__flash" />
+        </div>
+      )}
+
     </div>
   )
 }
@@ -1325,6 +1414,7 @@ function BattleHud({
   view,
   turn,
   remain,
+  boss,
   onQuit,
 }: {
   c0: ReturnType<typeof getChar>
@@ -1335,6 +1425,8 @@ function BattleHud({
   view: View
   turn: number
   remain: number | null
+  /** 상대가 스크립트 보스면 그 연출 데이터 — 칭호와 페이즈 문턱 눈금을 붙인다. */
+  boss?: BossCinematic
   onQuit: () => void
 }) {
   // mirror the HUD to match the board: this client's fighter on the left
@@ -1366,7 +1458,14 @@ function BattleHud({
           </button>
         </div>
       </div>
-      <BhudSide char={chars[oi]} maxHp={maxHp[oi]} hp={view.hp[oi]} energy={view.energy[oi]} side="right" />
+      <BhudSide
+        char={chars[oi]}
+        maxHp={maxHp[oi]}
+        hp={view.hp[oi]}
+        energy={view.energy[oi]}
+        side="right"
+        boss={boss}
+      />
     </div>
   )
 }
@@ -1400,6 +1499,7 @@ function BhudSide({
   energy,
   side,
   isLocal,
+  boss,
 }: {
   char: ReturnType<typeof getChar>
   maxHp: number
@@ -1407,6 +1507,8 @@ function BhudSide({
   energy: number
   side: 'left' | 'right'
   isLocal?: boolean
+  /** 이 쪽이 스크립트 보스일 때만. 칭호 한 줄 + 페이즈 전환 눈금을 그린다. */
+  boss?: BossCinematic
 }) {
   const hpPct = Math.max(0, (hp / maxHp) * 100)
   const ePct = Math.max(0, (energy / char.maxEnergy) * 100)
@@ -1442,13 +1544,15 @@ function BhudSide({
 
   return (
     <div
-      className={`bhud__side bhud__side--${side} ${shock ? 'is-shock' : ''}`}
-      style={{ ['--accent' as string]: char.accent }}
+      className={`bhud__side bhud__side--${side} ${shock ? 'is-shock' : ''} ${boss ? 'bhud__side--boss' : ''}`}
+      style={{ ['--accent' as string]: boss ? boss.accent : char.accent }}
     >
       <div className="bhud__name">
         {char.name}
         {isLocal && <span className="bhud__you">나</span>}
+        {boss && <span className="bhud__bosstag">BOSS</span>}
       </div>
+      {boss && <div className="bhud__bosstitle">{boss.title}</div>}
       {/* ⚠ 채움 막대만 클립한다. 숫자를 overflow:hidden 안에 두면 기울어진(skewX)
           모서리에 글자가 잘린다 — 예전에 그래서 "HP 205 / 205"의 위아래가 깎였다. */}
       <div className="bhud__hp">
@@ -1462,6 +1566,15 @@ function BhudSide({
             style={{ width: `${hpPct}%` }}
           />
           <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
+          {/* 페이즈 전환 눈금 — 여기를 지나면 보스가 격노한다. 예고 배너와 달리
+              **항상 보이는** 정보라, 플레이어가 "언제 몰아칠지"를 계획할 수 있다.
+              ⚠ 바가 바깥에서 안쪽으로 줄어들므로 오른쪽 진영은 눈금도 뒤집는다. */}
+          {boss && (
+            <div
+              className="bhud__phasemark"
+              style={{ [(side === 'left' ? 'left' : 'right') as string]: `${boss.enrageAt * 100}%` }}
+            />
+          )}
         </div>
         <span className="bhud__hpnum">
           HP {Math.ceil(hp)} / {maxHp}

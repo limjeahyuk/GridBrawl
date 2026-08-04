@@ -84,7 +84,6 @@ export function RunStartScreen({
           그리드로 출발 ▶
         </button>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

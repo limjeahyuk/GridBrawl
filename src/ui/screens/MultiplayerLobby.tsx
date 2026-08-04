@@ -18,6 +18,12 @@ type Role = 'host' | 'guest'
 type Mode = Role | 'quick'
 type Cancelable = { cancel(): void }
 
+/** ⚠ 빠른 대전(랜덤 매칭) 일시 중단(2026-08-04, 사용자 결정). PVP는 방 만들기·방 찾기
+ *  두 경로로만 간다. 코드는 `net/matchmaking.ts`째로 남겨 뒀으니 이 값만 true로
+ *  되돌리면 버튼·대기 화면이 그대로 살아난다 — 되살릴 땐 RTDB 대기열(`gridbrawl-mm`)
+ *  규칙과 `RULES_VERSION` 필터가 아직 열려 있는지 함께 확인할 것. */
+const QUICK_MATCH_ENABLED = false
+
 /** 룰셋이 다른 상대와는 붙지 않는다. 락스텝은 양쪽이 같은 엔진을 돌린다는
  *  전제 위에 서 있어서, 버전이 어긋나면 화면이 조용히 갈린다(desync). 양쪽이
  *  서로에게 hello를 보내므로 판정도 양쪽에서 똑같이 난다. */
@@ -201,18 +207,20 @@ export function MultiplayerLobby({
           </div>
         ) : role === null ? (
           <div className="mp__choose">
-            <p className="mp__lead">1:1 온라인 대전 — 랜덤 매칭 또는 친구와 코드로 연결합니다.</p>
+            <p className="mp__lead">1:1 온라인 대전 — 방을 만들거나, 친구의 코드로 방을 찾습니다.</p>
             <div className="mp__roles">
-              <button className="btn btn--online mp__rolebtn" onClick={startQuick}>
-                <span className="mp__roleicon">⚡</span>빠른 대전
-                <span className="mp__rolehint">대기 중인 아무 상대와 자동으로 매칭됩니다.</span>
-              </button>
-              <button className="btn mp__rolebtn" onClick={startHost}>
+              {QUICK_MATCH_ENABLED && (
+                <button className="btn btn--online mp__rolebtn" onClick={startQuick}>
+                  <span className="mp__roleicon">⚡</span>빠른 대전
+                  <span className="mp__rolehint">대기 중인 아무 상대와 자동으로 매칭됩니다.</span>
+                </button>
+              )}
+              <button className="btn btn--online mp__rolebtn" onClick={startHost}>
                 <span className="mp__roleicon">🛰</span>방 만들기 (호스트)
                 <span className="mp__rolehint">코드를 만들어 친구에게 알려줍니다.</span>
               </button>
-              <button className="btn btn--ghost mp__rolebtn" onClick={startGuest}>
-                <span className="mp__roleicon">🔗</span>참가하기 (게스트)
+              <button className="btn mp__rolebtn" onClick={startGuest}>
+                <span className="mp__roleicon">🔗</span>방 찾기 (게스트)
                 <span className="mp__rolehint">친구의 6자리 코드를 입력해 참가합니다.</span>
               </button>
             </div>
@@ -273,7 +281,6 @@ export function MultiplayerLobby({
         {status && <div className="mp__status">{status}</div>}
         {error && <div className="mp__error">{error}</div>}
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

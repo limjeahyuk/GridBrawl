@@ -202,11 +202,6 @@ h3 {
   image-rendering: pixelated; /* 608px = 원본 304px의 정확히 2배 — 소수 배율 금지 */
 }
 
-/* Scanline/CRT overlay removed for a flat matte look. */
-.scanlines {
-  display: none;
-}
-
 /* Generic neon button ---------------------------------------------------- */
 .btn {
   appearance: none;

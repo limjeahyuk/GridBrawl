@@ -48,7 +48,6 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
             계속 ▶
           </button>
         </div>
-        <div className="scanlines" />
       </div>
     )
   }
@@ -77,7 +76,6 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>
-        <div className="scanlines" />
       </div>
     )
   }
@@ -100,7 +98,6 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
           ))}
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

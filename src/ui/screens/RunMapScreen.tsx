@@ -175,7 +175,6 @@ export function RunMapScreen({
           )
         })}
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

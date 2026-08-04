@@ -45,10 +45,9 @@ export function ModeSelectScreen({
         <button className="mode-card mode-card--online" onClick={onOnline}>
           <span className="mode-card__icon">🌐</span>
           <span className="mode-card__title">온라인 대전</span>
-          <span className="mode-card__desc">빠른 매칭 또는 코드로 친구와</span>
+          <span className="mode-card__desc">방을 만들거나 코드로 친구 방 찾기</span>
         </button>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

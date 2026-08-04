@@ -243,6 +243,12 @@
   - **타이틀은 2026-08-04에 끝냈다.** 문구 `THE GRID · DEMON GAUNTLET` → **`THE GRID · DEMON ASCENT`**(건틀릿 모드가 사라지고 15층 사다리를 오르는 게임이 됐다), 로고 그라디언트 청록→보라 → **횃불 금(GRID) + 핏빛(BRAWL)**.
   - ⚠ **문구는 타이틀·로그인 두 화면이 같이 쓴다** — 로그인 직후 타이틀로 넘어가므로 한쪽만 고치면 글자가 깜빡이는 것처럼 보인다.
   - ⚠ **로고는 `.title__word`에 `background-image`를 두 번 쓴다(`ui.css`).** 윗줄이 리터럴 폴백, 아랫줄이 `color-mix`로 팔레트에서 파생한 진짜 값이다. 글자가 `-webkit-text-fill-color: transparent`라 그라디언트가 곧 글자색이어서, `color-mix`를 모르는 WebView에서 폴백이 없으면 **로고가 첫 화면에서 통째로 안 보인다**(minSdk 24). 두 줄의 색은 같게 맞춰 뒀으니 한쪽만 고치지 말 것.
+  - **꼬리 정리(2026-08-05)** — 카드·유물 이름을 다 갈고도 **이름이 아닌 자리**에 잔재가 남아 있었다. 넷을 마저 걷었다:
+    - **몬스터 `sentry`** 표시명 `센트리`(포탑) → **`감시안`**. 그림이 떠 있는 눈(flying-eye)이라 거기 맞췄다. **id는 그대로** — 문서·`MID_ELITE_IDS`·스프라이트 매핑이 물고 있다.
+    - **결과 화면 문구** — `SYSTEM FAILURE` → **`쓰러졌다`**. 같은 자리에 있던 `GRID 챔피언 / 코어를 장악했다`(outcome `champion`)와 `variant='gauntlet'`은 **아무도 설정하지 않는 죽은 분기**여서 통째로 지웠다 — 건틀릿 모드가 2026-08-04에 사라졌는데 결과 화면만 그 문구를 이고 있었다. CSS `.result--champ`·`.result__crown`도 같이. `Outcome`은 이제 `'win' | 'loss'`, `variant`는 `'single' | 'versus'`, `onNext` prop 제거.
+    - **도감 능력치 라벨** `HEALTH / POWER / RANGE / ENERGY` → **`체력 / 공격 / 사거리 / 기력`**(`ui/statBars.ts`). 게임 내 텍스트는 한국어라는 규약을 이 넷만 비켜 가고 있었다.
+    - **`.scanlines`(CRT 주사선)** — 리스킨 때 `display:none`으로 죽여만 두고 `<div className="scanlines" />`가 화면 10곳에 남아 있었다. div와 CSS 규칙을 함께 삭제(순수 제거 — 보이는 변화 없음).
+  - 🎮 **이스터에그 — 잔재 둘은 일부러 되돌렸다(2026-08-05, 사용자 결정).** "세계관에 안 맞는 물건이 하나쯤 굴러다니는 게 재미있다"는 요청으로 **유물 `battery` = `예비 배터리` 🔋**(+`어느 세계에서 굴러떨어진 쇳덩이. 정체는 아무도 모른다.`)와 **런 카드 `r-railgun` = `레일건`**(이름만 — 설명은 그대로)만 옛 이름으로 되돌렸다. ⚠ `r-railgun`의 **설명에는 농담을 못 붙인다** — `pointBlank:false`라 능력 칩이 붙고 `.cardface--tagged`가 설명을 2줄로 잘라, 덧붙이면 "붙으면 사각"이 화면 밖으로 밀린다. ⚠ **정리 대상이 아니다** — 두 곳 다 코드에 "고치지 말 것" 주석을 붙여 뒀다. 다음에 잔재를 훑을 때 이 둘을 "빠뜨린 것"으로 오해하지 말 것. **수치·효과·id는 불변이라 밸런스 영향 0**(`npm run check` 통과, 스윕 재측정 불필요).
 
 #### 캐릭터 패시브 (`Passive`, `src/data/roster.ts`)
 각 캐릭터는 고유 패시브를 1개 가진다. 엔진이 정해진 시점에 자동 적용(`resolveTurn` 턴 시작 / `computeAttack` 공격 판정). 캐릭터 선택 화면 `detail__passive`에 설명 노출.
@@ -398,14 +404,14 @@
 ## ⑤-bis 온라인 멀티플레이 (P2P + 짧은 코드) — 2026-06-18 추가 / 갱신
 
 > 친구와 1:1 온라인 대전. **게임 데이터는 항상 P2P(WebRTC 데이터 채널)** 로 직접 흐른다. 연결 성사(시그널링)에만 약간의 중개가 필요하며, 두 가지 방식이 전송 추상화(`NetTransport`) 위에 올라간다:
-> - **(기본) 빠른 대전 — 랜덤 매칭(2026-07-15 추가)** — `src/net/matchmaking.ts`. RTDB 대기열 `gridbrawl-mm`에서: ①살아있는(심장박동 45초 이내) 대기표를 오래된 순으로 **ETag CAS**(`lock` 필드, REST `X-Firebase-ETag`/`if-match`)로 원자 선점 → 게스트로 answer 작성. ②없으면 내 대기표(offer + `createdAt`/`aliveAt` 서버시각)를 걸고 answer 폴링(호스트), 20초마다 심장박동. 대기 중에도 4초마다 재스캔해 **나보다 엄격히 먼저 온**(createdAt, 동률이면 id) 대기표가 보이면 그쪽 게스트로 전환 — 둘이 동시에 큐를 눌러 서로 기다리는 교착을 풀고, 엄격한 나이순이라 서로를 동시에 잡는 역교착은 불가능. 연결 시도 12초 타임아웃 후 다음 후보, 5분 지난 대기표는 스캔 중 청소. RTDB 규칙은 `gridbrawl-mm`에 offer/answer/createdAt/aliveAt/lock만 허용.
+> - **빠른 대전 — 랜덤 매칭(2026-07-15 추가 · ⚠ 2026-08-04 UI 중단)** — 사용자 결정으로 **버튼을 내렸다**. PVP는 **방 만들기 · 방 찾기** 두 경로로만 간다. 코드는 아래 그대로 살아 있고 `MultiplayerLobby`의 **`QUICK_MATCH_ENABLED`** 한 줄만 true로 되돌리면 버튼·대기 화면이 복원된다(되살릴 땐 RTDB 대기열 규칙과 `rules` 필터가 아직 열려 있는지 함께 확인). 구현: `src/net/matchmaking.ts`. RTDB 대기열 `gridbrawl-mm`에서: ①살아있는(심장박동 45초 이내) 대기표를 오래된 순으로 **ETag CAS**(`lock` 필드, REST `X-Firebase-ETag`/`if-match`)로 원자 선점 → 게스트로 answer 작성. ②없으면 내 대기표(offer + `createdAt`/`aliveAt` 서버시각)를 걸고 answer 폴링(호스트), 20초마다 심장박동. 대기 중에도 4초마다 재스캔해 **나보다 엄격히 먼저 온**(createdAt, 동률이면 id) 대기표가 보이면 그쪽 게스트로 전환 — 둘이 동시에 큐를 눌러 서로 기다리는 교착을 풀고, 엄격한 나이순이라 서로를 동시에 잡는 역교착은 불가능. 연결 시도 12초 타임아웃 후 다음 후보, 5분 지난 대기표는 스캔 중 청소. RTDB 규칙은 `gridbrawl-mm`에 offer/answer/createdAt/aliveAt/lock만 허용.
 > - **짧은 6자리 룸 코드** — Firebase Realtime Database를 *시그널링*으로만 사용(SDP 교환). 사용자가 "AD3EF1"처럼 짧은 코드를 원해 도입(2차 결정). 6자리 코드는 정보량상 *반드시* 중개소의 열쇠여야 하므로(연결정보=DTLS 지문+ICE+IP 등) 시그널링 서버 없이는 불가능.
 > - **(폴백) 복붙 초대 코드** — 백엔드 0, 전체 SDP를 base64 코드로 직접 주고받음. `net/webrtc.ts`의 `createHost`/`joinAsGuest`로 구현돼 있으나 현재 로비 UI는 짧은 코드만 노출(오프라인/무설정 폴백용으로 코드 보존).
 >
 > 핵심 설계 의도: **전송 계층을 게임에서 분리**(`src/net/protocol.ts`의 `NetTransport`) → 시그널링 방식을 바꿔도(서버/WebSocket/매치메이킹) 전투·UI 불변.
 
 ### 화면 흐름
-`title → deck-select(캐릭터·덱 선택) → mode-select → mp-lobby(6자 코드/빠른 대전) → mp-fight(전투) → mp-result(승/패)`. 타이틀의 **PVP** 버튼으로 진입. (`src/App.tsx`)
+`title → deck-select(캐릭터·덱 선택) → mode-select → mp-lobby(방 만들기 / 방 찾기 — 6자 코드) → mp-fight(전투) → mp-result(승/패)`. 타이틀의 **PVP** 버튼으로 진입. (`src/App.tsx`)
 
 ### 설정 (온라인 사용 전 필수)
 - `.env`에 `VITE_FIREBASE_DB_URL=<RTDB URL>` 지정(미설정 시 로비가 "설정 필요" 안내를 띄우고 온라인 비활성). Firebase RTDB 규칙에서 `gridbrawl` 경로 읽기/쓰기 허용. 자세한 절차는 `.env.example`.

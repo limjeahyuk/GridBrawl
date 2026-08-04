@@ -39,7 +39,6 @@ export function RunEndScreen({
           </button>
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

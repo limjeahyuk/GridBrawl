@@ -279,7 +279,6 @@ export default function App() {
         outcome={outcome}
         playerCharId={deck.charId}
         variant="single"
-        onNext={startBot}
         onRetry={startBot}
         onMenu={toTitle}
       />
@@ -343,7 +342,6 @@ export default function App() {
         outcome={mpOutcome}
         playerCharId={deck?.charId ?? mpMatch.p0CharId}
         variant="versus"
-        onNext={leaveMp}
         onRetry={leaveMp}
         onMenu={leaveMp}
       />
@@ -357,7 +355,6 @@ export default function App() {
       <div className="login__content">
         <p className="login__lead">접속 중…</p>
       </div>
-      <div className="scanlines" />
     </div>
   ) : !user ? (
     <LoginScreen />

@@ -84,7 +84,6 @@ export function DeckManagerScreen({
           )
         })}
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

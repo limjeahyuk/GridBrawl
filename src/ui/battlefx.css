@@ -229,12 +229,36 @@
     url('/bg/cemetery/sky.png') center top / auto 448px repeat-x,
     linear-gradient(var(--bg-0), var(--bg-0));
 }
+/* --- 보스 전용 무대 3종 -----------------------------------------------------
+   ⚠ **보스마다 다른 무대다**(2026-08-05). 그전엔 셋이 다 용암을 썼는데, 그러면
+   배경이 "보스다"까지만 말하고 "어떤 보스다"는 못 말한다 — 화염군주만 불이고
+   오버로드는 심연, 수호기사는 성소라야 컷인·카드와 같은 이야기를 한다.
+   어느 무대를 쓸지는 `bosses.ts`의 `CINE[].scene`이 정한다(층 규칙보다 우선).
+   ⚠ 수호기사·화염군주는 **엘리트 칸**으로 나오므로 노드 종류가 아니라 몬스터
+   id로 고른다 — `sceneFor()` 주석 참고. */
 .boardfloor--lava {
-  /* 용암 — 보스 전용. 유일하게 붉은 장면이라 그 자체가 "여기가 끝" 신호다. */
+  /* 용암 — 화염군주. 유일하게 불타는 장면이라 그 자체가 "여기가 끝" 신호다. */
   --floor-scrim: 44%;
   background:
     url('/bg/lava/rocks.png') center bottom / auto 480px repeat-x,
     url('/bg/lava/back.png') center bottom / auto 480px repeat-x;
+}
+.boardfloor--abyss {
+  /* 심연 — 오버로드. 살아 있는 살덩이(Living Tissue) 위에 동굴 암벽을 겹친다.
+     ⚠ 원본이 144×144짜리 **양방향 타일**이라 `repeat-x`가 아니라 `repeat`다.
+     배율은 ×3(432px) — ×2(288)면 판 높이 302px에 한 줄이 더 들어와 이음매가
+     가로로 뚜렷하게 보인다. 정수배 규칙은 그대로 지킨다. */
+  --floor-scrim: 36%;
+  background:
+    url('/bg/abyss/flesh.png') center bottom / auto 432px repeat,
+    url('/bg/abyss/rock.png') center bottom / auto 576px repeat-x;
+}
+.boardfloor--sanctum {
+  /* 성소 — 수호기사. 촛불이 늘어선 보랏빛 예배당(Gothicvania Church).
+     원본 624×192의 다섯 칸(창·기둥·제단·석상·횃불)이 그대로 반복되면서
+     "봉인된 자리"로 읽힌다. 촛불이 밝아서 스크림을 기본보다 올린다. */
+  --floor-scrim: 50%;
+  background: url('/bg/sanctum/nave.png') center bottom / auto 384px repeat-x;
 }
 
 /* 광원·스크림 — 장면 위에 항상 같은 값으로 덮인다(위 주석 참고). */

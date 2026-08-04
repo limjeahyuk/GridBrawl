@@ -124,7 +124,6 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
           </div>
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

@@ -75,7 +75,6 @@ export function DeckSelectScreen({
           ))}
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

@@ -61,7 +61,6 @@ export function RewardScreen({
         <button className="btn btn--ghost" onClick={() => setReplaceCard(null)}>
           취소
         </button>
-        <div className="scanlines" />
       </div>
     )
   }
@@ -100,7 +99,6 @@ export function RewardScreen({
       <button className="btn btn--ghost reward__skip" onClick={() => onDone(skipRewardForHeal(run))}>
         건너뛰고 회복 (+{SKIP_HEAL} HP)
       </button>
-      <div className="scanlines" />
     </div>
   )
 }

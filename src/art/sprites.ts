@@ -226,7 +226,7 @@ export const SHEETS: Record<string, SheetDef> = {
       attack1: { frames: 7, frameMs: 80, loop: false, impactFrame: 4 },
     },
   }),
-  // 센트리 — 떠 있는 눈. 원본에 애니메이션이 하나뿐이라 세 클립이 같은 프레임이다.
+  // 감시안(id `sentry`) — 떠 있는 눈. 원본에 애니메이션이 하나뿐이라 세 클립이 같은 프레임이다.
   // `footY`가 프레임 높이보다 작다(27 < 30) — 공중에 떠 있어 발이 바닥에 안 닿는다.
   'flying-eye': sheet('flying-eye', {
     frameW: 28, frameH: 30, footY: 27, anchorX: 12, scale: 3, facesRight: true,

@@ -103,8 +103,13 @@ export const RUN_CARDS: CardDef[] = [
     id: 'r-maul', name: '파쇄 망치', range: [fwd(1)], damage: 42, energyCost: 26, push: 1,
     fx: 'punch', desc: '앞 한 칸을 짓뭉개고 한 칸 밀어낸다. 전방 전용 강타.',
   }),
+  // ⚠ **이스터에그 — 일부러 남긴 사이버 잔재**(2026-08-05). 리스킨 때 '꿰뚫는 화살'로
+  // 갈았던 걸 되돌린 것이다. 짝은 유물 `battery`('예비 배터리').
+  // **정리 대상이 아니다 — 고치지 말 것.**
   atk({
-    id: 'r-railgun', name: '꿰뚫는 화살', range: beam(2, 5), damage: 44, energyCost: 38, pierce: true, pointBlank: false,
+    id: 'r-railgun', name: '레일건', range: beam(2, 5), damage: 44, energyCost: 38, pierce: true, pointBlank: false,
+    // ⚠ 설명에 농담을 덧붙이지 말 것 — `pointBlank:false`라 능력 칩이 붙고, 그러면
+    // `.cardface--tagged`가 설명을 **2줄로 자른다**. 덧붙이면 "붙으면 사각"이 밀려 나간다.
     fx: 'bolt', desc: '앞 2~5칸을 관통하는 초장거리 사격. 보호막을 무시한다. 붙으면 사각.',
   }),
   atk({

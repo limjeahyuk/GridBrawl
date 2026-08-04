@@ -1,31 +1,31 @@
 import { getChar } from '../../data/roster'
 import { PortraitSvg } from '../PortraitSvg'
 
-export type Outcome = 'win' | 'champion' | 'loss'
+// ⚠ 'champion'(전원 격파)은 **건틀릿 모드 전용이었고, 그 모드는 2026-08-04에 코드째
+// 지웠다**(game/tournament.ts·BracketScreen·CharacterSelect). 아무도 설정하지 않는
+// 값이 남아 있어 2026-08-05에 걷어냈다 — 'GRID 챔피언 / 코어를 장악했다'라는 사이버
+// 시절 문구를 통째로 이고 있던 자리다. 되살리려면 git 기록에서 셋과 함께 꺼낸다.
+export type Outcome = 'win' | 'loss'
 
 export function ResultScreen({
   outcome,
   playerCharId,
-  onNext,
   onRetry,
   onMenu,
-  variant = 'gauntlet',
+  variant = 'single',
 }: {
   outcome: Outcome
   playerCharId: string
-  onNext: () => void
   onRetry: () => void
   onMenu: () => void
-  /** 'gauntlet' 다음상대/재도전, 'single'(봇 단판) 다시 대전, 'versus'(온라인) 메뉴만. */
-  variant?: 'gauntlet' | 'single' | 'versus'
+  /** 'single'(봇 단판) 다시 대전, 'versus'(온라인) 메뉴만. */
+  variant?: 'single' | 'versus'
 }) {
   const player = getChar(playerCharId)
   const cfg = {
     win: { title: '승리', sub: 'K.O.', cls: 'win' },
-    champion: { title: 'GRID 챔피언', sub: '코어를 장악했다', cls: 'champ' },
-    loss: { title: '패배', sub: 'SYSTEM FAILURE', cls: 'loss' },
+    loss: { title: '패배', sub: '쓰러졌다', cls: 'loss' },
   }[outcome]
-  const gauntlet = variant === 'gauntlet'
 
   return (
     <div className={`screen result result--${cfg.cls}`}>
@@ -33,22 +33,9 @@ export function ResultScreen({
       <div className="result__content" style={{ ['--accent' as string]: player.accent }}>
         <div className="result__sub neon-text">{cfg.sub}</div>
         <h1 className="result__title">{cfg.title}</h1>
-        {outcome === 'champion' && (
-          <div className="result__crown">★ 모든 적을 격파했다 ★</div>
-        )}
         <PortraitSvg char={player} className="result__portrait" />
         <div className="result__name neon-text">{player.name}</div>
         <div className="result__buttons">
-          {gauntlet && outcome === 'win' && (
-            <button className="btn" onClick={onNext}>
-              다음 상대 ▶
-            </button>
-          )}
-          {gauntlet && outcome === 'loss' && (
-            <button className="btn" onClick={onRetry}>
-              다시 도전
-            </button>
-          )}
           {variant === 'single' && (
             <button className="btn" onClick={onRetry}>
               다시 대전 ▶
@@ -59,7 +46,6 @@ export function ResultScreen({
           </button>
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

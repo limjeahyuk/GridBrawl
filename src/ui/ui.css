@@ -1339,16 +1339,8 @@
   color: var(--neon-red);
   text-shadow: 0 0 30px rgba(255, 77, 94, 0.55);
 }
-.result--champ .result__title {
-  color: var(--neon-yellow);
-  text-shadow: 0 0 40px rgba(255, 225, 77, 0.6);
-}
-.result__crown {
-  color: var(--neon-yellow);
-  letter-spacing: 0.2em;
-  margin-bottom: 8px;
-  font-weight: 700;
-}
+/* `.result--champ`·`.result__crown`(건틀릿 전원 격파)은 2026-08-05에 걷어냈다 —
+   모드가 사라진 뒤로 아무도 붙이지 않는 클래스였다. */
 .result__portrait {
   width: 260px;
   height: 300px;
@@ -3413,3 +3405,231 @@
 .runend__stat { color: var(--text-dim); font-size: 16px; }
 .runend__relics { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 700px; }
 .runend__buttons { display: flex; gap: 14px; margin-top: 10px; }
+
+/* ---- 보스 연출 (2026-08-05) ----------------------------------------------
+   보스전은 **화면 전체가 그 보스의 색**을 띤다. 색은 `bosses.ts`의 `accent` 한
+   곳에서 나와 `.battle--boss`의 `--boss` 변수로 내려오므로, 보스를 추가할 때
+   CSS를 건드릴 필요가 없다 — 무대·컷인·HUD·예고가 전부 이 변수를 읽는다.
+
+   ⚠ 필살기 컷인(`.cutin`)과 **일부러 다르게** 만들었다. 저쪽은 대각 스트리크가
+   옆으로 쓸고 지나가고, 이쪽은 빛살이 **가운데서 퍼진다**. 같은 언어를 쓰면
+   "필살기가 또 나왔나" 싶어 등장 컷인이 묻힌다. */
+
+/* 보스 기운 — 무대 위에 얹히는 맥동. 판 위 레이어라 `pointer-events: none`이
+   필수다(칸을 눌러 이동하므로 — 2026-08-05 붕괴 칸에서 겪은 그 문제와 같다). */
+.bossaura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(78% 120% at 50% 118%, color-mix(in srgb, var(--boss) 22%, transparent), transparent 68%),
+    radial-gradient(120% 100% at 50% -18%, color-mix(in srgb, var(--boss) 12%, transparent), transparent 62%);
+  animation: bossaura-breathe 4.2s ease-in-out infinite;
+}
+@keyframes bossaura-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+/* 격노 뒤에는 계속 붉게 남는다 — "이제부터 다른 싸움"이 화면에 상시로 보여야 한다. */
+.bossaura--enraged {
+  background:
+    radial-gradient(80% 130% at 50% 118%, color-mix(in srgb, var(--boss) 34%, transparent), transparent 66%),
+    radial-gradient(130% 110% at 50% -18%, rgba(255, 60, 60, 0.16), transparent 60%);
+  animation-duration: 1.9s;
+}
+
+/* 예고 배너 — 보스전에서는 붉은 기본색 대신 그 보스의 색을 쓴다. */
+.board__telegraph--boss {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--boss) 88%, #000),
+    color-mix(in srgb, var(--boss) 52%, #000)
+  );
+  border-color: color-mix(in srgb, var(--boss) 80%, #fff);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--boss) 55%, transparent);
+}
+
+/* HUD — 보스 쪽에만 붙는 칭호 한 줄 + BOSS 칩 + 페이즈 눈금 */
+.bhud__bosstag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+  background: var(--boss, var(--accent));
+  vertical-align: middle;
+}
+.bhud__bosstitle {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--boss, var(--accent)) 78%, #fff);
+  margin: -2px 0 4px;
+}
+.bhud__side--boss .bhud__name {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--boss) 60%, transparent);
+}
+/* 페이즈 전환 눈금 — 여기를 지나면 격노한다. HP 바는 **바깥에서 안쪽으로** 줄어
+   들므로(2026-08-04) 눈금도 그 쪽 끝에서부터 재야 한다: 왼쪽 진영은 left, 오른쪽
+   진영은 right로 `enrageAt`만큼 들어온 자리다. */
+.bhud__phasemark {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: #fff;
+  box-shadow: 0 0 8px var(--boss, #fff);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* ---- 보스 컷인 ----------------------------------------------------------- */
+.bosscut {
+  position: absolute;
+  inset: 0;
+  z-index: 41; /* 필살기 컷인(40) 위 — 겹칠 일은 없지만 겹치면 보스가 이긴다 */
+  overflow: hidden;
+  /* ⚠ 필살기 컷인과 달리 **입력을 삼킨다**. 연출이 도는 2.3초 동안 카드가
+     눌리면 안 된다(등장 컷인은 선택 화면 위에서 돈다). */
+  pointer-events: auto;
+  background: radial-gradient(ellipse at 50% 50%, rgba(8, 6, 14, 0.86), rgba(2, 2, 5, 0.98));
+  animation: bosscut-fade 0.2s ease-out both, bosscut-exit 0.42s ease-in 1.88s forwards;
+}
+@keyframes bosscut-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bosscut-exit {
+  to { opacity: 0; }
+}
+/* 빛살 — 가운데에서 방사형으로 퍼진다(필살기의 옆쓸기와 대비되는 축) */
+.bosscut__rays {
+  position: absolute;
+  inset: -60%;
+  animation: bosscut-spin 14s linear infinite;
+}
+.bosscut__ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 46px;
+  transform-origin: 0 50%;
+  transform: rotate(calc(var(--i) * 51.4deg));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--boss) 62%, transparent), transparent 72%);
+  opacity: 0;
+  animation: bosscut-ray 2.3s cubic-bezier(0.16, 0.85, 0.24, 1) both;
+  animation-delay: calc(var(--i) * 38ms);
+}
+@keyframes bosscut-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes bosscut-ray {
+  0% { opacity: 0; transform: rotate(calc(var(--i) * 51.4deg)) scaleX(0.1); }
+  22% { opacity: 0.65; transform: rotate(calc(var(--i) * 51.4deg)) scaleX(1); }
+  78% { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+/* 초상 — 위에서 **내려앉는다**. 필살기 컷인은 옆에서 밀고 들어오므로 서로 안 겹친다. */
+.bosscut__art {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  /* ⚠ **높이만** 준다. `PortraitSvg`의 픽셀 경로는 시트 비율을 `aspect-ratio`로
+     인라인에 박는데, 여기서 width·height를 둘 다 박으면 그 값이 무시돼 초상이
+     가로로 눌린다(`.cutin__art`가 424×512로 그러고 있다). 높이만 주면 시트마다
+     다른 비율이 그대로 살아난다 — 보스 셋은 프레임 크기가 서로 다르다.
+     ⚠ 높이 기준이라 **가로로 긴 시트가 넓게 퍼진다**: 용(120×55)은 이 높이에서
+     900px을 넘는다. 판이 가로 고정(1280+)이고 `.bosscut`이 `overflow: hidden`
+     이라 잘려도 구도가 무너지지 않지만, 더 키우지는 말 것 — 420px에서는 용의
+     배가 이름 글자를 덮었다(브라우저 실측). */
+  height: 356px;
+  transform: translate(-50%, -50%);
+  animation: bosscut-art 2.3s cubic-bezier(0.12, 0.86, 0.18, 1) both;
+  filter: drop-shadow(0 0 60px color-mix(in srgb, var(--boss) 78%, transparent)) contrast(1.12)
+    saturate(1.1);
+}
+/* 시트가 없는 캐릭터의 절차 SVG 폴백 — 이쪽도 높이를 기준으로 비율을 잡는다. */
+.bosscut__art svg {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+@keyframes bosscut-art {
+  0% { transform: translate(-50%, -50%) scale(1.9) translateY(-110px); opacity: 0; }
+  16% { opacity: 1; }
+  46% { transform: translate(-50%, -50%) scale(1.04) translateY(0); opacity: 1; }
+  84% { transform: translate(-50%, -50%) scale(1.01) translateY(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.06) translateY(10px); opacity: 0; }
+}
+/* 이름 — 화면 아래 가운데. 칭호(작게) → 이름(크게) → 태그라인(한 줄) */
+.bosscut__label {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 9%;
+  padding-top: 26px;
+  text-align: center;
+  /* 글자 뒤 어둠 — 시트마다 크기가 달라 초상이 어디까지 내려올지 장담할 수 없다.
+     테두리(-webkit-text-stroke)만으로는 밝은 용 배 위에서 이름이 묻혔다. */
+  background: radial-gradient(120% 150% at 50% 78%, rgba(3, 2, 6, 0.94), rgba(3, 2, 6, 0) 72%);
+  animation: bosscut-label 2.3s cubic-bezier(0.1, 0.9, 0.2, 1) both;
+}
+.bosscut__kicker {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0.34em;
+  color: var(--boss);
+  text-shadow: 0 0 20px var(--boss), 2px 2px 0 var(--bg-0);
+  margin-bottom: 6px;
+}
+.bosscut__name {
+  font-family: var(--font-display);
+  font-size: 82px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 9px var(--bg-0);
+  paint-order: stroke fill;
+  text-shadow: 0 0 52px color-mix(in srgb, var(--boss) 90%, transparent),
+    6px 8px 0 rgba(0, 0, 0, 0.55);
+}
+.bosscut__line {
+  margin-top: 12px;
+  font-size: 17px;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--boss) 40%, #fff);
+  text-shadow: 0 2px 10px #000;
+}
+@keyframes bosscut-label {
+  0% { opacity: 0; transform: translateY(38px) scale(0.94); letter-spacing: 0.2em; }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  86% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-14px) scale(1); }
+}
+/* 격노 컷인은 백색이 아니라 **보스 색** 섬광 — 등장과 한눈에 구분된다 */
+.bosscut__flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  animation: bosscut-flash 0.7s ease-out both;
+}
+.bosscut--enrage .bosscut__flash {
+  background: var(--boss);
+}
+.bosscut--enrage .bosscut__name {
+  animation: bosscut-shake 0.42s steps(2) 3;
+}
+@keyframes bosscut-flash {
+  0% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+@keyframes bosscut-shake {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(7px); }
+}

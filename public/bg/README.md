@@ -15,7 +15,13 @@
 | `hall` | `dark-castle/wall.png` | 960×304 | **기본** — 6~10층 · 봇전 · 온라인 · 타이틀/로그인/결과/런 종료(`.grid-bg--hall`) |
 | `cemetery` | `cemetery/{sky,mountains,graveyard}.png` | 384×224 / 192×179 / 384×123 | 1~5층 (유일한 야외) |
 | `corridor` | `corridor/{far,middle,near,foreground}.png` | 각 224 높이 | 11~14층 |
-| `lava` | `lava/{back,rocks}.png` | 432×240 / 196×240 | **보스 전용** |
+| `lava` | `lava/{back,rocks}.png` | 432×240 / 196×240 | **화염군주 전용** |
+| `abyss` | `abyss/{flesh,rock}.png` | 144×144 / 192×288 | **오버로드 전용** |
+| `sanctum` | `sanctum/nave.png` | 624×192 | **수호기사 전용** |
+
+⚠ **보스 무대는 층이 아니라 몬스터 id가 고른다**(`sceneFor`). 수호기사·화염군주는
+`boss` 칸이 아니라 **엘리트 칸**으로 나오므로 노드 종류로 판정하면 자기 무대를 영영
+못 본다. 어느 보스가 어느 무대를 쓰는지는 `src/game/bosses.ts`의 `CINE[].scene`.
 
 원본 팩은 `assets-raw/`에 있습니다(커밋 안 됨 — 최상위 [.gitignore](../../.gitignore) 참고).
 
@@ -24,6 +30,8 @@
 | `dark-castle` · `lava` | Ansimuz Legacy Collection | <https://ansimuz.itch.io/gothicvania-patreon-collection> |
 | `cemetery` | GothicVania Cemetery | <https://ansimuz.itch.io/gothicvania-cemetery> |
 | `corridor` | Gothicvania Cold Corridors | <https://itch.io/c/313331/gothicvania-packs> |
+| `abyss` | Ansimuz Legacy Collection (Living Tissue Platform + Caverns) | <https://ansimuz.itch.io/gothicvania-patreon-collection> |
+| `sanctum` | GothicVania Church | <https://ansimuz.itch.io/gothic-vania-church> |
 
 전부 같은 작가(ansimuz)라 팔레트·픽셀 크기가 서로 맞습니다 — 이게 다른 팩 대신
 이걸 고른 이유입니다. **상업·비상업 게임 프로젝트에 사용 가능하고 수정도 허용**되며
@@ -32,6 +40,10 @@
 
 ## 규격 — 왜 이 값인가
 
+- ⚠ **한 장은 예외로 양방향 타일이다.** `abyss/flesh.png`(144×144)는 좌우뿐 아니라
+  위아래로도 이어지게 그려져 있어 `repeat-x`가 아니라 `repeat`을 쓴다. 배율도 ×3
+  (432px)인데, ×2(288px)면 판 높이 302px 안에 두 번째 줄이 들어와 가로 이음매가
+  뚜렷하게 보인다.
 - **가로 반복(`repeat-x`)이 전제다.** 완성된 한 장면이 아니라 좌우로 이어 붙게
   그려진 **띠**입니다. 화면 폭이 얼마든 채워집니다.
 - **배율은 정수배만 씁니다**(`auto 608px` = 304×2, `auto 448px` = 224×2 …).

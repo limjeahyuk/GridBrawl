@@ -83,7 +83,6 @@ export function LoginScreen() {
           {error && <p className="login__error">{error}</p>}
         </div>
       </div>
-      <div className="scanlines" />
     </div>
   )
 }

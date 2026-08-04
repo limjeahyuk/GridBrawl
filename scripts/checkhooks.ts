@@ -7,10 +7,10 @@
 // ---------------------------------------------------------------------------
 import { CardBattle, planAffordable } from '../src/battle/engine'
 import { decideAI } from '../src/battle/ai'
-import { COMMON_CARDS, ENERGY_REGEN } from '../src/battle/cards'
+import { COMMON_CARDS, ENERGY_REGEN, deckFor } from '../src/battle/cards'
 import { SHEETS, placeSprite } from '../src/art/sprites'
 import { faceToward } from '../src/ui/screens/BattleScreen'
-import { getChar, type CharacterDef, type Passive } from '../src/data/roster'
+import { getChar, ROSTER, type CharacterDef, type Passive } from '../src/data/roster'
 import { mergeRelics, mergeRunMods } from '../src/game/relics'
 import {
   LADDER_FLOORS,
@@ -26,7 +26,10 @@ import {
   rollShop,
   startRun,
 } from '../src/game/run'
-import { RUN_CARD_BY_ID } from '../src/game/runcards'
+import { RUN_CARDS, RUN_CARD_BY_ID } from '../src/game/runcards'
+import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
+import { BOSS_CARDS } from '../src/game/bosscards'
+import { getMonster } from '../src/game/monsters'
 import type { CardDef } from '../src/battle/types'
 
 let failed = 0
@@ -686,6 +689,69 @@ console.log('\n회귀 — 옵션을 안 주면 예전과 같아야 한다')
   check('startHp — 지정한 쪽만 이월', [b.state.hp[0], b.state.hp[1]], [77, b.maxHp[1]])
   const c = new CardBattle('warrior', 'warrior', { startHp: [99999, -5] })
   check('startHp는 1..maxHp로 클램프', [c.state.hp[0], c.state.hp[1]], [c.maxHp[0], 1])
+}
+
+// --- 보스 전용 패턴·연출 -----------------------------------------------------
+// 보스는 스크립트가 카드 id를 **문자열로** 들고 있어서, 카드 이름을 바꾸거나 지우면
+// 타입 검사에 안 걸리고 조용히 그 슬롯이 비어 버린다(플랜 3장 → 2장). 여기서 잡는다.
+console.log('\n보스 전용 패턴 (bosses.ts + bosscards.ts)')
+{
+  const ctxs = [
+    { turn: 1, hpFrac: 1 }, { turn: 2, hpFrac: 1 }, { turn: 3, hpFrac: 1 }, { turn: 4, hpFrac: 1 },
+    { turn: 1, hpFrac: 0.2 }, { turn: 2, hpFrac: 0.2 },
+  ]
+  let missing = 0
+  let dupAttack = 0
+  let shortPlan = 0
+  for (const id of BOSS_IDS) {
+    for (const ctx of ctxs) {
+      const action = bossAction(id, ctx)!
+      const plan = bossPlan(id, ctx)!
+      // ① 모든 카드 id가 해석돼야 한다 — 하나라도 못 찾으면 플랜이 짧아진다.
+      if (plan.length !== action.plan.length) missing++
+      if (plan.length !== 3) shortPlan++
+      // ② 같은 공격 카드를 한 턴에 두 번 넣지 않는다. 플레이어에겐 UI·AI가 이걸
+      //    강제하므로(`placedNoRepeat`) 보스만 예외가 되면 불공평하다.
+      const atks = plan.filter((c) => c.kind === 'attack').map((c) => c.id)
+      if (new Set(atks).size !== atks.length) dupAttack++
+    }
+  }
+  check('보스 플랜의 카드 id가 전부 해석된다', missing, 0)
+  check('보스 플랜은 항상 3장', shortPlan, 0)
+  check('한 턴에 같은 공격 카드를 두 번 쓰지 않는다', dupAttack, 0)
+
+  // ③ 컷인의 격노 문턱이 스크립트의 페이즈 전환과 **같아야** 한다. 어긋나면
+  //    "격노 컷인이 떴는데 행동은 그대로"가 되어 연출이 거짓말이 된다.
+  const mismatched = BOSS_IDS.filter((id) => {
+    const cine = bossCinematic(id, id)!
+    const justAbove = bossAction(id, { turn: 1, hpFrac: cine.enrageAt + 0.02 })!
+    const atOrBelow = bossAction(id, { turn: 1, hpFrac: cine.enrageAt })!
+    return justAbove.phase !== 1 || atOrBelow.phase !== 2
+  })
+  check('격노 문턱 = 페이즈 전환 지점', mismatched, [])
+
+  // ④ 보스 카드는 **플레이어에게 새어 나가면 안 된다**. 덱 빌더(deckFor)·런 보상
+  //    풀(RUN_CARDS) 어느 쪽에도 들어 있으면 안 된다.
+  const playerPool = new Set([
+    ...ROSTER.flatMap((c) => deckFor(c).map((x) => x.id)),
+    ...RUN_CARDS.map((c) => c.id),
+  ])
+  check('보스 카드가 플레이어 풀에 없다', BOSS_CARDS.filter((c) => playerPool.has(c.id)).map((c) => c.id), [])
+
+  // ⑤ 보스마다 무대가 달라야 한다 — 셋이 같은 배경이면 "어떤 보스인가"를 못 말한다.
+  const scenes = BOSS_IDS.map((id) => bossScene(id))
+  check('보스마다 전용 무대', new Set(scenes).size, BOSS_IDS.length)
+  check('무대가 빠진 보스가 없다', scenes.filter((s) => !s), [])
+
+  // ⑥ 몬스터 덱과 스크립트가 같은 카드를 봐야 한다(도감·AI 폴백이 실제 행동과 일치).
+  const outOfDeck: string[] = []
+  for (const id of BOSS_IDS) {
+    const deck = new Set(getMonster(id).deckCardIds)
+    for (const ctx of ctxs)
+      for (const c of bossPlan(id, ctx)!)
+        if (c.kind === 'attack' && !deck.has(c.id)) outOfDeck.push(`${id}:${c.id}`)
+  }
+  check('스크립트가 쓰는 공격은 몬스터 덱에도 있다', [...new Set(outOfDeck)], [])
 }
 
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)

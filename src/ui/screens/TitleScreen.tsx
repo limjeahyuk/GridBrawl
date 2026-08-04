@@ -106,7 +106,6 @@ export function TitleScreen({
           </div>
         </div>
       )}
-      <div className="scanlines" />
     </div>
   )
 }

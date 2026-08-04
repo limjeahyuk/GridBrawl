@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 import { COMMON_CARDS } from '../battle/cards'
 import { getChar, ROSTER, type CharacterDef, type Passive } from '../data/roster'
+import { BOSS_CARDS } from './bosscards'
 import type { Archetype } from '../battle/ai'
 import type { CardDef, Difficulty } from '../battle/types'
 
@@ -35,8 +36,15 @@ export interface MonsterDef {
   note: string // 정체성 한 줄(보상/조우 안내용)
 }
 
-// 모든 카드(공용 + 전 캐릭터 고유)를 id로 조회 — 몬스터 덱 해석용.
-const ALL_CARDS: CardDef[] = [...COMMON_CARDS, ...ROSTER.flatMap((c) => c.cards)]
+// 모든 카드(공용 + 전 캐릭터 고유 + 보스 전용)를 id로 조회 — 몬스터 덱 해석용.
+// ⚠ 보스 전용 카드(`bosscards.ts`)는 **여기서만** 풀에 들어간다. 플레이어 쪽
+// 해석기(`decks.ts`의 `deckFor` · `runbattle.ts`의 런 덱)는 이 목록을 쓰지 않으므로
+// 보스 카드가 덱 빌더·보상에 새어 나가지 않는다.
+const ALL_CARDS: CardDef[] = [
+  ...COMMON_CARDS,
+  ...ROSTER.flatMap((c) => c.cards),
+  ...BOSS_CARDS,
+]
 const cardById = (id: string): CardDef | undefined => ALL_CARDS.find((c) => c.id === id)
 const resolveCards = (ids: string[]): CardDef[] =>
   ids.map(cardById).filter((c): c is CardDef => !!c)
@@ -75,7 +83,9 @@ export const MONSTERS: MonsterDef[] = [
   {
     id: 'sentry',
     behavior: 'kiter',
-    name: '센트리',
+    // 2026-08-05: '센트리'(포탑)는 사이버 시절 이름이었다 — 그림이 떠 있는 눈이라
+    // 이름을 거기 맞췄다. id는 저장 상태·문서가 물고 있어 그대로 둔다.
+    name: '감시안',
     baseArtId: 'mage',
     spriteId: 'flying-eye',
     tier: 2,
@@ -176,8 +186,11 @@ export const MONSTERS: MonsterDef[] = [
     startEnergy: 70,
     aiLevel: 'hard',
     passive: { turnEnergy: 15, turnShield: 10, damageReduction: 6, revive: 60 },
-    deckCardIds: ['mag-doom', 'war-oath', 'arc-pin', 'c-guard'],
-    note: '보스 — 광역기·방벽·부활을 두른 복합 위협.',
+    // 전용 카드(2026-08-05) — 실제 행동은 `bosses.ts` 스크립트가 정하고, 이 목록은
+    // 도감 표시 + 스크립트가 비었을 때의 AI 폴백이다. 둘이 어긋나면 안 되므로 같은
+    // 카드로 채운다.
+    deckCardIds: ['b-abyss-maw', 'b-abyss-grasp', 'b-abyss-tide', 'b-abyss-brand'],
+    note: '보스 — 도망쳐도 끌어당겨 삼킨다. 보호막이 통하지 않는다.',
   },
   // --- 확장 세트(2026-07-24) ---
   {
@@ -323,8 +336,8 @@ export const MONSTERS: MonsterDef[] = [
     // 방벽을 낮춘다(2026-07-30 밸런스): 매 턴 보호막 20 + 피해감소 8이면 플레이어
     // 화력이 통째로 먹혀 15턴 독안개 소모전이 됐다. 뚫리는 벽으로 조정.
     passive: { turnShield: 12, damageReduction: 8, turnEnergy: 8 },
-    deckCardIds: ['war-oath', 'war-wall', 'war-bash'],
-    note: '엘리트 — 방벽을 올렸다 열며 반격한다.',
+    deckCardIds: ['b-ward-bulwark', 'b-ward-riposte', 'b-ward-lance', 'b-ward-verdict'],
+    note: '엘리트 — 방벽을 올렸다 열며 보호막째 부순다.',
   },
   {
     id: 'pyrelord',
@@ -337,8 +350,8 @@ export const MONSTERS: MonsterDef[] = [
     startEnergy: 65,
     aiLevel: 'hard',
     passive: { attackBonus: 8, revive: 50, turnEnergy: 10 },
-    deckCardIds: ['mag-doom', 'mag-flame', 'arc-pin'],
-    note: '엘리트 — 불길을 모았다 인페르노로 폭발시킨다.',
+    deckCardIds: ['b-pyre-inferno', 'b-pyre-pillar', 'b-pyre-lash', 'b-pyre-ember'],
+    note: '엘리트 — 불씨를 모을수록 무거워진다. 길게 끌면 인페르노가 터진다.',
   },
 ]
 

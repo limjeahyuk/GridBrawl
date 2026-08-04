@@ -8,9 +8,10 @@ export function statBars(c: CharacterDef): { label: string; v: number }[] {
   const dmg = Math.max(...atks.map((a) => a.damage ?? 0))
   const reach = Math.max(...atks.flatMap((a) => (a.range ?? []).map((o) => o.df)))
   return [
-    { label: 'HEALTH', v: clamp01((c.maxHp - 96) / 50) },
-    { label: 'POWER', v: clamp01((dmg - 16) / 40) },
-    { label: 'RANGE', v: clamp01((reach - 1) / 4) },
-    { label: 'ENERGY', v: clamp01((c.startEnergy - 38) / 18) },
+    // 라벨은 한국어(2026-08-05) — 영문 대문자 HUD는 사이버 시절 표기였다.
+    { label: '체력', v: clamp01((c.maxHp - 96) / 50) },
+    { label: '공격', v: clamp01((dmg - 16) / 40) },
+    { label: '사거리', v: clamp01((reach - 1) / 4) },
+    { label: '기력', v: clamp01((c.startEnergy - 38) / 18) },
   ]
 }

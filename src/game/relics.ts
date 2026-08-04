@@ -115,7 +115,10 @@ const genericRelics: Relic[] = [
   { id: 'feather', name: '불꽃 깃털', icon: '🪶', rarity: 'epic', desc: '전투당 한 번, 체력 40으로 되살아난다.', effect: { revive: 40 } },
   { id: 'thorns', name: '가시 갑옷', icon: '🌵', rarity: 'common', desc: '피해를 입으면 공격자에게 8 반사.', effect: { thorns: 8 } },
   { id: 'heart', name: '심장 강화', icon: '❤️', rarity: 'common', desc: '최대 체력 +30.', effect: { maxHpBonus: 30 } },
-  { id: 'battery', name: '여분의 심지', icon: '🕯', rarity: 'common', desc: '매 턴 기력 +8.', effect: { turnEnergy: 8 } },
+  // ⚠ **이스터에그 — 일부러 남긴 사이버 잔재**(2026-08-05). 리스킨 때 '여분의 심지'로
+  // 갈았던 걸 되돌린 것이다. 세계관을 벗어난 물건이 하나쯤 굴러다니는 게 재미있다는
+  // 사용자 결정. 짝은 런 카드 `r-railgun`('레일건'). **정리 대상이 아니다 — 고치지 말 것.**
+  { id: 'battery', name: '예비 배터리', icon: '🔋', rarity: 'common', desc: '매 턴 기력 +8. 어느 세계에서 굴러떨어진 쇳덩이. 정체는 아무도 모른다.', effect: { turnEnergy: 8 } },
   { id: 'nanobot', name: '치유의 이끼', icon: '🌿', rarity: 'rare', desc: '매 턴 체력 +5.', effect: { regen: 5 } },
   { id: 'rage', name: '분노의 인장', icon: '😤', rarity: 'rare', desc: '내 공격 피해 +6.', effect: { attackBonus: 6 } },
   { id: 'plating', name: '두꺼운 판금', icon: '🪨', rarity: 'common', desc: '받는 피해 -6.', effect: { damageReduction: 6 } },

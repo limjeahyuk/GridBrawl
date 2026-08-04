@@ -62,7 +62,6 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>
-        <div className="scanlines" />
       </div>
     )
   }
@@ -118,7 +117,6 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
       <button className="btn shop__leave" onClick={() => onDone(advanceFloor(cur))}>
         상점을 떠난다 ▶
       </button>
-      <div className="scanlines" />
     </div>
   )
 }
