@@ -172,21 +172,93 @@
    스캔광 한 줄(floor-sweep)은 걷어냈다 — 일정한 속도로 지나가는 빛줄기는
    그 자체가 SF 신호라, 돌바닥 위에서는 계속 기계처럼 읽혔다. 대신 횃불이
    아주 느리게 밝기만 흔들린다. */
+/* 2026-08-03: 그라디언트만으로는 결국 "빈 무대"라, 뒤에 **그려진 배경**을 깔았다.
+   에셋은 전부 Gothicvania 계열(ansimuz) — 지금 팔레트와 같은 색이라 리스킨을
+   거스르지 않는다. 장면 목록·출처·라이선스는 public/bg/README.md.
+
+   ⚠ **그림과 빛을 두 겹으로 나눠 놨다. 합치지 말 것.**
+     `.boardfloor`      — 그림만. **장면 클래스(`--corridor` 등)가 통째로 갈아 끼운다**
+     `.boardfloor::before` — 스크림·비네트·달빛·횃불. 장면이 뭐든 **항상 같다**
+   전에는 한 덩어리였는데, 장면이 4개가 되면서 장면마다 광원 4줄을 복사하게 됐다.
+   나누면 장면 규칙은 `background` 한 줄로 끝난다.
+   스크림(가장 위 어두운 판)이 핵심이다 — 이게 없으면 배경의 밝은 부분(성당 창문·
+   묘지 달·용암)이 스프라이트보다 밝아져 **파이터가 배경에 묻힌다.**
+
+   ⚠ 배율은 **정수배 고정**(원본 224 → 448 = ×2 식). 캐릭터 스프라이트가 정수
+   배율이라 배경만 소수 배율이면 픽셀 크기가 어긋난다. `image-rendering: pixelated`와
+   짝이니 한쪽만 바꾸지 말 것. 바닥선을 맞추려고 전부 `center bottom`으로 붙인다. */
 .boardfloor {
   position: absolute;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  image-rendering: pixelated;
+  /* 장면마다 밝기가 달라서 스크림 세기를 변수로 뺐다 — 밝고 채도 높은 장면일수록
+     더 눌러야 파이터가 안 묻힌다. 기준은 "스프라이트가 배경보다 밝은가". */
+  --floor-scrim: 40%;
+  /* 기본 장면 = 고성 복도. 아래 장면 클래스가 이 한 줄만 덮어쓴다. */
+  background: url('/bg/dark-castle/wall.png') center bottom / auto 608px repeat-x;
+}
+
+/* 장면 — `BattleScreen`의 `scene` prop이 고른다(`sceneFor()` in run.ts).
+   층마다 배경이 바뀌어야 15층을 오르는 게 길게 안 느껴진다.
+
+   ⚠ **판이 302px밖에 안 된다**(`.board`, 실측). 원본은 224~304px짜리를 ×2로 키워
+   쓰므로 **대부분 화면 밖으로 잘린다** — 어느 부분이 남는지를 `background-position`이
+   정한다. 그래서 층 하나를 더하거나 배율을 바꾸면 반드시 눈으로 확인해야 한다. */
+.boardfloor--corridor {
+  /* 차가운 회랑(Cold Corridors) — 앞기둥 → 아치 → 먼 복도 순으로 겹친다.
+     원본이 파랑·보라로 밝아서 스크림을 기본보다 올린다. */
+  --floor-scrim: 52%;
+  background:
+    url('/bg/corridor/foreground.png') center bottom / auto 448px repeat-x,
+    url('/bg/corridor/near.png') center bottom / auto 448px repeat-x,
+    url('/bg/corridor/middle.png') center bottom / auto 448px repeat-x,
+    url('/bg/corridor/far.png') center bottom / auto 448px repeat-x;
+}
+.boardfloor--cemetery {
+  /* 묘지 — 유일한 야외 장면. 달 → 산맥 → 무덤 순.
+     ⚠ 산맥·무덤은 **거의 검은 실루엣**이라(밝은 하늘 위에 얹으라고 그려진 것)
+     바닥에 그대로 붙이면 판을 새까맣게 덮어 장면이 사라진다. 그래서 두 층을
+     `calc(100% + N)`으로 **화면 아래로 밀어** 윗부분만 남기고, 하늘은 위에
+     붙여 달이 보이게 한다. 이 세 값이 이 장면의 전부다. */
+  --floor-scrim: 50%;
+  background:
+    url('/bg/cemetery/graveyard.png') center calc(100% + 110px) / auto 246px repeat-x,
+    url('/bg/cemetery/mountains.png') center calc(100% + 190px) / auto 358px repeat-x,
+    url('/bg/cemetery/sky.png') center top / auto 448px repeat-x,
+    linear-gradient(var(--bg-0), var(--bg-0));
+}
+.boardfloor--lava {
+  /* 용암 — 보스 전용. 유일하게 붉은 장면이라 그 자체가 "여기가 끝" 신호다. */
+  --floor-scrim: 44%;
+  background:
+    url('/bg/lava/rocks.png') center bottom / auto 480px repeat-x,
+    url('/bg/lava/back.png') center bottom / auto 480px repeat-x;
+}
+
+/* 광원·스크림 — 장면 위에 항상 같은 값으로 덮인다(위 주석 참고). */
+.boardfloor::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(
-      120% 72% at 50% 106%,
-      color-mix(in srgb, var(--neon-orange) 13%, transparent),
-      transparent 70%
-    ),
+        120% 72% at 50% 106%,
+        color-mix(in srgb, var(--neon-orange) 13%, transparent),
+        transparent 70%
+      )
+      no-repeat,
     radial-gradient(
-      90% 60% at 50% -12%,
-      color-mix(in srgb, var(--neon-blue) 9%, transparent),
-      transparent 70%
+        90% 60% at 50% -12%,
+        color-mix(in srgb, var(--neon-blue) 9%, transparent),
+        transparent 70%
+      )
+      no-repeat,
+    radial-gradient(125% 105% at 50% 55%, transparent 32%, rgba(6, 5, 10, 0.8) 100%) no-repeat,
+    linear-gradient(
+      color-mix(in srgb, var(--bg-0) var(--floor-scrim), transparent),
+      color-mix(in srgb, var(--bg-0) var(--floor-scrim), transparent)
     );
 }
 /* 횃불 일렁임 — 위치가 아니라 밝기만 흔든다(움직이면 다시 스캔광이 된다). */

@@ -29,7 +29,7 @@ export function ResultScreen({
 
   return (
     <div className={`screen result result--${cfg.cls}`}>
-      <div className="grid-bg" />
+      <div className="grid-bg grid-bg--hall" />
       <div className="result__content" style={{ ['--accent' as string]: player.accent }}>
         <div className="result__sub neon-text">{cfg.sub}</div>
         <h1 className="result__title">{cfg.title}</h1>

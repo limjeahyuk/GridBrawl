@@ -102,7 +102,11 @@ export const COMMON_CARDS: CardDef[] = [
   },
 ]
 
-/** The full selectable card set for a fighter: common cards + their uniques. */
+/**
+ * The full selectable card set for a fighter: common cards + 직업 기본기 + uniques.
+ * ⚠ **기본기를 빼면 안 된다** — 멀티 락스텝의 상대 플랜 복원(`net/session.ts`)과 AI가
+ * 이 목록으로 카드 id를 되찾으므로, 빠진 카드는 조용히 사라진다.
+ */
 export function deckFor(char: CharacterDef): CardDef[] {
-  return [...COMMON_CARDS, ...char.cards]
+  return [...COMMON_CARDS, ...char.basics, ...char.cards]
 }

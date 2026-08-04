@@ -20,11 +20,22 @@ import { join, dirname } from 'node:path'
 
 // ---- PNG ------------------------------------------------------------------
 
+/**
+ * 8bit 비인터레이스 PNG를 RGBA 버퍼로 푼다. 지원하는 색 방식은 두 가지:
+ *   - **트루컬러+알파(colorType 6)** — LuizMelo·Sven Thole 계열이 이쪽
+ *   - **팔레트(colorType 3)** — ansimuz(Gothicvania) 계열이 이쪽. 팔레트는
+ *     PLTE에서 RGB를, tRNS에서 인덱스별 알파를 읽어 RGBA로 펴 준다.
+ * ⚠ 픽셀당 바이트 수가 다르므로(팔레트 1 · RGBA 4) 언필터의 "왼쪽 이웃" 거리도
+ *   같이 달라진다. 이 값이 어긋나면 이미지가 조용히 비스듬히 뭉개진다.
+ */
 function decodePng(buf) {
   if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error('PNG가 아님')
   let pos = 8
   let w = 0
   let h = 0
+  let colorType = 6
+  let plte = null
+  let trns = null
   const idat = []
   while (pos < buf.length) {
     const len = buf.readUInt32BE(pos)
@@ -33,24 +44,28 @@ function decodePng(buf) {
     if (type === 'IHDR') {
       w = data.readUInt32BE(0)
       h = data.readUInt32BE(4)
-      if (data[8] !== 8 || data[9] !== 6 || data[12] !== 0)
-        throw new Error('8bit RGBA 비인터레이스 PNG만 지원한다')
-    } else if (type === 'IDAT') idat.push(data)
+      colorType = data[9]
+      if (data[8] !== 8 || data[12] !== 0 || (colorType !== 6 && colorType !== 3))
+        throw new Error('8bit RGBA 또는 8bit 팔레트 PNG(비인터레이스)만 지원한다')
+    } else if (type === 'PLTE') plte = Buffer.from(data)
+    else if (type === 'tRNS') trns = Buffer.from(data)
+    else if (type === 'IDAT') idat.push(data)
     else if (type === 'IEND') break
     pos += 12 + len
   }
+  const bpp = colorType === 3 ? 1 : 4 // 픽셀당 바이트 = 언필터의 왼쪽 이웃 거리
   const raw = inflateSync(Buffer.concat(idat))
-  const stride = w * 4
-  const px = Buffer.alloc(stride * h)
+  const stride = w * bpp
+  const lines = Buffer.alloc(stride * h)
   for (let y = 0; y < h; y++) {
     const ft = raw[y * (stride + 1)]
     const line = raw.subarray(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride)
-    const cur = px.subarray(y * stride, (y + 1) * stride)
-    const prev = y > 0 ? px.subarray((y - 1) * stride, y * stride) : null
+    const cur = lines.subarray(y * stride, (y + 1) * stride)
+    const prev = y > 0 ? lines.subarray((y - 1) * stride, y * stride) : null
     for (let x = 0; x < stride; x++) {
-      const a = x >= 4 ? cur[x - 4] : 0
+      const a = x >= bpp ? cur[x - bpp] : 0
       const b = prev ? prev[x] : 0
-      const c = prev && x >= 4 ? prev[x - 4] : 0
+      const c = prev && x >= bpp ? prev[x - bpp] : 0
       let v = line[x]
       if (ft === 1) v = (v + a) & 255
       else if (ft === 2) v = (v + b) & 255
@@ -64,6 +79,17 @@ function decodePng(buf) {
       } else if (ft !== 0) throw new Error('알 수 없는 필터 ' + ft)
       cur[x] = v
     }
+  }
+  if (colorType === 6) return { w, h, px: lines }
+  if (!plte) throw new Error('팔레트 PNG인데 PLTE 청크가 없다')
+  // 인덱스 → RGBA. tRNS가 없거나 짧으면 그 인덱스는 불투명이다(PNG 규격).
+  const px = Buffer.alloc(w * h * 4)
+  for (let i = 0; i < w * h; i++) {
+    const idx = lines[i]
+    px[i * 4] = plte[idx * 3]
+    px[i * 4 + 1] = plte[idx * 3 + 1]
+    px[i * 4 + 2] = plte[idx * 3 + 2]
+    px[i * 4 + 3] = trns && idx < trns.length ? trns[idx] : 255
   }
   return { w, h, px }
 }
@@ -113,6 +139,35 @@ const blit = (dst, dw, sx, sy, src, sw, sh, dx, dy) => {
     const from = ((sy + y) * sw + sx) * 4
     src.copy(dst, ((dy + y) * dw + dx) * 4, from, from + sw * 4)
   }
+}
+
+/**
+ * 클립마다 캔버스 크기가 다른 팩을 하나로 맞춘다(Gothicvania demon: 대기 256×176,
+ * 공격 312×220). 뒤따르는 공통 bbox 크롭이 **모든 프레임이 같은 크기**임을 전제로
+ * 해서, 안 맞으면 버퍼를 넘겨 읽고 터진다.
+ *
+ * ⚠ 정렬이 핵심이다 — **가로는 가운데, 세로는 아래**에 맞춘다. 서 있는 캐릭터는
+ * 발이 닿는 선과 몸통 중심이 기준이라, 좌상단에 맞추면 큰 캔버스 클립에서
+ * 캐릭터가 공중에 뜨거나 옆으로 밀린다.
+ */
+function padToCommonCanvas(clips) {
+  let mw = 0
+  let mh = 0
+  for (const frames of Object.values(clips))
+    for (const f of frames) {
+      mw = Math.max(mw, f.w)
+      mh = Math.max(mh, f.h)
+    }
+  const out = {}
+  for (const [clip, frames] of Object.entries(clips)) {
+    out[clip] = frames.map((f) => {
+      if (f.w === mw && f.h === mh) return f
+      const px = Buffer.alloc(mw * mh * 4)
+      blit(px, mw, 0, 0, f.px, f.w, f.h, Math.floor((mw - f.w) / 2), mh - f.h)
+      return { w: mw, h: mh, px }
+    })
+  }
+  return out
 }
 
 /** 자른 프레임 하나를 새 버퍼로 뽑는다. */
@@ -342,6 +397,107 @@ const JOBS = [
         death: { from: 'Recover', reverse: true },
       }),
   })),
+
+  // --- Gothicvania 계열 (ansimuz) -------------------------------------------
+  // 배경과 같은 팩에서 나온 몬스터들. **직업 시트를 빌려 쓰던 세 자리**
+  // (오우거·센트리·골렘)를 여기서 메운다.
+  // ⚠ 이 팩들은 hurt·death 클립이 없다. `sprites.ts`의 폴백 사슬이
+  //   attack1 → idle로 대신하므로 동작은 하고, 피격·사망 때 대기 자세가 나온다.
+  {
+    id: 'ogre',
+    load: () =>
+      loadFromFolders(`${RAW}/Legacy Collection/Assets/Gothicvania/Characters/Ogre/Sprites`, {
+        idle: 'Idle',
+        run: 'walk',
+        attack1: 'Attack',
+      }),
+  },
+  {
+    // 센트리 — 떠 있는 눈. 애니메이션이 하나뿐이라 세 클립이 같은 프레임을 쓴다.
+    id: 'flying-eye',
+    load: () =>
+      loadFromFolders(
+        `${RAW}/Legacy Collection/Assets/Gothicvania/Characters/flying-eye-demon`,
+        { idle: 'Sprites', run: 'Sprites', attack1: 'Sprites' },
+      ),
+  },
+  {
+    // 골렘 — 성당의 석상 천사. 돌로 된 거구라 골렘 자리에 그대로 맞는다.
+    id: 'angel',
+    load: () =>
+      loadFromFolders(`${RAW}/gothicvania church files/Assets/SPRITES/angel`, {
+        idle: 'idle/sprites',
+        attack1: 'attack/sprites',
+      }),
+  },
+  // --- 보스 3종 (Gothicvania) -----------------------------------------------
+  // tier4 셋이 일반 몬스터와 같은 시트를 돌려 쓰고 있었다. 보스는 첫인상이 전부라
+  // 여기서 갈라 낸다. 셋 다 Legacy Collection 안에 있던 것들이다.
+  {
+    id: 'terrible-knight', // 수호기사 — 이 팩엔 드물게 Hurt까지 있다
+    load: () =>
+      loadFromFolders(
+        `${RAW}/Legacy Collection/Assets/Gothicvania/Characters/Terrible Knight/Sprites`,
+        {
+          idle: 'Idle',
+          run: 'Run',
+          attack1: 'SwordSlash',
+          attack2: 'AirSwordSlash',
+          attack3: 'CrouchSwordSlash',
+          block: 'Crouch',
+          hurt: 'Hurt',
+        },
+      ),
+  },
+  {
+    id: 'demon', // 화염군주 — 브레스 동작이 따로 있다
+    load: () =>
+      loadFromFolders(`${RAW}/Legacy Collection/Assets/Gothicvania/Characters/demon-Files/Sprites`, {
+        idle: 'Idle',
+        run: 'Idle', // 걷는 동작이 없다
+        attack1: 'DemonAttack',
+        attack2: 'DemonAttackBreath',
+      }),
+  },
+  {
+    id: 'dragon', // 오버로드 — 최종 보스. 꼬리치기 + 브레스
+    load: () =>
+      loadFromFolders(
+        `${RAW}/Legacy Collection/Assets/Gothicvania/Characters/Grotto-escape-2-boss-dragon/sprites`,
+        { idle: 'idle', run: 'idle', attack1: 'tail', attack2: 'breath' },
+      ),
+  },
+  {
+    /**
+     * 골렘 — 마지막까지 직업 시트를 빌려 쓰던 자리(Mecha-stone Golem, Kronovi).
+     * 낱장이 아니라 **1000×1000 격자 시트 한 장**이고 프레임은 100×100, 10열이다.
+     * 행별 구성(직접 세어 확인):
+     *   0행 대기 4 · 1행 발광 8 · 2행 원거리 9 · 3행 웅크리기 8
+     *   4행 근접 7 · 5행 레이저 준비 7 · 6행 강화 10 · 7~8행 파괴 14
+     * ⚠ **걷는 동작이 없다** — `run`을 대기로 돌려 쓴다(원본에 없어서지 실수가 아님).
+     */
+    id: 'golem',
+    load: () =>
+      loadFromGrid(`${RAW}/Mecha-stone Golem 0.1/PNG sheet/Character_sheet.png`, 100, 100, {
+        idle: [0, 4],
+        run: [0, 4],
+        attack1: [40, 7], // 근접 — 팔을 휘두른다
+        attack2: [20, 9], // 원거리 — 팔이 쭉 뻗는다
+        attack3: [50, 7], // 레이저 준비
+        block: [30, 8], // 몸을 말아 바위가 된다
+        death: [70, 14],
+      }),
+  },
+  {
+    // 주술사 — 시전 동작(Fire)이 따로 있는 몇 안 되는 팩. `evil-wizard` 한 시트를
+    // 네 몬스터가 돌려 쓰던 걸 여기서 하나 갈라 낸다.
+    id: 'church-wizard',
+    load: () =>
+      loadFromFolders(`${RAW}/gothicvania church files/Assets/SPRITES/wizard`, {
+        idle: 'Idle/sprites',
+        attack1: 'Fire/sprites',
+      }),
+  },
 ]
 
 // ---- 실행 ------------------------------------------------------------------
@@ -354,6 +510,8 @@ for (const job of JOBS) {
     console.log(`✗ ${job.id}: ${e.message} — 건너뜀`)
     continue
   }
+
+  clips = padToCommonCanvas(clips)
 
   // 전 클립 공통 bbox로 잘라야 클립이 바뀔 때 캐릭터가 안 튄다
   let x0 = Infinity

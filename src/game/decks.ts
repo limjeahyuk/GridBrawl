@@ -18,18 +18,23 @@ export const DECK_SIZE = 7
 
 const byId = (id: string): CardDef | undefined => COMMON_CARDS.find((c) => c.id === id)
 
-/** 모든 덱에 항상 들어가는 고정 카드 — 이동 4방향 + 기본 공격 + 기본 지원 2종. */
-export const FIXED_CARDS: CardDef[] = [
-  'm-up',
-  'm-down',
-  'm-right',
-  'm-left',
-  'c-strike',
-  'c-brace',
-  'c-energy',
-]
+/** 고정 카드 중 캐릭터와 무관한 6장 — 이동 4방향 + 기본 지원 2종. */
+const FIXED_COMMON: CardDef[] = ['m-up', 'm-down', 'm-right', 'm-left', 'c-brace', 'c-energy']
   .map(byId)
   .filter((c): c is CardDef => !!c)
+
+/**
+ * 모든 덱에 항상 들어가는 고정 카드 7장 = 공용 6장 + **그 직업의 기본 공격**.
+ * 예전엔 일곱 번째가 공용 `c-strike`라 세 직업의 기본기가 똑같았다(2026-08-04 변경).
+ * ⚠ 캐릭터를 알아야 하므로 상수가 아니라 함수다 — 덱 화면·조립 양쪽이 이걸 쓴다.
+ */
+export function fixedCardsFor(charId: string): CardDef[] {
+  const basic = getChar(charId).basics[0]
+  return basic ? [...FIXED_COMMON, basic] : FIXED_COMMON
+}
+
+/** 고정 카드 장수(고른 카드 7장과 합쳐 14장). */
+export const FIXED_COUNT = FIXED_COMMON.length + 1
 
 /** 공용 선택 풀(캐릭터 무관): 대시 2종 + 대각 이동 4종 + 견제 사격 + 더 좋은 방어 + 힐. */
 const COMMON_POOL_IDS = [
@@ -44,10 +49,15 @@ const COMMON_POOL_IDS = [
   'c-repair',
 ]
 
-/** 특정 캐릭터가 덱에 담을 수 있는 선택 풀 = 공용 풀 + 그 캐릭터 고유 카드 4장. */
+/**
+ * 특정 캐릭터가 덱에 담을 수 있는 선택 풀 = 공용 풀 + **그 직업의 나머지 기본기 2장**
+ * + 그 캐릭터 고유 카드. 기본기 첫 장은 고정 카드라 여기 넣지 않는다(중복 방지).
+ * ⚠ 공용 `c-shot`은 풀에 남겨 뒀다 — 빼면 그걸 고른 **저장 덱이 조용히 6장으로 줄어든다**.
+ */
 export function poolFor(charId: string): CardDef[] {
   const common = COMMON_POOL_IDS.map(byId).filter((c): c is CardDef => !!c)
-  return [...common, ...getChar(charId).cards]
+  const char = getChar(charId)
+  return [...common, ...char.basics.slice(1), ...char.cards]
 }
 
 /** 덱을 실제 전투 카드 목록으로 조립: 고정 7 + 고른 카드(풀에서 해석). */
@@ -56,7 +66,7 @@ export function assembleDeck(deck: Deck): CardDef[] {
   const chosen = deck.cardIds
     .map((id) => pool.find((c) => c.id === id))
     .filter((c): c is CardDef => !!c)
-  return [...FIXED_CARDS, ...chosen]
+  return [...fixedCardsFor(deck.charId), ...chosen]
 }
 
 // --- 프리셋(봇 덱 + 저장된 덱이 없을 때의 기본 덱) --------------------------

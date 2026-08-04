@@ -17,7 +17,7 @@ export function RunEndScreen({
   const char = getChar(run.charId)
   return (
     <div className="screen runend">
-      <div className="grid-bg" />
+      <div className="grid-bg grid-bg--hall" />
       <div className="runend__content" style={{ ['--accent' as string]: char.accent }}>
         <div className={`runend__banner ${won ? 'runend__banner--win' : 'runend__banner--loss'}`}>
           {won ? '런 클리어!' : '쓰러졌다'}

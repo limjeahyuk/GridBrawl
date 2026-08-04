@@ -70,6 +70,16 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
           </div>
 
           <div className="codex__cards">
+            <div className="codex__cards-title">기본 공격 (직업별)</div>
+            <div className="codex__deck">
+              {sel.basics.map((c) => (
+                <div className="codex__card" key={c.id}>
+                  <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                  <p className="codex__card-desc">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="codex__cards-title">전용 카드</div>
             <div className="codex__deck">
               {sel.cards.map((c) => (

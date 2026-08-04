@@ -5,7 +5,7 @@ import { CardFace, cardAccent } from '../CardFace'
 import { PortraitSvg } from '../PortraitSvg'
 import {
   DECK_SIZE,
-  FIXED_CARDS,
+  fixedCardsFor,
   poolFor,
   newDeckId,
   type Deck,
@@ -95,7 +95,7 @@ export function DeckBuilderScreen({
 
   // 내 덱 = 고정 + 고른 카드, 이동→공격→지원 순 정렬(정렬 안정)
   const deckList = useMemo(() => {
-    const fixed = FIXED_CARDS.map((c) => ({ card: c, fixed: true }))
+    const fixed = fixedCardsFor(charId).map((c) => ({ card: c, fixed: true }))
     const chosen = picked
       .map((id) => pool.find((c) => c.id === id))
       .filter((c): c is CardDef => !!c)
@@ -103,7 +103,7 @@ export function DeckBuilderScreen({
     return [...fixed, ...chosen].sort(
       (a, b) => TAB_ORDER[tabOf(a.card)] - TAB_ORDER[tabOf(b.card)],
     )
-  }, [picked, pool])
+  }, [picked, pool, charId])
 
   return (
     <div className="screen deckbuild" style={{ ['--accent' as string]: char.accent }}>

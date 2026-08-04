@@ -9,25 +9,35 @@ const HOW_TO: { step: string; label: string }[] = [
   { step: '5', label: '상대 HP를 먼저 0으로 만들면 승리. 사다리를 끝까지 올라라.' },
 ]
 
+/**
+ * 타이틀. **"게임 시작"이 곧 로그라이크다**(2026-08-04 사용자 요청) — 예전엔 게임
+ * 시작이 단판(덱 선택 → 봇/온라인)이고 로그라이크가 별도 버튼이었는데, 본편이
+ * 로그라이크라 그쪽이 기본 입구가 됐다. 단판 흐름은 **PVP 버튼**으로 옮겼다
+ * (덱 선택 → 봇전/온라인 = `deck-select`).
+ *
+ * **덱 만들기는 타이틀에 없다**(2026-08-04 사용자 요청) — 덱은 PVP에서만 쓰므로
+ * PVP 안(`DeckSelectScreen`의 "덱 만들기" 버튼)으로 넣었다. 그래서 `deck-manage`는
+ * 이제 `deck-select`에서만 열리고, 뒤로 가면 타이틀이 아니라 덱 선택으로 돌아간다.
+ */
 export function TitleScreen({
   user,
   onLogout,
   onStart,
-  onRoguelike,
-  onDecks,
+  onPvp,
   onCodex,
 }: {
   user: AuthUser | null
   onLogout: () => void
+  /** 게임 시작 = 로그라이크 런 출발(`run-start`). */
   onStart: () => void
-  onRoguelike: () => void
-  onDecks: () => void
+  /** PVP = 덱 선택 → 봇전·온라인(`deck-select`). */
+  onPvp: () => void
   onCodex: () => void
 }) {
   const [showControls, setShowControls] = useState(false)
   return (
     <div className="screen title">
-      <div className="grid-bg" />
+      <div className="grid-bg grid-bg--hall" />
 
       {user && (
         <div className="userchip">
@@ -59,14 +69,11 @@ export function TitleScreen({
           세 직업. 하나의 사다리. 끝까지 올라 그리드의 주인이 되어라.
         </p>
         <div className="title__buttons">
-          <button className="btn" onClick={onStart}>
+          <button className="btn btn--roguelike" onClick={onStart}>
             게임 시작
           </button>
-          <button className="btn btn--roguelike" onClick={onRoguelike}>
-            로그라이크
-          </button>
-          <button className="btn btn--online" onClick={onDecks}>
-            덱 만들기
+          <button className="btn btn--pvp" onClick={onPvp}>
+            PVP
           </button>
           <button className="btn btn--codex" onClick={onCodex}>
             도감
