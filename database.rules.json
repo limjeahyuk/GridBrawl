@@ -60,6 +60,7 @@
         "createdAt": { ".validate": "newData.isNumber()" },
         "aliveAt": { ".validate": "newData.isNumber()" },
         "lock": { ".validate": "newData.isString() && newData.val().length < 40" },
+        "rules": { ".validate": "newData.isNumber()" },
         "$other": { ".validate": false }
       }
     }

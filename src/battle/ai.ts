@@ -5,7 +5,8 @@ import {
   GRID_COLS,
   MOVE_DELTA,
   inBounds,
-  isFogCell,
+  isCollapsedCell,
+  isFullyCollapsed,
   type Cell,
   type CardDef,
   type Difficulty,
@@ -24,6 +25,48 @@ const DIFF: Record<Difficulty, AICfg> = {
   normal: { aggression: 0.8, guardChance: 0.2, energyFloor: 24, panicGuard: 0.4 },
   hard: { aggression: 0.94, guardChance: 0.3, energyFloor: 30, panicGuard: 0.65 },
 }
+
+/**
+ * 몬스터 **성격**(2026-08-05). 같은 `decideAI`를 쓰던 20종이 전부 "멀면 붙고 닿으면
+ * 때린다"는 한 가지 행동만 해서 매 전투가 똑같이 흘렀다. 아키타입이 난이도 cfg를
+ * 밀고(공격성·가드 성향), `keepGap`으로 접근/후퇴를 가른다.
+ *   rusher     돌격 — 공격성↑ 가드↓, 무조건 파고든다(잡졸·암살자·버서커)
+ *   kiter      카이팅 — 붙으면 물러나 같은 줄에서 원거리로 쏜다(석궁·센트리·마녀)
+ *   turtle     거북이 — 가드를 자주 들고 상대가 오길 기다린다(기사·골렘·가디언)
+ *   skirmisher 교란 — 줄을 옮겨 다니며 견제(박쥐·팬텀)
+ *   balanced   기본 — 조정 없음(슬라임·오우거 등)
+ * ⚠ 이 값들은 **런 밸런스를 움직인다** — 바꾸면 `sim:run --sweep`로 밴드 재확인.
+ * ⚠ 보스는 `bosses.ts`의 스크립트가 우선이고, 스크립트가 null을 줄 때만 성격이 쓰인다.
+ */
+export type Archetype = 'rusher' | 'kiter' | 'turtle' | 'skirmisher' | 'balanced'
+interface ArchMod {
+  aggression: number
+  guardChance: number
+  panicGuard: number
+  energyFloor: number
+  /** >0이면 카이팅 — 상대와의 가로 간격이 이 값보다 좁아지면 물러난다. */
+  keepGap: number
+}
+const ARCH: Record<Archetype, ArchMod> = {
+  rusher: { aggression: +0.06, guardChance: -0.12, panicGuard: -0.25, energyFloor: -6, keepGap: 0 },
+  kiter: { aggression: -0.02, guardChance: +0.05, panicGuard: +0.05, energyFloor: +2, keepGap: 2 },
+  turtle: { aggression: -0.12, guardChance: +0.3, panicGuard: +0.25, energyFloor: +4, keepGap: 0 },
+  skirmisher: { aggression: 0, guardChance: +0.05, panicGuard: 0, energyFloor: 0, keepGap: 1 },
+  balanced: { aggression: 0, guardChance: 0, panicGuard: 0, energyFloor: 0, keepGap: 0 },
+}
+
+/**
+ * 전투 1회 동안 고정되는 AI 성향(2026-08-05). `runbattle.ts`가 전투 시작 때 한 번
+ * 굴려 만들고 매 턴 `decideAI`에 그대로 넘긴다. `archetype`은 몬스터 정체성(종류마다
+ * 다름), `moodAgg`는 **그 판의 기분**(같은 몬스터라도 판마다 살짝 다르게) — 대략
+ * -0.12..+0.12의 공격성 가감. 시뮬은 시드 RNG라 재현되고, 멀티는 몬스터가 없어 무관.
+ */
+export interface AIProfile {
+  archetype: Archetype
+  moodAgg: number
+}
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
 
 /** 이 체력 이하면 "한 방에 죽을 수 있는 위기"로 보고 가드를 고려한다. */
 const PANIC_HP = 45
@@ -49,8 +92,20 @@ export function decideAI(
   char: CharacterDef,
   difficulty: Difficulty,
   availableCards?: CardDef[],
+  profile?: AIProfile,
 ): CardDef[] {
-  const cfg = DIFF[difficulty]
+  // 난이도 cfg에 성격·기분을 얹은 **실효 cfg**. profile이 없으면(봇전·튜토리얼)
+  // balanced + 기분 0이라 기존 동작과 동일하다.
+  const base = DIFF[difficulty]
+  const a = ARCH[profile?.archetype ?? 'balanced']
+  const mood = profile?.moodAgg ?? 0
+  const cfg: AICfg = {
+    aggression: clamp01(base.aggression + a.aggression + mood),
+    guardChance: clamp01(base.guardChance + a.guardChance - mood * 0.4),
+    panicGuard: clamp01(base.panicGuard + a.panicGuard - mood * 0.3),
+    energyFloor: Math.max(0, base.energyFloor + a.energyFloor),
+  }
+  const keepGap = a.keepGap
   const facing = self === 0 ? 1 : -1
   const opp = state.pos[1 - self]
 
@@ -140,6 +195,22 @@ export function decideAI(
     })
   }
 
+  // 카이팅(kiter) 전용 이동 — 붙이는 대신 거리를 유지한다. 같은 줄로 정렬해
+  // 원거리 공격이 닿게 하되(줄 맞춤 우선), 가로 간격이 keepGap보다 좁아지면 물러난다.
+  // 공격은 슬롯 2에서 이미 처리되므로, 여기 오는 건 "이번 슬롯엔 때릴 게 없다"일 때다.
+  function kiteCards(): CardDef[] {
+    const dcol = opp.col - pos.col
+    const drow = opp.row - pos.row
+    const vdir: MoveDir = drow >= 0 ? 'down' : 'up'
+    const away: MoveDir = dcol >= 0 ? 'left' : 'right' // 상대 반대쪽으로
+    const wishes: (CardDef | undefined)[] = []
+    if (drow !== 0) wishes.push(moveCard(vdir, 1)) // 같은 줄로 — 원거리 명중선 확보
+    if (Math.abs(dcol) < keepGap) wishes.push(moveCard(away, 2), moveCard(away, 1))
+    // 벽에 몰려 더 못 물러나면 approachCards로 떨어져 최소한 줄이라도 맞춘다.
+    const out = wishes.filter((w): w is CardDef => !!w)
+    return out.length ? out : approachCards()
+  }
+
   for (let slot = 0; slot < 3; slot++) {
     // 0) 위기 회피 — 체력이 위험하면 첫 슬롯에 가드를 우선 (가드는 턴 전체 지속)
     if (
@@ -154,14 +225,24 @@ export function decideAI(
       continue
     }
 
-    // 1) 독안개 이탈 — 지금 또는 다음 턴에 안개에 덮이면 공격보다 탈출이 먼저
-    //    (안개에 서서 트레이드하다 둘 다 죽는 사고 방지). 중앙 열 쪽으로 이동.
-    if (isFogCell(pos, state.turn) || isFogCell(pos, state.turn + 1)) {
+    // 1) 붕괴 이탈 — 지금 또는 다음 턴에 발밑이 무너지면 공격보다 탈출이 먼저
+    //    (무너진 칸에 서서 트레이드하다 둘 다 죽는 사고 방지). 중앙 열 쪽으로 이동.
+    // ⚠ **판 전체가 무너진 뒤에는 도망치지 않는다**(2026-08-05). 그전엔 갈 곳이
+    //    없는데도 매 슬롯 중앙으로 걷기만 해서, 마지막 단계부터 AI가 아예 공격을
+    //    멈췄다 — 무한전을 끊으라고 넣은 장치가 오히려 판을 늘리고 있었다.
+    if (
+      !isFullyCollapsed(state.turn + 1) &&
+      (isCollapsedCell(pos, state.turn) || isCollapsedCell(pos, state.turn + 1))
+    ) {
       const toCenter: MoveDir = pos.col <= (GRID_COLS - 1) / 2 ? 'right' : 'left'
       const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)].filter(
         (c): c is CardDef => !!c,
       )
-      const m = esc.find(usable)
+      // 실제로 **안전한 칸에 내리는** 이동만 고른다 — 한 칸 옮겨 봐야 여전히
+      // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05).
+      const m =
+        esc.find((c) => usable(c) && !isCollapsedCell(landingOf(c), state.turn + 1)) ??
+        esc.find(usable)
       if (m) {
         take(m)
         continue
@@ -193,8 +274,8 @@ export function decideAI(
     // 3) recharge when starved and the energy card is up
     //    ⚠ 이 판단은 ④ 접근보다 **먼저** 온다 — 기력이 `energyFloor`(hard 30) 바로
     //    아래면 접근 대신 원기 회복에 슬롯을 쓴다. 그래서 "턴당 기력"이 그 문턱에
-    //    걸치는지에 따라 캐릭터 강도가 계단처럼 튄다(런 시뮬에서 VOLT 기력 8 vs 10이
-    //    클리어율 20%p 차). ③④를 맞바꿔 없애 봤지만 1:1 밸런스가 무너져(VOLT 46%→67%,
+    //    걸치는지에 따라 캐릭터 강도가 계단처럼 튄다(런 시뮬에서 기력 8 vs 10이
+    //    클리어율 20%p 차). ③④를 맞바꿔 없애 봤지만 1:1 밸런스가 무너져(승률 46%→67%,
     //    평균 5.8→6.1턴) 되돌렸다 — 이 순서가 캐릭터 간 기력 격차를 눌러주고 있다.
     //    ⇒ **런 밸런스를 `turnEnergy`로 조정하지 말 것**(문턱 인공물). 회복·보호막·
     //      피해감소 같은 연속적인 훅으로 조정한다. 근본 해결은 AI 회피·자원 판단 개선.
@@ -203,8 +284,8 @@ export function decideAI(
       continue
     }
 
-    // 4) close in / line up with the opponent
-    const wish = approachCards().find(usable)
+    // 4) close in / line up with the opponent (카이터는 거리를 유지·회복한다)
+    const wish = (keepGap > 0 ? kiteCards() : approachCards()).find(usable)
     if (wish) {
       take(wish)
       continue

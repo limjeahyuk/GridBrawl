@@ -6,6 +6,7 @@
 // 실행: npm run check
 // ---------------------------------------------------------------------------
 import { CardBattle, planAffordable } from '../src/battle/engine'
+import { decideAI } from '../src/battle/ai'
 import { COMMON_CARDS, ENERGY_REGEN } from '../src/battle/cards'
 import { SHEETS, placeSprite } from '../src/art/sprites'
 import { faceToward } from '../src/ui/screens/BattleScreen'
@@ -16,6 +17,7 @@ import {
   advanceFloor,
   chooseBranch,
   currentNode,
+  currentOptionIndices,
   currentOptions,
   deckCap,
   grantRelic,
@@ -57,7 +59,7 @@ console.log('\n=== 유물·카드 훅 검증 ===\n')
 // --- 누적 기력 트리거 -------------------------------------------------------
 console.log('누적 기력 트리거(energyTriggers)')
 {
-  // 스트라이크(기력 10) 3장 = 턴당 30 소모. per:60이면 2턴째에 한 번 발동해야 한다.
+  // 내려치기(기력 10) 3장 = 턴당 30 소모. per:60이면 2턴째에 한 번 발동해야 한다.
   const b = battleWith({ energyTriggers: [{ per: 60, heal: 999 }] })
   b.state.hp[0] = 100
   const atk3 = [card('c-strike'), card('c-strike'), card('c-strike')]
@@ -93,10 +95,10 @@ console.log('\n기절(stun)')
   check('기절은 한 턴만 — 다음 턴엔 풀린다', b.state.stunned[1], 0)
 }
 {
-  // 카드 `stun`(충격 봉) — 피해가 들어가야 걸린다.
+  // 카드 `stun`(뇌명의 지팡이) — 피해가 들어가야 걸린다.
   const b = battleWith({})
   b.resolveTurn([card('r-stunrod'), card('c-energy'), card('c-energy')], HOLD)
-  check('충격 봉 적중 → 상대 기절 1턴', b.state.stunned[1], 1)
+  check('뇌명의 지팡이 적중 → 상대 기절 1턴', b.state.stunned[1], 1)
 }
 {
   // 가드로 완전히 막힌 타격은 기절시키지 못한다.
@@ -111,7 +113,7 @@ console.log('\n기절(stun)')
   // 유물 stunOnHit — stunCap 만큼만.
   const b = battleWith(mergeRelics(['concussor']))
   for (let t = 0; t < 4; t++) b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('충격 증폭기는 전투당 stunCap(2)회까지만', b.state.stunsUsed[0], 2)
+  check('강타의 인장은 전투당 stunCap(2)회까지만', b.state.stunsUsed[0], 2)
 }
 
 // --- 저체력 배율 ------------------------------------------------------------
@@ -144,7 +146,7 @@ console.log('\n관통(alwaysPierce) · 각성(empower) · 선제 보호막(openi
 {
   const b = battleWith({})
   b.resolveTurn([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
-  check('과부하 프로토콜 1회 → 각성 +6', b.state.empowered[0], 6)
+  check('피의 각인 1회 → 각성 +6', b.state.empowered[0], 6)
   b.resolveTurn([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
   check('각성은 중첩된다 → +12', b.state.empowered[0], 12)
 }
@@ -211,7 +213,7 @@ console.log('\n런 진행 규칙')
 // --- 상태이상(독·화상·빙결) -------------------------------------------------
 console.log('\n상태이상 — 지속피해·빙결·시너지')
 {
-  // 카드에 직접 붙인 독. 스트라이크(10dmg)를 독 5짜리로 바꿔 때린다.
+  // 카드에 직접 붙인 독. 내려치기(10dmg)를 독 5짜리로 바꿔 때린다.
   const poisonJab: CardDef = { ...card('c-strike'), id: 'test-poison', poison: 5 }
   const b = battleWith({}, {})
   const hp0 = b.state.hp[1]
@@ -349,7 +351,7 @@ console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForwa
     buff: 'freeCast', buffTurns: 2, buffCost: 0, cooldown: 0,
   }
   const b = battleWith({}, {})
-  b.state.energy[0] = 30 // 스트라이크(10) 3장도 빠듯한 양
+  b.state.energy[0] = 30 // 내려치기(10) 3장도 빠듯한 양
   b.resolveTurn([free, card('c-strike'), card('c-guard')], HOLD)
   check('freeCast — 켠 턴의 뒤 카드가 기력을 안 쓴다', b.state.energy[0], 30 + ENERGY_REGEN)
   // 엔진과 UI 판정이 같아야 한다(안 그러면 "낼 수 있다는데 불발")
@@ -465,44 +467,175 @@ console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다
   }
 }
 
-// --- 분기 지도(2026-08-04) ---------------------------------------------------
-console.log('\n분기 지도 — 갈래를 고르는 규칙')
+// --- 확장 훅(2026-08-05) -----------------------------------------------------
+console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 기력 · 처형 · 붕괴 저항')
+{
+  // freezeOnHit — 피해가 들어가야 걸리고, freezeCap 만큼만 걸린다.
+  const b = battleWith({ freezeOnHit: 1, freezeCap: 2 })
+  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('freezeOnHit — 적중하면 빙결이 걸린다', b.statusOf(1, 'frozen')?.turns, 1)
+  for (let t = 0; t < 4; t++)
+    b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('freezeOnHit — 전투당 freezeCap(2)회까지만', b.state.freezesUsed[0], 2)
+}
+{
+  // guardPowerPct — 수비 카드만 커진다(매 턴 보호막 turnShield는 그대로).
+  const plain = battleWith({})
+  plain.resolveTurn([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
+  const boosted = battleWith({ guardPowerPct: 50 })
+  boosted.resolveTurn([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
+  check('guardPowerPct 50% — 가드 50 → 75', boosted.state.shield[0] - plain.state.shield[0], 25)
+  const std = battleWith({ turnShield: 20 })
+  const std2 = battleWith({ turnShield: 20, guardPowerPct: 100 })
+  check('guardPowerPct는 매 턴 보호막엔 안 붙는다', std2.state.shield[0], std.state.shield[0])
+}
+{
+  // healPowerPct — 힐 카드와 regen 둘 다 키운다.
+  const b = battleWith({ healPowerPct: 100 })
+  b.state.hp[0] = 50
+  b.resolveTurn([card('c-repair'), card('c-energy'), card('c-energy')], IDLE)
+  check('healPowerPct 100% — 상처 봉합 20 → 40', b.state.hp[0], 90)
+  const r = battleWith({ regen: 10, healPowerPct: 50 })
+  r.state.hp[0] = 50
+  r.resolveTurn(IDLE, IDLE)
+  check('healPowerPct — regen 10 → 15', r.state.hp[0], 65)
+}
+{
+  const b = battleWith({ startEnergyBonus: 25 })
+  const base = battleWith({})
+  check('startEnergyBonus — 시작 기력 +25', b.state.energy[0] - base.state.energy[0], 25)
+  const capped = battleWith({ startEnergyBonus: 9999 })
+  check('시작 기력은 최대 기력으로 클램프', capped.state.energy[0], capped.chars[0].maxEnergy)
+}
+{
+  // executeBonusPct — **상대가** 반피 이하일 때만. lowHpBonusPct와는 합산.
+  const base = battleWith({})
+  base.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const normal = base.maxHp[1] - base.state.hp[1]
+
+  const full = battleWith({ executeBonusPct: 100 })
+  full.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('상대가 만피면 처형 배율 없음', full.maxHp[1] - full.state.hp[1], normal)
+
+  const low = battleWith({ executeBonusPct: 100 })
+  low.state.hp[1] = 100 // 205의 절반 이하 — 대신 한 방에 안 죽을 만큼은 남긴다
+  const before = low.state.hp[1]
+  low.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('상대가 반피 이하 + 100% → 피해 2배', before - low.state.hp[1], normal * 2)
+}
+{
+  // 카드 `shatter` — 적중하면 상대 보호막이 통째로 날아간다.
+  const b = battleWith({})
+  b.state.energy = [100, 100]
+  b.resolveTurn(
+    [card('c-energy'), card('r-havoc'), card('c-energy')],
+    [card('c-guard'), card('c-energy'), card('c-energy')],
+  )
+  check('shatter — 가드를 부수고 피해가 들어간다', b.state.hp[1] < b.maxHp[1], true)
+}
+{
+  // 전장 붕괴 — 무너진 칸에 서 있으면 턴 종료에 피해. `collapseResist`가 깎는다.
+  const at = (turn: number, pas: Partial<Passive>) => {
+    const b = battleWith(pas)
+    b.state.turn = turn
+    b.state.pos = [{ col: 0, row: 1 }, { col: 3, row: 1 }] // 왼쪽 끝 = 가장 먼저 무너지는 열
+    const hp = b.state.hp[0]
+    b.resolveTurn(HOLD, HOLD)
+    return hp - b.state.hp[0] // battleWith는 패시브를 통째로 갈아끼우므로 regen이 없다
+  }
+  check('붕괴 1단계 — 턴당 10', at(6, {}), 10)
+  check('붕괴 2단계 — 턴당 16', at(9, {}), 16)
+  check('붕괴 3단계 — 턴당 24', at(12, {}), 24)
+  check('collapseResist가 붕괴 피해를 깎는다', at(6, { collapseResist: 6 }), 4)
+  check('collapseResist가 크면 아예 안 아프다', at(6, { collapseResist: 99 }), 0)
+}
+{
+  // ⚠ **무너진 칸으로 들어갈 수 있어야 한다**(사용자 신고 — 소프트 위험지대).
+  const b = battleWith({})
+  b.state.turn = 6
+  b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
+  b.resolveTurn([card('m-left'), card('c-energy'), card('c-energy')], HOLD)
+  check('무너진 칸으로 이동이 막히지 않는다', b.state.pos[0].col, 0)
+}
+{
+  // 전면 붕괴 뒤에는 AI가 도망치지 않고 계속 싸운다 — 예전엔 슬롯을 전부 이동에 썼다.
+  const b = battleWith({})
+  b.state.turn = 12 // 판 전체가 무너진 단계
+  b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }]
+  const plan = decideAI(b.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.concat(getChar('warrior').basics))
+  check('전면 붕괴 뒤 AI는 이동만 하지 않는다', plan.every((c) => c.kind === 'move'), false)
+}
+
+// --- 분기 지도 그래프(2026-08-05) --------------------------------------------
+console.log('\n분기 지도 — 간선으로 이어진 사다리')
 {
   // 무작위 생성이라 한 번으로는 못 잡는다. 여러 런을 훑어 불변식을 확인한다.
   const RUNS = 300
-  let missingBranch = 0
   let bossBranched = 0
   let supportToCombat = 0
   let eliteShapeBad = 0
-  const headTypes = new Set<string>()
+  let noCenter = 0
+  let orphan = 0 // 들어오는 간선이 없는 칸
+  let deadend = 0 // 나가는 간선이 없는 칸(마지막 층 제외)
+  let farEdge = 0 // 줄을 두 칸 이상 건너뛰는 간선
+  let centerUnreachable = 0
+  const centerTypes = new Set<string>()
+  const widths = new Set<number>()
 
   for (let i = 0; i < RUNS; i++) {
     const run = startRun('warrior')
-    headTypes.add(run.branches.map((o) => o[0].type).join(','))
-    run.branches.forEach((opts, f) => {
-      const isBoss = opts[0].type === 'boss'
-      if (isBoss && opts.length !== 1) bossBranched++
-      if (!isBoss && opts.length < 2) missingBranch++
-      // ⚠ 이게 이번 작업의 핵심 회귀 검사다. 지원 칸(이벤트·상점)의 대안을 전투로
-      //   뒀다가 클리어율이 27%→10%로 무너졌다(상점이 회복의 주 수단이라서).
-      //   지원 칸은 지원 칸끼리만 바꿔야 한다.
-      const head = opts[0].type
+    const center = (f: number) => run.map[f].find((n) => n.lane === 1)
+    centerTypes.add(run.map.map((nodes, f) => center(f)?.type ?? '?').join(','))
+    run.map.forEach((nodes, f) => {
+      widths.add(nodes.length)
+      const isBoss = nodes[0].type === 'boss'
+      if (isBoss && nodes.length !== 1) bossBranched++
+      // 가운데 줄은 **모든 층**에 있어야 한다 — 옛 사다리 경로가 거기로 이어진다.
+      if (!center(f)) noCenter++
+      // ⚠ 핵심 회귀 검사. 지원 칸(이벤트·상점)의 대안을 전투로 뒀다가 클리어율이
+      //   27%→10%로 무너졌다(상점이 회복의 주 수단이라서). 지원 칸끼리만 바꾼다.
+      const head = center(f)?.type
       if (head === 'event' || head === 'shop') {
-        if (opts.some((o) => o.type !== 'event' && o.type !== 'shop')) supportToCombat++
+        if (nodes.some((o) => o.type !== 'event' && o.type !== 'shop')) supportToCombat++
       }
-      // 엘리트는 유일하게 "전투량"을 고르는 칸 — [엘리트, 일반전투]여야 한다.
+      // 엘리트는 유일하게 "전투량"을 고르는 칸 — 엘리트 하나 + 나머지는 일반 전투.
       if (head === 'elite') {
-        if (opts.length !== 2 || opts[1].type !== 'combat') eliteShapeBad++
+        const elites = nodes.filter((o) => o.type === 'elite').length
+        const rest = nodes.filter((o) => o.type !== 'elite')
+        if (elites !== 1 || rest.some((o) => o.type !== 'combat')) eliteShapeBad++
       }
-      void f
+      const last = f === run.map.length - 1
+      nodes.forEach((n) => {
+        if (!last && !n.next.length) deadend++
+        // 어느 칸에서든 **다음 층 가운데 칸**으로는 갈 수 있어야 한다(옛 사다리 경로).
+        if (!last) {
+          const centerIdx = run.map[f + 1].findIndex((m) => m.lane === 1)
+          if (centerIdx < 0 || !n.next.includes(centerIdx)) centerUnreachable++
+          for (const j of n.next) {
+            if (Math.abs(run.map[f + 1][j].lane - n.lane) > 1) farEdge++
+          }
+        }
+      })
+      if (f > 0 && !run.map[f - 1].some((a) => a.next.includes(nodes.indexOf(nodes[0]))))
+        void 0 // (아래에서 칸별로 본다)
+      if (f > 0)
+        nodes.forEach((_, j) => {
+          if (!run.map[f - 1].some((a) => a.next.includes(j))) orphan++
+        })
     })
   }
   check('보스 층은 갈래가 없다', bossBranched, 0)
-  check('보스 외 모든 층에 갈래가 있다', missingBranch, 0)
+  check('모든 층에 가운데 줄이 있다', noCenter, 0)
   check('지원 칸(이벤트·상점)은 전투로 바뀌지 않는다', supportToCombat, 0)
-  check('엘리트 층은 [엘리트, 일반전투]', eliteShapeBad, 0)
-  // 0번만 따라가면 늘 같은 층 구성 = 옛 선형 사다리. 밸런스 기준선이 경로로 남는다.
-  check('0번 갈래의 타입 열은 항상 같다(옛 사다리)', headTypes.size, 1)
+  check('엘리트 층은 엘리트 1 + 나머지 일반전투', eliteShapeBad, 0)
+  check('막다른 칸이 없다(마지막 층 제외)', deadend, 0)
+  check('들어오는 길이 없는 칸이 없다', orphan, 0)
+  check('간선은 줄을 한 칸까지만 건넌다', farEdge, 0)
+  // 이게 밸런스 기준선(`sim:run --path=template`)이 성립하는 근거다.
+  check('어느 칸에서든 다음 층 가운데로 갈 수 있다', centerUnreachable, 0)
+  check('가운데 줄의 타입 열은 항상 같다(옛 사다리)', centerTypes.size, 1)
+  // 폭이 늘 같으면 "사다리"가 아니라 격자다 — 1~3이 섞여야 길이 모였다 갈라진다.
+  check('층 폭이 1~3으로 섞인다', [...widths].sort().join(','), '1,2,3')
 }
 {
   const run = startRun('mage')
@@ -515,6 +648,14 @@ console.log('\n분기 지도 — 갈래를 고르는 규칙')
   const picked = chooseBranch(run, combatAt < 0 ? 0 : combatAt)
   check('고르면 choosing이 풀린다', picked.status !== 'choosing', true)
   check('고른 칸이 현재 칸이 된다', currentNode(picked), opts[combatAt < 0 ? 0 : combatAt])
+
+  // 2층의 선택지는 **1층에서 고른 칸에서 이어진 칸**뿐이다.
+  {
+    const f2 = advanceFloor(picked)
+    const from = picked.map[0][picked.picked[0]]
+    check('다음 층 선택지 = 직전 칸의 next', currentOptionIndices(f2), from.next)
+    check('선택지는 1~3개', currentOptions(f2).length >= 1 && currentOptions(f2).length <= 3, true)
+  }
 
   // 범위 밖 인덱스는 잘라 낸다(네트워크·저장본이 이상해도 런이 안 깨지게).
   check('인덱스는 클램프된다', currentNode(chooseBranch(run, 99)), opts[opts.length - 1])

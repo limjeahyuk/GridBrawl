@@ -25,7 +25,7 @@ export const COMMON_CARDS: CardDef[] = [
   { id: 'm-dl', name: '↙ 대각 이동', kind: 'move', dir: 'down-left', steps: 1, cooldown: 0, desc: '왼쪽 아래로 한 칸 이동. (↙)' },
   {
     id: 'c-strike',
-    name: '스트라이크',
+    name: '내려치기',
     kind: 'attack',
     range: [
       { df: 1, du: 0 },
@@ -39,7 +39,7 @@ export const COMMON_CARDS: CardDef[] = [
   },
   {
     id: 'c-shot',
-    name: '펄스 샷',
+    name: '돌팔매',
     kind: 'attack',
     range: [
       { df: 2, du: 0 },
@@ -50,11 +50,11 @@ export const COMMON_CARDS: CardDef[] = [
     cooldown: 0,
     fx: 'bolt',
     pointBlank: false, // 두 칸째 전용 — 밀착도 사각
-    desc: '앞뒤 두 칸째 한 칸씩만 맞히는 견제 사격. 위력은 낮고, 붙은 상대는 못 맞힌다.',
+    desc: '앞뒤 두 칸째 한 칸씩만 노리는 견제용 투척. 위력은 낮고, 붙은 상대는 못 맞힌다.',
   },
   {
     id: 'c-jab',
-    name: '잽',
+    name: '찌르기',
     kind: 'attack',
     // 앞뒤 대칭(2026-08-03) — 지나쳐도 안 놓치게. 대신 기력 8→10.
     range: [{ df: 1, du: 0 }, { df: -1, du: 0 }],
@@ -66,7 +66,7 @@ export const COMMON_CARDS: CardDef[] = [
   },
   {
     id: 'c-guard',
-    name: '가드',
+    name: '방패 세우기',
     kind: 'guard',
     block: GUARD_BLOCK,
     guardCost: GUARD_COST,
@@ -75,7 +75,7 @@ export const COMMON_CARDS: CardDef[] = [
   },
   {
     id: 'c-brace',
-    name: '브레이스',
+    name: '버티기',
     kind: 'guard',
     block: 30,
     guardCost: 10,
@@ -93,7 +93,7 @@ export const COMMON_CARDS: CardDef[] = [
   // 힐 지원 카드(2026-07-23) — 기력을 체력으로 바꾼다. 장기전 버티기용.
   {
     id: 'c-repair',
-    name: '리페어',
+    name: '상처 봉합',
     kind: 'heal',
     healHp: 20,
     healCost: 20,

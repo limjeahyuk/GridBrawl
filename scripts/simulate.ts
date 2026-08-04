@@ -17,7 +17,7 @@ interface GameResult {
   winner: string | null // char id, null = 무승부/타임아웃
   turns: number
   timeout: boolean
-  drawCause: 'fog' | 'trade' | null // 무승부일 때: 독안개 동반사 vs 동시 KO
+  drawCause: 'collapse' | 'trade' | null // 무승부일 때: 붕괴 동반사 vs 동시 KO
 }
 
 function playGame(a: string, b: string): GameResult {
@@ -34,7 +34,7 @@ function playGame(a: string, b: string): GameResult {
     winner: battle.state.over && w !== null ? (w === 0 ? a : b) : null,
     turns: battle.state.turn,
     timeout: !battle.state.over,
-    drawCause: isDraw ? (lastSteps.some((s) => s.phase === 'fog') ? 'fog' : 'trade') : null,
+    drawCause: isDraw ? (lastSteps.some((s) => s.phase === 'collapse') ? 'collapse' : 'trade') : null,
   }
 }
 
@@ -44,7 +44,7 @@ const games: Record<string, number> = {}
 const cell: Record<string, { w: number; d: number; n: number; turns: number }> = {} // a>b 매치업
 let allTurns: number[] = []
 let draws = 0
-let fogDraws = 0
+let collapseDraws = 0
 let timeouts = 0
 
 for (const a of IDS)
@@ -63,7 +63,7 @@ for (const a of IDS)
       if (r.winner === null) {
         draws++
         cell[key].d++
-        if (r.drawCause === 'fog') fogDraws++
+        if (r.drawCause === 'collapse') collapseDraws++
       } else {
         wins[r.winner] = (wins[r.winner] ?? 0) + 1
         if (r.winner === a) cell[key].w++
@@ -80,7 +80,7 @@ const pct = (n: number, d: number) => ((100 * n) / d).toFixed(1).padStart(5)
 
 console.log(`\n=== GridBrawl 밸런스 시뮬 (hard AI, ${N}판/매치업, 총 ${total}판) ===\n`)
 console.log(
-  `평균 턴: ${avg.toFixed(2)}   중앙값: ${median}   무승부 ${pct(draws, total)}% (안개 ${pct(fogDraws, total)}% / 트레이드 ${pct(draws - fogDraws, total)}%)   타임아웃 ${pct(timeouts, total)}%`,
+  `평균 턴: ${avg.toFixed(2)}   중앙값: ${median}   무승부 ${pct(draws, total)}% (붕괴 ${pct(collapseDraws, total)}% / 트레이드 ${pct(draws - collapseDraws, total)}%)   타임아웃 ${pct(timeouts, total)}%`,
 )
 
 // 턴 분포

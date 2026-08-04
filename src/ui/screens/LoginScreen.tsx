@@ -26,9 +26,11 @@ export function LoginScreen() {
           ? '로그인 창이 닫혔습니다. 다시 시도하세요.'
           : code === 'auth/unauthorized-domain'
             ? '이 도메인은 Firebase 인증에 등록되어 있지 않습니다. (콘솔 → Authentication → 승인된 도메인)'
-            : e instanceof Error
-              ? e.message
-              : '로그인에 실패했습니다.',
+            : code === 'auth/network-request-failed'
+              ? '네트워크에 연결되어 있지 않습니다. 게스트로 시작하면 오프라인에서도 플레이할 수 있습니다.'
+              : e instanceof Error
+                ? e.message
+                : '로그인에 실패했습니다.',
       )
       setBusy(false)
     }
@@ -38,7 +40,9 @@ export function LoginScreen() {
     <div className="screen login">
       <div className="grid-bg grid-bg--hall" />
       <div className="login__content">
-        <div className="title__kicker neon-text">THE GRID · DEMON GAUNTLET</div>
+        {/* ⚠ 타이틀 화면과 같은 문구를 쓴다(TitleScreen 참고) — 로그인 직후 타이틀로
+            넘어가므로 다르면 글자만 바뀌어 깜빡이는 것처럼 보인다. */}
+        <div className="title__kicker neon-text">THE GRID · DEMON ASCENT</div>
         <h1 className="title__logo">
           <span className="title__word title__word--a">GRID</span>
           <span className="title__word title__word--b">BRAWL</span>
@@ -62,6 +66,10 @@ export function LoginScreen() {
             </div>
           )}
 
+          {/* ⚠ 이 버튼은 어떤 조건에서도 사라지면 안 된다. 앱 전체가 로그인 뒤에
+              막혀 있어서(App.tsx), 게스트 경로가 없으면 네트워크가 없는 첫 실행에서
+              앱이 통째로 잠긴다 — 오프라인에서 아무것도 못 보는 앱은 iOS 심사
+              2.1/4.2 반려 사유다. 구글(또는 Apple) 로그인을 붙여도 병행 유지한다. */}
           <button
             className={`btn ${isNativeApp ? '' : 'btn--ghost'} login__guest`}
             onClick={signInAsGuest}

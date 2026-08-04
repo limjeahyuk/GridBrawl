@@ -266,25 +266,9 @@ const JOBS = [
         death: 'DeathNoBlood',
       }),
   },
-  // Bandits 팩 하나에 경장·중장 두 캐릭터가 들어 있다(폴더만 다르다).
-  ...['Light', 'Heavy'].map((weight) => ({
-    id: `bandit-${weight.toLowerCase()}`,
-    load: () =>
-      loadFromFolders(`assets-raw/bandits/Sprites/${weight} Bandit`, {
-        idle: 'Idle',
-        run: 'Run',
-        // 이 팩엔 공격 동작이 하나뿐이라 세 클립이 같은 프레임을 쓴다.
-        attack1: 'Attack',
-        attack2: 'Attack',
-        attack3: 'Attack',
-        // 칼을 든 대기 자세 = 방어 포즈.
-        block: 'Combat Idle',
-        hurt: 'Hurt',
-        // 죽는 동작이 없다(Death는 이미 쓰러진 한 장). 일어나는 Recover를
-        // 거꾸로 돌려 쓰러지는 8프레임을 만든다 — 마지막 프레임이 Death와 같다.
-        death: { from: 'Recover', reverse: true },
-      }),
-  })),
+  // ⚠ Bandits 팩(경장·중장)은 **더 이상 굽지 않는다** — 궁수·마법사에 임시로
+  //   붙여 뒀던 자리를 huntress·wizard가 가져갔다(2026-08-04). 되살리려면 git
+  //   기록에서 이 항목과 `sprites.ts`의 `banditClips()`를 함께 꺼내야 한다.
 
   // --- Gothicvania 계열 (ansimuz) -------------------------------------------
   // 배경과 같은 팩에서 나온 몬스터들. **직업 시트를 빌려 쓰던 세 자리**

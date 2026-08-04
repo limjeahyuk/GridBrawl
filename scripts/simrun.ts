@@ -5,7 +5,7 @@
 //
 // 실행:
 //   npm run sim:run                      기본 200런, 전 캐릭터, hard 봇
-//   npm run sim:run 500 --char=volt      캐릭터 고정
+//   npm run sim:run 500 --char=warrior   캐릭터 고정(warrior/archer/mage)
 //   npm run sim:run 300 --skill=normal   봇 숙련도(플레이어 실력 모델)
 //   npm run sim:run 300 --policy=random  보상/이벤트/상점을 아무렇게나 고르는 하한선
 //   npm run sim:run 300 --seed=7         같은 시드 = 같은 사다리·보상 → 튜닝 전후 비교
@@ -39,6 +39,7 @@ import {
   rollShop,
   skipRewardForHeal,
   startRun,
+  templateOptionIndex,
   type EventEffect,
   type Reward,
   type RunState,
@@ -252,7 +253,9 @@ function doShop(run: RunState): RunState {
 function pickBranch(run: RunState): number {
   const opts = currentOptions(run)
   if (opts.length <= 1) return 0
-  if (PATH === 'template') return 0
+  // ⚠ 그래프 지도(2026-08-05)에선 "늘 0번"이 더 이상 옛 사다리가 아니다 — 선택지
+  //   목록이 직전 칸에 따라 달라지기 때문이다. 옛 기준선은 **가운데 줄**이 잇는다.
+  if (PATH === 'template') return templateOptionIndex(run)
   if (PATH === 'random') return Math.floor(Math.random() * opts.length)
   const eliteAt = opts.findIndex((o) => o.type === 'elite')
   if (eliteAt < 0) return Math.floor(Math.random() * opts.length)

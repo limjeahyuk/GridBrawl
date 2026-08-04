@@ -24,7 +24,7 @@ export type SfxName =
   | 'whiff'
   | 'nofuel'
   | 'stun'
-  | 'fog'
+  | 'collapse'
   | 'trigger'
   | 'cutin'
   | 'ko'
@@ -197,7 +197,7 @@ const SFX: Record<SfxName, (k: number) => void> = {
   whiff: () => burst(0.22, 0.08, 1900, 1000, { type: 'bandpass', q: 0.6 }),
   nofuel: () => tone(150, 96, 0.2, 0.13, 'square'),
   stun: () => arp([720, 520, 700, 470], 0.11, 0.09, 'triangle', 0.075),
-  fog: () => burst(0.55, 0.09, 1000, 220, { type: 'bandpass', q: 0.5 }),
+  collapse: () => burst(0.55, 0.09, 1000, 220, { type: 'bandpass', q: 0.5 }),
   trigger: () => {
     tone(880, 1760, 0.18, 0.09)
     tone(1320, 2640, 0.18, 0.05, 'sine', 0.035)

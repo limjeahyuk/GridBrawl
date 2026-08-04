@@ -87,28 +87,6 @@ const STD_CLIPS: Record<ClipName, ClipDef> = {
   death: { frames: 10, frameMs: 95, loop: false },
 }
 
-/**
- * Bandits 팩(경장·중장 공용)의 클립 구성. `atkMs`로 공격 속도만 갈라 무게를 준다.
- * 이 팩은 공격 동작이 하나뿐이라 attack1/2/3이 같은 8프레임을 쓰고, 칼날 궤적이
- * 처음 그려지는 **4번 프레임**이 임팩트다(구운 `attack1.png`에서 확인).
- * `block`은 잠깐 취하는 자세가 아니라 보호막이 살아 있는 동안 계속 서 있는
- * 전투 대기 자세라 유일하게 반복 재생한다.
- */
-const banditClips = (atkMs: number): Record<ClipName, ClipDef> => {
-  const attack: ClipDef = { frames: 8, frameMs: atkMs, loop: false, impactFrame: 4 }
-  return {
-    idle: { frames: 4, frameMs: 150, loop: true },
-    run: { frames: 8, frameMs: 70, loop: true },
-    attack1: attack,
-    attack2: attack,
-    attack3: attack,
-    block: { frames: 4, frameMs: 150, loop: true },
-    hurt: { frames: 2, frameMs: 90, loop: false },
-    // 일어나는 Recover를 거꾸로 돌려 만든 쓰러지는 동작(패커 참고)
-    death: { frames: 8, frameMs: 95, loop: false },
-  }
-}
-
 /** 플레이스홀더 기본값 — 진짜 에셋이 들어오면 측정값으로 덮어쓴다. */
 const sheet = (id: string, over: Partial<SheetDef> = {}): SheetDef => ({
   id,

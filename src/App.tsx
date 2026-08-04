@@ -299,6 +299,7 @@ export default function App() {
         deck={fp.deck}
         battleOpts={fp.battleOpts}
         telegraph={fp.telegraph}
+        boss={fp.boss}
         scene={sceneFor(run)}
         getOpponentPlan={fp.getOpponentPlan}
         onEnd={runFightEnd}

@@ -8,8 +8,11 @@
 
 /** Game-level messages exchanged between the two peers. */
 export type NetMessage =
-  // sent once on connect so each peer learns the other's chosen avatar
-  | { t: 'hello'; charId: string }
+  // sent once on connect so each peer learns the other's chosen avatar — and
+  // its ruleset version, since lockstep only holds if both run the same rules
+  // (`rules` is optional so a peer on an older build parses the message at all;
+  // a missing value simply fails the check below). See RULES_VERSION.
+  | { t: 'hello'; charId: string; rules?: number }
   // a single turn's three chosen card ids, tagged with the turn number so the
   // peers can stay in lockstep even if messages arrive slightly out of phase
   | { t: 'plan'; turn: number; cards: string[] }

@@ -14,19 +14,20 @@ import {
 } from '../../art/sprites'
 import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
 import type { BattleScene } from '../../game/run'
+import type { BossCinematic } from '../../game/bosses'
 import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent, moveIcon } from '../CardFace'
 import { PortraitSvg } from '../PortraitSvg'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
-  FOG_DAMAGE,
-  FOG_START_TURN,
-  fogEscalatesNext,
+  COLLAPSE_START_TURN,
+  collapseDamageAt,
+  collapseEscalatesNext,
   GRID_COLS,
   GRID_ROWS,
   MOVE_DELTA,
   inBounds,
-  isFogCell,
+  isCollapsedCell,
   MIRROR_DIR,
   type ActionResult,
   type Cell,
@@ -123,7 +124,7 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   energy: '원기 +',
   heal: '회복!',
   move: '이동',
-  fog: '피해!',
+  collapse: '피해!',
   revive: '🔥',
   status: '피해!',
   buff: '강화!',
@@ -133,7 +134,7 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
   move: '이동',
   defense: '수비',
   attack: '공격',
-  fog: '독안개',
+  collapse: '붕괴',
   revive: '부활',
   stun: '기절',
   trigger: '유물',
@@ -151,7 +152,7 @@ const STATUS_CHIP: Record<string, string> = {
 
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
 const STEP_MS: Record<Step['phase'], number> = {
-  move: 540, defense: 560, attack: 900, fog: 700, revive: 1100,
+  move: 540, defense: 560, attack: 900, collapse: 700, revive: 1100,
   stun: 900, // 기절은 한 턴을 통째로 날리므로 충분히 보여준다
   trigger: 700,
   status: 620, // 독·화상 틱 — 여러 개가 잇달아 뜰 수 있어 짧게
@@ -213,7 +214,7 @@ function stepToView(step: Step, seq: number): View {
   const actFx: [string | null, string | null] = [null, null]
   if (acting[a]) actFx[a] = step.card.fx ?? 'punch'
   const damage: [number, number] = [0, 0]
-  // 상대에게 준 피해 — 공격뿐 아니라 유물 트리거(방전 코일 등)도 -N을 띄운다.
+  // 상대에게 준 피해 — 공격뿐 아니라 유물 트리거(뇌운의 고리 등)도 -N을 띄운다.
   if (step.damage > 0) damage[d] = step.damage
   if (step.recoil > 0) damage[a] = step.recoil // 반동·독안개: 자기 자신에게 -N 표시
   const heal: [number, number] = [0, 0]
@@ -251,7 +252,7 @@ function stepSfx(step: Step): void {
   if (step.result === 'nofuel') return playSfx('nofuel')
   if (step.card.id === 'stun') return playSfx('stun')
   if (step.card.id === 'trigger' || step.phase === 'revive') return playSfx('trigger')
-  if (step.phase === 'fog') return playSfx('fog')
+  if (step.phase === 'collapse') return playSfx('collapse')
   switch (step.card.kind) {
     case 'move':
       return playSfx((step.card.steps ?? 1) >= 2 ? 'dash' : 'move')
@@ -727,13 +728,13 @@ export function BattleScreen({
         setResolveHit(null)
         setView(full)
         stepSfx(step)
-        // 공격이 아닌데 피해가 났다 — 유물 트리거(상대에게) 또는 독안개·반동(자신에게).
-        // 독안개는 stepSfx가 이미 치찰음을 내므로 타격음은 겹쳐 울리지 않는다.
+        // 공격이 아닌데 피해가 났다 — 유물 트리거(상대에게) 또는 붕괴·반동(자신에게).
+        // 붕괴는 stepSfx가 이미 굉음을 내므로 타격음은 겹쳐 울리지 않는다.
         let held = 0
         if (step.damage > 0) held = await impact(step, foe, step.damage, koAt(si, foe))
         else if (step.recoil > 0)
           held = await impact(step, actor, step.recoil, koAt(si, actor), {
-            sound: step.phase !== 'fog',
+            sound: step.phase !== 'collapse',
           })
         if (cancelled.current) return
         await wait(Math.max(160, STEP_MS[step.phase] - held))
@@ -844,26 +845,35 @@ export function BattleScreen({
             const ccol = dcol(i % GRID_COLS)
             const hovered = targetCells.some((c) => c.col === ccol && c.row === row)
             const live = resolveHit?.cells.some((c) => c.col === ccol && c.row === row)
-            // 독안개: 발동 턴부터 덮인 열을 보라색으로 물들인다(열 기준 점진 확대)
-            const fog = isFogCell({ col: ccol, row }, battle.state.turn)
+            // 전장 붕괴: 무너진 열은 갈라진 붉은 바닥, 다음 턴에 무너질 열은 예고.
+            // ⚠ **`cell--fog`는 이동 강조와 겹칠 수 있다**(무너진 칸에도 들어갈 수
+            //   있으므로). 그래서 배타적인 `cls` 삼항에 넣지 않고 **따로 붙인다** —
+            //   예전엔 이동 강조가 붕괴 표시를 통째로 덮어써서, 갈 수 있는 칸은 전부
+            //   멀쩡해 보였고 "이동하면 안개에 안 들어간다"로 읽혔다.
+            const cell = { col: ccol, row }
+            const turn = battle.state.turn
+            const hazard = isCollapsedCell(cell, turn)
+              ? ' cell--fog'
+              : isCollapsedCell(cell, turn + 1)
+                ? ' cell--fog-next'
+                : ''
             const cls =
-              hovered || (live && resolveHit?.actor === localSide)
+              (hovered || (live && resolveHit?.actor === localSide)
                 ? ' cell--target'
                 : live
                   ? ' cell--target cell--target-foe'
-                  : fog
-                    ? ' cell--fog'
-                    : ''
+                  : '') + hazard
             // 이동 가능한 칸이면 눌러서 그 자리로 간다(노란 강조 + 커서)
             const mv = moveTargets.get(`${ccol},${row}`)
             if (mv) {
+              const warn = hazard ? ` — ${collapseDamageAt(turn + 1)} 피해` : ''
               return (
                 <button
                   key={i}
                   className={`cell cell--move${cls}`}
                   onClick={() => addCard(mv)}
-                  title={`이동: ${mv.name}`}
-                  aria-label={`이동: ${mv.name}`}
+                  title={`이동: ${mv.name}${warn}`}
+                  aria-label={`이동: ${mv.name}${warn}`}
                 />
               )
             }
@@ -1341,13 +1351,13 @@ function BattleHud({
             ⏱ {remain}s
           </div>
         )}
-        {fogEscalatesNext(turn) && (
+        {collapseEscalatesNext(turn) && (
           <div className="bhud__fog bhud__fog--warn">
-            {turn < FOG_START_TURN ? '⚠ 다음 턴부터 독안개!' : '⚠ 다음 턴 독안개 확대!'}
+            {turn < COLLAPSE_START_TURN ? '⚠ 다음 턴부터 전장이 무너진다!' : '⚠ 다음 턴 붕괴 확대!'}
           </div>
         )}
-        {turn >= FOG_START_TURN && (
-          <div className="bhud__fog">☠ 독안개 위 턴당 -{FOG_DAMAGE}</div>
+        {turn >= COLLAPSE_START_TURN && (
+          <div className="bhud__fog">🪨 무너진 칸 턴당 -{collapseDamageAt(turn)}</div>
         )}
         <div className="bhud__buttons">
           <SfxToggle />

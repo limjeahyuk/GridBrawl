@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 import { COMMON_CARDS } from '../battle/cards'
 import { getChar, ROSTER, type CharacterDef, type Passive } from '../data/roster'
+import type { Archetype } from '../battle/ai'
 import type { CardDef, Difficulty } from '../battle/types'
 
 export interface MonsterDef {
@@ -22,6 +23,12 @@ export interface MonsterDef {
   maxHp: number
   startEnergy: number
   aiLevel: Difficulty
+  /**
+   * AI 성격(2026-08-05). 같은 종류의 몬스터가 매번 똑같이 움직이던 걸 가른다 —
+   * 돌격/카이팅/거북이/교란. 비우면 `balanced`(조정 없음). 상세는 ai.ts `Archetype`.
+   * ⚠ 보스는 `bosses.ts` 스크립트가 우선이라 이 값은 스크립트가 비는 턴에만 쓰인다.
+   */
+  behavior?: Archetype
   /** 몬스터 고유 상시 능력(인라인 패시브). 유물 시스템과 같은 훅을 쓴다. */
   passive: Omit<Passive, 'desc'>
   deckCardIds: string[] // AI가 낼 수 있는 카드
@@ -37,6 +44,7 @@ const resolveCards = (ids: string[]): CardDef[] =>
 export const MONSTERS: MonsterDef[] = [
   {
     id: 'slime',
+    behavior: 'balanced',
     name: '슬라임',
     baseArtId: 'archer',
     spriteId: 'slime',
@@ -50,6 +58,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'grunt',
+    behavior: 'rusher',
     name: '도끼병',
     baseArtId: 'warrior',
     spriteId: 'rat',
@@ -65,6 +74,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'sentry',
+    behavior: 'kiter',
     name: '센트리',
     baseArtId: 'mage',
     spriteId: 'flying-eye',
@@ -81,6 +91,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'ogre',
+    behavior: 'balanced',
     name: '오우거',
     baseArtId: 'warrior',
     spriteId: 'ogre',
@@ -94,6 +105,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'berserker',
+    behavior: 'rusher',
     name: '버서커',
     baseArtId: 'mage',
     spriteId: 'martial-hero',
@@ -107,6 +119,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'vampire',
+    behavior: 'balanced',
     name: '뱀파이어',
     baseArtId: 'archer',
     spriteId: 'mimic',
@@ -124,6 +137,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'guardian',
+    behavior: 'turtle',
     name: '가디언',
     baseArtId: 'warrior',
     spriteId: 'angel',
@@ -137,6 +151,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'phantom',
+    behavior: 'skirmisher',
     name: '팬텀',
     baseArtId: 'warrior',
     spriteId: 'bat',
@@ -145,13 +160,14 @@ export const MONSTERS: MonsterDef[] = [
     startEnergy: 60,
     aiLevel: 'hard',
     // 2026-07-30 밸런스: 십자·대각 교란은 좋았지만 화력이 없어 그냥 지나가는 층이었다
-    // (시뮬 승률 100%). 펄스 샷(10)을 아크 볼트(30)로 바꿔 실제로 아프게.
+    // (시뮬 승률 100%). 약한 견제기(10)를 아픈 카드(30)로 바꿔 실제로 위협이 되게.
     passive: { turnEnergy: 10, regen: 6, attackBonus: 6 },
     deckCardIds: ['mag-spark', 'arc-venom', 'arc-pin'],
     note: '십자·대각으로 교란하며 조금씩 아문다.',
   },
   {
     id: 'overlord',
+    behavior: 'balanced',
     name: '오버로드',
     baseArtId: 'mage',
     spriteId: 'demon',
@@ -166,6 +182,7 @@ export const MONSTERS: MonsterDef[] = [
   // --- 확장 세트(2026-07-24) ---
   {
     id: 'bat',
+    behavior: 'skirmisher',
     name: '박쥐 떼',
     baseArtId: 'warrior',
     spriteId: 'bat',
@@ -179,6 +196,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'goblin',
+    behavior: 'rusher',
     name: '고블린',
     baseArtId: 'mage',
     spriteId: 'rat',
@@ -192,6 +210,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'crossbow',
+    behavior: 'kiter',
     name: '석궁병',
     baseArtId: 'mage',
     spriteId: 'martial-hero',
@@ -205,6 +224,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'shaman',
+    behavior: 'turtle',
     name: '주술사',
     baseArtId: 'archer',
     spriteId: 'church-wizard',
@@ -218,6 +238,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'knight',
+    behavior: 'turtle',
     name: '기사',
     baseArtId: 'warrior',
     spriteId: 'martial-hero',
@@ -231,6 +252,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'golem',
+    behavior: 'turtle',
     name: '골렘',
     baseArtId: 'warrior',
     spriteId: 'golem',
@@ -244,6 +266,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'assassin',
+    behavior: 'rusher',
     name: '암살자',
     baseArtId: 'archer',
     spriteId: 'martial-hero',
@@ -257,6 +280,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'witch',
+    behavior: 'kiter',
     name: '마녀',
     baseArtId: 'mage',
     spriteId: 'evil-wizard',
@@ -272,6 +296,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'splitter',
+    behavior: 'balanced',
     name: '분열체',
     baseArtId: 'archer',
     spriteId: 'slime',
@@ -287,6 +312,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'warden',
+    behavior: 'turtle',
     name: '수호기사',
     baseArtId: 'warrior',
     spriteId: 'terrible-knight',
@@ -302,6 +328,7 @@ export const MONSTERS: MonsterDef[] = [
   },
   {
     id: 'pyrelord',
+    behavior: 'balanced',
     name: '화염군주',
     baseArtId: 'mage',
     spriteId: 'dragon',

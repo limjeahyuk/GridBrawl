@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- 적응형 아이콘은 이제 @mipmap/ic_launcher_background(돌바닥 그림)를 쓴다.
-         이 색은 그 그림이 없는 경로의 폴백이므로 --bg-1과 같은 어두운 돌로 둔다. -->
-    <color name="ic_launcher_background">#0C0A11</color>
-</resources>

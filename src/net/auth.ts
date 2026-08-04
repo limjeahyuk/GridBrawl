@@ -119,6 +119,16 @@ const emit = (): void => {
   listeners.forEach((l) => l(u))
 }
 
+/** ⚠ `onAuthStateChanged`가 끝내 안 불리는 경우가 실제로 있다(capacitor://localhost
+ *  오리진 — 2026-08-03 시뮬레이터에서 확인). 그러면 `ready`가 영원히 false로 남아
+ *  앱이 "접속 중…"에서 멈춘다. 지금은 아래 NATIVE 가드가 막고 있지만, 네이티브
+ *  구글 로그인을 플러그인으로 붙이며 그 가드를 걷어내는 순간 위험이 되돌아온다.
+ *  그래서 콜백을 무한정 기다리지 않는다 — 시간이 지나면 "아직 미로그인"으로 확정하고
+ *  화면을 띄운다(게스트 세션이 있으면 그대로 들어간다). 콜백이 늦게라도 오면 그때
+ *  사용자를 갈아 끼우므로, 최악이라도 로그인 화면이 잠깐 스쳤다가 넘어갈 뿐이다.
+ *  세션 복원은 로컬 저장소에서 일어나 네트워크와 무관하므로 3초면 넉넉하다. */
+const AUTH_TIMEOUT_MS = 3_000
+
 function ensureStarted(): void {
   if (started) return
   started = true
@@ -137,6 +147,11 @@ function ensureStarted(): void {
     ready = true
     emit()
   })
+  setTimeout(() => {
+    if (ready) return
+    ready = true
+    emit() // 게이트만 풀어 준다 — firebaseUser는 건드리지 않으므로 늦은 복원도 그대로 반영된다
+  }, AUTH_TIMEOUT_MS)
 }
 
 /** Subscribe to sign-in state. Emits the current user once Firebase has had a

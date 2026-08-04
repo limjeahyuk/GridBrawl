@@ -11,8 +11,8 @@ import type { BuffKind, CardDef, Offset } from '../battle/types'
 // (battle/cards.ts),
 // and the character's own cards carry the exciting abilities — wide ranges,
 // heavy damage, energy drain, lifesteal, pierce, knockback, self-shield,
-// recoil. Unique cards are mostly attacks but can be any kind (AEGIS has a
-// unique guard).
+// recoil. Unique cards are mostly attacks but can be any kind (the warrior
+// has a unique guard).
 //
 // Range offsets are { df, du }: df = cells forward (+ toward opponent), du =
 // rows upward (+ above). The engine mirrors df by the attacker's facing.
@@ -77,6 +77,28 @@ export interface Passive {
   statusPowerPct?: number
   /** 상대가 상태이상에 하나라도 걸려 있으면 내 공격 피해 +N(상태이상 시너지). */
   bonusVsAfflicted?: number
+
+  // --- 확장 훅(2026-08-05) — 유물 종류를 2배로 늘리면서 추가 ---
+  // 기존 훅만으로는 새 유물 70종이 전부 "수치만 다른 같은 것"이 됐다. 아래 여섯은
+  // **다른 자리를 건드리는** 훅이라 유물이 서로 다르게 느껴지는 근거가 된다.
+  // 전부 결정론적이고 정산 자리가 고정이라 멀티 락스텝은 그대로 안전하다.
+  /**
+   * 내 공격이 피해를 입히면 상대를 N턴 빙결(이동 무효). `poisonOnHit`의 빙결판.
+   * ⚠ 무제한이면 상대가 영원히 못 움직인다 — `freezeCap`(기본 2)회로 제한한다.
+   */
+  freezeOnHit?: number
+  /** `freezeOnHit`이 전투당 발동할 수 있는 횟수(합산). 없으면 2회. */
+  freezeCap?: number
+  /** 방패 세우기·버티기 등 **수비 카드**의 흡수량 +N%(매 턴 보호막에는 안 붙는다). */
+  guardPowerPct?: number
+  /** 힐 카드와 `regen`의 회복량 +N%. */
+  healPowerPct?: number
+  /** 전투 시작 기력 +N(최대 기력으로 클램프). */
+  startEnergyBonus?: number
+  /** 상대 체력이 절반(`LOW_HP_FRAC`) 이하일 때 내 공격 피해 +N%(처형). */
+  executeBonusPct?: number
+  /** 무너진 칸에서 받는 턴당 피해 -N(0까지). 전장 붕괴 전용 방어. */
+  collapseResist?: number
 }
 
 /** 누적 기력 소비 트리거 한 개. `per`만큼 쓸 때마다 아래 효과가 한 번씩 터진다. */
@@ -125,7 +147,7 @@ export interface CharacterDef {
    * 쓴다 — 직업 기본기는 플레이어 것이다.
    */
   basics: CardDef[]
-  /** 고유(전용) 카드. 대부분 공격이지만 어떤 종류든 될 수 있다(예: AEGIS의 전용 가드). */
+  /** 고유(전용) 카드. 대부분 공격이지만 어떤 종류든 될 수 있다(예: 전사의 전용 가드 `war-wall`). */
   cards: CardDef[]
 }
 

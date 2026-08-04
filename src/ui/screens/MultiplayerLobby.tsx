@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { RULES_VERSION } from '../../battle/types'
 import { getChar } from '../../data/roster'
 import { PortraitSvg } from '../PortraitSvg'
 import { firebaseConfigured, hostRoom, joinRoom } from '../../net/firebase'
@@ -17,13 +18,24 @@ type Role = 'host' | 'guest'
 type Mode = Role | 'quick'
 type Cancelable = { cancel(): void }
 
-/** Exchange `hello` so each peer learns the other's avatar, then build the
- *  canonical match (host = side 0, guest = side 1). */
+/** 룰셋이 다른 상대와는 붙지 않는다. 락스텝은 양쪽이 같은 엔진을 돌린다는
+ *  전제 위에 서 있어서, 버전이 어긋나면 화면이 조용히 갈린다(desync). 양쪽이
+ *  서로에게 hello를 보내므로 판정도 양쪽에서 똑같이 난다. */
+export const VERSION_MISMATCH =
+  '상대와 게임 버전이 다릅니다. 앱을 최신으로 업데이트한 뒤 다시 시도하세요.'
+
+/** Exchange `hello` so each peer learns the other's avatar and ruleset version,
+ *  then build the canonical match (host = side 0, guest = side 1). */
 function finishHandshake(transport: NetTransport, role: Role, myCharId: string): Promise<MatchReady> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const off = transport.onMessage((m) => {
       if (m.t !== 'hello') return
       off()
+      if (m.rules !== RULES_VERSION) {
+        transport.close()
+        reject(new Error(VERSION_MISMATCH))
+        return
+      }
       resolve({
         transport,
         localSide: role === 'host' ? 0 : 1,
@@ -31,7 +43,7 @@ function finishHandshake(transport: NetTransport, role: Role, myCharId: string):
         p1CharId: role === 'host' ? m.charId : myCharId,
       })
     })
-    transport.send({ t: 'hello', charId: myCharId })
+    transport.send({ t: 'hello', charId: myCharId, rules: RULES_VERSION })
   })
 }
 
@@ -65,10 +77,20 @@ export function MultiplayerLobby({
 
   const ready = (transport: NetTransport, r: Role) => {
     setStatus('연결됨! 상대 정보 교환 중…')
-    finishHandshake(transport, r, myCharId).then((m) => {
-      done.current = true
-      onReady(m)
-    })
+    finishHandshake(transport, r, myCharId)
+      .then((m) => {
+        done.current = true
+        onReady(m)
+      })
+      .catch((e) => {
+        // 룰셋 불일치 등 — 연결은 finishHandshake가 이미 닫았다. 로비로 되돌린다.
+        roomRef.current?.cancel()
+        roomRef.current = null
+        setRole(null)
+        setBusy(false)
+        setStatus('')
+        setError(msg(e))
+      })
   }
 
   const startQuick = () => {
@@ -79,7 +101,17 @@ export function MultiplayerLobby({
     try {
       const ticket = startQuickMatch()
       roomRef.current = ticket
-      void ticket.matched.then(({ transport, role: r }) => ready(transport, r))
+      // ⚠ catch가 없으면 대기열 쓰기가 거부돼도(예: RTDB 규칙) 화면은 "상대를 찾는 중…"
+      //   에서 영원히 돈다 — 실패가 비동기 루프 안에서 나기 때문.
+      void ticket.matched
+        .then(({ transport, role: r }) => ready(transport, r))
+        .catch((e) => {
+          roomRef.current = null
+          setRole(null)
+          setBusy(false)
+          setStatus('')
+          setError(msg(e))
+        })
     } catch (e) {
       setBusy(false)
       setError(msg(e))

@@ -60,7 +60,10 @@ export function TitleScreen({
         </div>
       )}
       <div className="title__content">
-        <div className="title__kicker neon-text">THE GRID · DEMON GAUNTLET</div>
+        {/* ⚠ 로그인 화면과 **같은 문구**여야 한다 — 두 화면이 이어 붙어 보인다.
+            GAUNTLET(대진표 건틀릿)은 2026-08-04에 모드째 사라져서 ASCENT(15층
+            사다리를 오른다)로 갈았다. `letter-spacing: 0.5em`이라 더 길어지면 넘친다. */}
+        <div className="title__kicker neon-text">THE GRID · DEMON ASCENT</div>
         <h1 className="title__logo">
           <span className="title__word title__word--a">GRID</span>
           <span className="title__word title__word--b">BRAWL</span>

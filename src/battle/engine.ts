@@ -1,17 +1,18 @@
 import { getChar, type CharacterDef, type Passive } from '../data/roster'
 import { ENERGY_REGEN } from './cards'
 import {
-  FOG_DAMAGE,
-  FOG_START_TURN,
+  COLLAPSE_START_TURN,
+  collapseDamageAt,
   GRID_COLS,
+  GRID_ROWS,
   LOW_HP_FRAC,
   MOVE_DELTA,
   START_CELLS,
   STATUS_POWER_CAP,
   STATUS_TURNS,
   inBounds,
+  isCollapsedCell,
   isDot,
-  isFogCell,
   type BattleSnapshot,
   type Cell,
   type CardDef,
@@ -22,8 +23,8 @@ import {
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
 
-// 독안개·부활 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
-const FOG_CARD: CardDef = { id: 'fog', name: '독안개', kind: 'guard', desc: '가장자리를 덮는 독안개.' }
+// 붕괴·부활 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
+const COLLAPSE_CARD: CardDef = { id: 'collapse', name: '붕괴', kind: 'guard', desc: '바닥이 무너져 내린다.' }
 const REVIVE_CARD: CardDef = { id: 'revive', name: '잿불 부활', kind: 'guard', desc: '쓰러진 자리에서 불씨로 되살아난다.' }
 const STUN_CARD: CardDef = { id: 'stun', name: '기절', kind: 'guard', desc: '기절해서 이 턴에 아무것도 못 한다.' }
 const TRIGGER_CARD: CardDef = { id: 'trigger', name: '유물 발동', kind: 'guard', desc: '누적 기력이 유물을 깨웠다.' }
@@ -52,6 +53,8 @@ export interface BattleState {
   stunned: [number, number]
   /** `stunOnHit`으로 이번 전투에 기절시킨 횟수(`stunCap` 제한). */
   stunsUsed: [number, number]
+  /** `freezeOnHit`으로 이번 전투에 얼린 횟수(`freezeCap` 제한). */
+  freezesUsed: [number, number]
   /** 카드 `empower`로 이 전투 내내 누적된 공격 피해 보너스. */
   empowered: [number, number]
   /** 걸려 있는 지속 상태이상(독·화상·빙결). 종류당 최대 1개로 합쳐 둔다. */
@@ -75,6 +78,12 @@ export interface BattleOpts {
    * 클램프), 미지정(undefined)이면 풀피 — PvP·봇전·튜토리얼은 변화 없음.
    */
   startHp?: [number | undefined, number | undefined]
+  /**
+   * 시작 셀 override(로그라이크 **랜덤 배치**, 2026-08-05). 지정한 쪽만 이 셀에서
+   * 시작한다(격자 밖이면 클램프). 런에서 몬스터를 매번 다른 줄에 세워 개전을
+   * 바꾸는 용도 — 미지정이면 기본 `START_CELLS`(PvP·봇전·튜토리얼 불변).
+   */
+  startCells?: [Cell | undefined, Cell | undefined]
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -101,10 +110,30 @@ export class CardBattle {
       const want = opts?.startHp?.[p]
       return want == null ? this.maxHp[p] : clamp(Math.round(want), 1, this.maxHp[p])
     }
+    // 시작 셀 — override가 있으면 격자 안으로 클램프해 쓴다(랜덤 배치).
+    const startCell = (p: number): Cell => {
+      const want = opts?.startCells?.[p]
+      if (!want) return cloneCell(START_CELLS[p])
+      return {
+        col: clamp(Math.round(want.col), 0, GRID_COLS - 1),
+        row: clamp(Math.round(want.row), 0, GRID_ROWS - 1),
+      }
+    }
     this.state = {
-      pos: [cloneCell(START_CELLS[0]), cloneCell(START_CELLS[1])],
+      pos: [startCell(0), startCell(1)],
       hp: [startHp(0), startHp(1)],
-      energy: [this.chars[0].startEnergy, this.chars[1].startEnergy],
+      energy: [
+        clamp(
+          this.chars[0].startEnergy + (this.passive[0].startEnergyBonus ?? 0),
+          0,
+          this.chars[0].maxEnergy,
+        ),
+        clamp(
+          this.chars[1].startEnergy + (this.passive[1].startEnergyBonus ?? 0),
+          0,
+          this.chars[1].maxEnergy,
+        ),
+      ],
       shield: [0, 0],
       cooldowns: [{}, {}],
       revived: [false, false],
@@ -112,6 +141,7 @@ export class CardBattle {
       energySeen: [0, 0],
       stunned: [0, 0],
       stunsUsed: [0, 0],
+      freezesUsed: [0, 0],
       empowered: [0, 0],
       status: [[], []],
       turn: 1,
@@ -222,7 +252,11 @@ export class CardBattle {
       s.energy[p] = clamp(s.energy[p] + bonus, 0, this.chars[p].maxEnergy)
       s.shield[p] += pas.turnShield ?? 0
       if (s.turn === 1 && pas.openingShield) s.shield[p] += pas.openingShield
-      if (pas.regen) s.hp[p] = Math.min(this.maxHp[p], s.hp[p] + pas.regen)
+      // 지속 회복도 `healPowerPct`로 증폭된다 — 힐 카드와 같은 손잡이를 쓴다.
+      if (pas.regen) {
+        const heal = Math.round(pas.regen * (1 + (pas.healPowerPct ?? 0) / 100))
+        s.hp[p] = Math.min(this.maxHp[p], s.hp[p] + heal)
+      }
     }
 
     const emit = (
@@ -346,7 +380,10 @@ export class CardBattle {
         const cost = costOf(p, c)
         if (s.energy[p] >= cost) {
           spend(p, cost)
-          s.shield[p] += c.block ?? 0
+          // 수비 카드 흡수량은 유물(`guardPowerPct`)로 증폭된다. 매 턴 자동
+          // 보호막(`turnShield`)에는 안 붙는다 — "가드를 낸 턴"만 보상하는 훅이다.
+          const boost = 1 + (this.passive[p].guardPowerPct ?? 0) / 100
+          s.shield[p] += Math.round((c.block ?? 0) * boost)
           emit(p, c, 'guard')
         } else {
           emit(p, c, 'nofuel')
@@ -360,7 +397,10 @@ export class CardBattle {
         if (s.energy[p] >= cost) {
           spend(p, cost)
           const before = s.hp[p]
-          s.hp[p] = Math.min(this.maxHp[p], before + (c.healHp ?? 0))
+          const amount = Math.round(
+            (c.healHp ?? 0) * (1 + (this.passive[p].healPowerPct ?? 0) / 100),
+          )
+          s.hp[p] = Math.min(this.maxHp[p], before + amount)
           emit(p, c, 'heal', 0, s.hp[p] - before)
         } else {
           emit(p, c, 'nofuel')
@@ -431,9 +471,14 @@ export class CardBattle {
         synergy +
         buffPower(p, 'atkUp') // 공격 강화 버프(N턴 한정) — empowered(영구 누적)와 별개
       const low = s.hp[p] <= this.maxHp[p] * LOW_HP_FRAC ? (atkPas.lowHpBonusPct ?? 0) : 0
-      const raw = low > 0 ? Math.round(flat * (1 + low / 100)) : flat
-      // EMBER (shieldBreak): a connecting hit wipes the defender's shield first.
-      if (atkPas.shieldBreak) s.shield[d] = 0
+      // 처형(executeBonusPct, 2026-08-05): **상대가** 반피 이하면 배율. lowHpBonusPct의
+      // 거울상이라 같은 자리에서 합산한다 — 둘 다 켜지면 곱이 아니라 합(폭주 방지).
+      const exec =
+        s.hp[d] <= this.maxHp[d] * LOW_HP_FRAC ? (atkPas.executeBonusPct ?? 0) : 0
+      const pct = low + exec
+      const raw = pct > 0 ? Math.round(flat * (1 + pct / 100)) : flat
+      // shieldBreak: a connecting hit wipes the defender's shield first.
+      if (atkPas.shieldBreak || c.shatter) s.shield[d] = 0
       // pierce: 보호막을 소모시키지 않고 그대로 통과한다(유물 alwaysPierce도 같은 효과).
       const absorbed = c.pierce || atkPas.alwaysPierce ? 0 : Math.min(s.shield[d], raw)
       s.shield[d] -= absorbed
@@ -449,11 +494,11 @@ export class CardBattle {
         s.energy[d] -= drain
         s.energy[p] = clamp(s.energy[p] + drain, 0, this.chars[p].maxEnergy)
       }
-      // 회복: 카드 흡혈(leech) + CIPHER 패시브(lifesteal 고정치), 피해가 들어갔을 때만.
+      // 회복: 카드 흡혈(leech) + 패시브 흡혈(lifesteal 고정치), 피해가 들어갔을 때만.
       let heal = 0
       if (dmg > 0) {
         heal += c.leech ?? 0
-        heal += atkPas.lifesteal ?? 0 // CIPHER 패시브 + 송곳니류 유물
+        heal += atkPas.lifesteal ?? 0 // 패시브 + 송곳니류 유물
       }
       // 기절: 카드의 `stun` + 유물 `stunOnHit`(전투당 `stunCap`회). 피해가 실제로
       // 들어갔을 때만 — 가드에 막힌 타격으로는 기절하지 않는다.
@@ -468,7 +513,14 @@ export class CardBattle {
       // 위력 보정(statusPowerPct)은 여기서 한 번 계산해 확정한다.
       const poison = dmg > 0 ? scaledPower(p, (c.poison ?? 0) + (atkPas.poisonOnHit ?? 0)) : 0
       const burn = dmg > 0 ? scaledPower(p, (c.burn ?? 0) + (atkPas.burnOnHit ?? 0)) : 0
-      const freeze = dmg > 0 ? (c.freeze ?? 0) : 0
+      // 빙결 부여 유물(freezeOnHit) — 기절과 같은 구조로 **전투당 freezeCap회**까지만.
+      // 상한이 없으면 상대가 영원히 못 움직인다(빙결은 지속이 갱신되므로).
+      let freeze = dmg > 0 ? (c.freeze ?? 0) : 0
+      const onFreeze = atkPas.freezeOnHit ?? 0
+      if (dmg > 0 && onFreeze > 0 && s.freezesUsed[p] < (atkPas.freezeCap ?? 2)) {
+        s.freezesUsed[p] += 1
+        freeze += onFreeze
+      }
       const result = (dmg > 0 ? 'hit' : 'blocked') as Step['result']
       return {
         ...zero,
@@ -518,7 +570,7 @@ export class CardBattle {
       if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze)
     }
 
-    // 부활(EMBER 잿불 부활 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
+    // 부활(영원의 불씨 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
     const tryRevive = (p: number) => {
       const amount = this.passive[p].revive ?? 0
       if (s.hp[p] > 0 || amount <= 0 || s.revived[p]) return
@@ -655,28 +707,32 @@ export class CardBattle {
       if (settleKo()) break
     }
 
-    // 지속 상태이상(독·화상) — 독안개보다 **먼저** 갉는다. 독안개는 무한전을 끊는
+    // 지속 상태이상(독·화상) — 붕괴보다 **먼저** 갉는다. 붕괴는 무한전을 끊는
     // 최후의 장치라 마지막에 두는 게 읽기 좋다.
     if (!s.over) {
       tickStatuses()
       settleKo()
     }
 
-    // 독안개: FOG_START_TURN부터 턴 종료 시 독안개 위에 서 있으면 피해.
+    // 전장 붕괴: COLLAPSE_START_TURN부터, 턴 종료 시 무너진 칸에 서 있으면 피해.
+    // 실드는 무시하지만 유물의 `collapseResist`만큼은 줄어든다(발판 유물).
     // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
-    if (!s.over && s.turn >= FOG_START_TURN) {
+    if (!s.over && s.turn >= COLLAPSE_START_TURN) {
+      const base = collapseDamageAt(s.turn)
       for (let p = 0; p < 2; p++) {
-        if (!isFogCell(s.pos[p], s.turn)) continue
-        s.hp[p] = Math.max(0, s.hp[p] - FOG_DAMAGE)
+        if (!isCollapsedCell(s.pos[p], s.turn)) continue
+        const dmg = Math.max(0, base - (this.passive[p].collapseResist ?? 0))
+        if (dmg <= 0) continue
+        s.hp[p] = Math.max(0, s.hp[p] - dmg)
         steps.push({
-          phase: 'fog',
+          phase: 'collapse',
           actor: p,
-          card: FOG_CARD,
-          result: 'fog',
+          card: COLLAPSE_CARD,
+          result: 'collapse',
           damage: 0,
           heal: 0,
           drain: 0,
-          recoil: FOG_DAMAGE,
+          recoil: dmg,
           snapshot: this.snapshot(),
         })
       }

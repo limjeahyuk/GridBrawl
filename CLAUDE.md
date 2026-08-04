@@ -24,7 +24,9 @@
 
 ### 로그라이크 밸런스 (2026-08-03 재조정 완료)
 
-개편 직후엔 WARRIOR 31.0 / MAGE 1.3 / ARCHER 0.7%(**밴드 30.3%p**)로 궁수·마법사가 클리어 불가였다. `SIGNATURE.runEffect`만 조정해 잡았다. **현재 밴드 2.4%p**(5시드 × 900런 `--sweep --path=random` 평균 · WARRIOR 28.9 / ARCHER 27.3 / MAGE 26.5 · 클리어율 27.5%). 동시 트레이드 규칙 변경(2026-08-04) 뒤 재조정한 값이다 — ⚠ 조정 기준이 **기본 경로(`random`)**라, 극단 경로에서는 4~5%p로 벌어진다([docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑤-bis).
+개편 직후엔 WARRIOR 31.0 / MAGE 1.3 / ARCHER 0.7%(**밴드 30.3%p**)로 궁수·마법사가 클리어 불가였다. `SIGNATURE.runEffect`만 조정해 잡았다. **현재 밴드 0.9%p**(5시드 × 900런 `--sweep --path=random` 평균 · WARRIOR 29.7 / ARCHER 28.9 / MAGE 28.8 · 클리어율 29.1%). 2026-08-05 유물·카드 2배 확장 + `mergeRelics` 수정 뒤 재조정한 값이다 — ⚠ 조정 기준이 **기본 경로(`random`)**다([docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑤-bis).
+
+- ⚠ **`mergeRelics`가 상태이상 훅을 통째로 흘리고 있었다(2026-08-05 수정)**. 훅 이름을 손으로 나열하는 방식이라 2026-08-01에 추가한 `poisonOnHit`/`burnOnHit`/`statusPowerPct`/`bonusVsAfflicted` 네 개를 적는 걸 빠뜨렸고, 그래서 **상태이상 유물 8종과 궁수·마법사 시그니처의 독·화상이 런에서 아무 일도 하지 않았다**(카드에 붙은 독은 엔진이 따로 처리해 겉으론 멀쩡해 보였다). 고치자 밴드가 3.6 → **17.1%p**로 벌어져(궁수·마법사만 급등) `SIGNATURE.runEffect`를 다시 맞췄다. 이제 `effect`의 키를 그대로 훑으므로 훅을 새로 파도 자동으로 붙는다.
 
 - **PvP는 손대지 않았다.** `runEffect`는 런 전용이고, `scripts/simulate.ts`는 `relics.ts`를 import하지 않는다(`mergeRelics` 호출처는 `runbattle.ts`·`run.ts`뿐). ⚠ `npm run sim`은 시드가 없어 실행마다 ±0.05턴 흔들린다 — 이 값으로 회귀를 판정하지 말 것.
 - ⚠ **단일 시드로 튜닝하면 시드에 과적합된다.** 같은 수치로 시드만 바꿔도 밴드가 1.5~7.3%p로 널뛴다. 반드시 **여러 시드 평균**으로 판정한다.
@@ -47,18 +49,27 @@
 - **층별 배경 4종 + 몬스터 스프라이트 전면 이관**(2026-08-04) — 직업 시트를 빌려 쓰는 몬스터 0
 - **타이틀 = 로그라이크 입구**(2026-08-04). 단판은 PVP 버튼 아래로 내려갔다
 - ⚠ 위 다섯은 **두 갈래에서 따로 진행돼 2026-08-04에 합쳤다**(merge). 합친 뒤 재측정한 런 밴드는 **2.2%p · 클리어율 ~27.6%**(5시드 × 900런 평균 · ARCHER 28.7 / WARRIOR 27.4 / MAGE 26.6) — 각 갈래가 따로 적어 둔 수치(3.6→1.5%p 등)는 **상대 갈래를 모르고 잰 값이라 더는 유효하지 않다**
-- **분기 지도(2026-08-04)** — 선형 사다리를 층마다 갈래가 있는 지도로 바꿨다. 이제 앞으로 갈 칸을 **직접 고른다**. 상세·수치는 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑤-bis
-  - 갈래 규칙: 전투↔다른 몬스터 전투 · 엘리트↔일반전투(회피 가능) · 이벤트↔상점. **0번만 따라가면 분기 이전과 완전히 같은 런**이라 옛 기준선이 경로로 남아 있다(`--path=template`)
+- **분기 지도(2026-08-04) → 사다리 그래프(2026-08-05)** — 선형 사다리를 갈래가 있는 지도로 바꾸고(08-04), 다시 **간선으로 이어진 그래프**로 바꿨다(08-05). 상세·수치는 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑤-bis
+  - 층마다 **줄(lane) 0·1·2**에 칸이 서고 간선은 세로로 한 칸까지만 난다. **직전에 고른 칸에서 이어진 칸만** 다음 선택지 → 갈래가 1~3개로 달라진다
+  - 갈래 규칙: 전투↔다른 몬스터 전투 · 엘리트↔일반전투(회피 가능) · 이벤트↔상점
+  - ⚠ **가운데 줄(lane 1)은 모든 층에 있고 어디서든 이어진다** — 그 경로가 곧 옛 선형 사다리이자 밸런스 기준선이다(`--path=template`). "늘 0번"은 더 이상 그 경로가 아니다
   - ⚠ **지원 칸(이벤트·상점)의 대안을 전투로 두지 말 것** — 처음에 그렇게 했다가 클리어율이 **27%→10%로 무너졌다**(상점이 회복의 주 수단). 지원 칸은 서로하고만 바꾼다. `npm run check`가 지킨다
-  - 경로가 결과를 가른다: `safe`(엘리트 회피) 24.0% → `random` 27.5% → `greedy`(엘리트 우선) 31.1%. **엘리트를 먹는 쪽이 이득**이라 "안전 경로가 최적"이 되는 실패는 피했다
+  - 경로가 결과를 가른다: `safe`(엘리트 회피) 26.9% → `greedy` 28.3% → `random` 28.8% → `template` 31.0%. **엘리트를 피하는 쪽이 손해**라 "안전 경로가 최적"이 되는 실패는 피했다(단 그래프가 되며 격차가 7.1 → 1.4%p로 줄었다)
 - **동시 트레이드 수정(2026-08-04)** — "적을 죽였는데 그 적이 때린다"는 신고. 같은 슬롯 양측 공격을 통째로 동시 적용하던 걸 **쓰러뜨리는 쪽부터 적용 + 쓰러진 쪽은 못 때림**으로 고쳤다(진짜 동시 KO만 예외). 룰 변경이라 밴드가 1.7→7.2%p로 벌어져 `SIGNATURE.runEffect` 재조정 → **밴드 2.4%p · 클리어율 27.5%**(`--path=random` 기준). 상세 GDD ④
+- **앱 아이콘 = 전사(2026-08-04)** — 리스킨 전 사이버 아이콘(청록 삼각 우주선)이 홈 화면에만 남아 있었다. 아래 "앱 아이콘" 절
+- **타이틀 = 다크 판타지 마무리(2026-08-04)** — 문구와 로고 색이 마지막 사이버 잔재였다. 문구 `THE GRID · DEMON GAUNTLET` → **`THE GRID · DEMON ASCENT`**(건틀릿 모드가 사라지고 15층 사다리를 오르는 게임이 됐다), 로고는 청록→보라에서 **횃불 금(GRID) + 핏빛(BRAWL)**으로. ⚠ 문구는 **타이틀·로그인 두 화면이 공유**하고(한쪽만 고치면 로그인 직후 글자가 깜빡인다), 로고 그라디언트는 **`ui.css`에 폴백 한 줄이 필수다**(`color-mix`를 모르는 WebView에서 로고가 통째로 사라진다). 근거는 GDD ④ "아직 남은 사이버 잔재"
+- **죽은 파일·낡은 기록 정리(2026-08-04)** — 개편을 여러 번 거치며 아무도 안 쓰는 파일과 "6종 시절" 서술이 남아 있었다. 지운 것: 옛 사이버 아이콘 원본(`resources/icon.svg`·`icon.png`) · 건틀릿 3종(`game/tournament.ts`·`BracketScreen`·`CharacterSelect` — 단판 전환 뒤 import 0) · `art/emblem.ts` · 임시 도적 시트(`public/sprites/bandit-*` 16장 + `banditClips()` + 패커 항목) · Capacitor 기본 아이콘 벡터 3종. **되살릴 땐 git 기록에서 짝을 이루는 것들을 함께 꺼낼 것**(시트는 스트립·클립·패커 세 곳)
+  - ⚠ **명시적으로 "6종 시절의 기록"이라고 표시된 GDD 표·시뮬 로그는 남겨 뒀다** — 옛 측정치와 대조하려고 일부러 둔 것이다. 고친 건 **현재형으로 잘못 적혀 있던 것들**뿐이다(시트 매핑이 `bandit-*`로 남아 있던 곳, 명세 대조표의 "6직업/6명", 대진표 시절 화면 흐름, `--char=volt` 예시)
+- **지도 = 사다리 그래프(2026-08-05)** — 층마다 독립된 2택이던 걸 **간선으로 이어진 그래프**로. 직전에 고른 칸에서 **이어진 칸만** 다음 선택지가 되므로 갈래가 1~3개로 달라진다. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑤-bis
+- **독안개 → 전장 붕괴(2026-08-05)** — 이름·색·경고를 "바닥이 무너진다"로 바꾸고 단계별 피해를 **10 / 16 / 24**로 올렸다. **무너진 칸에도 들어갈 수 있다**(소프트 위험지대 — 벽으로 막으면 마지막 단계에 설 자리가 0이 된다). 상세 GDD ④
+- **유물 72 → 158종 · 런 카드 22 → 50장(2026-08-05)** — 새 엔진 훅 여섯(빙결 부여·수비 증폭·치유 증폭·시작 기력·처형·붕괴 저항) 위에 세트를 짰다. 런 카드엔 **버프 카드가 처음 들어갔다**
+- **몬스터 전투 변주(2026-08-05)** — 20종이 단 하나의 `decideAI`를 공유해 "멀면 붙고 닿으면 때린다"만 반복, 매 전투가 똑같이 흘렀다("처음 만나는 슬라임·도끼병이 거의 똑같다"는 신고). 세 축을 넣었다 — ⓐ **성격(archetype)**: `MonsterDef.behavior`(rusher/kiter/turtle/skirmisher/balanced)가 난이도 cfg를 밀고 `keepGap`으로 접근/후퇴를 가른다(카이터는 붙으면 물러나 원거리로 쏨). ⓑ **랜덤 시작 위치**: `BattleOpts.startCells`로 몬스터를 매 전투 다른 줄에 세운다(보스는 가운데 고정). ⓒ **전투별 기분**: `runbattle.ts`가 판 시작 때 `moodAgg`(±0.12)를 한 번 굴려 같은 몬스터도 판마다 공격성이 다르게. 셋 다 **런(싱글) 전용** — 몬스터 AI는 PvP 락스텝에 관여 안 하고 시뮬은 시드 RNG라 재현된다. ⚠ **밴드 영향**: 5시드 스윕에서 3.5→3.6%p로 유지돼(궁수만 +2.6%p — 카이터가 밀착사각을 덜 노출) `runEffect` 재조정 없이 성립. 성격 수치(`ai.ts`의 `ARCH`)를 건드리면 스윕 재측정. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑦
 
 **남은 것 (다음 후보)**
 1. ~~대형 몬스터 시트~~ — **2026-08-03 완료.** 20종이 직업 시트 3개를 돌려 쓰던 상태가 끝났다(13개 시트). 새 팩을 더할 때의 절차는 [public/sprites/README.md](public/sprites/README.md)
 2. **PvP 밸런스** — 3직업 개편 이후 **한 번도 안 맞췄다**(사용자 결정으로 후순위). `npm run sim`의 매치업 승률로 본다. ⚠ 이 시뮬은 시드가 없어 ±0.05턴 흔들리니 큰 차이만 신뢰할 것
-3. **타이틀 로고** — 글자 그라디언트가 아직 사이버 시절 청록→보라다(`ui.css`의 `.title__word`)
-4. **보스 연출** — 보스 3종이 일반 몬스터와 같은 스크립트 틀만 쓴다. 컷인·전용 배경 등
-5. **다인 전투(Phase 2)** — 엔진이 엄격히 1:1(`pos/hp/chars`)이라 코어 재작성이 필요. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md)
+3. **보스 연출** — 보스 3종이 일반 몬스터와 같은 스크립트 틀만 쓴다. 컷인·전용 배경 등
+4. **다인 전투(Phase 2)** — 엔진이 엄격히 1:1(`pos/hp/chars`)이라 코어 재작성이 필요. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md)
 
 **작업 시작 전 확인**
 ```bash
@@ -121,19 +132,19 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 | 전투 엔진(턴 해소) | `src/battle/engine.ts`                                   |
 | CPU AI             | `src/battle/ai.ts`                                       |
 | 캐릭터·공격 카드   | `src/data/roster.ts`                                     |
-| 토너먼트(건틀릿)   | `src/game/tournament.ts`                                 |
 | 로그라이크(런/유물/몬스터) | `src/game/run.ts`·`relics.ts`·`monsters.ts` — 설계 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) |
 | 온라인 멀티(P2P)   | `src/net/*`, `src/ui/screens/MultiplayerLobby.tsx`       |
 | 로그인(구글 인증)  | `src/net/auth.ts`, `src/ui/useAuth.ts`, `src/ui/screens/LoginScreen.tsx` |
 | 화면 흐름 / UI     | `src/App.tsx`, `src/ui/screens/*`, `src/ui/`, `src/art/` |
 | 전투 연출(손맛)    | `src/ui/sfx.ts`(효과음 합성)·`src/ui/battlefx.css` — 아래 "전투 연출" 참고 |
 | 픽셀 스프라이트    | `src/art/sprites.ts`(시트 정의·클립 폴백)·`scripts/packsprites.mjs`(원본→스트립 굽기, `npm run sprites`) — 규격 [public/sprites/README.md](public/sprites/README.md) |
+| 앱 아이콘          | `scripts/makeicon.mjs`(`npm run icon` — 웹·iOS·Android 24장) · PNG 코덱 `scripts/png.mjs`(패커와 공용) |
 | 에셋 원본(배포 제외) | `assets-raw/` — ⚠ 원본을 `public/`에 두면 EULA·프리뷰·미사용 애니메이션까지 배포된다 |
 
 ## 전투 모델 (현재 구현 요약) — 2D 격자
 
 - **로그인 게이트(앱 전체)**: 모든 화면 앞에 구글 로그인이 필수(`App.tsx`가 `useAuth`로 게이트). 미로그인 시 `LoginScreen`, 인증 복원 중엔 "접속 중…". 로그인 후에야 아래 흐름 진입. 예외적으로 **Firebase Auth는 SDK 의존**(시그널링용 `net/firebase.ts`는 여전히 REST-only) — `VITE_FIREBASE_API_KEY` 필요, 미설정 시 로그인 화면이 "설정 필요" 안내(`.env.example`). 콘솔에서 Google 공급업체 활성화 필수.
-- **덱 빌딩(2026-07-22)**: 전투 전에 **고정 7장 + 고른 7장 = 14장** 덱을 짠다(`src/game/decks.ts`). 고정=이동4방향·브레이스·원기 + **그 직업의 기본 공격**(`fixedCardsFor(charId)` — 2026-08-04 전엔 공용 스트라이크 고정이라 상수였다), 선택 풀=대시2·**대각선 이동4(↗↖↘↙)**·펄스샷·가드·**리페어(힐)**+**직업 기본기 나머지 2장**+직업 고유 카드. 덱은 **캐릭터 종속**(이름/수정/삭제). ⚠ **직업마다 고유 카드 수가 다르다**(전사 9·궁수 8·마법사 8 — 여기에 기본기 3장이 더 붙는다) — `PRESET_DECKS`는 고유 카드를 먼저 넣고 남는 자리를 `PRESET_FILLERS`로 채워 정확히 7장을 맞춘다. 카드가 상한을 넘은 뒤로는 **직업별로 손으로 고른다**(아래 "버프 카드 · 이동공격" 절). **저장은 계정별(2026-07-23)** — 로그인 시 RTDB `decks/<uid>`가 원본이고 localStorage `gb-decks:<uid>`는 캐시, 게스트는 `gb-decks` 로컬 전용. UI는 `src/game/deckSync.ts`의 `listDecks/putDeck/removeDeck`(비동기)만 사용. 모든 덱 카드는 `deckFor(char)`의 부분집합이라 **멀티 플랜 복원(`net/session.ts`)은 그대로 동작**. `PRESET_DECKS`는 봇 상대 덱 + 기본 덱.
+- **덱 빌딩(2026-07-22)**: 전투 전에 **고정 7장 + 고른 7장 = 14장** 덱을 짠다(`src/game/decks.ts`). 고정=이동4방향·버티기·원기 + **그 직업의 기본 공격**(`fixedCardsFor(charId)` — 2026-08-04 전엔 공용 내려치기 고정이라 상수였다), 선택 풀=대시2·**대각선 이동4(↗↖↘↙)**·돌팔매·방패 세우기·**상처 봉합(힐)**+**직업 기본기 나머지 2장**+직업 고유 카드. 덱은 **캐릭터 종속**(이름/수정/삭제). ⚠ **직업마다 고유 카드 수가 다르다**(전사 9·궁수 8·마법사 8 — 여기에 기본기 3장이 더 붙는다) — `PRESET_DECKS`는 고유 카드를 먼저 넣고 남는 자리를 `PRESET_FILLERS`로 채워 정확히 7장을 맞춘다. 카드가 상한을 넘은 뒤로는 **직업별로 손으로 고른다**(아래 "버프 카드 · 이동공격" 절). **저장은 계정별(2026-07-23)** — 로그인 시 RTDB `decks/<uid>`가 원본이고 localStorage `gb-decks:<uid>`는 캐시, 게스트는 `gb-decks` 로컬 전용. UI는 `src/game/deckSync.ts`의 `listDecks/putDeck/removeDeck`(비동기)만 사용. ⚠ **오프라인에서 저장·삭제가 던지지 않는다(2026-08-05)** — 로컬 반영은 이미 끝난 상태라 클라우드 실패로 편집을 막으면 안 된다. 실패한 반영은 보류 큐(`gb-decks-pending:<uid>`)에 쌓고 **다음 `listDecks`에서 클라우드를 읽기 *전에* 먼저 올린다** — 순서를 뒤집으면 `writeDecks`가 캐시를 덮어써 오프라인 편집이 되돌아간다. 모든 덱 카드는 `deckFor(char)`의 부분집합이라 **멀티 플랜 복원(`net/session.ts`)은 그대로 동작**. `PRESET_DECKS`는 봇 상대 덱 + 기본 덱.
 - **칸을 눌러 이동 · 탭 제거(2026-08-03)** — 이동 카드를 탭에서 골라 쓰는 게 번거로웠다(특히 "이동 후 공격"이 탭을 두 번 오갔다). 이제 **판의 칸을 직접 누른다**.
   - 갈 수 있는 칸을 **호박색으로 밝히고**(`.cell--move`) 누르면 그 이동 카드가 슬롯에 담긴다. 출발점은 **이미 고른 카드까지 반영된 위치**라 연달아 눌러 두 칸을 갈 수 있다.
   - 같은 칸에 닿는 카드가 둘이면 **걸음 수가 적은 쪽**을 고른다(대시는 쿨이 있어 아껴 두는 게 보통 이득).
@@ -141,16 +152,16 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
   - ⚠ **공격 사거리(붉은색)와 색이 겹치면 안 된다.** 둘 다 "여기를 노린다"는 뜻이라 같은 색이면 무엇을 누르는지 헷갈린다. 겹친 칸은 사거리 표시가 이긴다.
   - 손패에는 **공격·수비만** 남고 탭이 사라졌다. ⚠ `.cards__hand`는 `flex-wrap: nowrap` + 가로 스크롤이어야 한다 — `wrap`이면 카드가 10장을 넘는 순간 두 번째 줄이 생겨 고정 높이 밖으로 잘린다(로그라이크에서 덱이 커지면 실제로 넘는다).
 - **대각선 이동·힐(2026-07-23, 2단계)**: `MoveDir`에 `up-right/up-left/down-right/down-left` 추가(`MOVE_DELTA`, 멀티 미러링은 `MIRROR_DIR`+`faceCard`). 새 카드종류 `heal`(`c-repair`: 기력20→체력20, 쿨1) — 엔진 `resolvePrep`이 처리하고 `planAffordable`이 비용 반영(기력 부족 시 선택 불가). `CardFace`는 대각 화살표·힐 초록 표기.
-- 화면 흐름: **`title →(게임 시작)→ run-start`(로그라이크 — 2026-08-04부터 이게 기본 입구다)** / `title →(PVP)→ deck-select → mode-select →` **봇전** `fight → result`(1:1 단판, 상대는 랜덤 캐릭터+프리셋 덱) 또는 **온라인** `mp-lobby → mp-fight → mp-result`. **덱 만들기**는 타이틀이 아니라 **PVP 안**(`deck-select` 헤더)에 있다(2026-08-04 사용자 요청 — 덱은 PVP에서만 쓴다) → `deck-manage`(목록/삭제) → `deck-build`(캐릭터+7장 선택·저장). `deck-manage`의 뒤로는 그래서 타이틀이 아니라 `deck-select`다. **도감** → `codex`. 카드 렌더는 배틀·덱화면 공용 `src/ui/CardFace.tsx` — **전투에선 `compact` prop**으로 설명을 빼고 이름·수치(기력/데미지)·사거리만(덱 빌더·도감은 설명 유지). (건틀릿 `game/tournament.ts`는 단판 전환으로 현재 미사용.)
+- 화면 흐름: **`title →(게임 시작)→ run-start`(로그라이크 — 2026-08-04부터 이게 기본 입구다)** / `title →(PVP)→ deck-select → mode-select →` **봇전** `fight → result`(1:1 단판, 상대는 랜덤 캐릭터+프리셋 덱) 또는 **온라인** `mp-lobby → mp-fight → mp-result`. **덱 만들기**는 타이틀이 아니라 **PVP 안**(`deck-select` 헤더)에 있다(2026-08-04 사용자 요청 — 덱은 PVP에서만 쓴다) → `deck-manage`(목록/삭제) → `deck-build`(캐릭터+7장 선택·저장). `deck-manage`의 뒤로는 그래서 타이틀이 아니라 `deck-select`다. **도감** → `codex`. 카드 렌더는 배틀·덱화면 공용 `src/ui/CardFace.tsx` — **전투에선 `compact` prop**으로 설명을 빼고 이름·수치(기력/데미지)·사거리만(덱 빌더·도감은 설명 유지). ⚠ **건틀릿(토너먼트)은 2026-08-04에 코드째 지웠다** — `game/tournament.ts`·`BracketScreen`·`CharacterSelect`가 단판 전환 이후 아무 데서도 import되지 않은 채 남아 있었다. 되살리려면 git 기록에서 셋을 함께 꺼낸다.
 - 전장은 **2D 격자 6열 × 3행**(`GRID_COLS/ROWS`). 위치는 셀 `{col,row}`, 시작은 가운뎃줄 양 끝. p0는 오른쪽, p1은 왼쪽을 바라봄(`facing`).
 - 카드 종류: `move / attack / guard / energy`. 모든 카드에 `cooldown`(사용 후 잠기는 턴 수). **공용(약함) + 캐릭터 고유(강함, 각 4장)** 이원화 — 2026-07-03.
-  - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 스트라이크(앞뒤1칸 10dmg)·펄스 샷(앞뒤 2칸째 10dmg)** + 가드(실드 50·쿨1)·**브레이스(실드 30·쿨0)** + 원기(기력 +35·쿨1). 턴 시작 패시브 기력 +20. (2026-07-15 "5턴 페이싱" 밸런스 패스 — GDD ④ 참고)
+  - 공용: 이동 `> < ^ v`(쿨0)·대시 `>> <<`(쿨1) + **약공 내려치기(앞뒤1칸 10dmg)·돌팔매(앞뒤 2칸째 10dmg)** + 방패 세우기(실드 50·쿨1)·**버티기(실드 30·쿨0)** + 원기(기력 +35·쿨1). 턴 시작 패시브 기력 +20. (2026-07-15 "5턴 페이싱" 밸런스 패스 — GDD ④ 참고)
   - 공격: `range` 오프셋 `{df,du}`(df=앞, du=위)로 타격 셀 지정. 상대 셀이 들어오면 적중, 실드가 먼저 흡수.
   - **고유 카드 특수 능력**(`roster.ts`의 `CharacterDef.cards` — 공격 외 종류도 가능, 예: AEGIS 전용 가드): `drain`(기력 흡수)·`leech`(흡혈)·`pierce`(실드 관통)·`push`(넉백)·`selfShield`(사용 시 실드)·`recoil`(반동 자해). 발동 조건·적용 순서는 GDD ③/④, 카드 UI엔 능력 칩(`CardFace`의 `abilityTags`).
   - **밀착 타격**(2026-07-25 · 2026-08-03 재집계): 두 파이터는 같은 셀에 겹칠 수 있고, 겹친 상대는 사거리가 아니라 `CardDef.pointBlank`로 판정한다. **공격 21장 중 19장(90%)이 가능**하고 사각은 `c-shot`·`arc-venom` 2장뿐(런 전용 포함 시 6장). 사거리 그림 가운데 칸의 테두리(`.rc--pb`)가 "내 칸도 사거리"를 보여 준다. 엔진·AI·UI 범위 표시가 같은 규칙을 공유 — 한쪽만 고치면 어긋난다.
 - 캐릭터 패시브: 각 캐릭터에 `Passive` 1개(`roster.ts`). 엔진이 턴 시작/공격 판정/KO 판정 시 자동 적용(매 턴 기력·보호막, 피해감소, 흡혈, 1회 부활 등). 표·적용 순서는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) "캐릭터 패시브".
 - 한 턴 = 카드 3장 → **고른 슬롯 순서대로(1→2→3)** 해소. **같은 공격 카드는 한 턴에 한 번만**(쿨0이어도 — UI·AI가 강제, 2026-07-15). 한 슬롯 안에서만 나·상대 카드를 **우선순위 이동<수비<공격**으로 정렬해 처리(낮은 쪽 먼저 → 다음 카드는 갱신된 보드를 봄). 같은 슬롯 양측 공격은 **같은 판에서 계산**하는 트레이드지만, **적용은 쓰러뜨리는 쪽부터고 이미 쓰러진 쪽은 못 때린다**(2026-08-04 — 그전엔 죽은 적의 공격이 그대로 들어왔다). **서로를 쓰러뜨리는 진짜 동시 KO만 예외**로 둘 다 적용하고, 그때 **턴 시작 HP 비율이 높던 쪽이 승리**(타이브레이크, 랜덤 없음). ⚠ 이 규칙은 트레이드 피해를 줄여 **밸런스를 움직인다** — 도입 때 런 밴드가 1.7→7.2%p로 벌어져 `SIGNATURE.runEffect`를 재조정했다(→ 2.4%p·클리어율 27.5%). 상세 GDD ④. (`CardBattle.resolveTurn`)
-- **로그라이크 런(개발 중, 2026-07-24 → 밸런스 패스 2026-07-30)** — 단판 지루함 해결용. 직업 선택으로 시작 → **분기 지도**(15층, 층마다 갈래를 고른다 — 2026-08-04) 전투(약→강) → 승리 보상(5중1택 또는 HP회복) → 보스. **유물 = 상시 능력(엔진 Passive 훅 조합)**, 기존 캐릭터 패시브를 시그니처 유물로 이관. 엔진은 `BattleOpts`의 `chars`·`passives`(유물 merge)·**`startHp`(HP 이월)** 로 지원(**PvP·봇전 불변**). Phase 1a(`game/relics.ts` 72종 — 기본 훅 + 조합형(누적 기력 트리거·저체력 폭주·기절·관통)·경제형(상점 할인·골드·보상칸) + 희귀도 가중 추첨·`monsters.ts` 20종·`run.ts`) + Phase 1b(UI: `RunStart/RunMap/Reward/Event/Shop/RunEnd` + `App.tsx` `run-*` 페이즈) + **보스/엘리트 스크립트 패턴**(`game/bosses.ts` — 오버로드·수호기사·화염군주, 3턴 주기 + 40% 격노 + `BattleScreen.telegraph` 예고 배너) 완료. 다인 전투는 Phase 2. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md).
+- **로그라이크 런(개발 중, 2026-07-24 → 밸런스 패스 2026-07-30)** — 단판 지루함 해결용. 직업 선택으로 시작 → **분기 지도**(15층, 층마다 갈래를 고른다 — 2026-08-04) 전투(약→강) → 승리 보상(5중1택 또는 HP회복) → 보스. **유물 = 상시 능력(엔진 Passive 훅 조합)**, 기존 캐릭터 패시브를 시그니처 유물로 이관. 엔진은 `BattleOpts`의 `chars`·`passives`(유물 merge)·**`startHp`(HP 이월)** 로 지원(**PvP·봇전 불변**). Phase 1a(`game/relics.ts` 158종 — 기본 훅 + 조합형(누적 기력 트리거·저체력 폭주·기절·관통)·경제형(상점 할인·골드·보상칸) + 희귀도 가중 추첨·`monsters.ts` 20종·`run.ts`) + Phase 1b(UI: `RunStart/RunMap/Reward/Event/Shop/RunEnd` + `App.tsx` `run-*` 페이즈) + **보스/엘리트 스크립트 패턴**(`game/bosses.ts` — 오버로드·수호기사·화염군주, 3턴 주기 + 40% 격노 + `BattleScreen.telegraph` 예고 배너) 완료. 다인 전투는 Phase 2. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md).
   - **Phase 1c 밸런스(2026-07-30)** — `npm run sim:run`으로 측정하며 조정. **① HP 이월 배선 수정**(그전엔 `run.hp`가 지도에만 반영되고 전투는 풀피로 시작 — 런 난이도의 핵심이 빠져 있었다). **② 사다리 12→15층**(전투 7·엘리트 2·보스 1·이벤트 3·상점 2 — tier3 몬스터가 9층 한 칸에서만 나오던 문제, 첫 엘리트를 7층으로 물리고 앞에 상점). **③ 층 스케일**: 체력 +7%/층 + **공격력 2차 곡선**(`atkScaleAt`, 4층 +1 → 15층 +19 — 유물로 *합산*되는 방어를 후반에 넘어서게), 엘리트 ×1.2/+3, 보스는 체력 스케일 40%만. **④ 몬스터 패스**(센트리·마녀·수호기사 하향, 가디언 후반 엘리트로, 뱀파이어·팬텀 상향). **⑤ 캐릭터 밸런스**(`relics.ts`의 `SIGNATURE.runEffect` — 시그니처 유물의 **런 실효 수치**를 캐릭터 패시브와 따로 지정. `ROSTER.passive`는 안 건드리므로 **PvP·1:1 시뮬 불변**). 결과: 클리어율 19%→36%, 보스가 가장 어려운 관문(62%), **`--sweep`(캐릭터×시작카드 매트릭스) 103,500런으로 최선 카드 기준 밴드 30%p→4.0%p**(36.5~40.4%).
   - **몬스터 이동 버그 수정 + 재조정(2026-08-01)** — 몬스터 `deckCardIds`엔 이동 카드가 없어 `decideAI`의 `moveCard`가 덱에서 이동을 못 찾았고, **몬스터가 제자리서 공격만 반복**했다(치명적). `runbattle.ts`가 AI 풀에 **공용 이동 카드를 주입**(`COMMON_MOVES`)해 몬스터가 접근·회피하게 고침. 그 결과 몬스터가 실제로 싸워 난이도가 급등(hard 클리어 30%→6%) → 층 스케일을 크게 낮춰 재조정(`HP_SCALE_PER_FLOOR` 0.07→0.03, `atkScaleAt` ~1/3로). 이동 도입이 **카이팅 캐릭터(NOVA)를 크게 약화**시켜 시그니처를 재튜닝. 결과: hard 클리어 ~29%, 밴드 4.8%p(26.6~31.4%), 조합 100%·기울기 easy 13%→hard 26%. ⚠ **`SIGNATURE.runEffect`는 1포인트가 ~10%p씩 흔든다**(특히 회복·보호막) — 아주 작게 조정하고 매번 1000런 스윕으로 확인.
   - ⚠ **런 밸런스를 `turnEnergy`로 조정하지 말 것** — AI가 기력 `energyFloor`(hard 30) 아래면 접근보다 원기 회복을 먼저 골라서 클리어율이 계단처럼 20%p 튄다(봇 인공물). 회복·보호막·피해감소 같은 연속적인 훅으로 조정한다.
@@ -165,7 +176,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
   - **효과음(`sfx.ts`)** — Web Audio 절차 합성, **오디오 파일 0개**. 자동재생 정책 탓에 `installAudioUnlock()`(main.tsx)이 첫 입력에서 컨텍스트를 연다. 음소거는 HUD 토글 + localStorage `gb-sfx-muted`.
   - 그 밖에: 임팩트 불꽃(피해량 비례 개수), 피해 숫자 크기 스케일, HP 잔상 바(lag bar), 아이들 호흡 모션, KO 섬광.
   - **픽셀 스프라이트(`src/art/sprites.ts`) — 3직업 전원 이관 완료(2026-08-01)**. 절차 SVG(`art/art.ts`)를 프레임 애니메이션으로 교체했다. `SHEETS`에 없는 id는 **자동으로 SVG 폴백**(몬스터는 `baseArtId`로 직업 시트를 빌려 쓰므로 사실상 전부 픽셀). 재생은 JS가 아니라 CSS `steps()`라 히트스톱이 스프라이트 프레임까지 그대로 얼린다. 타격 시점은 `IMPACT_MS` 눈대중 대신 클립의 **`impactFrame`**(실제 프레임 번호)에서 나온다 — 시트가 있는 캐릭터는 이쪽이 이긴다.
-    - 시트 매핑: `warrior`→hero-knight · `archer`→bandit-light · `mage`→bandit-heavy. ⚠ **마법사에 중장 도적 시트를 임시로 붙여 놨다**(지팡이 팩이 없어서). 활·지팡이 팩을 구하면 `SHEETS`만 갈아 끼우면 된다. 팩마다 프레임 구성이 달라 Bandits 계열은 `banditClips()`로 `STD_CLIPS`를 통째로 교체한다.
+    - 시트 매핑: `warrior`→hero-knight · `archer`→huntress · `mage`→wizard. 처음엔 궁수·마법사에 도적 시트를 임시로 붙여 놨었는데(활·지팡이 팩이 없어서) 2026-08-04에 갈아 끼우고 임시 시트를 지웠다.
   - ⚠ **좌우 반전은 두 겹이고 절대 합치면 안 된다**(`placeSprite`). ① `--flip`은 **진영**(왼쪽 1·오른쪽 -1)으로, 공격 키프레임의 `translateX(+N)`가 "상대 방향"이 되게 하는 값이다. ② `--artflip`은 **시트 원본이 보는 방향**을 바로잡는 값(지금 팩 셋은 전부 원본이 왼쪽을 봐서 -1). 둘을 곱해 `--flip` 하나로 합치면 원본이 왼쪽을 보는 캐릭터가 **상대 반대쪽으로 파고든다**. 그리고 실제로 뒤집히는 쪽은 `anchorX`도 프레임 반대편(`frameW - anchorX`)으로 옮겨야 한다 — 안 하면 그쪽만 셀에서 밀려 선다(hero-knight 96px).
   - **에셋은 `public/sprites/`를 손으로 만들지 않는다.** 원본 팩을 `assets-raw/`에 두고 `npm run sprites`(`scripts/packsprites.mjs`, 의존성 0)로 가로 스트립을 굽고, 출력된 `frameW/frameH/footY/anchorX`를 `SHEETS`에 옮긴다. 절차·클립 규격·시트별 상태표는 [public/sprites/README.md](public/sprites/README.md).
 - **화면 배경 정리(2026-08-01)** — 리스킨이 **색만** 갈고 형태를 안 건드려서, 팔레트가 다크 판타지인데도 화면이 계속 SF로 읽히던 걸 마무리했다.
@@ -195,10 +206,13 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
   - 버프 지속은 **걸린 턴에 바로 1턴 소모**한다(그 턴 공격에 이미 얹혔으므로). `since` 유예를 받는 건 여전히 **빙결뿐**이다.
   - 검증 `npm run check` — atkUp 지속/소멸, defUp 감산, freeCast 3자 일치, dashForward 사거리·벽 처리까지 10건.
   - 카드가 늘어 **덱 상한(선택 7장)을 넘었다** → 덱 빌딩이 실제 선택이 됐고, `PRESET_DECKS`는 자동 생성을 버리고 **직업별로 손으로 골랐다**(자동으로 앞에서 자르면 뒤에 붙인 버프·기동 카드가 통째로 빠진다). 프리셋 id·장수는 모듈 로드 시 검증한다.
-- **지속 상태이상(2026-08-01)** — 독·화상·빙결. 3직업 개편의 1단계로 엔진에 먼저 넣었고, **2단계에서 카드에 연결됐다**(궁수=독 / 마법사=화상·빙결, 위 "로스터" 참고). 그래서 **더 이상 밸런스 중립이 아니다** — 상태이상 수치를 건드리면 `npm run sim:run -- --sweep`을 다시 돌려야 한다. 독안개와 같은 자리(턴 종료·보호막 무시·랜덤 없음)에서 돌아 멀티 락스텝 안전. 타입 `types.ts`(`StatusKind/StatusEffect/STATUS_TURNS`), 정산 `engine.resolveTurn`의 `tickStatuses`, 유물 훅 `poisonOnHit/burnOnHit/statusPowerPct/bonusVsAfflicted`. 검증 `npm run check`.
+- **지속 상태이상(2026-08-01)** — 독·화상·빙결. 3직업 개편의 1단계로 엔진에 먼저 넣었고, **2단계에서 카드에 연결됐다**(궁수=독 / 마법사=화상·빙결, 위 "로스터" 참고). 그래서 **더 이상 밸런스 중립이 아니다** — 상태이상 수치를 건드리면 `npm run sim:run -- --sweep`을 다시 돌려야 한다. 전장 붕괴와 같은 자리(턴 종료·보호막 무시·랜덤 없음)에서 돌아 멀티 락스텝 안전. 타입 `types.ts`(`StatusKind/StatusEffect/STATUS_TURNS`), 정산 `engine.resolveTurn`의 `tickStatuses`, 유물 훅 `poisonOnHit/burnOnHit/statusPowerPct/bonusVsAfflicted`. 검증 `npm run check`.
   - ⚠ **지속피해와 빙결은 시간 규칙이 다르다** — 독·화상은 걸린 턴에 바로 갉고 지속도 같이 깎지만, **빙결은 걸린 턴엔 안 깎는다**(이동이 공격보다 먼저 해소돼 그 턴엔 온전한 한 턴을 못 막으므로). 기준은 `StatusEffect.since`. 상세·근거는 GDD ④ "지속 상태이상".
   - ⚠ **빙결 ≠ 기절** — 빙결은 이동만 무효(공격·가드는 나감), 기절은 그 턴 카드를 통째로 버린다.
-- **독안개(무한전 억제)** — 2026-07-16 열 축소 개편: **6턴부터 양 끝 열(col 0·5)**에 독안개, **3턴마다 안쪽으로** 한 단계씩(9턴 col 0·1·4·5 → 12턴 전부) 조여들어 결국 판 전체를 덮음. **턴 종료 시** 안개 열에 있으면 **턴당 10 고정 피해**(실드 무시, KO 가능). 상수·판정은 `types.ts`(`FOG_START_TURN/FOG_STEP_TURNS/FOG_DAMAGE/fogStageAt/isFogCell(cell,turn)/fogEscalatesNext`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). AI는 지금/다음 턴 안개면 중앙 열로 이탈. 상세는 GDD ④ "독안개".
+- **전장 붕괴(무한전 억제, 2026-08-05 — 옛 "독안개")** — **6턴부터 양 끝 열(col 0·5)**이 무너지고 **3턴마다 안쪽으로** 한 단계씩(9턴 col 0·1·4·5 → 12턴 전부) 번져 결국 판 전체를 덮음. **턴 종료 시** 무너진 열에 있으면 **단계별 턴당 10 / 16 / 24 고정 피해**(실드 무시, KO 가능, 유물 `collapseResist`만 깎아 준다). 상수·판정은 `types.ts`(`COLLAPSE_START_TURN/COLLAPSE_STEP_TURNS/COLLAPSE_DAMAGE/collapseStageAt/isCollapsedCell/collapseDamageAt/isFullyCollapsed/collapseEscalatesNext`), 적용은 `resolveTurn` 끝(랜덤 없음 → 멀티 락스텝 안전). 상세는 GDD ④ "전장 붕괴".
+  - ⚠ **무너진 칸으로 들어갈 수 있다.** 벽으로 막으면 마지막 단계에 설 자리가 0이 되고, 넉백·끌어당김이 갈 곳 없는 상태를 만들며, 궁수의 "거리를 산다"가 사라진다. **체력을 내고 거리를 사는** 선택으로 남긴다.
+  - ⚠ **AI는 판 전체가 무너진 뒤에는 도망치지 않는다.** 그전엔 갈 곳이 없는데도 매 슬롯을 이동에 써서 마지막 단계부터 공격을 멈췄다.
+  - ⚠ **판 위의 연출 레이어는 `pointer-events: none`이어야 한다.** `.fighter`가 클릭을 먹고 있어서 **스프라이트가 덮은 윗줄 칸은 눌러도 반응이 없었다**(이동은 칸을 눌러서 한다) — "무너진 칸으로 이동이 안 된다"는 신고의 진짜 원인이었다.
 
 ## 온라인 멀티 (P2P + 짧은 코드) — 2026-06-18
 
@@ -206,6 +220,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - **설정 필수**: `.env`의 `VITE_FIREBASE_DB_URL`(미설정 시 로비가 "설정 필요" 안내, 온라인 비활성). 절차는 `.env.example`. ⚠️ 테스트용 `.env.local`을 만들면 실제 `.env`를 덮어쓰니 주의(쓰면 반드시 삭제).
 - **전송 분리**: 게임은 `NetTransport`(`src/net/protocol.ts`)에만 의존. 시그널링/전송을 바꿔도(서버·WebSocket·매치메이킹) 전투·UI 불변.
 - **결정론 락스텝**: `engine.resolveTurn`은 랜덤 없음 → 두 피어가 동일 엔진(**호스트=side0, 게스트=side1 고정**)을 돌리고 매 턴 카드 ID만 교환(`session.ts`). `BattleScreen`은 `localSide` + `getOpponentPlan` 콜백으로 싱글(AI)·멀티(네트워크) 공용. **렌더는 로컬 시점**: 엔진은 정규 좌표(호스트=side0)지만 `BattleScreen`이 side1을 잡으면 화면을 좌우 반전해 **내 캐릭터를 항상 왼쪽(오른쪽 바라봄)·상대를 오른쪽**에 표시(`flip`/`dcol`). 절대좌표 이동 카드는 반전 시 좌↔우 라벨을 바꿔(`faceCard`) 화살표가 실제 화면 이동과 일치. 카드 사정거리·예측 범위는 항상 "앞=오른쪽". 내 쪽엔 "나" 배지.
+- ⚠ **룰셋 버전 게이트(2026-08-05)** — 락스텝은 양쪽이 **같은 룰 코드**를 돌려야 성립하는데, 웹은 배포 즉시 갱신되고 앱은 스토어·OTA로 늦게 따라와 **버전이 겹치는 기간이 실제로 있다**. 어긋나면 크래시가 아니라 **조용한 desync**라 재현이 안 된다. 기준값은 `battle/types.ts`의 **`RULES_VERSION`** — `resolveTurn` 출력에 닿는 변경(룰 상수·엔진·카드 수치/사거리/능력·카드 id 증감)을 하면 **같은 커밋에서 올린다**(연출·UI·시뮬만 바뀌면 안 올림). 막는 곳은 둘: 빠른 대전은 대기표 `rules`로 스캔에서 거르고(`matchmaking.ts` — ⚠ `database.rules.json`에 필드를 같이 열어야 등록이 안 거부된다), 방 코드는 `hello`에서 판정한다(`MultiplayerLobby.finishHandshake`). ⚠ **게이트는 온라인 매칭에만 건다** — 앱 진입·로그라이크를 막으면 오프라인에서 게임이 죽고 iOS 심사(2.1/4.2) 반려 사유가 된다.
 - **턴 제한 30초(온라인만)** — `App.tsx`의 `MP_TURN_SECONDS`, `BattleScreen`의 `turnSeconds` prop. 0이 되면 자동 제출(현재 플랜이 유효하면 그대로, 아니면 빈 슬롯을 원기 회복으로 메움 → 최후엔 원기 회복 3장). 각 피어가 자기 플랜만 만들어 전송하므로 락스텝 안전. 싱글·튜토리얼은 prop 미지정 = 타이머 없음.
 - 자세한 흐름·설정·검증·미구현(재대결 등)은 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) §⑤-bis.
 
@@ -214,7 +229,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 설계 명세(2D 격자)와 코드는 이제 **일치**합니다(2026-06-15, 방향 A 채택·구현·검증). 상세 차이표·결정 근거는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) §⑤.
 
 - 전투 룰·격자·카드 수치를 바꾸면 **GDD를 같은 변경에서 함께 갱신**. 격자 크기 변경 시 `types.ts`의 `GRID_COLS/ROWS`와 `ui.css`의 `.gridboard`를 같이 수정.
-- 미구현(다음 후보): 승리 후 미스터리 카드 5중 1 선택(원작 보상).
+- 원작의 "승리 후 미스터리 카드 5중 1 선택"은 **로그라이크 런에 구현돼 있다**(`run.ts`의 `rollRewards`). 단판(PVP·봇전)에는 없고, 넣으려면 덱 성장 모델이 먼저 필요하다.
 
 ## 배포 / 네이티브 앱 — 2026-07-13
 
@@ -222,9 +237,26 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - **RTDB 규칙**: `database.rules.json`(레포 관리) — `gridbrawl/<코드>` 경로만 열림, 코드 형식·offer/answer 필드 검증. 규칙 바꾸면 `--only database`로 배포.
 - **TURN**: `.env`의 `VITE_TURN_URL/USERNAME/CREDENTIAL`(선택, `webrtc.ts`가 ICE에 자동 추가). 비면 STUN 단독 — 셀룰러/대칭 NAT에서 연결 실패 가능. 관리형 TURN 발급 후 채우고 재빌드·재배포.
 - **네이티브 앱(Capacitor)**: `capacitor.config.ts`(appId `com.imjaehyeog.GridBrawl`, webDir `dist`), `android/`·`ios/` 커밋됨. 워크플로: `npm run build && npx cap sync` → `npx cap open android|ios`. **가로 고정**: Android `AndroidManifest.xml`의 `sensorLandscape`, iOS `Info.plist` 가로 2종만. **네이티브에선 구글 로그인 숨김**(구글이 WebView OAuth 차단) — `LoginScreen`이 `Capacitor.isNativePlatform()`으로 게스트를 기본 버튼화. 구글은 추후 네이티브 플러그인으로.
-  - ⚠ **네이티브에선 Firebase Auth를 아예 시작하지 않는다**(`auth.ts`의 `authConfigured()`가 `!NATIVE`). `capacitor://localhost` 오리진에서는 `onAuthStateChanged`가 **끝내 호출되지 않아** `ready`가 영원히 false로 남고, 앱이 **"접속 중…" 화면에서 멈춘다**(2026-08-03 시뮬레이터에서 확인 — 웹에서는 안 나므로 `npm run dev`로는 절대 못 잡는다). 나중에 네이티브 구글 로그인을 붙일 땐 이 가드를 걷어내는 게 아니라 **네이티브 플러그인 경로로 갈아 끼워야** 한다.
+  - ⚠ **네이티브에선 Firebase Auth를 아예 시작하지 않는다**(`auth.ts`의 `authConfigured()`가 `!NATIVE`). `capacitor://localhost` 오리진에서는 `onAuthStateChanged`가 **끝내 호출되지 않아** `ready`가 영원히 false로 남고, 앱이 **"접속 중…" 화면에서 멈춘다**(2026-08-03 시뮬레이터에서 확인 — 웹에서는 안 나므로 `npm run dev`로는 절대 못 잡는다). 나중에 네이티브 구글 로그인을 붙일 땐 이 가드를 걷어내는 게 아니라 **네이티브 플러그인 경로로 갈아 끼워야** 한다. **안전망을 미리 깔아 뒀다(2026-08-05)** — `ensureStarted()`가 `AUTH_TIMEOUT_MS`(3초) 뒤에는 콜백을 포기하고 `ready`를 풀어 준다. 콜백이 늦게 와도 사용자를 그때 갈아 끼우므로 최악이라도 로그인 화면이 잠깐 스칠 뿐이고, **"접속 중…"에서 영구히 멈추는 일은 없다**(세션 복원은 로컬 저장소에서 일어나 네트워크와 무관하므로 3초면 넉넉하다).
+  - ⚠ **`LoginScreen`의 "게스트로 시작"은 어떤 조건에서도 사라지면 안 된다.** 앱 전체가 로그인 뒤에 막혀 있어서, 게스트 경로가 없으면 **네트워크 없는 첫 실행에서 앱이 통째로 잠긴다** — 오프라인에서 아무것도 못 보는 앱은 iOS 심사 2.1/4.2 반려 사유다. 구글 로그인을 네이티브에 붙여도 병행 유지한다.
+  - ⚠ **네이티브 구글 로그인을 붙이면 Sign in with Apple이 의무가 된다**(심사지침 4.8 — 제3자 로그인을 쓰면 동등한 프라이버시 옵션을 같이 제공해야 한다). 게스트는 계정 서비스가 아니라 대체재가 안 된다. 계정을 지원하면 **앱 안에서 계정 삭제**(5.1.1(v))도 필요하고, RTDB `decks/<uid>`도 같이 지워야 한다.
   - ⚠ **iOS는 iPhone 전용이다**(`TARGETED_DEVICE_FAMILY = 1`, 2026-08-04). iPad를 포함하면 App Store 업로드가 **가로 2방향만으로는 거부된다** — iPad 멀티태스킹은 세로 2방향까지 전부 선언하라고 요구한다. UI에 반응형 대응이 전혀 없고(판이 1280×302 가로 띠) 세로에서는 레이아웃이 무너지므로 iPhone 전용으로 내렸다. iPad를 열려면 **세로 레이아웃을 먼저 만들어야** 한다.
   - ⚠ **`ios/App/App/public/`은 `npx cap sync`가 굽는 사본이다** — 이걸 빼먹으면 오래된 웹 빌드가 그대로 앱에 담긴다(2026-08-03에 7/26자 사본이 남아 있어 **스프라이트·배경이 통째로 빠진 상태**였다). 아카이브 전에는 반드시 `npm run build && npx cap sync ios`.
+
+### 앱 아이콘 — 전사 (2026-08-04)
+
+리스킨·3직업 개편이 끝난 뒤에도 홈 화면 아이콘만 **사이버 시절 그대로**였다(청록 삼각 우주선). 전사(hero-knight)로 갈았고, **손으로 그린 그림이 아니라 게임이 실제로 쓰는 스프라이트에서 굽는다** — 아이콘용 그림을 따로 두면 캐릭터를 갈아 끼울 때 아이콘만 또 옛것으로 남는다.
+
+```bash
+npm run icon
+```
+
+- `scripts/makeicon.mjs` 한 방에 **24장**(웹 3 · iOS 1 · Android 20). PNG 코덱은 스프라이트 패커와 공용(`scripts/png.mjs`) — 의존성 0개, ImageMagick 불필요. 굽고 나면 네이티브에 옮기려면 **`npx cap sync`가 따로 필요하다**(아이콘은 `dist`가 아니라 네이티브 리소스 폴더에 직접 쓴다 — 즉 `cap sync` 없이도 파일 자체는 갱신돼 있다).
+- 구도: 대기 0프레임(방패가 앞, 검을 뒤로 당긴 가드 자세) + 계산으로만 그린 돌바닥·횃불 후광·비네트. 배경 이미지 파일은 여전히 0개다.
+- ⚠ **가로 정렬은 bbox 기준, 후광은 몸통 기준**이다. 뻗은 검이 폭의 왼쪽 1/3을 먹어서, 무게중심에 맞추면 검 끝이 잘린다. 대신 후광(`layout()`의 `bodyX`)을 몸 뒤에 놓아 구도가 기울어 보이지 않게 했다.
+- ⚠ **iOS 아이콘은 알파 채널이 있으면 App Store 업로드가 거부된다** — `encodePng(..., { opaque: true })`로 트루컬러(colorType 2)로만 쓴다.
+- ⚠ **Android 적응형 아이콘은 캔버스 108dp 중 가운데 66%만 확실히 보인다.** 전경은 그 안에만 그리고, 배경은 `span`(그림의 기준 한 변)을 66%로 줘서 **비네트까지 마스크 안에 들어오게** 한다 — 안 그러면 배경이 밋밋한 갈색 판으로만 보인다. 배경은 `@color`가 아니라 `@mipmap/ic_launcher_background`(그림)를 쓰도록 `mipmap-anydpi-v26/*.xml`을 바꿔 뒀다.
+- 다른 직업으로 갈고 싶으면 `SRC`(시트 경로·프레임)만 바꾸면 된다. 다듬을 때는 24장을 다 굽지 말고 `node scripts/makeicon.mjs --preview <경로>`로 512 한 장만 본다.
 
 ## 컨벤션
 

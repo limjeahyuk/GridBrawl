@@ -27,7 +27,16 @@ export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop'
 export interface RunNode {
   type: NodeType
   monsterId?: string // combat/elite/boss
+  /**
+   * 세로 위치(0=위, 1=가운데, 2=아래). 화면에서 어느 줄에 그릴지이자 **어디로
+   * 이어지는지의 근거**다 — 간선은 세로로 한 칸 안쪽(|Δlane| ≤ 1)으로만 난다.
+   */
+  lane: number
+  /** 다음 층에서 **이 칸에서 갈 수 있는** 노드들의 인덱스. 마지막 층은 빈 배열. */
+  next: number[]
 }
+/** 노드 줄은 0·1·2 셋. 가운데(1)는 모든 층에 반드시 있다(아래 `buildMap` 주석). */
+const CENTER_LANE = 1
 /**
  * 층 구성(전투 위주에 이벤트·상점을 섞고, 엘리트 뒤 보스). 15층 = 전투 7 + 엘리트 2
  * + 보스 1 + 이벤트 3 + 상점 2. **12층에서 늘렸다(2026-07-30)**: 예전 구성은 전투가
@@ -87,7 +96,7 @@ const PRICE_HEAL_AMOUNT = 50 // 35 → 50: 상점 회복이 층 사이 회복의
 const PRICE_REMOVE = 40
 
 /**
- * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 브레이스 + 원기). 2026-07-31에
+ * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 버티기 + 원기). 2026-07-31에
  * 직업 카드 1장 선택을 없앴다: 런에선 큰 카드가 항상 유리해서 "시그니처로 시작"이
  * 정답이 되고 나머지 선택이 함정이었으며, 그 시작이 1~6층을 무료로 만들었다.
  * 이제 직업 카드·강한 런 카드는 **보상으로 번다** — 기획서 ③의 원래 의도다.
@@ -98,7 +107,7 @@ const STARTING_COMMON = [
 ]
 
 /**
- * 시작 덱 9장 = 공용 6장(이동4 + 브레이스 + 원기) + **그 직업의 기본기 3장**.
+ * 시작 덱 9장 = 공용 6장(이동4 + 버티기 + 원기) + **그 직업의 기본기 3장**.
  * 2026-08-04까지는 세 직업 모두 공용 약공(`c-strike`/`c-shot`/`c-jab`)으로 출발해
  * 1~5층이 어느 직업이든 똑같은 싸움이었다. 총합 화력은 그대로 두고 **때리는 모양**만
  * 갈랐다(전사=밀착·강타 / 궁수=긴 사거리 / 마법사=광역) — 수치 근거는 `roster.ts`의
@@ -123,13 +132,17 @@ export interface RunState {
   gold: number
   floor: number // 1-based
   /**
-   * 층별 갈래 후보(2026-08-04). `branches[floor-1]`이 그 층에서 고를 수 있는 칸들이다.
-   * ⚠ **0번은 항상 `NODE_TEMPLATE`의 타입**이다 — 늘 0번만 고르면 분기 도입 전 런과
-   * 완전히 같아진다. 시뮬로 맞춰 둔 밸런스 기준선이 지도 안에 경로로 남아 있는 것이라,
-   * 후보를 새로 짤 때도 이 규칙은 지킬 것(`optionsForFloor`).
+   * 층별 노드와 그 사이의 간선(2026-08-05). `map[floor-1]`이 그 층에 놓인 칸들이고,
+   * 각 칸의 `next`가 다음 층에서 갈 수 있는 칸이다. **고를 수 있는 건 직전 칸에서
+   * 이어진 칸뿐**이라(`currentOptions`), 선택지 수가 층마다 1~3개로 달라진다.
+   * 생성 규칙과 불변식은 `buildMap` 주석 참고.
    */
-  branches: RunNode[][]
-  /** 층마다 고른 후보의 인덱스. `picked[floor-1]`이 없으면 아직 안 골랐다. */
+  map: RunNode[][]
+  /**
+   * 층마다 고른 **노드 인덱스**(그 층 `map[floor-1]` 안에서의 위치). ⚠ 선택지 목록
+   * 안에서의 순번이 아니다 — 선택지는 직전 칸에 따라 달라지므로 노드로 기억해야
+   * 지나온 길을 그대로 되짚을 수 있다. 없으면 아직 안 골랐다.
+   */
   picked: number[]
   status: RunStatus
 }
@@ -179,17 +192,16 @@ function elitePool(floor: number): MonsterDef[] {
   return [...monstersOfTier(4).filter((m) => m.id !== 'overlord'), ...DEEP_ELITE_IDS.map(getMonster)]
 }
 
-/** 그 층의 일반 전투 노드 하나(티어 풀에서 뽑는다). `exclude`와는 다른 몬스터로. */
-function combatNode(floor: number, exclude?: string): RunNode {
+/** 그 층의 일반 전투 몬스터 하나(티어 풀에서 뽑는다). `exclude`와는 다른 몬스터로. */
+function combatMonster(floor: number, exclude?: string): string {
   const poolT = combatPool(floor)
   const pool = poolT.length ? poolT : monstersOfTier(1)
   const distinct = pool.filter((m) => m.id !== exclude)
-  return { type: 'combat', monsterId: pick(distinct.length ? distinct : pool).id }
+  return pick(distinct.length ? distinct : pool).id
 }
 
 /**
- * 한 층의 갈래 후보(2026-08-04). **0번은 반드시 템플릿 타입**이다 — 이유는
- * `RunState.branches` 주석 참고(늘 0번을 고르면 분기 이전 런과 동일).
+ * 한 층에 놓을 칸들(줄 배정 전). 첫 칸은 **반드시 템플릿 타입**이고 가운데 줄로 간다.
  *
  * 대안 칸은 "무엇을 포기하고 무엇을 받나"가 한 줄로 설명되는 것만 뒀다:
  *   전투  → 다른 몬스터와의 전투 (어느 적을 상대할지 고른다)
@@ -204,20 +216,102 @@ function combatNode(floor: number, exclude?: string): RunNode {
  * (`PRICE_HEAL_AMOUNT`) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
  * 그래야 15층 페이싱을 맞춰 둔 전투/지원 비율이 경로와 무관하게 유지된다.
  */
-function optionsForFloor(floor: number, primary: NodeType): RunNode[] {
-  if (primary === 'boss') return [{ type: 'boss', monsterId: 'overlord' }]
-  if (primary === 'combat') {
-    const a = combatNode(floor)
-    return [a, combatNode(floor, a.monsterId)]
+function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode[] {
+  const blank = (type: NodeType, monsterId?: string): RunNode => ({
+    type,
+    monsterId,
+    lane: 0,
+    next: [],
+  })
+  if (primary === 'boss') return [blank('boss', 'overlord')]
+
+  const out: RunNode[] = []
+  if (primary === 'combat') out.push(blank('combat', combatMonster(floor)))
+  else if (primary === 'elite') out.push(blank('elite', pick(elitePool(floor)).id))
+  else out.push(blank(primary))
+
+  while (out.length < count) {
+    if (primary === 'event' || primary === 'shop') {
+      // 지원 칸끼리만 — 둘을 번갈아 놓아 한 층에 상점과 이벤트가 같이 서게 한다.
+      out.push(blank(out.length % 2 === 1 ? (primary === 'event' ? 'shop' : 'event') : primary))
+    } else {
+      // 전투·엘리트의 대안은 언제나 일반 전투다(엘리트는 이걸로 회피한다).
+      // 이미 나온 몬스터는 피해서 뽑는다 — 같은 얼굴 둘을 고르는 건 선택이 아니다.
+      const used = out.map((n) => n.monsterId)
+      out.push(blank('combat', combatMonster(floor, used[used.length - 1])))
+    }
   }
-  if (primary === 'event') return [{ type: 'event' }, { type: 'shop' }]
-  if (primary === 'shop') return [{ type: 'shop' }, { type: 'event' }]
-  // 엘리트 — 유일하게 "전투량 자체"를 고르는 칸이다(유물 확정 vs 안전).
-  return [{ type: 'elite', monsterId: pick(elitePool(floor)).id }, combatNode(floor)]
+  return out
 }
 
-function buildBranches(): RunNode[][] {
-  return NODE_TEMPLATE.map((type, i) => optionsForFloor(i + 1, type))
+/**
+ * 층 폭(그 층에 놓을 칸 수). **가운데 줄은 항상 있고**, 좌우로 늘어난다.
+ * 1이 섞여야 길이 다시 모이는 "허리"가 생겨 지도가 사다리처럼 읽힌다.
+ */
+function widthForFloor(floor: number, primary: NodeType): number {
+  if (primary === 'boss') return 1
+  if (floor === 1) return 2 // 첫 층부터 고를 게 있어야 한다
+  const r = Math.random()
+  return r < 0.18 ? 1 : r < 0.68 ? 2 : 3
+}
+
+/** 폭 n짜리 층이 쓸 줄 번호 — 가운데부터 채운다(1 → 1·0 → 0·1·2). */
+function lanesFor(width: number): number[] {
+  if (width <= 1) return [CENTER_LANE]
+  if (width === 2) return Math.random() < 0.5 ? [0, CENTER_LANE] : [CENTER_LANE, 2]
+  return [0, 1, 2]
+}
+
+/**
+ * 분기 **그래프**(2026-08-05). 예전엔 층마다 독립된 2택이라 "무엇을 고르든 다음 층은
+ * 다시 전부 열려" 있었다 — 고른 게 뒤에 아무 영향이 없으니 지도가 아니라 팝업 두 개였다.
+ * 이제 칸마다 **이어지는 칸**이 정해져 있고, 다음 층에서는 **거기서 이어진 칸만** 고를
+ * 수 있다. 그래서 선택지 수가 1~3개로 달라지고, 멀리 있는 상점을 노리려면 몇 층 전부터
+ * 그쪽 줄을 타야 한다 — 사용자가 요청한 "더 나은 길을 찾아간다"가 이 규칙에서 나온다.
+ *
+ * ⚠ **가운데 줄(CENTER_LANE)은 모든 층에 있고 거기엔 항상 템플릿 타입이 놓인다.**
+ * 어느 칸에서든 |Δlane| ≤ 1로 가운데에 닿으므로, **"매 층 가운데만 밟는 경로"가 늘
+ * 존재하고 그게 곧 분기 이전의 선형 사다리**다. 시뮬로 맞춰 둔 밸런스 기준선이 지도
+ * 안에 경로로 남아 있는 것이라(`--path=template`), 생성 규칙을 바꿔도 이건 지킬 것.
+ */
+function buildMap(): RunNode[][] {
+  const floors: RunNode[][] = NODE_TEMPLATE.map((type, i) => {
+    const nodes = nodesForFloor(i + 1, type, widthForFloor(i + 1, type))
+    const lanes = lanesFor(nodes.length)
+    // 템플릿 타입(0번)이 가운데 줄에 오도록 배치한다.
+    const centerAt = lanes.indexOf(CENTER_LANE)
+    const order = [...nodes]
+    if (centerAt > 0) {
+      ;[order[0], order[centerAt]] = [order[centerAt], order[0]]
+    }
+    return order.map((n, j) => ({ ...n, lane: lanes[j] }))
+  })
+
+  for (let f = 0; f < floors.length - 1; f++) {
+    const cur = floors[f]
+    const nxt = floors[f + 1]
+    cur.forEach((a) => {
+      a.next = nxt.map((_, j) => j).filter((j) => Math.abs(nxt[j].lane - a.lane) <= 1)
+      // 세로로 두 칸 넘게 떨어져 갈 곳이 없으면 가장 가까운 칸으로 잇는다.
+      if (!a.next.length) {
+        let best = 0
+        nxt.forEach((b, j) => {
+          if (Math.abs(b.lane - a.lane) < Math.abs(nxt[best].lane - a.lane)) best = j
+        })
+        a.next = [best]
+      }
+    })
+    // 들어오는 길이 없는 칸을 남기지 않는다 — 화면에 그려 놓고 못 가는 칸은 거짓말이다.
+    nxt.forEach((b, j) => {
+      if (cur.some((a) => a.next.includes(j))) return
+      let best = 0
+      cur.forEach((a, i) => {
+        if (Math.abs(a.lane - b.lane) < Math.abs(cur[best].lane - b.lane)) best = i
+      })
+      cur[best].next = [...cur[best].next, j].sort((x, y) => x - y)
+    })
+  }
+  return floors
 }
 
 // --- 전장 배경 --------------------------------------------------------------
@@ -243,9 +337,33 @@ export function computeMaxHp(charId: string, relicIds: string[]): number {
   const base = getChar(charId).maxHp
   return Math.max(1, base + (mergeRelics(relicIds).maxHpBonus ?? 0))
 }
+/**
+ * 이번 층에서 고를 수 있는 칸의 **노드 인덱스**. 1층은 전부 열려 있고, 그 뒤로는
+ * 직전 층에서 고른 칸의 `next`만 열린다 — 그래서 갈래가 1~3개로 달라진다.
+ */
+export function currentOptionIndices(run: RunState): number[] {
+  const floor = run.map[run.floor - 1] ?? []
+  if (run.floor <= 1) return floor.map((_, i) => i)
+  const prevNodes = run.map[run.floor - 2] ?? []
+  const prev = prevNodes[run.picked[run.floor - 2] ?? 0]
+  const next = (prev?.next ?? []).filter((i) => i >= 0 && i < floor.length)
+  // 저장본이 깨졌거나 경로가 끊겼으면 그 층 전체를 열어 준다 — 런이 막히는 것보다 낫다.
+  return next.length ? next : floor.map((_, i) => i)
+}
 /** 이번 층에서 고를 수 있는 칸들. */
 export function currentOptions(run: RunState): RunNode[] {
-  return run.branches[run.floor - 1] ?? []
+  const floor = run.map[run.floor - 1] ?? []
+  return currentOptionIndices(run).map((i) => floor[i])
+}
+/**
+ * "매 층 가운데 줄"을 따라가는 선택지의 순번. 분기 이전 선형 사다리와 같은 경로라
+ * 밸런스 기준선을 재는 데 쓴다(`sim:run --path=template`). 가운데 칸은 항상 이어져
+ * 있으므로 늘 존재한다(`buildMap` 참고).
+ */
+export function templateOptionIndex(run: RunState): number {
+  const opts = currentOptions(run)
+  const at = opts.findIndex((n) => n.lane === CENTER_LANE)
+  return at < 0 ? 0 : at
 }
 /** 이번 층에서 이미 골랐는가. `status === 'choosing'`과 짝이다. */
 export function hasPicked(run: RunState): boolean {
@@ -257,16 +375,20 @@ export function hasPicked(run: RunState): boolean {
  * 0번으로 떨어뜨린다(옛 선형 사다리와 같은 칸이라 최소한 엉뚱하지는 않다).
  */
 export function currentNode(run: RunState): RunNode {
-  const opts = currentOptions(run)
-  return opts[run.picked[run.floor - 1] ?? 0]
+  const floor = run.map[run.floor - 1] ?? []
+  return floor[run.picked[run.floor - 1] ?? currentOptionIndices(run)[0] ?? 0]
 }
-/** 갈래를 골라 그 칸으로 확정한다 — 지도 화면의 유일한 진입 경로. */
+/**
+ * 갈래를 골라 그 칸으로 확정한다 — 지도 화면의 유일한 진입 경로.
+ * `index`는 **선택지 목록 안에서의 순번**이고, 저장되는 건 노드 인덱스다.
+ */
 export function chooseBranch(run: RunState, index: number): RunState {
-  const opts = currentOptions(run)
-  const idx = clamp(index, 0, Math.max(0, opts.length - 1))
+  const idxs = currentOptionIndices(run)
+  const at = clamp(index, 0, Math.max(0, idxs.length - 1))
+  const node = run.map[run.floor - 1][idxs[at]]
   const picked = run.picked.slice()
-  picked[run.floor - 1] = idx
-  return { ...run, picked, status: statusForNode(opts[idx]) }
+  picked[run.floor - 1] = idxs[at]
+  return { ...run, picked, status: statusForNode(node) }
 }
 export function isEliteFloor(run: RunState): boolean {
   const t = currentNode(run).type
@@ -315,7 +437,7 @@ export function startRun(charId: string): RunState {
     maxHp,
     gold: 0,
     floor: 1,
-    branches: buildBranches(),
+    map: buildMap(),
     picked: [],
     // 1층부터 고른다 — 어느 칸으로 들어갈지가 런의 첫 결정이다.
     status: 'choosing',
@@ -583,7 +705,10 @@ export function rollShop(run: RunState): ShopItem[] {
   // 유물 할인(상인의 인증패 등)은 **모든 상점 가격**에 적용된다.
   const off = 1 - (runMods(run).shopDiscountPct ?? 0) / 100
   const price = (n: number) => Math.max(1, Math.round(n * off))
-  shuffle(cardRewardPool(run)).slice(0, 3).forEach((cardId, i) =>
+  // 카드 칸은 기본 3 + 유물 보정(행상 마차 등). 진열이 넓어지면 원하는 카드를
+  // 만날 확률이 올라간다 — 골드를 "가능성"으로 바꾸는 경제형 유물의 자리.
+  const cardSlots = 3 + (runMods(run).shopExtraItems ?? 0)
+  shuffle(cardRewardPool(run)).slice(0, cardSlots).forEach((cardId, i) =>
     items.push({ id: `card-${i}`, kind: 'card', cardId, price: price(PRICE_CARD) }),
   )
   const relicId = rollRelicId(run) // 희귀도 가중 — legend는 드물고 아주 비싸다

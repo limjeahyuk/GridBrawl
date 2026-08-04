@@ -6,6 +6,23 @@
 // cooldown (turns locked after use). See docs/GAME_DESIGN.md for the design.
 // ---------------------------------------------------------------------------
 
+/** 룰셋 버전 — 온라인 대전의 락스텝 호환성 표식.
+ *
+ *  두 피어는 서버 없이 각자 `resolveTurn`을 돌려 같은 결과를 낸다(랜덤 없음).
+ *  그 전제는 **양쪽이 같은 룰 코드를 돌린다**는 것이라, 한쪽만 갱신되면 조용히
+ *  결과가 갈린다(크래시가 아니라 desync — 재현이 거의 불가능하다). 그래서 매칭
+ *  전에 이 값을 교환해 다르면 아예 붙이지 않는다. (`net/protocol.ts`의 `hello`,
+ *  `net/matchmaking.ts`의 대기표 필터.)
+ *
+ *  ⚠ 아래를 바꾸면 **반드시 올린다** — 웹은 배포 즉시 갱신되지만 앱은 스토어·OTA를
+ *  거쳐 늦게 따라오므로, 버전이 겹치는 기간이 실제로 존재한다:
+ *    - `types.ts`의 룰 상수(격자·전장 붕괴·상태이상 지속)
+ *    - `engine.ts`의 턴 해소 규칙
+ *    - `cards.ts`·`roster.ts`의 카드 수치·사거리·능력 (id 추가·삭제 포함)
+ *  연출·UI·밸런스 시뮬처럼 `resolveTurn`의 출력에 닿지 않는 변경은 올리지 않아도 된다.
+ */
+export const RULES_VERSION = 1
+
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
 export type CardKind = 'move' | 'attack' | 'guard' | 'energy' | 'heal' | 'buff'
@@ -123,7 +140,7 @@ export interface CardDef {
   /**
    * 같은 셀에 겹쳐 선 상대(밀착)에게도 맞는가. 기본 true — 어떤 카드의 `range`도
    * 자기 셀 {df:0,du:0}을 덮지 않으므로 이 값이 없으면 밀착 상태에서 명중한다.
-   * `false`는 "바로 옆이 사각"인 원거리 카드 전용(펄스 샷·포크 라이트닝·이온 랜스).
+   * `false`는 "바로 옆이 사각"인 원거리 카드 전용(돌팔매·독니 화살·꿰뚫는 화살 등).
    */
   pointBlank?: boolean
 
@@ -141,6 +158,11 @@ export interface CardDef {
   freeze?: number
   /** 적중 시 상대를 (공격자 쪽으로) N칸 끌어당긴다. push의 반대. */
   pull?: number
+  /**
+   * 적중하면 상대 보호막을 **남김없이** 없앤다(피해 계산 전). 유물 `shieldBreak`의
+   * 카드판 — 보호막을 매 턴 쌓는 상대를 한 장으로 뚫는 자리다.
+   */
+  shatter?: boolean
   /** 기력 지불 성공 시 이번 **전투 내내** 내 공격 피해 +N(중첩). */
   empower?: number
   /**
@@ -205,31 +227,57 @@ export const MIRROR_DIR: Record<MoveDir, MoveDir> = {
 export const inBounds = (c: Cell): boolean =>
   c.col >= 0 && c.col < GRID_COLS && c.row >= 0 && c.row < GRID_ROWS
 
-// 독안개 — 무한전 억제 장치. FOG_START_TURN에 양 끝 열(col 0·5)부터 시작해,
-// FOG_STEP_TURNS 턴마다 한 열씩 안쪽으로 조여들어(0·5 → 0·1·4·5 → 전부) 결국
-// 판 전체를 덮는다. 턴 종료 시 독안개 위에 있으면 FOG_DAMAGE(실드 무시) 피해.
-export const FOG_START_TURN = 6
-export const FOG_STEP_TURNS = 3
-export const FOG_DAMAGE = 10
+// ---------------------------------------------------------------------------
+// 전장 붕괴 (2026-08-05, 옛 "독안개") — 무한전 억제 장치.
+//
+// **왜 안개가 아니라 붕괴인가**: 예전엔 보라색 독안개가 가장자리를 덮었는데, 판이
+// 6×3뿐이라 "안개가 낀다"보다 **"설 자리가 줄어든다"**가 실제로 일어나는 일이었다.
+// 그래서 연출을 바닥이 무너지는 쪽으로 바꿨다 — 이름·색·경고가 전부 그쪽이다.
+//
+// ⚠ **무너진 칸에도 들어갈 수 있다(소프트 위험지대).** 벽으로 막지 않는 이유:
+//   ① 판이 6×3이고 마지막 단계는 **전 칸**이 무너진다 — 막으면 설 자리가 0이 된다.
+//   ② 넉백·끌어당김·돌진이 상시로 위치를 옮긴다. 막힌 칸이 생기면 "밀렸는데 갈 곳이
+//      없다"를 엔진 곳곳에서 따로 처리해야 하고, 그게 곧 룰 분기 = 락스텝 위험이다.
+//   ③ 궁수의 정체성이 "거리를 사는 것"이다. 강제로 좁히면 붙어야만 하는 판이 되어
+//      3직업 약점 설계가 무너진다. **체력을 내고 거리를 사는** 선택으로 남긴다.
+// 대신 단계가 오를수록 **더 아프게** 해서 소모전이 실제로 끝나게 한다.
+export const COLLAPSE_START_TURN = 6
+export const COLLAPSE_STEP_TURNS = 3
+/** 단계별 턴당 피해(실드 무시). 단계가 오를수록 버티는 값이 커진다. */
+export const COLLAPSE_DAMAGE: readonly number[] = [10, 16, 24]
 
-// 마지막 단계 = 모든 열이 덮이는 단계. 6열이면 stage 2에서 col 0~5 전부.
-const FOG_MAX_STAGE = Math.ceil(GRID_COLS / 2) - 1
+/** 마지막 단계 = 모든 열이 무너지는 단계. 6열이면 stage 2에서 col 0~5 전부. */
+export const COLLAPSE_MAX_STAGE = Math.ceil(GRID_COLS / 2) - 1
 
-/** 해당 턴의 독안개 단계. 시작 전 -1, 시작 턴 0, 이후 FOG_STEP_TURNS마다 +1(최대 cap). */
-export const fogStageAt = (turn: number): number =>
-  turn < FOG_START_TURN
+/** 해당 턴의 붕괴 단계. 시작 전 -1, 시작 턴 0, 이후 COLLAPSE_STEP_TURNS마다 +1(cap). */
+export const collapseStageAt = (turn: number): number =>
+  turn < COLLAPSE_START_TURN
     ? -1
-    : Math.min(FOG_MAX_STAGE, Math.floor((turn - FOG_START_TURN) / FOG_STEP_TURNS))
+    : Math.min(
+        COLLAPSE_MAX_STAGE,
+        Math.floor((turn - COLLAPSE_START_TURN) / COLLAPSE_STEP_TURNS),
+      )
 
-/** 해당 턴에 이 셀이 독안개에 덮이는가 — 양 끝 열부터 안쪽으로 조여든다. */
-export const isFogCell = (c: Cell, turn: number): boolean => {
-  const stage = fogStageAt(turn)
+/** 해당 턴에 이 셀이 무너져 있는가 — 양 끝 열부터 안쪽으로 무너진다. */
+export const isCollapsedCell = (c: Cell, turn: number): boolean => {
+  const stage = collapseStageAt(turn)
   return stage >= 0 && (c.col <= stage || c.col >= GRID_COLS - 1 - stage)
 }
 
-/** 다음 턴에 독안개가 시작되거나 한 단계 더 조여드는가(경고용). */
-export const fogEscalatesNext = (turn: number): boolean =>
-  fogStageAt(turn + 1) > fogStageAt(turn)
+/** 그 턴에 무너진 칸에 서 있으면 받는 피해. 단계 밖이면 0. */
+export const collapseDamageAt = (turn: number): number => {
+  const stage = collapseStageAt(turn)
+  if (stage < 0) return 0
+  return COLLAPSE_DAMAGE[Math.min(stage, COLLAPSE_DAMAGE.length - 1)]
+}
+
+/** 판 전체가 무너졌는가 — 이때는 도망칠 칸이 없다(AI가 이걸 봐야 한다). */
+export const isFullyCollapsed = (turn: number): boolean =>
+  collapseStageAt(turn) >= COLLAPSE_MAX_STAGE
+
+/** 다음 턴에 붕괴가 시작되거나 한 단계 더 번지는가(경고용). */
+export const collapseEscalatesNext = (turn: number): boolean =>
+  collapseStageAt(turn + 1) > collapseStageAt(turn)
 /** Both fighters start on the middle row at opposite ends, facing each other. */
 export const START_CELLS: readonly [Cell, Cell] = [
   { col: 0, row: 1 },
@@ -249,13 +297,13 @@ export type ActionResult =
   | 'move'
   | 'guard'
   | 'energy'
-  | 'heal' // 기력을 써서 체력을 회복(리페어 계열)
+  | 'heal' // 기력을 써서 체력을 회복(상처 봉합 계열)
   | 'buff' // 자신에게 N턴 강화를 걸었다(공격력·방어력·기력 면제)
   | 'hit'
   | 'blocked' // connected but fully absorbed by the opponent's guard
   | 'whiff' // out of range
   | 'nofuel' // could not pay the energy cost
-  | 'fog' // took poison-fog damage at the edge of the grid (end of turn)
+  | 'collapse' // 무너진 칸에 서 있어 턴 종료에 피해를 입었다(실드 무시)
   | 'revive' // came back from a KO via a revive passive (once per battle)
   | 'stun' // 기절해 이 턴 카드를 못 냈다 / 유물 트리거로 상대를 기절시켰다
   | 'trigger' // 누적 기력 트리거 발동(회복·보호막·피해)
@@ -266,7 +314,7 @@ export type Phase =
   | 'move'
   | 'defense'
   | 'attack'
-  | 'fog'
+  | 'collapse'
   | 'revive'
   | 'stun'
   | 'trigger'

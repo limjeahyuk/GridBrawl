@@ -12,6 +12,7 @@
 //   3) 연결 시도는 12초 타임아웃 — 상대가 이미 떠났으면 다음 후보로.
 // 스테일 청소: 스캔 중 5분 넘은 대기표는 지워준다(best-effort).
 // ---------------------------------------------------------------------------
+import { RULES_VERSION } from '../battle/types'
 import { acceptAnswer, createAnswer, createOffer } from './webrtc'
 import type { NetTransport } from './protocol'
 import { dbDelete, dbGet, dbPut, firebaseConfigured, randomCode, refUrl, wait } from './firebase'
@@ -30,6 +31,8 @@ interface Entry {
   createdAt?: number
   aliveAt?: number
   lock?: string
+  /** 대기자의 룰셋 버전. 다르면 붙여 봐야 desync라 스캔에서 거른다. */
+  rules?: number
 }
 
 const SV_NOW = { '.sv': 'timestamp' } // RTDB 서버 시각 (클라이언트 시계 무관)
@@ -119,6 +122,7 @@ export function startQuickMatch(): QuickMatchTicket {
         dbDelete(`${ROOT}/${id}`) // 두고 간 대기표 청소 (서버·클라 시계 오차 감안해 넉넉히)
         continue
       }
+      if (e?.rules !== RULES_VERSION) continue // 룰셋이 다른 빌드 — 핸드셰이크까지 갈 것도 없다
       if (!e?.offer || e.answer || e.lock) continue
       if (now - alive > ALIVE_MS) continue // 심장박동 끊김 — 청소는 아직, 선점만 회피
       // 내 대기표가 있으면 "나보다 엄격히 먼저 온" 것만 선점 (동시 큐 교착 해소, 역교착 방지)
@@ -160,7 +164,12 @@ export function startQuickMatch(): QuickMatchTicket {
         myPc = off.pc
         myReady = off.ready
         myId = randomCode(6)
-        await dbPut(`${ROOT}/${myId}`, { offer: off.localSdp, createdAt: SV_NOW, aliveAt: SV_NOW })
+        await dbPut(`${ROOT}/${myId}`, {
+          offer: off.localSdp,
+          rules: RULES_VERSION,
+          createdAt: SV_NOW,
+          aliveAt: SV_NOW,
+        })
         myCreatedAt = (await dbGet<number>(`${ROOT}/${myId}/createdAt`).catch(() => null)) ?? Date.now()
         lastBeat = Date.now()
       }

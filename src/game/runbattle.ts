@@ -4,7 +4,8 @@
 // ---------------------------------------------------------------------------
 import { getChar } from '../data/roster'
 import { COMMON_CARDS } from '../battle/cards'
-import { decideAI } from '../battle/ai'
+import { decideAI, type AIProfile } from '../battle/ai'
+import { GRID_COLS, GRID_ROWS, type Cell } from '../battle/types'
 
 // 이동은 모든 파이터가 쓰는 보편 능력이다. 몬스터의 `deckCardIds`는 정체성(공격·가드)만
 // 담으므로, AI가 접근·회피할 수 있도록 공용 이동 카드를 풀에 주입한다. 이게 없으면
@@ -15,7 +16,7 @@ import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
 import { RUN_CARDS } from './runcards'
-import { bossPlan, bossTelegraph, isScriptedBoss } from './bosses'
+import { bossCinematic, bossPlan, bossTelegraph, isScriptedBoss, type BossCinematic } from './bosses'
 import { currentEnemy, type RunState } from './run'
 
 export interface RunFightProps {
@@ -28,6 +29,8 @@ export interface RunFightProps {
   /** 보스 예고(선택 화면 배너). turn·상대 체력비율을 받아 문구 or null. 스크립트
    *  보스가 아니면 undefined. */
   telegraph?: (turn: number, oppHpFrac: number) => string | null
+  /** 보스 컷인(등장·격노). 스크립트 보스가 아니면 undefined. */
+  boss?: BossCinematic
 }
 
 export function runFightProps(run: RunState): RunFightProps {
@@ -39,15 +42,26 @@ export function runFightProps(run: RunState): RunFightProps {
   const deck = run.deck
     .map((id) => all.find((c) => c.id === id))
     .filter((c): c is CardDef => !!c)
+  // 랜덤 배치(2026-08-05) — 몬스터를 매 전투 다른 줄에 세워 개전을 바꾼다. 보스는
+  // 연출·스크립트가 자리를 전제하므로 가운데 줄 고정(baseArtId 무관).
+  const scripted = isScriptedBoss(enemy.id)
+  const monRow = scripted ? 1 : Math.floor(Math.random() * GRID_ROWS)
+  const monCell: Cell = { col: GRID_COLS - 1, row: monRow }
   const battleOpts: BattleOpts = {
     chars: [pChar, eChar],
     passives: [mergeRelics(run.relicIds), eChar.passive],
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
+    startCells: [undefined, monCell],
+  }
+  // 전투별 기분(2026-08-05) — 같은 몬스터라도 판마다 공격성이 살짝 다르게. 성격
+  // (archetype)과 함께 매 턴 decideAI로 넘긴다. 전투 시작 때 한 번만 굴린다.
+  const profile: AIProfile = {
+    archetype: enemy.behavior ?? 'balanced',
+    moodAgg: (Math.random() - 0.5) * 0.24, // ≈ -0.12..+0.12
   }
   // 몬스터가 실제로 낼 수 있는 카드 = 공용 이동 + 그 몬스터 고유 덱(공격·가드).
   const enemyCards: CardDef[] = [...COMMON_MOVES, ...eChar.cards]
-  const scripted = isScriptedBoss(enemy.id)
   return {
     p0CharId: run.charId,
     p1CharId: enemy.baseArtId, // 아트 재활용
@@ -60,9 +74,10 @@ export function runFightProps(run: RunState): RunFightProps {
         const plan = bossPlan(enemy.id, ctx)
         if (plan) return Promise.resolve(plan)
       }
-      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards))
+      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards, profile))
     },
     enemyName: enemy.name,
     telegraph: scripted ? (turn, frac) => bossTelegraph(enemy.id, { turn, hpFrac: frac }) : undefined,
+    boss: scripted ? (bossCinematic(enemy.id, enemy.name) ?? undefined) : undefined,
   }
 }
