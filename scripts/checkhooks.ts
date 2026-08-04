@@ -424,6 +424,47 @@ console.log('\n파이터 방향 — 자리가 아니라 상대 위치를 따라�
   check('모든 시트에 facesRight가 명시돼 있다', wrong.map(([k]) => k), [])
 }
 
+// --- 쓰러진 뒤엔 못 때린다(2026-08-04) ---------------------------------------
+console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다')
+{
+  const hew = getChar('warrior').basics.find((c) => c.id === 'war-hew')!
+  /** 두 전사를 밀착시켜 같은 슬롯에 서로 공격을 물린다. */
+  const trade = (hp0: number, hp1: number) => {
+    const b = new CardBattle('warrior', 'warrior', { startHp: [hp0, hp1] })
+    b.state.pos[0] = { col: 2, row: 1 }
+    b.state.pos[1] = { col: 3, row: 1 }
+    const steps = b.resolveTurn([hew], [hew])
+    return { b, steps, attacks: steps.filter((s) => s.phase === 'attack') }
+  }
+
+  // ① 신고된 버그 — 내가 죽이면 적의 공격은 아예 안 나간다.
+  {
+    const { b, attacks } = trade(200, 1)
+    check('죽인 적의 공격은 해소되지 않는다', attacks.length, 1)
+    check('죽인 적에게 피해를 안 입는다', b.state.hp[0], 204) // 200 + 패시브 재생 4
+    check('적은 쓰러졌고 내가 이긴다', [b.state.hp[1], b.state.over, b.state.winner], [0, true, 0])
+  }
+  // ② 아무도 안 죽으면 예전 그대로 — 양쪽 다 맞는 트레이드.
+  {
+    const { b, attacks } = trade(200, 200)
+    check('둘 다 살면 트레이드는 그대로', attacks.length, 2)
+    check('양쪽 다 피해를 입는다', [b.state.hp[0] < 204, b.state.hp[1] < 204], [true, true])
+  }
+  // ③ 서로를 쓰러뜨리면 **진짜 동시 KO** — 무승부 판정이 살아 있어야 한다.
+  //    체력 비율이 정확히 같으므로(같은 캐릭터·같은 체력) 승자 없음.
+  {
+    const { b, attacks } = trade(1, 1)
+    check('상호 치명타는 둘 다 해소된다', attacks.length, 2)
+    check('둘 다 쓰러진다', [b.state.hp[0], b.state.hp[1]], [0, 0])
+    check('체력비가 같으면 무승부(랜덤 없음)', b.state.winner, null)
+  }
+  // ④ 상호 치명타지만 체력비가 다르면 높던 쪽이 이긴다(기존 타이브레이크 유지).
+  {
+    const { b } = trade(20, 1)
+    check('상호 치명타 — 체력비 높던 쪽 승리', [b.state.over, b.state.winner], [true, 0])
+  }
+}
+
 // --- 분기 지도(2026-08-04) ---------------------------------------------------
 console.log('\n분기 지도 — 갈래를 고르는 규칙')
 {

@@ -614,10 +614,28 @@ export class CardBattle {
         here.length === 2 && here[0].card.kind === 'attack' && here[1].card.kind === 'attack'
 
       if (bothAttack) {
-        // simultaneous trade: measure both vs the same board, then apply together
+        // 사거리·실드·상태이상은 **같은 판에서** 잰다(트레이드의 핵심 — 먼저 맞았다고
+        // 사거리가 바뀌면 안 된다). 2026-08-04에 바꾼 건 **적용 순서**뿐이다.
         const banked = here.map((e) => computeAttack(e.p, e.card))
-        for (const e of banked) applyOutcome(e)
-        for (const e of banked) emit(e.p, e.card, e.result, e.dmg, e.heal, e.drain, e.recoil)
+        // 이 공격이 상대를 쓰러뜨리는가 — 적용 **전** 판 기준으로 미리 본다.
+        const lethal = banked.map((r) => s.hp[1 - r.p] - r.dmg <= 0)
+        const mutual = lethal[0] && lethal[1]
+        /**
+         * 쓰러뜨리는 쪽을 먼저 적용하고, **이미 쓰러진 쪽은 그 턴에 못 때린다**
+         * (2026-08-04 신고: "적을 죽였는데 그 적이 때려서 피해를 입는다").
+         * 전엔 둘을 통째로 동시 적용해서, 체력 0이 된 상대의 공격이 그대로 들어왔다.
+         *
+         * ⚠ **서로를 쓰러뜨리는 진짜 동시 KO만 예외**로 둘 다 적용한다. 그래야
+         *   동시 KO 타이브레이크·무승부(`koWinner`)가 그대로 살아 있고, 둘 중
+         *   누구를 먼저 놓느냐로 승자가 갈리는 비대칭(호스트 유리)이 안 생긴다.
+         */
+        const order = mutual ? [0, 1] : lethal[1] ? [1, 0] : [0, 1]
+        for (const i of order) {
+          const e = banked[i]
+          if (!mutual && s.hp[e.p] <= 0) continue
+          applyOutcome(e)
+          emit(e.p, e.card, e.result, e.dmg, e.heal, e.drain, e.recoil)
+        }
       } else {
         for (const e of here) {
           if (e.card.kind === 'attack') {
