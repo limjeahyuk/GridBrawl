@@ -28,7 +28,15 @@ import { RewardScreen } from './ui/screens/RewardScreen'
 import { EventScreen } from './ui/screens/EventScreen'
 import { ShopScreen } from './ui/screens/ShopScreen'
 import { RunEndScreen } from './ui/screens/RunEndScreen'
-import { startRun, afterWin, afterLoss, currentNode, sceneFor, type RunState } from './game/run'
+import {
+  startRun,
+  afterWin,
+  afterLoss,
+  chooseBranch,
+  currentNode,
+  sceneFor,
+  type RunState,
+} from './game/run'
 import { runFightProps } from './game/runbattle'
 
 const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
@@ -152,13 +160,14 @@ export default function App() {
     setRun(startRun(charId))
     setPhase('run-map')
   }, [])
-  // 맵에서 현재 노드로 진입 — 타입에 따라 전투/이벤트/상점으로.
-  const enterNode = useCallback(() => {
+  // 지도에서 갈래를 골라 그 칸으로 진입 — 타입에 따라 전투/이벤트/상점으로.
+  const chooseNode = useCallback((index: number) => {
     setRun((r) => {
       if (!r) return r
-      const t = currentNode(r).type
+      const next = chooseBranch(r, index)
+      const t = currentNode(next).type
       setPhase(t === 'event' ? 'run-event' : t === 'shop' ? 'run-shop' : 'run-fight')
-      return r
+      return next
     })
   }, [])
   const runFightEnd = useCallback((won: boolean, hpLeft: number) => {
@@ -278,7 +287,7 @@ export default function App() {
   } else if (phase === 'run-start') {
     screen = <RunStartScreen onStart={beginRun} onBack={toTitle} />
   } else if (phase === 'run-map' && run) {
-    screen = <RunMapScreen run={run} onEnter={enterNode} onQuit={toTitle} />
+    screen = <RunMapScreen run={run} onChoose={chooseNode} onQuit={toTitle} />
   } else if (phase === 'run-fight' && run) {
     const fp = runFightProps(run)
     screen = (

@@ -108,7 +108,11 @@ export function startingDeck(charId: string): string[] {
   return [...STARTING_COMMON, ...getChar(charId).basics.map((c) => c.id)]
 }
 
-export type RunStatus = 'fighting' | 'reward' | 'event' | 'shop' | 'won' | 'lost'
+/**
+ * `choosing` = 이번 층의 갈래를 아직 안 골랐다(2026-08-04 분기 지도).
+ * 나머지는 고른 노드에 따라 정해진다(`statusForNode`).
+ */
+export type RunStatus = 'choosing' | 'fighting' | 'reward' | 'event' | 'shop' | 'won' | 'lost'
 
 export interface RunState {
   charId: string
@@ -118,7 +122,15 @@ export interface RunState {
   maxHp: number
   gold: number
   floor: number // 1-based
-  ladder: RunNode[]
+  /**
+   * 층별 갈래 후보(2026-08-04). `branches[floor-1]`이 그 층에서 고를 수 있는 칸들이다.
+   * ⚠ **0번은 항상 `NODE_TEMPLATE`의 타입**이다 — 늘 0번만 고르면 분기 도입 전 런과
+   * 완전히 같아진다. 시뮬로 맞춰 둔 밸런스 기준선이 지도 안에 경로로 남아 있는 것이라,
+   * 후보를 새로 짤 때도 이 규칙은 지킬 것(`optionsForFloor`).
+   */
+  branches: RunNode[][]
+  /** 층마다 고른 후보의 인덱스. `picked[floor-1]`이 없으면 아직 안 골랐다. */
+  picked: number[]
   status: RunStatus
 }
 
@@ -167,17 +179,45 @@ function elitePool(floor: number): MonsterDef[] {
   return [...monstersOfTier(4).filter((m) => m.id !== 'overlord'), ...DEEP_ELITE_IDS.map(getMonster)]
 }
 
-function buildLadder(): RunNode[] {
-  return NODE_TEMPLATE.map((type, i) => {
-    const floor = i + 1
-    if (type === 'combat') {
-      const poolT = combatPool(floor)
-      return { type, monsterId: (poolT.length ? pick(poolT) : pick(monstersOfTier(1))).id }
-    }
-    if (type === 'elite') return { type, monsterId: pick(elitePool(floor)).id }
-    if (type === 'boss') return { type, monsterId: 'overlord' }
-    return { type } // event / shop
-  })
+/** 그 층의 일반 전투 노드 하나(티어 풀에서 뽑는다). `exclude`와는 다른 몬스터로. */
+function combatNode(floor: number, exclude?: string): RunNode {
+  const poolT = combatPool(floor)
+  const pool = poolT.length ? poolT : monstersOfTier(1)
+  const distinct = pool.filter((m) => m.id !== exclude)
+  return { type: 'combat', monsterId: pick(distinct.length ? distinct : pool).id }
+}
+
+/**
+ * 한 층의 갈래 후보(2026-08-04). **0번은 반드시 템플릿 타입**이다 — 이유는
+ * `RunState.branches` 주석 참고(늘 0번을 고르면 분기 이전 런과 동일).
+ *
+ * 대안 칸은 "무엇을 포기하고 무엇을 받나"가 한 줄로 설명되는 것만 뒀다:
+ *   전투  → 다른 몬스터와의 전투 (어느 적을 상대할지 고른다)
+ *   엘리트 → 일반 전투 (유물 확정을 포기하고 안전을 산다)
+ *   이벤트 → 상점 (도박 대신 확실한 보급)
+ *   상점  → 이벤트 (골드가 없을 때 차라리 도박)
+ *   보스  → 없음 (마지막 층은 고를 게 없다)
+ *
+ * ⚠ **지원 칸(이벤트·상점)을 전투로 바꿀 수 있게 하면 안 된다.** 처음엔 모든 대안을
+ * 전투로 뒀는데, 그러면 경로를 헤맬수록 이벤트·상점이 전투로 갈려 나가 **클리어율이
+ * 27% → 10%로 무너졌다**(5시드 × 900런). 상점이 층 사이 회복의 주 수단이라
+ * (`PRICE_HEAL_AMOUNT`) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
+ * 그래야 15층 페이싱을 맞춰 둔 전투/지원 비율이 경로와 무관하게 유지된다.
+ */
+function optionsForFloor(floor: number, primary: NodeType): RunNode[] {
+  if (primary === 'boss') return [{ type: 'boss', monsterId: 'overlord' }]
+  if (primary === 'combat') {
+    const a = combatNode(floor)
+    return [a, combatNode(floor, a.monsterId)]
+  }
+  if (primary === 'event') return [{ type: 'event' }, { type: 'shop' }]
+  if (primary === 'shop') return [{ type: 'shop' }, { type: 'event' }]
+  // 엘리트 — 유일하게 "전투량 자체"를 고르는 칸이다(유물 확정 vs 안전).
+  return [{ type: 'elite', monsterId: pick(elitePool(floor)).id }, combatNode(floor)]
+}
+
+function buildBranches(): RunNode[][] {
+  return NODE_TEMPLATE.map((type, i) => optionsForFloor(i + 1, type))
 }
 
 // --- 전장 배경 --------------------------------------------------------------
@@ -203,8 +243,30 @@ export function computeMaxHp(charId: string, relicIds: string[]): number {
   const base = getChar(charId).maxHp
   return Math.max(1, base + (mergeRelics(relicIds).maxHpBonus ?? 0))
 }
+/** 이번 층에서 고를 수 있는 칸들. */
+export function currentOptions(run: RunState): RunNode[] {
+  return run.branches[run.floor - 1] ?? []
+}
+/** 이번 층에서 이미 골랐는가. `status === 'choosing'`과 짝이다. */
+export function hasPicked(run: RunState): boolean {
+  return run.picked[run.floor - 1] !== undefined
+}
+/**
+ * 이번 층에서 **고른** 칸. ⚠ 고르기 전(`status === 'choosing'`)에 부르면 안 된다 —
+ * 전투/보상 로직은 전부 고른 뒤에 도는 자리라 그때만 유효하다. 아직 안 골랐으면
+ * 0번으로 떨어뜨린다(옛 선형 사다리와 같은 칸이라 최소한 엉뚱하지는 않다).
+ */
 export function currentNode(run: RunState): RunNode {
-  return run.ladder[run.floor - 1]
+  const opts = currentOptions(run)
+  return opts[run.picked[run.floor - 1] ?? 0]
+}
+/** 갈래를 골라 그 칸으로 확정한다 — 지도 화면의 유일한 진입 경로. */
+export function chooseBranch(run: RunState, index: number): RunState {
+  const opts = currentOptions(run)
+  const idx = clamp(index, 0, Math.max(0, opts.length - 1))
+  const picked = run.picked.slice()
+  picked[run.floor - 1] = idx
+  return { ...run, picked, status: statusForNode(opts[idx]) }
 }
 export function isEliteFloor(run: RunState): boolean {
   const t = currentNode(run).type
@@ -216,7 +278,13 @@ export function isEliteFloor(run: RunState): boolean {
  * tier4(수호기사·화염군주)는 이미 엘리트 스탯이라 엘리트 보정을 중복 적용하지 않는다.
  */
 export function currentEnemy(run: RunState): MonsterDef {
-  const node = currentNode(run)
+  return enemyForNode(run, currentNode(run))
+}
+/**
+ * 임의의 칸에 대한 스케일 적용 몬스터. 지도에서 **고르기 전에** 각 갈래의 적을
+ * 미리 보여 주려면 필요하다 — 뭘 상대하는지 모르면 고르는 게 도박이 된다.
+ */
+export function enemyForNode(run: RunState, node: RunNode): MonsterDef {
   const base = getMonster(node.monsterId ?? 'grunt')
   const elite = node.type === 'elite' && base.tier < 4
   const boss = node.type === 'boss'
@@ -239,7 +307,6 @@ function statusForNode(node: RunNode): RunStatus {
 export function startRun(charId: string): RunState {
   const relicIds = [signatureRelicId(charId)].filter(Boolean)
   const maxHp = computeMaxHp(charId, relicIds)
-  const ladder = buildLadder()
   return {
     charId,
     relicIds,
@@ -248,8 +315,10 @@ export function startRun(charId: string): RunState {
     maxHp,
     gold: 0,
     floor: 1,
-    ladder,
-    status: statusForNode(ladder[0]), // 1층이 전투가 아닌 템플릿으로 바뀌어도 안전하게
+    branches: buildBranches(),
+    picked: [],
+    // 1층부터 고른다 — 어느 칸으로 들어갈지가 런의 첫 결정이다.
+    status: 'choosing',
   }
 }
 
@@ -563,11 +632,14 @@ export function buyShopItem(
 }
 
 // --- 진행 -------------------------------------------------------------------
-/** 다음 층으로. 새 노드 타입에 맞춰 status를 정한다(전투/이벤트/상점). */
+/**
+ * 다음 층으로. 분기 도입 뒤로는 **칸을 정하지 않고 `choosing`으로 넘긴다** — 다음
+ * 칸은 지도 화면에서 플레이어가 고른다(`chooseBranch`).
+ */
 export function advanceFloor(run: RunState): RunState {
   const floor = run.floor + 1
   if (floor > LADDER_FLOORS) return { ...run, status: 'won' }
-  return { ...run, floor, status: statusForNode(run.ladder[floor - 1]) }
+  return { ...run, floor, status: 'choosing' }
 }
 /** 보상을 포기하고 회복 후 진행. */
 export function skipRewardForHeal(run: RunState): RunState {

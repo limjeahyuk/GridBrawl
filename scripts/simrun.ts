@@ -28,7 +28,9 @@ import {
   afterLoss,
   afterWin,
   buyShopItem,
+  chooseBranch,
   currentNode,
+  currentOptions,
   grantCard,
   grantRelic,
   resolveEventEffect,
@@ -60,6 +62,15 @@ const SEED = flagNum('seed', 12345)
 const SKILL = flagStr('skill', 'hard') as Difficulty
 const POLICY = flagStr('policy', 'greedy') as 'greedy' | 'random'
 const CHAR = flagStr('char', 'all')
+/**
+ * 분기 지도의 경로 선택 정책(2026-08-04). 지도가 갈래를 갖게 되면서 "어느 길로
+ * 갔는가"가 클리어율을 직접 흔들기 때문에, 무엇을 재는지 명시해야 한다.
+ *   template 늘 0번 = 분기 이전과 **완전히 같은 런**. 옛 기준선과 비교할 때 쓴다
+ *   random   무작위. "평균적인 플레이어"의 기댓값
+ *   greedy   엘리트를 우선 = 유물을 최대한 먹는 하이리스크 경로
+ *   safe     엘리트를 회피 = 안전 경로. 이게 최적이 되면 분기 설계가 실패한 것이다
+ */
+const PATH = flagStr('path', 'random') as 'template' | 'random' | 'greedy' | 'safe'
 /**
  * 특정 유물을 들고 시작한다(`--relics=coil,circuit,deathwish`). "이 조합이 얼마나
  * 말이 안 되나"를 재는 용도 — 실제 런에서 이걸 다 모으기가 어려운 것과는 별개로,
@@ -237,6 +248,20 @@ function doShop(run: RunState): RunState {
   return advanceFloor(cur)
 }
 
+/** `--path` 정책대로 이번 층의 갈래를 고른다(위 PATH 주석 참고). */
+function pickBranch(run: RunState): number {
+  const opts = currentOptions(run)
+  if (opts.length <= 1) return 0
+  if (PATH === 'template') return 0
+  if (PATH === 'random') return Math.floor(Math.random() * opts.length)
+  const eliteAt = opts.findIndex((o) => o.type === 'elite')
+  if (eliteAt < 0) return Math.floor(Math.random() * opts.length)
+  if (PATH === 'greedy') return eliteAt
+  // safe — 엘리트가 아닌 첫 칸
+  const other = opts.findIndex((o) => o.type !== 'elite')
+  return other < 0 ? 0 : other
+}
+
 // --- 런 1회 ----------------------------------------------------------------
 async function playRun(charId: string): Promise<void> {
   let run = startRun(charId)
@@ -281,7 +306,9 @@ async function playRun(charId: string): Promise<void> {
       }
       continue
     }
-    if (run.status === 'reward') {
+    if (run.status === 'choosing') {
+      run = chooseBranch(run, pickBranch(run))
+    } else if (run.status === 'reward') {
       run = takeReward(run)
     } else if (run.status === 'event') {
       arrive[floor]++

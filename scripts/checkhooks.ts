@@ -11,7 +11,19 @@ import { SHEETS, placeSprite } from '../src/art/sprites'
 import { faceToward } from '../src/ui/screens/BattleScreen'
 import { getChar, type CharacterDef, type Passive } from '../src/data/roster'
 import { mergeRelics, mergeRunMods } from '../src/game/relics'
-import { deckCap, grantRelic, healHp, rollRewards, rollShop, startRun } from '../src/game/run'
+import {
+  LADDER_FLOORS,
+  advanceFloor,
+  chooseBranch,
+  currentNode,
+  currentOptions,
+  deckCap,
+  grantRelic,
+  healHp,
+  rollRewards,
+  rollShop,
+  startRun,
+} from '../src/game/run'
 import { RUN_CARD_BY_ID } from '../src/game/runcards'
 import type { CardDef } from '../src/battle/types'
 
@@ -410,6 +422,70 @@ console.log('\n파이터 방향 — 자리가 아니라 상대 위치를 따라�
   // 지금 팩은 전부 오른쪽을 본다 — 하나라도 빠지면 그 캐릭터만 뒤집혀 선다.
   const wrong = Object.entries(SHEETS).filter(([, sh]) => sh.facesRight !== true)
   check('모든 시트에 facesRight가 명시돼 있다', wrong.map(([k]) => k), [])
+}
+
+// --- 분기 지도(2026-08-04) ---------------------------------------------------
+console.log('\n분기 지도 — 갈래를 고르는 규칙')
+{
+  // 무작위 생성이라 한 번으로는 못 잡는다. 여러 런을 훑어 불변식을 확인한다.
+  const RUNS = 300
+  let missingBranch = 0
+  let bossBranched = 0
+  let supportToCombat = 0
+  let eliteShapeBad = 0
+  const headTypes = new Set<string>()
+
+  for (let i = 0; i < RUNS; i++) {
+    const run = startRun('warrior')
+    headTypes.add(run.branches.map((o) => o[0].type).join(','))
+    run.branches.forEach((opts, f) => {
+      const isBoss = opts[0].type === 'boss'
+      if (isBoss && opts.length !== 1) bossBranched++
+      if (!isBoss && opts.length < 2) missingBranch++
+      // ⚠ 이게 이번 작업의 핵심 회귀 검사다. 지원 칸(이벤트·상점)의 대안을 전투로
+      //   뒀다가 클리어율이 27%→10%로 무너졌다(상점이 회복의 주 수단이라서).
+      //   지원 칸은 지원 칸끼리만 바꿔야 한다.
+      const head = opts[0].type
+      if (head === 'event' || head === 'shop') {
+        if (opts.some((o) => o.type !== 'event' && o.type !== 'shop')) supportToCombat++
+      }
+      // 엘리트는 유일하게 "전투량"을 고르는 칸 — [엘리트, 일반전투]여야 한다.
+      if (head === 'elite') {
+        if (opts.length !== 2 || opts[1].type !== 'combat') eliteShapeBad++
+      }
+      void f
+    })
+  }
+  check('보스 층은 갈래가 없다', bossBranched, 0)
+  check('보스 외 모든 층에 갈래가 있다', missingBranch, 0)
+  check('지원 칸(이벤트·상점)은 전투로 바뀌지 않는다', supportToCombat, 0)
+  check('엘리트 층은 [엘리트, 일반전투]', eliteShapeBad, 0)
+  // 0번만 따라가면 늘 같은 층 구성 = 옛 선형 사다리. 밸런스 기준선이 경로로 남는다.
+  check('0번 갈래의 타입 열은 항상 같다(옛 사다리)', headTypes.size, 1)
+}
+{
+  const run = startRun('mage')
+  check('시작하면 아직 안 골랐다', run.status, 'choosing')
+  check('1층부터 갈래가 있다', currentOptions(run).length >= 2, true)
+
+  // 고르면 그 칸의 종류에 맞는 status로 간다.
+  const opts = currentOptions(run)
+  const combatAt = opts.findIndex((o) => o.type === 'combat' || o.type === 'elite')
+  const picked = chooseBranch(run, combatAt < 0 ? 0 : combatAt)
+  check('고르면 choosing이 풀린다', picked.status !== 'choosing', true)
+  check('고른 칸이 현재 칸이 된다', currentNode(picked), opts[combatAt < 0 ? 0 : combatAt])
+
+  // 범위 밖 인덱스는 잘라 낸다(네트워크·저장본이 이상해도 런이 안 깨지게).
+  check('인덱스는 클램프된다', currentNode(chooseBranch(run, 99)), opts[opts.length - 1])
+
+  // 다음 층으로 가면 **다시 고르는 상태**여야 한다 — 자동으로 칸이 정해지면 안 된다.
+  const next = advanceFloor(picked)
+  check('다음 층은 다시 choosing', next.status, 'choosing')
+  check('층이 하나 올랐다', next.floor, picked.floor + 1)
+
+  // 마지막 층을 넘기면 승리.
+  const last = { ...run, floor: LADDER_FLOORS }
+  check('마지막 층 다음은 승리', advanceFloor(last).status, 'won')
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------
