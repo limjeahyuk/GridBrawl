@@ -1,4 +1,5 @@
-// 상점 — 골드로 카드·유물·회복·카드 제거를 구매. 카드 제거/획득은 카드 선택이 필요.
+// 상점 — 골드로 카드·유물·회복을 구매. 덱이 꽉 찬 상태의 카드 구매만 카드 선택
+// (버릴 카드)이 필요하다. ⚠ 유료 "카드 1장 제거"는 뺐다(run.ts "덱 룰" 참고).
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
@@ -8,6 +9,7 @@ import {
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
+import { DeckPicker } from '../DeckPicker'
 import { RunBar } from '../RunBar'
 
 
@@ -41,34 +43,15 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
   }
 
   if (pending) {
-    const removing = pending.kind === 'removeCard'
     return (
       <div className="screen shop">
         <div className="grid-bg" />
-        <h2 className="shop__title">{removing ? '제거할 카드를 고르세요' : '버릴 카드를 고르세요'}</h2>
-        <div className="reward__deck">
-          {cur.deck.map((id, i) => {
-            const c = resolveRunCard(cur.charId, id)
-            if (!c) return null
-            return (
-              <button
-                key={`${id}-${i}`}
-                className="reward__card"
-                style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                {...zoom.bind(c)}
-                onClick={() => {
-                  if (zoom.consumedClick()) return
-                  pickCard(id)
-                }}
-              >
-                <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
-              </button>
-            )
-          })}
-        </div>
+        <h2 className="shop__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
+        <DeckPicker charId={cur.charId} deck={cur.deck} zoom={zoom} onPick={pickCard} />
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>
+        {zoom.sheet}
       </div>
     )
   }
@@ -101,12 +84,6 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
                   <div className="shop__service">
                     <div className="shop__service-icon">❤</div>
                     <div className="shop__service-name">체력 +{item.amount}</div>
-                  </div>
-                )}
-                {item.kind === 'removeCard' && (
-                  <div className="shop__service">
-                    <div className="shop__service-icon">🗑</div>
-                    <div className="shop__service-name">카드 1장 제거</div>
                   </div>
                 )}
               </div>

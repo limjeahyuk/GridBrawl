@@ -315,13 +315,13 @@ export const ROSTER: CharacterDef[] = [
       atk({ id: 'arc-knife', name: '단검 긋기', range: both(1), damage: 11, energyCost: 8, fx: 'slash', desc: '앞뒤 한 칸을 단검으로 긋는다. 붙잡혔을 때의 최후 수단.' }),
     ],
     cards: [
-      atk({ id: 'arc-shot', name: '잿빛 화살', range: beamBoth(1, 2), damage: 24, energyCost: 16, fx: 'bolt', desc: '앞뒤 1~2칸을 노리는 기본 사격. 겹쳐 선 상대도 맞힌다.' }),
+      atk({ id: 'arc-shot', name: '잿빛 화살', range: [...beamBoth(1, 2), ...FORK], damage: 24, energyCost: 16, fx: 'bolt', desc: '앞뒤 1~2칸 + 앞뒤 대각 네 칸을 노리는 기본 사격. 한 줄 어긋난 상대도 대각으로 잡는다. 겹쳐 선 상대도 맞힌다.' }),
       atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 22, energyCost: 20, poison: 6, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 독 6(3턴) — 겹칠수록 위력이 쌓인다. 밀착 사각.' }),
       atk({ id: 'arc-pin', name: '말뚝 화살', range: beamBoth(1, 2), damage: 28, energyCost: 32, pierce: true, push: 1, fx: 'bolt', desc: '앞뒤 1~2칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
       atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 40, energyCost: 45, poison: 8, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 독 8(3턴). 밀착 사각.' }),
       // ⚠ 궁수의 구조적 약점: 카드 대부분이 밀착 사각인데 몬스터가 접근한다.
       // 아래 두 장이 그 해법이다 — 물러나며 쏘고(카이팅), 붙은 적을 얼려 떼어낸다.
-      atk({ id: 'arc-kite', name: '물러서며 쏘기', range: beamBoth(1, 2), damage: 22, energyCost: 20, dashForward: -1, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞뒤 1~2칸을 쏜다. 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),
+      atk({ id: 'arc-kite', name: '물러서며 쏘기', range: [...beamBoth(1, 2), ...FORK], damage: 22, energyCost: 20, dashForward: -1, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞뒤 1~2칸 + 앞뒤 대각 네 칸에 흩뿌린다. 빠지면서 어긋난 줄을 대각으로 쓸어 맞힌다 — 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),
       atk({ id: 'arc-snare', name: '가시 올가미', range: barBoth(1), damage: 16, energyCost: 24, freeze: 1, push: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 한 칸 × 세 줄에 올가미를 깐다. 상대를 한 칸 밀고 1턴 빙결(이동 불가) — 쿨타임 2턴.' }),
       buff({ id: 'arc-focus', name: '사냥꾼의 집중', buff: 'atkUp', buffPower: 11, buffTurns: 3, buffCost: 22, fx: 'bolt', accent: '#3cbf7a', desc: '3턴간 내 공격 피해 +11. 거리를 벌어 둔 턴에 깔아 두는 카드.' }),
       buff({ id: 'arc-veil', name: '잿빛 장막', buff: 'defUp', buffPower: 8, buffTurns: 3, buffCost: 20, accent: '#5aa06d', desc: '3턴간 받는 공격 피해 -8. 갑주가 얇은 궁수가 붙잡혔을 때 버는 시간.' }),

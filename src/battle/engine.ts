@@ -10,13 +10,18 @@ import {
   START_CELLS,
   STATUS_POWER_CAP,
   STATUS_TURNS,
+  canStand,
   facingBetween,
   inBounds,
   isCollapsedCell,
   isDot,
+  rockAt,
+  shadowRock,
   type BattleSnapshot,
   type Cell,
   type CardDef,
+  type Obstacle,
+  type RockPlan,
   type StatusEffect,
   type StatusKind,
   type Step,
@@ -34,6 +39,8 @@ const STATUS_CARD: Record<'poison' | 'burn', CardDef> = {
   burn: { id: 'st-burn', name: '화상', kind: 'guard', desc: '불길이 살을 태운다.' },
 }
 const FROZEN_CARD: CardDef = { id: 'st-frozen', name: '빙결', kind: 'guard', desc: '얼어붙어 움직일 수 없다.' }
+const ROCK_BREAK_CARD: CardDef = { id: 'rock-break', name: '바위 파괴', kind: 'guard', desc: '가로막던 바위가 부서졌다.' }
+const ROCK_RAISE_CARD: CardDef = { id: 'rock-raise', name: '석벽', kind: 'guard', desc: '바닥에서 바위가 솟았다.' }
 const cloneCell = (c: Cell): Cell => ({ col: c.col, row: c.row })
 const sameCell = (a: Cell, b: Cell) => a.col === b.col && a.row === b.row
 
@@ -60,6 +67,8 @@ export interface BattleState {
   empowered: [number, number]
   /** 걸려 있는 지속 상태이상(독·화상·빙결). 종류당 최대 1개로 합쳐 둔다. */
   status: [StatusEffect[], StatusEffect[]]
+  /** 판 위의 바위(지형). 비어 있으면 지형 규칙이 통째로 no-op — PvP·봇전이 그렇다. */
+  obstacles: Obstacle[]
   turn: number
   over: boolean
   winner: number | null
@@ -85,6 +94,12 @@ export interface BattleOpts {
    * 바꾸는 용도 — 미지정이면 기본 `START_CELLS`(PvP·봇전·튜토리얼 불변).
    */
   startCells?: [Cell | undefined, Cell | undefined]
+  /**
+   * 지형(**런 전용**, 2026-08-05). 판에 미리 세워 둘 바위. 미지정이면 빈 판이라
+   * 지형 규칙이 전부 no-op이다 — PvP·봇전·튜토리얼은 여기를 절대 채우지 않는다.
+   * 시작 셀과 겹치는 바위는 생성자가 버린다(파이터가 바위 위에 설 수는 없다).
+   */
+  obstacles?: readonly Obstacle[]
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -120,8 +135,21 @@ export class CardBattle {
         row: clamp(Math.round(want.row), 0, GRID_ROWS - 1),
       }
     }
+    const p0 = startCell(0)
+    const p1 = startCell(1)
+    // 지형 — 격자 밖·중복·**파이터가 선 칸**의 바위는 버린다. 바위 위에 서 있는
+    // 상태는 이동 규칙(못 들어간다)과 모순이라 아예 만들지 않는다.
+    const obstacles: Obstacle[] = []
+    for (const r of opts?.obstacles ?? []) {
+      const cell = { col: Math.round(r.cell.col), row: Math.round(r.cell.row) }
+      if (!inBounds(cell)) continue
+      if (sameCell(cell, p0) || sameCell(cell, p1)) continue
+      if (rockAt(obstacles, cell)) continue
+      const hp = Math.max(1, Math.round(r.hp))
+      obstacles.push({ cell, hp, maxHp: Math.max(hp, Math.round(r.maxHp) || hp) })
+    }
     this.state = {
-      pos: [startCell(0), startCell(1)],
+      pos: [p0, p1],
       hp: [startHp(0), startHp(1)],
       energy: [
         clamp(
@@ -145,6 +173,7 @@ export class CardBattle {
       freezesUsed: [0, 0],
       empowered: [0, 0],
       status: [[], []],
+      obstacles,
       turn: 1,
       over: false,
       winner: null,
@@ -194,7 +223,21 @@ export class CardBattle {
       shield: [s.shield[0], s.shield[1]],
       // 깊은 복사 — 스냅샷은 연출용 과거 기록이라 이후 턴에 같이 변하면 안 된다
       status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
+      obstacles: s.obstacles.map((r) => ({ ...r, cell: cloneCell(r.cell) })),
     }
+  }
+
+  /** 이 칸에 바위가 서 있는가 — UI·AI가 엔진과 같은 규칙을 보도록 여기서 판다. */
+  rockAt(c: Cell): Obstacle | undefined {
+    return rockAt(this.state.obstacles, c)
+  }
+
+  /**
+   * 이 공격이 **바위를 무시하는가**. 카드의 `pierce`와 유물 `alwaysPierce` 둘 다
+   * 관통이다 — 사격선 판정·바위 피해가 모두 이 한 곳을 본다.
+   */
+  piercesRock(p: number, card: CardDef): boolean {
+    return !!card.pierce || !!this.passive[p].alwaysPierce
   }
 
   /** Cells this attack covers right now, mapped from the attacker's facing. */
@@ -211,7 +254,8 @@ export class CardBattle {
     let cur = cloneCell(s.pos[p])
     for (let k = 0; k < steps; k++) {
       const next: Cell = { col: cur.col + dc, row: cur.row + dr }
-      if (!inBounds(next)) break // 벽에서 멈춤
+      // 벽과 **바위**에서 멈춘다 — 바위는 통과도 착지도 안 된다(지형 규칙 ①).
+      if (!canStand(s.obstacles, next)) break
       cur = next // 상대 셀 통과·정지 모두 가능(겹침 허용)
     }
     s.pos[p] = cur
@@ -228,7 +272,7 @@ export class CardBattle {
     let cur = cloneCell(s.pos[p])
     for (let k = 0; k < Math.abs(forward); k++) {
       const next: Cell = { col: cur.col + step, row: cur.row }
-      if (!inBounds(next)) break
+      if (!canStand(s.obstacles, next)) break // 벽·바위에 막히면 거기까지만
       cur = next
     }
     s.pos[p] = cur
@@ -401,6 +445,20 @@ export class CardBattle {
           const boost = 1 + (this.passive[p].guardPowerPct ?? 0) / 100
           s.shield[p] += Math.round((c.block ?? 0) * boost)
           emit(p, c, 'guard')
+          // 석벽 — 가드 카드가 판에 바위를 세운다(수호기사). 가드 스텝 **뒤에** 따로
+          // 실어야 "방벽을 올리자 바닥에서 바위가 솟았다"로 순서대로 읽힌다.
+          if (c.raiseRocks && raiseRocks(p, c.raiseRocks).length)
+            steps.push({
+              phase: 'rock',
+              actor: p,
+              card: ROCK_RAISE_CARD,
+              result: 'rock',
+              damage: 0,
+              heal: 0,
+              drain: 0,
+              recoil: 0,
+              snapshot: this.snapshot(),
+            })
         } else {
           emit(p, c, 'nofuel')
         }
@@ -446,10 +504,76 @@ export class CardBattle {
      */
     const connectsNow = (p: number, c: CardDef): boolean => {
       const d = 1 - p
-      return (
-        (sameCell(s.pos[p], s.pos[d]) && c.pointBlank !== false) ||
-        this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
-      )
+      if (sameCell(s.pos[p], s.pos[d])) return c.pointBlank !== false
+      if (!this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))) return false
+      // 지형 ② — 사이에 바위가 끼면 사격선이 끊긴다. 관통은 그대로 뚫는다.
+      if (this.piercesRock(p, c)) return true
+      return !shadowRock(s.obstacles, s.pos[p], s.pos[d])
+    }
+
+    /**
+     * 이 공격이 **깎아 내는 바위들**(지형 ③). 두 가지가 대상이다:
+     *   ⓐ 공격이 덮은 칸에 서 있는 바위 — 범위에 들어왔으니 그대로 맞는다
+     *   ⓑ 그 칸을 **가로막은** 바위 — 날아가다 바위에 부딪힌 셈이다
+     * ⓑ가 있어야 사거리가 짧은 카드로도 결국 길을 뚫을 수 있다. 관통 공격은 바위를
+     * 무시하므로 아무것도 깎지 않는다(뒤를 그냥 때린다).
+     */
+    const rocksHitBy = (p: number, c: CardDef): Obstacle[] => {
+      if (!s.obstacles.length || this.piercesRock(p, c)) return []
+      const from = s.pos[p]
+      const out: Obstacle[] = []
+      for (const cell of this.targetsOf(p, c)) {
+        if (!inBounds(cell)) continue
+        const r = rockAt(s.obstacles, cell) ?? shadowRock(s.obstacles, from, cell)
+        if (r && !out.includes(r)) out.push(r)
+      }
+      return out
+    }
+
+    /**
+     * 판에 바위를 세운다(`CardDef.raiseRocks`). 파이터가 선 칸·이미 바위가 있는 칸·
+     * 무너진 칸은 건너뛴다 — 무너진 칸에 세워 봐야 이 턴 끝에 같이 무너진다.
+     * 세워진 칸 목록을 돌려준다(빈 배열이면 아무것도 못 세운 것).
+     */
+    const raiseRocks = (p: number, plan: RockPlan): Cell[] => {
+      const anchor = plan.where === 'flankFoe' ? s.pos[1 - p] : s.pos[p]
+      const made: Cell[] = []
+      for (const dc of [-1, 1]) {
+        const cell: Cell = { col: anchor.col + dc, row: anchor.row }
+        if (!inBounds(cell)) continue
+        if (sameCell(cell, s.pos[0]) || sameCell(cell, s.pos[1])) continue
+        if (rockAt(s.obstacles, cell)) continue
+        if (isCollapsedCell(cell, s.turn)) continue
+        const hp = Math.max(1, Math.round(plan.hp))
+        s.obstacles.push({ cell, hp, maxHp: hp })
+        made.push(cell)
+      }
+      return made
+    }
+
+    /** 바위에 피해를 주고, 부서진 것은 판에서 치운다. 부서진 수를 돌려준다. */
+    const damageRocks = (actor: number, rocks: Obstacle[], amount: number): number => {
+      if (amount <= 0) return 0
+      let broken = 0
+      for (const r of rocks) {
+        r.hp -= amount
+        if (r.hp > 0) continue
+        broken += 1
+      }
+      if (!broken) return 0
+      s.obstacles = s.obstacles.filter((r) => r.hp > 0)
+      steps.push({
+        phase: 'rock',
+        actor,
+        card: ROCK_BREAK_CARD,
+        result: 'rock',
+        damage: 0,
+        heal: 0,
+        drain: 0,
+        recoil: 0,
+        snapshot: this.snapshot(),
+      })
+      return broken
     }
 
     // spend energy and measure one attack against the current board. Energy /
@@ -469,6 +593,8 @@ export class CardBattle {
         poison: 0,
         burn: 0,
         freeze: 0,
+        rocks: [] as Obstacle[],
+        rockDmg: 0,
       }
       const cost = costOf(p, c)
       if (s.energy[p] < cost) return { ...zero, result: 'nofuel' as Step['result'] }
@@ -480,10 +606,22 @@ export class CardBattle {
       // 이미 이동을 끝낸 뒤이고, 빙결에도 막히지 않는다(이동 카드가 아니라 공격의
       // 일부다). 벽에 막히면 갈 수 있는 만큼만 간다.
       if (c.dashForward) this.applyDash(p, c.dashForward)
+      if (c.raiseRocks) raiseRocks(p, c.raiseRocks)
       const recoil = c.recoil ?? 0
       const d = 1 - p
-      if (!connectsNow(p, c)) return { ...zero, recoil, result: 'whiff' as Step['result'] }
       const atkPas = this.passive[p]
+      // 바위 피해는 **빗나가도 들어간다** — 바위가 가로막아 빗나간 것이 흔한 경우라,
+      // 여기서 안 깎으면 "바위 뒤 상대를 노렸는데 아무 일도 안 일어난다"가 된다.
+      // 저체력·처형 배율과 상태이상 시너지는 얹지 않는다(바위는 지형이다).
+      const rocks = rocksHitBy(p, c)
+      const rockDmg = rocks.length
+        ? Math.max(
+            0,
+            (c.damage ?? 0) + (atkPas.attackBonus ?? 0) + s.empowered[p] + buffPower(p, 'atkUp'),
+          )
+        : 0
+      if (!connectsNow(p, c))
+        return { ...zero, recoil, rocks, rockDmg, result: 'whiff' as Step['result'] }
       const defPas = this.passive[d]
       // raw 피해 = 카드 + attackBonus(유물) + empowered(이 전투 누적 각성),
       // 저체력이면 lowHpBonusPct(유물, 합산)만큼 배율. 순서·반올림 고정(결정론).
@@ -562,6 +700,8 @@ export class CardBattle {
         poison,
         burn,
         freeze,
+        rocks,
+        rockDmg,
       }
     }
 
@@ -570,15 +710,37 @@ export class CardBattle {
     // ⚠ `facing`이 **위치 기준**이 된 뒤로(2026-08-05) 이건 언제나 "나에게서 멀어지는
     //   쪽"이다. 좌석 기준이던 시절엔 상대를 지나친 순간 넉백이 상대를 **내 쪽으로
     //   끌어당겼다** — 밀어내라고 만든 능력이 정반대로 작동했다.
-    const applyShove = (attacker: number, n: number, toward: boolean) => {
+    //
+    // **바위에 처박기**(2026-08-05): 밀어낼 곳에 바위가 서 있으면 상대는 한 칸도
+    // 밀리지 않고 **1턴 기절**한다. 벽은 그렇지 않다 — 판 가장자리는 늘 거기 있어서
+    // 벽까지 포함하면 "구석에 몰린 상대를 매 턴 기절"이 되고, 그건 지형을 만든
+    // 대가가 아니라 그냥 좌석 운이다. 바위는 누군가가 세웠거나 그 층이 준 것이라,
+    // **밀어붙일 곳을 골랐다**는 판단에 값을 치르는 게 맞다.
+    // 돌려주는 값: 실제로 밀려난 칸 수와, 0칸이 된 이유가 바위인지.
+    const applyShove = (
+      attacker: number,
+      n: number,
+      toward: boolean,
+    ): { moved: number; rockWall: boolean } => {
       const d = 1 - attacker
       const f = this.facing(attacker) * (toward ? -1 : 1)
+      let moved = 0
+      let rockWall = false
       for (let k = 0; k < n; k++) {
         const next: Cell = { col: s.pos[d].col + f, row: s.pos[d].row }
         if (next.col < 0 || next.col >= GRID_COLS) break
+        if (rockAt(s.obstacles, next)) {
+          rockWall = true
+          break
+        }
         s.pos[d] = next
+        moved += 1
       }
+      return { moved, rockWall }
     }
+
+    /** 강제 이동이 **바위에 완전히 막혔는가** — 그때만 처박기 기절이 붙는다. */
+    const slammed = (r: { moved: number; rockWall: boolean }) => r.moved === 0 && r.rockWall
 
     // apply a measured attack's HP / board consequences
     const applyOutcome = (r: ReturnType<typeof computeAttack>) => {
@@ -589,15 +751,29 @@ export class CardBattle {
       if (r.dmg > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
       if (r.recoil) s.hp[r.p] = Math.max(0, s.hp[r.p] - r.recoil)
       if (r.heal) s.hp[r.p] = Math.min(this.maxHp[r.p], s.hp[r.p] + r.heal)
-      if (r.push) applyShove(r.p, r.push, false)
-      if (r.pull) applyShove(r.p, r.pull, true)
+      // 강제 이동. 바위에 처박혀 한 칸도 못 밀렸으면 1턴 기절이 붙는다.
+      let slam = false
+      if (r.push) slam = slammed(applyShove(r.p, r.push, false)) || slam
+      if (r.pull) slam = slammed(applyShove(r.p, r.pull, true)) || slam
       // 이 턴 시작에 감소 판정이 이미 끝났으므로, 여기서 더한 값은 다음 턴부터 소모된다.
       if (r.stun) s.stunned[d] += r.stun
+      if (slam) s.stunned[d] += 1
       // 상태이상 부여도 여기서 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤
       // 함께 적용돼야 선후가 안 생긴다.
       if (r.poison) applyStatus(d, 'poison', r.poison, STATUS_TURNS.poison)
       if (r.burn) applyStatus(d, 'burn', r.burn, STATUS_TURNS.burn)
       if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze)
+    }
+
+    /**
+     * 공격 하나를 판에 반영하고 화면에 싣는다. **순서가 중요하다** — 바위가 부서지는
+     * 스텝은 그 공격 스텝 **뒤에** 와야 "때렸다 → 바위가 깨졌다"로 읽힌다.
+     * 부딪힌 바위는 상대에게 빗나갔어도 깎인다(지형 ③ — 대개 그 바위가 막은 것이다).
+     */
+    const settleAttack = (r: ReturnType<typeof computeAttack>) => {
+      applyOutcome(r)
+      emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil)
+      if (r.rocks.length) damageRocks(r.p, r.rocks, r.rockDmg)
     }
 
     // 부활(영원의 불씨 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
@@ -748,23 +924,21 @@ export class CardBattle {
           if (!mutual && s.hp[e.p] <= 0) continue
           if (!crossShove && shoved.has(e.p) && !connectsNow(e.p, e.card)) {
             // 밀려나서 빗나갔다 — 피해·넉백·상태이상이 전부 사라지고 반동만 남는다.
+            // ⚠ **바위 피해는 그대로 남긴다** — 빗나간 건 상대가 자리를 뜬 탓이고,
+            //   공격이 덮은 칸(따라서 부딪힌 바위)은 공격자 자리 기준이라 그대로다.
             const miss = { ...e, result: 'whiff' as Step['result'] }
             for (const k of ['dmg', 'heal', 'push', 'pull', 'stun', 'poison', 'burn', 'freeze'] as const)
               miss[k] = 0
-            applyOutcome(miss)
-            emit(e.p, e.card, miss.result, 0, 0, e.drain, e.recoil)
+            settleAttack(miss)
             continue
           }
-          applyOutcome(e)
-          emit(e.p, e.card, e.result, e.dmg, e.heal, e.drain, e.recoil)
+          settleAttack(e)
           if ((e.push ?? 0) + (e.pull ?? 0) > 0) shoved.add(1 - e.p)
         }
       } else {
         for (const e of here) {
           if (e.card.kind === 'attack') {
-            const r = computeAttack(e.p, e.card)
-            applyOutcome(r)
-            emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil)
+            settleAttack(computeAttack(e.p, e.card))
           } else {
             resolvePrep(e.p, e.card)
           }
@@ -789,6 +963,10 @@ export class CardBattle {
     // 실드는 무시하지만 유물의 `collapseResist`만큼은 줄어든다(발판 유물).
     // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
     if (!s.over && s.turn >= COLLAPSE_START_TURN) {
+      // 무너진 칸의 **바위도 같이 무너진다**. 남겨 두면 판이 좁아지는 속도에 지형이
+      // 곱해져, 마지막 단계에서 "무너진 칸에도 들어갈 수 있다"는 안전판(붕괴 설계의
+      // 핵심)이 바위 때문에 사라진다 — 밀려날 곳도 도망칠 곳도 없는 판이 된다.
+      s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, s.turn))
       const base = collapseDamageAt(s.turn)
       for (let p = 0; p < 2; p++) {
         if (!isCollapsedCell(s.pos[p], s.turn)) continue

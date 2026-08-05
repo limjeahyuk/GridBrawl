@@ -100,6 +100,17 @@ const SANCTUM: CardDef[] = [
     fx: 'shield', accent: '#c9a24a',
     desc: '이번 턴 받는 피해를 최대 88 막는다. 이 턴에 큰 카드를 쓰면 통째로 삼켜진다.',
   },
+  {
+    // **석벽 소환** — 이 보스의 새 축(2026-08-05). 플레이어 **양옆**에 바위를 세워
+    // 가로 이동을 끊는다. 빠져나가려면 줄을 바꿔야 하고, 그 한 턴이 곧 수호기사가
+    // 방벽을 세우는 시간이다. 「돌파 창격」과 짝이다 — 바위에 등을 댄 채로 밀리면
+    // 한 칸도 못 밀려 **처박혀 기절한다**(엔진 `slammed`).
+    // ⚠ 세우는 위치는 상대 **좌우**뿐이다. 위아래까지 막으면 갇혀서 못 빠져나온다.
+    id: 'b-ward-menhir', name: '석벽 소환', kind: 'guard', block: 34, guardCost: 14, cooldown: 0,
+    raiseRocks: { hp: 46, where: 'flankFoe' },
+    fx: 'shield', accent: '#c9a24a',
+    desc: '바닥을 내리쳐 상대 좌우에 바위를 세운다(체력 46). 보호막 34를 함께 두른다.',
+  },
   atk({
     id: 'b-ward-riposte', name: '되갚는 일격', range: barBoth(1), damage: 30, energyCost: 22,
     selfShield: 16, fx: 'slash', accent: '#c9a24a',

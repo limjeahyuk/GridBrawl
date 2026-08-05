@@ -24,7 +24,9 @@
 // 2 (2026-08-05): ① `facing`이 좌석 고정 → **상대 위치 기준**(넉백·사거리 방향이
 //     상대를 지나친 뒤에도 맞는다) ② 같은 슬롯 트레이드에서 **밀려난 쪽의 공격을
 //     새 자리에서 재판정**한다. 둘 다 `resolveTurn` 출력이 바뀐다.
-export const RULES_VERSION = 2
+// 3 (2026-08-05): 격자 세로 3행 → **4행**(`GRID_ROWS`). 이동·사거리·전장 붕괴가
+//     닿는 좌표 공간이 바뀌므로 두 피어가 같은 판을 돌려야 한다.
+export const RULES_VERSION = 3
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
@@ -175,6 +177,11 @@ export interface CardDef {
    * 상대에게서 물러나며 쏘는(카이팅) 수단이다. 벽에 막히면 갈 수 있는 만큼만 간다.
    */
   dashForward?: number
+  /**
+   * 기력 지불 성공 시 판에 **바위를 세운다**(런 전용 — 지금은 수호기사 보스만).
+   * 파이터가 선 칸·이미 바위가 있는 칸·무너진 칸은 건너뛴다.
+   */
+  raiseRocks?: RockPlan
 
   // buff — 자신에게 N턴짜리 지속 효과를 건다
   buff?: BuffKind
@@ -201,7 +208,7 @@ export interface CardDef {
 }
 
 export const GRID_COLS = 6
-export const GRID_ROWS = 3
+export const GRID_ROWS = 4
 
 /** col/row delta for each move direction (row grows downward). */
 export const MOVE_DELTA: Record<MoveDir, readonly [number, number]> = {
@@ -229,6 +236,95 @@ export const MIRROR_DIR: Record<MoveDir, MoveDir> = {
 
 export const inBounds = (c: Cell): boolean =>
   c.col >= 0 && c.col < GRID_COLS && c.row >= 0 && c.row < GRID_ROWS
+
+// ---------------------------------------------------------------------------
+// 지형 — 바위 (2026-08-05)
+//
+// 판이 6×3짜리 빈 격자뿐이라 어느 전투나 "가로로 붙었다 떨어졌다"만 반복됐다.
+// 바위는 그 판에 **막힌 칸**을 만들어 접근 경로와 사격선을 동시에 끊는다.
+//
+// 규칙은 셋뿐이다 — 늘리지 않는다:
+//   ① **못 들어간다.** 이동·이동공격(dashForward)·넉백·끌어당김이 바위 앞에서
+//      멈춘다. 벽과 같은 자리에서 처리되므로 새 분기가 거의 안 생긴다.
+//   ② **사격선을 끊는다.** 공격자와 목표가 **같은 줄이나 같은 열**일 때, 그 사이에
+//      낀 바위가 그 칸을 가린다. 대각으로 어긋난 칸은 안 가린다 — 그래서 **줄을
+//      옮기는 것**이 언제나 우회로로 남고, "거리를 사는" 궁수가 갇히지 않는다.
+//   ③ **부술 수 있다.** 체력이 있어서 때리면 깨진다(`ROCK_HP`). 공격이 덮은 칸에
+//      선 바위, 그리고 그 공격을 **가로막은** 바위가 피해를 받는다 — 어떤 카드든
+//      결국 길을 뚫을 수 있다.
+// 예외는 **관통**(`pierce` · 유물 `alwaysPierce`)이다. 관통 공격은 바위를 무시하고
+// 그 뒤를 그대로 때린다(바위도 안 깎는다) — 궁수·마법사의 답이 되는 자리다.
+//
+// ⚠ **런(싱글) 전용이다.** 바위는 오직 `BattleOpts.obstacles`로만 들어오고 PvP·봇전은
+//   빈 배열이라 아래 규칙이 전부 no-op이 된다 — 그래서 `RULES_VERSION`을 올리지
+//   않는다(보스 전용 카드와 같은 근거). 바위가 PvP 판에 놓이는 날에는 반드시 올린다.
+// ---------------------------------------------------------------------------
+
+/** 판 위에 선 바위 한 덩이. `hp`가 0이 되면 부서져 목록에서 빠진다. */
+export interface Obstacle {
+  cell: Cell
+  hp: number
+  maxHp: number
+}
+
+/** 바위 기본 체력. 카드 한 장으로는 못 깨고 두세 대를 들여야 하는 값. */
+export const ROCK_HP = 50
+
+/** 이 칸에 선 바위(없으면 undefined). */
+export const rockAt = (rocks: readonly Obstacle[], c: Cell): Obstacle | undefined =>
+  rocks.find((r) => r.hp > 0 && r.cell.col === c.col && r.cell.row === c.row)
+
+/** 이 칸에 들어갈 수 있는가 — 격자 안이고 바위가 없어야 한다. */
+export const canStand = (rocks: readonly Obstacle[], c: Cell): boolean =>
+  inBounds(c) && !rockAt(rocks, c)
+
+/**
+ * `from`에서 `to`를 노릴 때 **사이를 가로막고 선** 바위(가장 가까운 것). 없으면
+ * undefined.
+ *
+ * 같은 줄(행)이나 같은 열일 때만 가린다 — 대각으로 어긋난 칸은 뚫린 것으로 본다.
+ * 6×3 격자에서 임의의 선분을 긋는 규칙(Bresenham 등)은 판정이 눈에 안 읽히고,
+ * "가로·세로로 곧게 이어질 때만 막힌다"는 그림만 보고도 바로 알 수 있다.
+ * `to` 칸 자체에 선 바위는 여기서 세지 않는다(그건 목표를 가리는 게 아니라 **그게
+ * 목표**다 — 호출부가 `rockAt`으로 따로 본다).
+ */
+export function shadowRock(
+  rocks: readonly Obstacle[],
+  from: Cell,
+  to: Cell,
+): Obstacle | undefined {
+  if (!rocks.length) return undefined
+  if (from.row === to.row) {
+    const step = to.col > from.col ? 1 : to.col < from.col ? -1 : 0
+    if (step === 0) return undefined
+    for (let col = from.col + step; col !== to.col; col += step) {
+      const r = rockAt(rocks, { col, row: from.row })
+      if (r) return r
+    }
+    return undefined
+  }
+  if (from.col === to.col) {
+    const step = to.row > from.row ? 1 : -1
+    for (let row = from.row + step; row !== to.row; row += step) {
+      const r = rockAt(rocks, { col: from.col, row })
+      if (r) return r
+    }
+    return undefined
+  }
+  return undefined // 대각으로 어긋난 칸 — 바위가 가리지 않는다
+}
+
+/** 카드가 판에 세우는 바위. 지금은 보스 카드(수호기사)만 쓴다. */
+export interface RockPlan {
+  /** 세울 바위의 체력. */
+  hp: number
+  /**
+   * 어디에 세우는가.
+   *   flankFoe  상대의 좌우 두 칸 — **가둔다**(줄을 바꿔야 빠져나온다)
+   *   flankSelf 내 좌우 두 칸 — 나에게 붙는 길을 막는다
+   */
+  where: 'flankFoe' | 'flankSelf'
+}
 
 // ---------------------------------------------------------------------------
 // 전장 붕괴 (2026-08-05, 옛 "독안개") — 무한전 억제 장치.
@@ -291,13 +387,20 @@ export const collapseEscalatesNext = (turn: number): boolean =>
  *
  * 같은 열이면 겨룰 기준이 없으므로 `seat`으로 떨어진다(p0=오른쪽). 순수 함수라
  * 랜덤이 없고, 같은 판을 보는 두 피어는 같은 값을 낸다 — 멀티 락스텝 안전.
+ *
+ * ⚠ **좌석 폴백은 임시 처리가 아니라 확정된 룰이다**(2026-08-05 사용자 결정).
+ * 겹친 칸에서 플레이어(p0)가 밀면 **상대는 오른쪽으로** 간다. 실제 런에서
+ * **넉백의 82%가 겹친 상태에서 일어나므로**(1500런 실측) 이 한 줄이 곧 체감 규칙이다.
+ * "멀어지는 쪽이 정의되지 않았으니 대충 좌석으로 뒀다"고 읽고 고치지 말 것 —
+ * `npm run check`의 "넉백 3원칙"이 세 경우를 그대로 지킨다.
  */
 export function facingBetween(me: Cell, foe: Cell, seat: number): number {
   if (foe.col === me.col) return seat === 0 ? 1 : -1
   return foe.col > me.col ? 1 : -1
 }
 
-/** Both fighters start on the middle row at opposite ends, facing each other. */
+/** PvP·봇전 기본 시작 위치 — 양 끝, 위에서 둘째 줄(row 1)에서 마주 본다. 4행이라
+ *  정확한 중앙은 없지만, 락스텝은 고정값만 있으면 되고 런은 여기를 안 쓴다(랜덤). */
 export const START_CELLS: readonly [Cell, Cell] = [
   { col: 0, row: 1 },
   { col: GRID_COLS - 1, row: 1 },
@@ -310,6 +413,8 @@ export interface BattleSnapshot {
   shield: [number, number] // remaining guard absorption for the current turn
   /** 현재 걸려 있는 지속 상태이상. UI가 아이콘·남은 턴을 그리는 근거. */
   status: [StatusEffect[], StatusEffect[]]
+  /** 이 시점에 판에 서 있는 바위. 깨지는 순간이 스텝별로 보여야 하므로 스냅샷에 싣는다. */
+  obstacles: Obstacle[]
 }
 
 export type ActionResult =
@@ -328,6 +433,7 @@ export type ActionResult =
   | 'trigger' // 누적 기력 트리거 발동(회복·보호막·피해)
   | 'status' // 독·화상이 턴 종료에 갉았다(보호막 무시)
   | 'frozen' // 빙결이라 이동 카드가 무효가 됐다
+  | 'rock' // 바위를 세웠다 / 바위가 부서졌다
 
 export type Phase =
   | 'move'
@@ -338,6 +444,7 @@ export type Phase =
   | 'stun'
   | 'trigger'
   | 'status'
+  | 'rock'
 
 /** 체력이 이 비율 이하면 "저체력"으로 보고 `lowHpBonusPct`가 발동한다. */
 export const LOW_HP_FRAC = 0.5

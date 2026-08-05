@@ -1553,7 +1553,7 @@
   inset: 22px 70px 26px;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
   gap: 7px;
 }
 /* 바닥에 새긴 룬 격자 — 네온 타일이 아니라 **그을린 돌판**이다.
@@ -2363,6 +2363,10 @@
 /* ---- cards (bottom) ------------------------------------------------------ */
 /* 전투 카드에서 설명을 뺀 만큼(2026-07-23) 카드·손패를 낮추고 그 여유를
    보드에 돌려준다 — 격자가 넓어야 위치 싸움이 눈에 들어온다. */
+/* 카드가 놓이는 곳 = **나무 상판**. 예전엔 평평한 남색 그라디언트 하나라 카드가
+   허공에 뜬 듯 허전했다. 무대 쪽(위)에서 횃불 온기가 떨어지고 앞쪽(플레이어 립)은
+   그늘로 꺼지는 짙은 나무 결 — 전장 바닥(`.boardfloor`)과 같은 언어다. 이미지 0개,
+   전부 계산으로만 그린다. ⚠ 색은 팔레트(황동·나무 톤) 안에서만 — 리터럴 남색 금지. */
 .cards {
   height: 322px;
   flex: none;
@@ -2371,8 +2375,25 @@
   align-items: center;
   gap: 10px;
   padding: 12px 24px 14px;
-  background: linear-gradient(0deg, rgba(6, 9, 16, 0.97), rgba(6, 9, 16, 0.55));
+  background:
+    /* 위쪽 횃불 스밀 — 무대에서 상판으로 떨어지는 온기 */
+    radial-gradient(140% 120px at 50% 0%, rgba(198, 150, 82, 0.18), transparent 68%),
+    /* 앞쪽 립 그늘 — 상판 앞단이 어둡다 */
+    linear-gradient(0deg, rgba(3, 2, 5, 0.92) 0%, rgba(3, 2, 5, 0) 30%),
+    /* 나뭇결 — 세로로 흐르는 낮은 대비의 결(서로소 폭이라 규칙성이 안 보인다) */
+    repeating-linear-gradient(90deg,
+      rgba(74, 53, 36, 0) 0px, rgba(74, 53, 36, 0.16) 3px,
+      rgba(32, 23, 18, 0.22) 7px, rgba(74, 53, 36, 0) 13px),
+    /* 판재 이음 — 넓은 널이 몇 장 깔린 느낌 */
+    repeating-linear-gradient(90deg,
+      rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0) 176px,
+      rgba(0, 0, 0, 0.28) 177px, rgba(120, 92, 58, 0.12) 179px,
+      rgba(0, 0, 0, 0) 181px),
+    /* 상판 바탕 — 위가 밝고 아래로 꺼지는 짙은 나무 */
+    linear-gradient(0deg, #130d10 0%, #241a17 56%, #2d2019 100%);
   border-top: 1px solid var(--panel-edge);
+  box-shadow: inset 0 1px 0 rgba(198, 150, 82, 0.32),
+    inset 0 22px 46px rgba(0, 0, 0, 0.34);
   z-index: 5;
 }
 .cards--resolving {
@@ -2390,16 +2411,20 @@
   align-items: stretch;
   gap: 14px;
 }
+/* 슬롯 = 상판에 파인 **가죽 자리**. 남색 대신 상판보다 어두운 따뜻한 톤 + 안쪽
+   그림자로 표면에 눌러 박은 느낌을 준다(테이블 위에 뜬 상자처럼 보이지 않게). */
 .slot {
   position: relative;
   width: 116px;
   height: 92px;
   border: 1px dashed var(--panel-edge);
   border-radius: 10px;
-  background: rgba(10, 16, 28, 0.6);
+  background: rgba(9, 6, 5, 0.5);
   padding: 0;
   display: grid;
   place-items: center;
+  box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .slot--filled {
@@ -3593,8 +3618,19 @@
   display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
   max-width: 1100px; max-height: 460px; overflow-y: auto;
 }
-.reward__deck .reward__card { width: 104px; height: 132px; cursor: pointer; }
+.reward__deck .reward__card { width: 104px; height: 132px; cursor: pointer; position: relative; }
 .reward__deck .reward__card:hover { transform: translateY(-4px); }
+/* 잠긴 카드(이동 4방향) — 뺄 수 없다. 눌리지는 않지만 **꾹 눌러 읽을 수는 있어야**
+   하므로 disabled가 아니라 모양으로만 알린다(DeckPicker 주석 참고). */
+/* ⚠ 흐리게 하는 건 **카드 본체만**이다 — 버튼에 걸면 자물쇠까지 같이 바랜다
+   (filter는 자식이 되돌릴 수 없다). */
+.reward__deck .reward__card.is-locked { cursor: not-allowed; }
+.reward__deck .reward__card.is-locked .cardface { filter: grayscale(0.55) brightness(0.62); }
+.reward__deck .reward__card.is-locked:hover { transform: none; }
+.reward__lock {
+  position: absolute; top: 4px; right: 4px; font-size: 15px; line-height: 1;
+  text-shadow: 0 1px 3px var(--bg-0);
+}
 
 /* ---- 이벤트 화면 --------------------------------------------------------- */
 .event__topbar { width: 100%; }

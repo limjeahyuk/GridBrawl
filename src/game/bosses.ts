@@ -76,11 +76,17 @@ const warden: BossScript = ({ turn, hpFrac }) => {
       return { plan: ['b-ward-verdict', 'b-ward-lance', 'm-left'], phase: 2, telegraph: '⚔ 방벽을 버렸다 — 최후의 심판!' }
     return { plan: ['b-ward-riposte', 'b-ward-lance', 'm-left'], phase: 2, telegraph: null }
   }
-  const beat = (turn - 1) % 3
+  // 4박자 — **가둔다 → 방벽 → 밀어붙인다 → 심판**. 지형이 이 보스의 축이 됐다
+  // (2026-08-05): 「석벽 소환」이 플레이어 좌우를 막고, 두 턴 뒤 「돌파 창격」이
+  // 그 바위에 처박아 **기절**시킨다(엔진 `slammed`). 사이의 방벽 턴이 곧 빠져나갈
+  // 시간이라, 세로로 한 칸 움직이면 덫이 풀린다 — 예고를 읽으면 피할 수 있다.
+  const beat = (turn - 1) % 4
   if (beat === 0)
-    return { plan: ['b-ward-bulwark', 'm-left', 'm-left'], phase: 1, telegraph: '🛡 수호기사가 방벽을 올린다 — 이번 턴 공격은 대부분 막힌다' }
+    return { plan: ['b-ward-menhir', 'm-left', 'm-left'], phase: 1, telegraph: '🪨 수호기사가 바닥을 내리친다 — 좌우에 바위가 솟는다' }
   if (beat === 1)
-    return { plan: ['b-ward-lance', 'm-left', 'm-left'], phase: 1, telegraph: null } // 견제·접근
+    return { plan: ['b-ward-bulwark', 'm-left', 'm-left'], phase: 1, telegraph: '🛡 방벽을 올린다 — 이번 턴 공격은 대부분 막힌다. 지금 자리를 옮겨라' }
+  if (beat === 2)
+    return { plan: ['b-ward-lance', 'm-left', 'm-left'], phase: 1, telegraph: '⚡ 창을 겨눈다 — 등 뒤가 바위면 처박혀 기절한다' }
   return { plan: ['b-ward-riposte', 'b-ward-verdict', 'm-left'], phase: 1, telegraph: '⚔ 커튼을 열고 심판! 보호막이 부서진다' }
 }
 

@@ -27,14 +27,18 @@ import {
   GRID_COLS,
   GRID_ROWS,
   MOVE_DELTA,
+  canStand,
   facingBetween,
   inBounds,
   isCollapsedCell,
   MIRROR_DIR,
+  rockAt,
+  shadowRock,
   type ActionResult,
   type Cell,
   type CardDef,
   type MoveDir,
+  type Obstacle,
   type Step,
   type StatusEffect,
 } from '../../battle/types'
@@ -55,6 +59,8 @@ interface View {
   hp: [number, number]
   energy: [number, number]
   shield: [number, number]
+  /** 이 시점의 지형(바위). 스텝마다 바뀌므로 뷰에 싣는다 — 부서지는 순간이 보여야 한다. */
+  obstacles: Obstacle[]
   acting: [boolean, boolean] // attack lunge
   /** 지금 내는 공격 카드의 fx 종류. 준비 동작~타격 내내 유지돼야 한다 —
    *  중간에 바뀌면 CSS animation-name이 갈려 모션이 처음부터 다시 뛴다. */
@@ -74,12 +80,27 @@ const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
 const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-/** Board cells an attack covers, from the attacker's cell and facing (+1 / -1). */
-function attackCells(from: Cell, card: CardDef, facing: number, foe?: Cell): Cell[] {
+/**
+ * Board cells an attack covers, from the attacker's cell and facing (+1 / -1).
+ *
+ * ⚠ **바위에 가려진 칸은 빼고 그린다**(2026-08-05). 붉은 칸은 "여기를 때린다"는
+ * 약속이라, 사격선이 끊긴 칸까지 칠하면 화면이 거짓말을 한다 — 바위 뒤를 노리고
+ * 카드를 냈는데 헛치는 게 버그로 읽힌다. 바위 **자체가 선 칸**은 남긴다(그 바위를
+ * 때려서 깨는 게 실제로 일어나는 일이다). 관통 공격은 아무것도 안 걸러낸다.
+ */
+function attackCells(
+  from: Cell,
+  card: CardDef,
+  facing: number,
+  foe?: Cell,
+  rocks: readonly Obstacle[] = [],
+  pierces = false,
+): Cell[] {
   if (card.kind !== 'attack') return []
   const cells = (card.range ?? [])
     .map((o) => ({ col: from.col + facing * o.df, row: from.row - o.du }))
     .filter(inBounds)
+    .filter((c) => pierces || !rocks.length || !!rockAt(rocks, c) || !shadowRock(rocks, from, c))
   // 밀착: 상대가 내 셀에 겹쳐 서 있으면 이 카드로 때릴 수 있는지(pointBlank)에 따라
   // 내 셀도 타격 범위로 보여 준다 — 엔진 판정과 같은 규칙.
   if (foe && foe.col === from.col && foe.row === from.row && card.pointBlank !== false)
@@ -106,12 +127,12 @@ export function faceToward(myCol: number, foeCol: number, fallback: 'left' | 'ri
 /** Where a move card lands, mirroring the engine's rule: walls stop you, the
  *  opponent's cell can be passed through or landed on (겹침 허용). Used to
  *  preview an attack's reach *after* earlier move cards in the plan resolve. */
-function applyMovePreview(from: Cell, card: CardDef): Cell {
+function applyMovePreview(from: Cell, card: CardDef, rocks: readonly Obstacle[] = []): Cell {
   const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
   let cur = { ...from }
   for (let k = 0; k < (card.steps ?? 1); k++) {
     const next = { col: cur.col + dc, row: cur.row + dr }
-    if (!inBounds(next)) break
+    if (!canStand(rocks, next)) break // 벽·바위에서 멈춤 — 엔진 applyMove와 같은 규칙
     cur = next
   }
   return cur
@@ -131,6 +152,7 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   status: '피해!',
   buff: '강화!',
   frozen: '얼어붙음',
+  rock: '',
 }
 const PHASE_TEXT: Record<Step['phase'], string> = {
   move: '이동',
@@ -141,6 +163,7 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
   stun: '기절',
   trigger: '유물',
   status: '상태이상',
+  rock: '지형',
 }
 /** 파이터 발밑 상태 칩 — 지금 뭐가 걸려 있는지 숫자를 안 읽어도 보이게. */
 const STATUS_CHIP: Record<string, string> = {
@@ -158,6 +181,7 @@ const STEP_MS: Record<Step['phase'], number> = {
   stun: 900, // 기절은 한 턴을 통째로 날리므로 충분히 보여준다
   trigger: 700,
   status: 620, // 독·화상 틱 — 여러 개가 잇달아 뜰 수 있어 짧게
+  rock: 560, // 바위가 솟거나 부서지는 순간 — 판의 모양이 바뀌므로 눈에 담을 틈은 준다
 }
 /** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
 const CUTIN_MS = 1750
@@ -201,6 +225,7 @@ function baseView(b: CardBattle): View {
     hp: [s.hp[0], s.hp[1]],
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
+    obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
     acting: [false, false],
     actFx: [null, null],
     damage: [0, 0],
@@ -242,6 +267,7 @@ function stepToView(step: Step, seq: number): View {
     hp: [s.hp[0], s.hp[1]],
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
+    obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
     acting,
     actFx,
     status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
@@ -551,6 +577,11 @@ export function BattleScreen({
   // 놓아도 예시가 유지되고, 슬롯이 모두 비어야 사라진다.
   // ⚠ 카드를 고르는 동안에만 그린다 — 실행을 누르면 슬롯은 그대로지만(해소가
   //   끝나야 비운다) 예시는 즉시 사라져야 실제 진행과 겹치지 않는다.
+  // 지금 판에 선 바위. 이동 가능 칸·사거리 미리보기가 전부 이걸 본다(엔진과 같은 규칙).
+  const rocks = battle.state.obstacles
+  /** 이 카드가 바위를 무시하는가 — 엔진 `piercesRock`(카드 pierce + 유물 alwaysPierce). */
+  const piercesRock = (c: CardDef) => !!c.pierce || !!battle.passive[localSide].alwaysPierce
+
   const planPreview = useMemo(() => {
     const cur = view.pos[localSide]
     const none = { ghost: null as Cell | null, cells: [] as Cell[] }
@@ -562,11 +593,11 @@ export function BattleScreen({
     let cells: Cell[] = []
     for (const c of slots) {
       if (!c) continue
-      if (c.kind === 'move') at = applyMovePreview(at, c)
+      if (c.kind === 'move') at = applyMovePreview(at, c, rocks)
       // ⚠ 방향은 **그 카드가 나갈 자리에서** 다시 잰다(2026-08-05) — 앞선 이동으로
       //   상대를 지나쳤으면 사거리도 같이 뒤집힌다. 엔진과 같은 규칙.
       else if (c.kind === 'attack')
-        cells = attackCells(at, c, facingBetween(at, foe, localSide), foe)
+        cells = attackCells(at, c, facingBetween(at, foe, localSide), foe, rocks, piercesRock(c))
     }
     const moved = at.col !== cur.col || at.row !== cur.row
     return { ghost: moved ? at : null, cells }
@@ -588,10 +619,10 @@ export function BattleScreen({
     let from = { ...cur }
     for (let j = 0; j < upto; j++) {
       const c = slots[j]
-      if (c?.kind === 'move') from = applyMovePreview(from, c)
+      if (c?.kind === 'move') from = applyMovePreview(from, c, rocks)
     }
     let ghost: Cell | null =
-      hoveredCard.kind === 'move' ? applyMovePreview(from, hoveredCard) : from
+      hoveredCard.kind === 'move' ? applyMovePreview(from, hoveredCard, rocks) : from
     if (ghost && ghost.col === cur.col && ghost.row === cur.row) ghost = null
     return { from, ghost }
   }, [hoveredCard, hoverSlot, slots, view, localSide, planPreview])
@@ -612,8 +643,8 @@ export function BattleScreen({
     const from = planPreview.ghost ?? view.pos[localSide]
     for (const c of hand) {
       if (c.kind !== 'move' || !selectable(c) || !canAfford(c)) continue
-      const to = applyMovePreview(from, c)
-      if (to.col === from.col && to.row === from.row) continue // 벽에 막혀 제자리
+      const to = applyMovePreview(from, c, rocks)
+      if (to.col === from.col && to.row === from.row) continue // 벽·바위에 막혀 제자리
       const key = `${to.col},${to.row}`
       const prev = out.get(key)
       if (!prev || (c.steps ?? 1) < (prev.steps ?? 1)) out.set(key, c)
@@ -631,6 +662,8 @@ export function BattleScreen({
             hoveredCard,
             facingBetween(preview.from, view.pos[1 - localSide], localSide),
             view.pos[1 - localSide],
+            rocks,
+            piercesRock(hoveredCard),
           )
         : planPreview.cells,
     [hoveredCard, preview, battle, localSide, planPreview],
@@ -755,6 +788,10 @@ export function BattleScreen({
             //   끝난 뒤의 위치를 보므로, 재생 중에 사거리가 엉뚱한 쪽에 그려진다.
             facingBetween(step.snapshot.pos[actor], step.snapshot.pos[foe], actor),
             step.snapshot.pos[foe],
+            // 지형도 **그 스텝의 스냅샷**으로 본다 — 바위가 부서지는 건 뒤따르는
+            // 별도 스텝이라, 이 시점엔 아직 서 있고 그게 실제로 막은 상태다.
+            step.snapshot.obstacles,
+            !!step.card.pierce || !!battle.passive[actor].alwaysPierce,
           ),
           actor,
         })
@@ -977,6 +1014,26 @@ export function BattleScreen({
               )
             }
             return <span className={`cell${cls}`} key={i} />
+          })}
+          {/* 지형 — 판 위에 얹는 바위. ⚠ `pointer-events: none`이 필수다(칸을 눌러
+              이동하므로 바위가 클릭을 먹으면 그 줄이 통째로 안 눌린다). 금이 간
+              정도는 남은 체력으로 3단계 — 몇 대 더 때리면 깨지는지가 보여야 한다. */}
+          {view.obstacles.map((r) => {
+            const frac = r.hp / Math.max(1, r.maxHp)
+            const wear = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2
+            return (
+              <div
+                key={`rock-${r.cell.col},${r.cell.row}`}
+                className={`rock rock--wear${wear}`}
+                style={{
+                  left: `${cellX(dcol(r.cell.col))}%`,
+                  top: `${cellY(r.cell.row)}%`,
+                }}
+                aria-hidden
+              >
+                <span className="rock__hp" style={{ ['--frac' as string]: frac }} />
+              </div>
+            )
           })}
           {preview.ghost && (
             // 잔상도 본체와 **같은 몸**이어야 한다 — 스프라이트 캐릭터인데 잔상만

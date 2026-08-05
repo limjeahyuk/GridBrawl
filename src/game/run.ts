@@ -22,6 +22,7 @@ import {
 import { getMonster, monstersOfTier, type MonsterDef } from './monsters'
 import { bossScene } from './bosses'
 import { RUN_CARDS } from './runcards'
+import { ROCK_HP, type Obstacle } from '../battle/types'
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
 export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop'
@@ -53,8 +54,38 @@ const NODE_TEMPLATE: NodeType[] = [
 ]
 export const LADDER_FLOORS = NODE_TEMPLATE.length
 
-// --- 튜닝 상수 --------------------------------------------------------------
+// --- 덱 룰 ------------------------------------------------------------------
+/**
+ * **덱 = 손패**다. 이 게임엔 셔플·드로우가 없고 `BattleScreen`의 손패는 덱 전체다
+ * (`hand = deck`). 그래서 **카드는 많을수록 무조건 유리하고, 덱을 얇게 하는 전략은
+ * 존재하지 않는다** — 다른 로그라이크의 "덱 압축"을 여기로 들여오면 안 된다.
+ *
+ * 여기서 카드 룰 세 줄이 따라 나온다(2026-08-05 확정):
+ *   ① **덱 상한 20장**(유물로 +2~4). 카드가 많을수록 유리하므로 상한이 곧 유일한
+ *      선택 압박이다 — 꽉 찬 뒤의 보상은 "받을까"가 아니라 "무엇과 바꿀까"가 된다.
+ *   ② **줄이는 길은 교체뿐**. 꽉 찬 상태로 카드를 얻으면 1장을 버린다(`grantCard`).
+ *      골드로 카드를 없애는 서비스는 **없앴다** — 얇게 만들 이득이 0이라 사는 순간
+ *      손해인 함정 칸이었다(상점 `removeCard` 서비스, 2026-08-05 삭제).
+ *      대가를 치르고 **더 강한 것으로 바꾸는** 거래는 남아 있다(이벤트 카드→유물).
+ *   ③ **이동 4방향은 잠긴다**(`LOCKED_CARD_IDS`). 아래 참고.
+ */
 export const DECK_CAP = 20
+/**
+ * 어떤 경로로도 덱에서 뺄 수 없는 카드 — **직교 이동 4장**.
+ *
+ * 이동은 카드를 고르는 게 아니라 **판의 칸을 눌러서** 한다(2026-08-03). 그 노란 칸은
+ * `BattleScreen`의 `moveTargets`가 **덱에 있는 이동 카드**를 훑어 만들기 때문에,
+ * `m-up` 한 장이 빠지면 위로 가는 칸이 영영 안 밝혀지고 손패엔 이동 칩도 없어서
+ * **왜 못 가는지 보이지도 않는다**. 넷이 다 있어야 어느 칸에든 닿을 수 있다.
+ *
+ * ⚠ 잠그는 건 이 **넷뿐**이다. 나중에 주운 대시·대각 이동(`m-right2`·`m-ur` 등)은
+ * `kind: 'move'`지만 잠기지 않는다 — 덱이 꽉 찼을 때 더 좋은 카드와 바꿀 길을
+ * 막아 버리기 때문이다. 그러니 **`kind`로 판정하지 말고 이 목록으로 판정한다.**
+ */
+export const LOCKED_CARD_IDS: readonly string[] = ['m-up', 'm-down', 'm-left', 'm-right']
+export const isLockedCard = (cardId: string): boolean => LOCKED_CARD_IDS.includes(cardId)
+
+// --- 튜닝 상수 --------------------------------------------------------------
 /** 승리 보상으로 보여주는 선택지 수(5장 중 1택). */
 const REWARD_OPTIONS = 6
 /** 일반 전투 보상 5장 중 유물이 섞일 확률(엘리트·보스는 확정). */
@@ -94,7 +125,6 @@ const GOLD_BOSS_BONUS = 80
 const PRICE_CARD = 35
 const PRICE_HEAL = 30
 const PRICE_HEAL_AMOUNT = 50 // 35 → 50: 상점 회복이 층 사이 회복의 주 수단이 되게
-const PRICE_REMOVE = 40
 
 /**
  * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 버티기 + 원기). 2026-07-31에
@@ -342,6 +372,54 @@ export function sceneFor(run: RunState): BattleScene {
   return 'corridor'
 }
 
+// --- 지형(바위) -------------------------------------------------------------
+/**
+ * 그 무대에 미리 서 있는 바위(`BattleOpts.obstacles`). **무대마다 다르다** — 판이
+ * 6×4짜리 빈 격자뿐이면 어느 전투나 "가로로 붙었다 떨어졌다"만 반복되므로, 무대가
+ * 바뀔 때 **판의 모양도 바뀌어야** 층을 내려가는 게 느껴진다. 규칙은 `types.ts`의
+ * 지형 절(못 들어간다 · 사격선을 끊는다 · 부술 수 있다).
+ *
+ * 배치 원칙 셋 — 이걸 어기면 재미가 아니라 짜증이 된다:
+ *   ① **열을 완전히 막지 않는다.** 어느 열에도 최소 두 칸은 뚫려 있어야 한다.
+ *      한 열이 통째로 막히면 접근 자체가 불가능해지는 개전이 나온다.
+ *   ② **끝열(0·5)에 두지 않는다.** 양쪽 시작 자리이고, 6턴에 가장 먼저 무너지는
+ *      열이라 바위를 세워 봐야 금방 사라진다.
+ *   ③ **`hall`은 비워 둔다.** 전부 지형이 있으면 지형이 배경이 돼 버린다 — 빈 판이
+ *      섞여 있어야 "이 층은 다르다"가 읽힌다.
+ * ⚠ **런 전용이다.** PvP·봇전은 `BattleOpts.obstacles`를 안 넘기므로 빈 판 그대로다.
+ * ⚠ 여기 손대면 `npm run sim:run -- --sweep`으로 밴드를 다시 잰다 — 바위는 접근
+ *   경로와 사격선을 동시에 바꾸므로 직업마다 다르게 얹힌다.
+ */
+const rock = (col: number, row: number, hp = ROCK_HP): Obstacle => ({
+  cell: { col, row },
+  hp,
+  maxHp: hp,
+})
+
+/** 무대별 바위 배치. `npm run check`가 위 원칙 ①②를 이 표에서 직접 검사한다. */
+export const SCENE_TERRAIN: Record<BattleScene, readonly Obstacle[]> = {
+  // 묘지 — 기울어진 비석 둘. 대각으로 어긋나게 둬서 어느 줄도 막지 않는다.
+  // 가장 약하다(1~5층은 지형을 **배우는** 구간이라 부수기 쉬워야 한다).
+  cemetery: [rock(2, 0, 34), rock(3, 3, 34)],
+  // 대전당 — 기본 무대는 빈 판(원칙 ③).
+  hall: [],
+  // 회랑 — 무너진 기둥이 같은 열에 둘. col 3이 아래 두 줄로만 지나가는 **좁은 문**이
+  // 된다. 후반부라 제일 단단하다.
+  corridor: [rock(3, 0, 62), rock(3, 1, 62)],
+  // 용암 — 굳은 용암 덩이 하나. 가운데를 가로막아 직선 접근을 꺾는다.
+  lava: [rock(3, 1)],
+  // 심연(오버로드) — 비워 둔다. "도망칠 수 없다"가 이 보스의 정체성이라, 엄폐물이
+  // 생기면 컨셉과 정면으로 부딪힌다.
+  abyss: [],
+  // 성소(수호기사) — **비워 둔다.** 이 무대의 바위는 보스가 직접 세우는 것이라
+  // 미리 깔아 두면 「석벽 소환」이 무슨 일을 한 건지 안 보인다.
+  sanctum: [],
+}
+
+export function terrainFor(run: RunState): readonly Obstacle[] {
+  return SCENE_TERRAIN[sceneFor(run)]
+}
+
 // --- 파생값 -----------------------------------------------------------------
 export function computeMaxHp(charId: string, relicIds: string[]): number {
   const base = getChar(charId).maxHp
@@ -513,12 +591,17 @@ export function grantRandomRelic(run: RunState): { run: RunState; relicId?: stri
   if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
   return { run: grantRelic(run, relicId), relicId }
 }
-/** 카드 획득. 덱이 꽉 찼는데 removeId가 없으면 needsReplace로 UI에 교체를 넘긴다. */
+/**
+ * 카드 획득. 덱이 꽉 찼는데 removeId가 없으면 needsReplace로 UI에 교체를 넘긴다.
+ * ⚠ 잠긴 카드(이동 4방향)를 버리려 하면 **안 고른 것과 같이** 취급한다 — 그냥
+ * 무시하면 상한을 넘겨 담게 된다.
+ */
 export function grantCard(
   run: RunState,
   cardId: string,
   removeId?: string,
 ): { run: RunState; needsReplace?: boolean } {
+  if (removeId && isLockedCard(removeId)) removeId = undefined
   if (run.deck.length >= deckCap(run) && !removeId) return { run, needsReplace: true }
   let deck = run.deck
   if (removeId) {
@@ -527,7 +610,9 @@ export function grantCard(
   }
   return { run: { ...run, deck: [...deck, cardId] } }
 }
+/** 카드 제거(이벤트 "녹이기" 등). 잠긴 카드는 어떤 경로로도 빠지지 않는다. */
 export function removeCard(run: RunState, cardId: string): RunState {
+  if (isLockedCard(cardId)) return run
   const i = run.deck.indexOf(cardId)
   if (i < 0) return run
   return { ...run, deck: [...run.deck.slice(0, i), ...run.deck.slice(i + 1)] }
@@ -683,7 +768,8 @@ export function resolveEventEffect(
       return { run: r.run, gainedRelicId: r.relicId }
     }
     case 'removeCardGainRelic': {
-      if (!removeCardId) return { run, needsCardPick: true }
+      // 잠긴 카드를 고르면 대가를 안 치른 셈이라 유물도 없다 — 다시 고르게 한다.
+      if (!removeCardId || isLockedCard(removeCardId)) return { run, needsCardPick: true }
       const r = grantRandomRelic(removeCard(run, removeCardId))
       return { run: r.run, gainedRelicId: r.relicId }
     }
@@ -703,10 +789,12 @@ export type ShopItem =
   | { id: string; kind: 'card'; cardId: string; price: number }
   | { id: string; kind: 'relic'; relicId: string; price: number }
   | { id: string; kind: 'heal'; price: number; amount: number }
-  | { id: string; kind: 'removeCard'; price: number }
 
 /**
- * 상점 진열 — 카드 3 + 유물 1 + 회복 1 + 카드 제거 서비스 1.
+ * 상점 진열 — 카드 3 + 유물 1 + 회복 2.
+ * ⚠ **"카드 1장 제거"(40골드)는 2026-08-05에 뺐다.** 덱이 곧 손패라 카드를 줄여서
+ * 얻는 이득이 0이고(위 "덱 룰"), 꽉 찬 뒤 자리를 비우는 일은 카드를 살 때의 교체가
+ * 공짜로 해 준다 — 즉 **어떤 상황에서도 사면 손해인 칸**이었다. 되살리지 말 것.
  * 유물은 2 → **1칸**(2026-07-30): 상점 2곳에서 유물 4개를 사들이면 후반이 무력화됐다
  * (시뮬: 보스 도달 시 유물 6개, 12·13층 통과율 99%). 유물은 엘리트·이벤트가 주 경로.
  */
@@ -733,13 +821,12 @@ export function rollShop(run: RunState): ShopItem[] {
   // 골드를 체력으로 바꾸는 창구를 넓혀 남는 골드가 생존으로 이어지게.
   items.push({ id: 'heal', kind: 'heal', price: price(PRICE_HEAL), amount: PRICE_HEAL_AMOUNT })
   items.push({ id: 'heal-2', kind: 'heal', price: price(PRICE_HEAL), amount: PRICE_HEAL_AMOUNT })
-  items.push({ id: 'remove', kind: 'removeCard', price: price(PRICE_REMOVE) })
   return items
 }
 
 /**
- * 상점 구매. 골드가 모자라면 ok:false. removeCard/카드획득(덱꽉참)은 카드 선택이
- * 필요할 수 있어 needsCardPick으로 넘긴다.
+ * 상점 구매. 골드가 모자라면 ok:false. 덱이 꽉 찬 상태의 카드 구매는 **버릴 카드**
+ * 선택이 필요하므로 needsCardPick으로 넘긴다(그때까지 결제하지 않는다).
  */
 export function buyShopItem(
   run: RunState,
@@ -758,9 +845,6 @@ export function buyShopItem(
       return { run: grantRelic(paid, item.relicId), ok: true }
     case 'heal':
       return { run: healHp(paid, item.amount), ok: true }
-    case 'removeCard':
-      if (!cardId) return { run, ok: false, needsCardPick: true } // 결제 전 — 카드 먼저 고른다
-      return { run: removeCard(paid, cardId), ok: true }
     default:
       return { run, ok: false }
   }

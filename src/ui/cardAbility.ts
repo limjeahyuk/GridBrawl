@@ -32,7 +32,7 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '➤',
       label: '관통',
-      meaning: '보호막에 막히지 않고 그대로 체력을 깎는다.',
+      meaning: '보호막에 막히지 않고 그대로 체력을 깎는다. 바위도 뚫고 그 뒤를 맞힌다.',
     })
   if (c.shatter)
     out.push({
@@ -44,13 +44,13 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '👊',
       label: `넉백 ${c.push}`,
-      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽에 닿으면 거기서 멈춘다.`,
+      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽에 닿으면 거기서 멈추고, 바위에 막혀 한 칸도 못 밀리면 그 상대는 1턴 기절한다.`,
     })
   if (c.pull)
     out.push({
       icon: '🪝',
       label: `끌어당김 ${c.pull}`,
-      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 도망치는 적을 사거리 안으로 잡아 온다.`,
+      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 도망치는 적을 사거리 안으로 잡아 오고, 바위에 막혀 한 칸도 못 오면 그 상대는 1턴 기절한다.`,
     })
   if (c.stun)
     out.push({

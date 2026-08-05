@@ -4,14 +4,16 @@ import { baseCostOf, type BattleState } from './engine'
 import {
   GRID_COLS,
   MOVE_DELTA,
-  inBounds,
+  canStand,
   facingBetween,
   isCollapsedCell,
   isFullyCollapsed,
+  shadowRock,
   type Cell,
   type CardDef,
   type Difficulty,
   type MoveDir,
+  type Obstacle,
 } from './types'
 
 interface AICfg {
@@ -80,14 +82,28 @@ const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
 /** 이 체력 이하면 "한 방에 죽을 수 있는 위기"로 보고 가드를 고려한다. */
 const PANIC_HP = 45
 
-/** Does `card` from `self` (at `pos`, given `facing`) cover the opponent cell? */
-function hits(pos: Cell, facing: number, card: CardDef, opp: Cell): boolean {
+/**
+ * Does `card` from `self` (at `pos`, given `facing`) cover the opponent cell?
+ * `rocks`가 있으면 **사격선이 끊기는지**까지 본다 — 엔진 `connectsNow`와 같은 규칙이라
+ * AI가 "닿는다"고 판단한 공격이 엔진에서 헛치는 일이 없다. 관통은 바위를 무시한다.
+ */
+function hits(
+  pos: Cell,
+  facing: number,
+  card: CardDef,
+  opp: Cell,
+  rocks: readonly Obstacle[] = [],
+  pierces = false,
+): boolean {
   // 밀착(같은 셀)은 range가 아니라 카드의 pointBlank로 판정 — 엔진과 같은 규칙
   const overlapping = pos.col === opp.col && pos.row === opp.row
-  if (overlapping && card.pointBlank !== false) return true
-  return (card.range ?? []).some(
+  if (overlapping) return card.pointBlank !== false
+  const covered = (card.range ?? []).some(
     (o) => pos.col + facing * o.df === opp.col && pos.row - o.du === opp.row,
   )
+  if (!covered) return false
+  if (pierces || !rocks.length) return true
+  return !shadowRock(rocks, pos, opp)
 }
 
 /**
@@ -117,6 +133,10 @@ export function decideAI(
   const keepGap = a.keepGap
   const gait = a.gait
   const opp = state.pos[1 - self]
+  // 지형 — 런에서만 채워진다. 빈 배열이면 아래 판정이 전부 예전 그대로다.
+  const rocks = state.obstacles
+  /** 이 공격이 바위를 무시하는가 — 엔진 `piercesRock`과 같은 규칙. */
+  const pierces = (c: CardDef) => !!c.pierce || !!char.passive.alwaysPierce
   // ⚠ 방향은 **지금 서 있는 자리**에서 상대를 보고 정한다(2026-08-05, 엔진과 같은
   //   규칙). 좌석 고정이던 시절엔 AI가 상대를 지나친 뒤에도 반대쪽을 겨눠서,
   //   "닿는다"고 판단한 공격이 엔진에서 헛쳤다. `pos`는 슬롯마다 갱신되므로
@@ -159,17 +179,23 @@ export function decideAI(
     else energy -= baseCostOf(c) // 공격·가드·힐·버프는 비용 필드만 다르고 같은 처리
   }
 
-  // 이동 카드가 도착할 셀 — 엔진 applyMove와 동일 규칙(벽에서 멈춤, 겹침 허용)
+  // 이동 카드가 도착할 셀 — 엔진 applyMove와 동일 규칙(벽·**바위**에서 멈춤, 겹침 허용)
   function landingOf(c: CardDef): Cell {
     const steps = c.steps ?? 1
     const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
     let cur: Cell = { col: pos.col, row: pos.row }
     for (let k = 0; k < steps; k++) {
       const next: Cell = { col: cur.col + dc, row: cur.row + dr }
-      if (!inBounds(next)) break
+      if (!canStand(rocks, next)) break
       cur = next
     }
     return cur
+  }
+
+  /** 이 이동이 실제로 자리를 옮기는가 — 바위·벽에 막혀 제자리면 슬롯만 버린다. */
+  function goesSomewhere(c: CardDef): boolean {
+    const land = landingOf(c)
+    return land.col !== pos.col || land.row !== pos.row
   }
 
   function applyMove(c: CardDef) {
@@ -235,6 +261,9 @@ export function decideAI(
     // 수단이 있을 때만 허용한다 — 없으면 올라타 봤자 공격이 전부 빗나간다.
     return wishes.filter((w): w is CardDef => {
       if (!w) return false
+      // 바위·벽에 막혀 제자리인 이동은 버린다 — 안 그러면 바위 앞에서 매 슬롯
+      // "오른쪽으로 간다"를 골라 놓고 한 발짝도 못 가는 채로 턴을 통째로 날린다.
+      if (!goesSomewhere(w)) return false
       if (canPointBlank) return true
       const land = landingOf(w)
       return !(land.col === opp.col && land.row === opp.row)
@@ -253,7 +282,7 @@ export function decideAI(
     if (drow !== 0) wishes.push(moveCard(vdir, 1)) // 같은 줄로 — 원거리 명중선 확보
     if (Math.abs(dcol) < keepGap) wishes.push(moveCard(away, 2), moveCard(away, 1))
     // 벽에 몰려 더 못 물러나면 approachCards로 떨어져 최소한 줄이라도 맞춘다.
-    const out = wishes.filter((w): w is CardDef => !!w)
+    const out = wishes.filter((w): w is CardDef => !!w && goesSomewhere(w))
     return out.length ? out : approachCards()
   }
 
@@ -287,8 +316,9 @@ export function decideAI(
       // 실제로 **안전한 칸에 내리는** 이동만 고른다 — 한 칸 옮겨 봐야 여전히
       // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05).
       const m =
-        esc.find((c) => usable(c) && !isCollapsedCell(landingOf(c), state.turn + 1)) ??
-        esc.find(usable)
+        esc.find(
+          (c) => usable(c) && goesSomewhere(c) && !isCollapsedCell(landingOf(c), state.turn + 1),
+        ) ?? esc.find((c) => usable(c) && goesSomewhere(c))
       if (m) {
         take(m)
         continue
@@ -297,7 +327,12 @@ export function decideAI(
 
     // 2) attack if one connects right now and we roll aggressive
     const ready = attacks
-      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0) && hits(pos, facingAt(pos), a, opp))
+      .filter(
+        (a) =>
+          usable(a) &&
+          energy >= (a.energyCost ?? 0) &&
+          hits(pos, facingAt(pos), a, opp, rocks, pierces(a)),
+      )
       .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
     if (ready.length > 0 && Math.random() < cfg.aggression) {
       take(ready[0])
@@ -367,7 +402,8 @@ export function decideAI(
       take(cheap)
       continue
     }
-    const anyMove = pool.filter((c) => c.kind === 'move').find(usable)
+    const moves = pool.filter((c) => c.kind === 'move')
+    const anyMove = moves.find((c) => usable(c) && goesSomewhere(c)) ?? moves.find(usable)
     if (anyMove) {
       take(anyMove)
       continue

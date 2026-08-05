@@ -6,8 +6,8 @@ import { resolveRunCard } from '../../game/runcards'
 import {
   advanceFloor, resolveEventEffect, rollEvent, type EventEffect, type RunState,
 } from '../../game/run'
-import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
+import { DeckPicker } from '../DeckPicker'
 import { RunBar } from '../RunBar'
 
 
@@ -60,26 +60,7 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
       <div className="screen event">
         <div className="grid-bg" />
         <h2 className="event__title">녹일 카드를 고르세요</h2>
-        <div className="reward__deck">
-          {run.deck.map((id, i) => {
-            const c = resolveRunCard(run.charId, id)
-            if (!c) return null
-            return (
-              <button
-                key={`${id}-${i}`}
-                className="reward__card"
-                style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                {...zoom.bind(c)}
-                onClick={() => {
-                  if (zoom.consumedClick()) return
-                  pickRemove(id)
-                }}
-              >
-                <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
-              </button>
-            )
-          })}
-        </div>
+        <DeckPicker charId={run.charId} deck={run.deck} zoom={zoom} onPick={pickRemove} />
         {zoom.sheet}
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소

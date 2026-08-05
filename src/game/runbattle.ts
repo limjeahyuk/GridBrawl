@@ -17,7 +17,7 @@ import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
 import { RUN_CARDS } from './runcards'
 import { bossCinematic, bossPlan, bossTelegraph, isScriptedBoss, type BossCinematic } from './bosses'
-import { currentEnemy, type RunState } from './run'
+import { currentEnemy, terrainFor, type RunState } from './run'
 
 export interface RunFightProps {
   p0CharId: string
@@ -42,17 +42,22 @@ export function runFightProps(run: RunState): RunFightProps {
   const deck = run.deck
     .map((id) => all.find((c) => c.id === id))
     .filter((c): c is CardDef => !!c)
-  // 랜덤 배치(2026-08-05) — 몬스터를 매 전투 다른 줄에 세워 개전을 바꾼다. 보스는
-  // 연출·스크립트가 자리를 전제하므로 가운데 줄 고정(baseArtId 무관).
+  // 랜덤 배치(2026-08-05) — 4행 격자에서 **양쪽 다** 자기 끝열의 네 칸 중 무작위로
+  // 선다. 세로로 어긋난 채 개전해 "회피하며 접근"이 판마다 다른 그림이 된다. 보스는
+  // 연출·스크립트가 자리를 전제하므로 둘 다 가운데 줄(row 1) 고정. ⚠ 랜덤은 런
+  // 전용이다 — PvP는 `startCells`를 안 넘겨 고정 START_CELLS를 쓰므로 락스텝 안전.
   const scripted = isScriptedBoss(enemy.id)
-  const monRow = scripted ? 1 : Math.floor(Math.random() * GRID_ROWS)
-  const monCell: Cell = { col: GRID_COLS - 1, row: monRow }
+  const rndRow = () => Math.floor(Math.random() * GRID_ROWS)
+  const pCell: Cell = { col: 0, row: scripted ? 1 : rndRow() }
+  const monCell: Cell = { col: GRID_COLS - 1, row: scripted ? 1 : rndRow() }
   const battleOpts: BattleOpts = {
     chars: [pChar, eChar],
     passives: [mergeRelics(run.relicIds), eChar.passive],
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
-    startCells: [undefined, monCell],
+    startCells: [pCell, monCell],
+    // 지형 — 무대마다 다른 바위 배치(`terrainFor`). 런 전용이라 PvP·봇전은 빈 판.
+    obstacles: terrainFor(run),
   }
   // 전투별 기분(2026-08-05) — 같은 몬스터라도 판마다 공격성이 살짝 다르게. 성격
   // (archetype)과 함께 매 턴 decideAI로 넘긴다. 전투 시작 때 한 번만 굴린다.

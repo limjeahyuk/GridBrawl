@@ -14,23 +14,29 @@ import { getChar, ROSTER, type CharacterDef, type Passive } from '../src/data/ro
 import { mergeRelics, mergeRunMods } from '../src/game/relics'
 import {
   LADDER_FLOORS,
+  LOCKED_CARD_IDS,
   advanceFloor,
   chooseBranch,
   currentNode,
   currentOptionIndices,
   currentOptions,
   deckCap,
+  grantCard,
   grantRelic,
   healHp,
+  isLockedCard,
+  removeCard,
+  resolveEventEffect,
   rollRewards,
   rollShop,
   startRun,
 } from '../src/game/run'
 import { RUN_CARDS, RUN_CARD_BY_ID } from '../src/game/runcards'
+import { SCENE_TERRAIN } from '../src/game/run'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster } from '../src/game/monsters'
-import type { CardDef } from '../src/battle/types'
+import { GRID_COLS, GRID_ROWS, ROCK_HP, type CardDef } from '../src/battle/types'
 
 let failed = 0
 function check(name: string, got: unknown, want: unknown) {
@@ -211,6 +217,26 @@ console.log('\n런 진행 규칙')
     healHp(grantRelic(hurt, 'balm'), 20).hp - 10,
     30,
   )
+
+  // --- 덱 룰(2026-08-05) ---------------------------------------------------
+  // ⚠ 이동 4방향이 빠지면 **그 방향으로 갈 칸이 영영 안 밝혀진다**(이동은 칸을 눌러서
+  // 한다). 빼는 경로가 셋이라 한 곳만 새도 런이 조용히 망가지므로 전부 단정한다.
+  check('잠긴 카드 = 이동 4방향', [...LOCKED_CARD_IDS].sort(), ['m-down', 'm-left', 'm-right', 'm-up'])
+  check('이동 카드는 제거되지 않는다', removeCard(run, 'm-up').deck.length, run.deck.length)
+  check('잠기지 않은 카드는 제거된다', removeCard(run, 'c-brace').deck.includes('c-brace'), false)
+  // 나중에 주운 대시·대각 이동은 잠기지 않는다 — 꽉 찬 덱에서 바꿀 길을 막으면 안 된다.
+  check('대시·대각 이동은 잠기지 않는다', ['m-right2', 'm-ur'].some(isLockedCard), false)
+  // 꽉 찬 덱 + 잠긴 카드를 버리려 하면 "안 고른 것"과 같다(상한을 넘겨 담으면 안 된다).
+  const full = { ...run, deck: [...run.deck, ...Array(deckCap(run) - run.deck.length).fill('c-strike')] }
+  check('덱이 꽉 찼다', full.deck.length, deckCap(run))
+  check('꽉 찬 덱 + 잠긴 카드 지정 → 교체 요구', grantCard(full, 'war-cleave', 'm-up').needsReplace, true)
+  check('꽉 찬 덱 + 잠긴 카드 지정 → 상한을 넘기지 않는다', grantCard(full, 'war-cleave', 'm-up').run.deck.length, deckCap(run))
+  check('꽉 찬 덱 + 일반 카드 지정 → 교체된다', grantCard(full, 'war-cleave', 'c-strike').run.deck.length, deckCap(run))
+  // 유료 "카드 1장 제거"는 뺐다 — 덱=손패라 얇게 만들 이득이 0인 함정 칸이었다.
+  check('상점에 카드 제거 서비스가 없다', rollShop(run).some((i) => i.kind !== 'card' && i.kind !== 'relic' && i.kind !== 'heal'), false)
+  // 이벤트 "녹이기"로도 이동 카드는 못 뺀다(빼면 유물만 공짜로 얻는 셈이 된다).
+  const melt = resolveEventEffect(run, { type: 'removeCardGainRelic' }, 'm-left')
+  check('이벤트 녹이기 — 잠긴 카드를 고르면 다시 고르게 한다', [melt.needsCardPick, melt.gainedRelicId], [true, undefined])
 }
 
 // --- 상태이상(독·화상·빙결) -------------------------------------------------
@@ -461,6 +487,31 @@ console.log('\n엔진 방향 — 넉백·사거리가 상대를 지나쳐도 맞
   }
   check('오른쪽 상대를 밀면 더 오른쪽으로', away(1, 2), 4)
   check('지나쳐서 왼쪽에 있는 상대는 더 왼쪽으로', away(4, 3), 1)
+}
+{
+  // --- 넉백 3원칙 (2026-08-05 사용자 확정) ---------------------------------
+  // 두 번 신고된 자리라 **사용자가 말한 그대로** 세 줄로 못 박아 둔다. 세 번째가
+  // 특히 중요하다 — 겹친 칸엔 "멀어지는 쪽"이 없어서 규칙이 없으면 아무 값이나
+  // 나오는데, 실제 런에서 **넉백의 82%가 이 경우다**(1500런 × 넉백 185회 실측).
+  //   ① 내가 왼쪽 · 몬스터가 오른쪽 → 몬스터는 오른쪽으로
+  //   ② 내가 오른쪽 · 몬스터가 왼쪽 → 몬스터는 왼쪽으로
+  //   ③ 같은 타일        → 몬스터는 **오른쪽으로**
+  // ⚠ ③은 `facingBetween`의 좌석 폴백(p0=+1)이 내는 값이다. "정의되지 않은 경우의
+  //   임시 처리"처럼 보이지만 **의도된 규칙이니 지우지 말 것**.
+  const bash: CardDef = {
+    id: 'test-bash1', name: '테스트 넉백1', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 1, cooldown: 0,
+    pointBlank: true,
+  }
+  const shoved = (meCol: number, foeCol: number) => {
+    const b = battleWith({}, {})
+    b.state.pos = [{ col: meCol, row: 1 }, { col: foeCol, row: 1 }]
+    b.resolveTurn([bash, card('c-energy'), card('c-energy')], HOLD)
+    return b.state.pos[1].col
+  }
+  check('① 몬스터가 내 오른쪽 → 오른쪽으로 한 칸', shoved(2, 3), 4)
+  check('② 몬스터가 내 왼쪽 → 왼쪽으로 한 칸', shoved(3, 2), 1)
+  check('③ 같은 타일 → 몬스터는 오른쪽으로', shoved(2, 2), 3)
 }
 
 // --- 넉백 재판정 (2026-08-05) ------------------------------------------------
@@ -838,6 +889,173 @@ console.log('\n보스 전용 패턴 (bosses.ts + bosscards.ts)')
         if (c.kind === 'attack' && !deck.has(c.id)) outOfDeck.push(`${id}:${c.id}`)
   }
   check('스크립트가 쓰는 공격은 몬스터 덱에도 있다', [...new Set(outOfDeck)], [])
+}
+
+// --- 지형: 바위 (2026-08-05) -------------------------------------------------
+// 규칙 셋(못 들어간다 · 사격선을 끊는다 · 부술 수 있다) + 처박기 기절. 지형은
+// **런 전용**이라 마지막 검사가 제일 중요하다 — 바위가 없으면 예전과 완전히 같아야
+// `RULES_VERSION`을 안 올리고 갈 수 있다(PvP 락스텝 안전).
+console.log('\n지형 — 바위')
+{
+  const rocks = (...cells: [number, number][]) =>
+    cells.map(([col, row]) => ({ cell: { col, row }, hp: ROCK_HP, maxHp: ROCK_HP }))
+  // ⚠ 시작 칸은 **여기서 정확히** 준다 — 생성자가 시작 칸과 겹치는 바위를 버리므로,
+  //   나중에 `state.pos`를 갈아 끼우면 원하던 바위가 이미 사라져 있다(실제로 한 번
+  //   걸렸다: 상대 시작 칸에 바위를 두고 밀어내기를 검사하려다 바위 없이 쟀다).
+  const withRocks = (
+    list: ReturnType<typeof rocks>,
+    p0: [number, number] = [1, 1],
+    p1: [number, number] = [4, 1],
+  ) =>
+    new CardBattle('warrior', 'warrior', {
+      chars: [getChar('warrior'), getChar('warrior')],
+      passives: [{ desc: '' }, { desc: '' }],
+      startCells: [{ col: p0[0], row: p0[1] }, { col: p1[0], row: p1[1] }],
+      obstacles: list,
+    })
+
+  // ① 못 들어간다 — 이동이 바위 앞에서 멈춘다(벽과 같은 규칙).
+  {
+    const b = withRocks(rocks([2, 1]))
+    b.resolveTurn([card('m-right'), card('c-energy'), card('c-energy')], HOLD)
+    check('바위 앞에서 이동이 멈춘다', b.state.pos[0].col, 1)
+    const b2 = withRocks(rocks([3, 1]))
+    b2.resolveTurn([card('m-right2'), card('c-energy'), card('c-energy')], HOLD)
+    check('2칸 이동은 바위 직전까지만 간다', b2.state.pos[0].col, 2)
+    const b3 = withRocks(rocks([2, 1]))
+    b3.resolveTurn([card('m-up'), card('m-right'), card('c-energy')], HOLD)
+    check('줄을 바꾸면 바위를 지나갈 수 있다', [b3.state.pos[0].col, b3.state.pos[0].row], [2, 0])
+  }
+
+  // ② 사격선을 끊는다 — 사이에 낀 바위가 그 칸을 가린다. 대각은 안 가린다.
+  {
+    const beam: CardDef = {
+      id: 'test-beam', name: '테스트 광선', kind: 'attack', desc: '',
+      range: [{ df: 1, du: 0 }, { df: 2, du: 0 }, { df: 3, du: 0 }],
+      damage: 30, energyCost: 0, cooldown: 0,
+    }
+    const b = withRocks(rocks([2, 1]))
+    const hp1 = b.state.hp[1]
+    b.resolveTurn([beam, card('c-energy'), card('c-energy')], HOLD)
+    check('바위 뒤 상대는 안 맞는다', hp1 - b.state.hp[1], 0)
+
+    // 관통은 바위를 무시하고 뒤를 그대로 때린다(궁수·마법사의 답).
+    const bp = withRocks(rocks([2, 1]))
+    const hpp = bp.state.hp[1]
+    bp.resolveTurn([{ ...beam, id: 'test-beam-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
+    check('관통은 바위를 뚫고 맞힌다', hpp - bp.state.hp[1] > 0, true)
+
+    // 유물 `alwaysPierce`도 같은 규칙(엔진 piercesRock 한 곳을 본다).
+    const ba = new CardBattle('warrior', 'warrior', {
+      chars: [getChar('warrior'), getChar('warrior')],
+      passives: [{ desc: '', alwaysPierce: true }, { desc: '' }],
+      startCells: [{ col: 1, row: 1 }, { col: 4, row: 1 }],
+      obstacles: rocks([2, 1]),
+    })
+    const hpa = ba.state.hp[1]
+    ba.resolveTurn([beam, card('c-energy'), card('c-energy')], HOLD)
+    check('alwaysPierce 유물도 바위를 뚫는다', hpa - ba.state.hp[1] > 0, true)
+
+    // 다른 줄의 바위는 아무것도 안 가린다 — 우회로가 늘 남아 있어야 한다.
+    const bd = withRocks(rocks([2, 0]))
+    const hpd = bd.state.hp[1]
+    bd.resolveTurn([beam, card('c-energy'), card('c-energy')], HOLD)
+    check('다른 줄 바위는 사격선을 안 막는다', hpd - bd.state.hp[1] > 0, true)
+  }
+
+  // ③ 부술 수 있다 — 가로막은 바위가 그 공격의 피해를 받는다(빗나가도).
+  {
+    const hit: CardDef = {
+      id: 'test-rockhit', name: '테스트 타격', kind: 'attack', desc: '',
+      range: [{ df: 1, du: 0 }, { df: 2, du: 0 }], damage: 26, energyCost: 0, cooldown: 0,
+    }
+    const b = withRocks(rocks([2, 1]))
+    b.resolveTurn([hit, card('c-energy'), card('c-energy')], HOLD)
+    check('가로막은 바위가 깎인다', b.state.obstacles[0]?.hp, ROCK_HP - 26)
+    // 두 번 더 때리면 부서져 판에서 사라진다.
+    b.resolveTurn([hit, card('c-energy'), card('c-energy')], HOLD)
+    check('바위가 부서지면 판에서 사라진다', b.state.obstacles.length, 0)
+    // 관통은 바위를 그냥 지나간다 — 깎지도 않는다.
+    const bp = withRocks(rocks([2, 1]))
+    bp.resolveTurn([{ ...hit, id: 'test-rockhit-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
+    check('관통은 바위를 깎지 않는다', bp.state.obstacles[0]?.hp, ROCK_HP)
+  }
+
+  // ④ 처박기 — 밀어낼 곳이 바위면 한 칸도 안 밀리고 1턴 기절. **벽은 아니다.**
+  {
+    const shove: CardDef = {
+      id: 'test-slam', name: '테스트 처박기', kind: 'attack', desc: '',
+      range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 2, cooldown: 0,
+    }
+    const b = withRocks(rocks([3, 1]))
+    b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+    b.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+    check('바위에 막히면 한 칸도 안 밀린다', b.state.pos[1].col, 2)
+    check('바위에 처박히면 기절한다', b.state.stunned[1], 1)
+
+    // 벽에 몰린 상대는 기절하지 않는다 — 좌석 운으로 매 턴 기절하면 안 된다.
+    const w = withRocks([])
+    w.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }]
+    w.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+    check('벽에 몰려도 기절하지 않는다', w.state.stunned[1], 0)
+
+    // 한 칸이라도 밀리면 기절하지 않는다(완전히 막혔을 때만).
+    const p = withRocks(rocks([4, 1]), [1, 1], [2, 1])
+    p.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+    check('한 칸이라도 밀리면 기절 없음', [p.state.pos[1].col, p.state.stunned[1]], [3, 0])
+  }
+
+  // ⑤ 세우기 — 「석벽 소환」이 상대 좌우에 바위를 만든다.
+  {
+    const menhir = BOSS_CARDS.find((c) => c.id === 'b-ward-menhir')!
+    // p1(보스)이 내면 **상대(p0) 좌우**에 선다.
+    const b = withRocks([], [1, 1], [3, 1])
+    b.resolveTurn(HOLD, [menhir, card('c-energy'), card('c-energy')])
+    check(
+      '석벽은 상대 좌우에 선다',
+      b.state.obstacles.map((r) => r.cell.col).sort((x, y) => x - y),
+      [0, 2],
+    )
+    check('석벽 체력은 카드가 정한다', b.state.obstacles[0]?.maxHp, 46)
+    // 파이터가 선 칸에는 안 세운다(바위 위에 서 있는 상태를 만들면 안 된다).
+    // p0=2·p1=3이면 상대 좌우는 1과 3인데, 3은 보스 자신이 서 있으므로 1만 선다.
+    const c2 = withRocks([], [2, 1], [3, 1])
+    c2.resolveTurn(HOLD, [menhir, card('c-energy'), card('c-energy')])
+    check('파이터가 선 칸엔 안 세운다', c2.state.obstacles.map((r) => r.cell.col), [1])
+  }
+
+  // ⑥ 생성자 — 시작 칸과 겹치는 바위는 버린다.
+  {
+    const b = new CardBattle('warrior', 'warrior', {
+      startCells: [{ col: 1, row: 1 }, { col: 4, row: 1 }],
+      obstacles: rocks([1, 1], [9, 9], [3, 1]),
+    })
+    check('시작 칸·격자 밖 바위는 버린다', b.state.obstacles.map((r) => r.cell.col), [3])
+  }
+
+  // ⑦ 무대별 지형 — 열을 통째로 막으면 접근 자체가 불가능한 개전이 나온다.
+  {
+    const bad: string[] = []
+    for (const [scene, list] of Object.entries(SCENE_TERRAIN)) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const blocked = list.filter((r) => r.cell.col === col).length
+        if (blocked >= GRID_ROWS - 1) bad.push(`${scene}:col${col}`)
+      }
+      if (list.some((r) => r.cell.col === 0 || r.cell.col === GRID_COLS - 1)) bad.push(`${scene}:끝열`)
+    }
+    check('열을 통째로 막는 무대가 없다', bad, [])
+  }
+
+  // ⑧ **바위가 없으면 예전과 똑같다** — 이게 `RULES_VERSION`을 안 올리는 근거다.
+  {
+    const plan = [card('m-right'), card('c-strike'), card('c-guard')]
+    const run = (obstacles: ReturnType<typeof rocks>) => {
+      const b = new CardBattle('warrior', 'archer', { obstacles })
+      const out = [b.resolveTurn(plan, HOLD), b.resolveTurn(plan, HOLD)]
+      return JSON.stringify(out)
+    }
+    check('빈 지형은 지형 인자를 안 준 것과 동일', run([]), run(undefined as never))
+  }
 }
 
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)

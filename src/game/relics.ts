@@ -81,7 +81,10 @@ const SIGNATURE: Record<
     // ⚠ 화력·독을 올리는 건 답이 아니었다 — 오히려 떨어졌다(독 위력 +45% 실험에서
     // 24.7%→22.2%). 필요한 건 **버티는 힘**이라 흡혈·피해감소·최대체력으로 준다.
     // 그중 lifesteal이 지배 변수다(4→5만으로 +5%p) — 손대면 반드시 스윕 재측정.
-    runEffect: { attackBonus: 9, poisonOnHit: 3, damageReduction: 6, maxHpBonus: 40, lifesteal: 5 },
+    // ⚠ 4행 전환(2026-08-05)으로 궁수가 −2.6%p 떨어졌다(세로가 벌어져 밀착 사각이 더
+    //   노출). 대각 사거리(arc-shot·arc-kite)는 손맛용이라 유지하고, 밸런스는 문서대로
+    //   생존 훅으로만 되돌린다 — lifesteal 5→6.
+    runEffect: { attackBonus: 9, poisonOnHit: 3, damageReduction: 6, maxHpBonus: 40, lifesteal: 6 },
     desc: '독니 화살통: 최대 체력 +40, 받는 피해 -6. 내 공격 피해 +9, 피해를 주면 체력 5 흡수 + 독 3.',
   },
   mage: {

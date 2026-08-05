@@ -336,7 +336,7 @@ export const MONSTERS: MonsterDef[] = [
     // 방벽을 낮춘다(2026-07-30 밸런스): 매 턴 보호막 20 + 피해감소 8이면 플레이어
     // 화력이 통째로 먹혀 15턴 독안개 소모전이 됐다. 뚫리는 벽으로 조정.
     passive: { turnShield: 12, damageReduction: 8, turnEnergy: 8 },
-    deckCardIds: ['b-ward-bulwark', 'b-ward-riposte', 'b-ward-lance', 'b-ward-verdict'],
+    deckCardIds: ['b-ward-menhir', 'b-ward-bulwark', 'b-ward-riposte', 'b-ward-lance', 'b-ward-verdict'],
     note: '엘리트 — 방벽을 올렸다 열며 보호막째 부순다.',
   },
   {

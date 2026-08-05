@@ -33,6 +33,7 @@ import {
   currentOptions,
   grantCard,
   grantRelic,
+  isLockedCard,
   resolveEventEffect,
   rollEvent,
   rollRewards,
@@ -114,10 +115,13 @@ function cardScore(id: string, deck: string[]): number {
   if (deck.includes(id)) s *= 0.35
   return s
 }
-/** 덱에서 가장 값이 낮은 카드(교체·제거용). 이동 4방향은 남겨 둔다. */
+/**
+ * 덱에서 가장 값이 낮은 카드(교체용). 이동 4방향은 남겨 둔다 — 여기 목록을 손으로
+ * 적어 두고 있었는데 이제 **엔진이 실제로 잠그는** 카드다(`run.ts`의 덱 룰). 목록이
+ * 한 곳에서 오므로 잠금 규칙을 바꾸면 시뮬 정책도 같이 따라간다.
+ */
 function worstCard(deck: string[]): string {
-  const keep = new Set(['m-up', 'm-down', 'm-left', 'm-right'])
-  const pool = deck.filter((id) => !keep.has(id))
+  const pool = deck.filter((id) => !isLockedCard(id))
   const target = pool.length ? pool : deck
   return target.reduce((lo, id) => (cardScore(id, []) < cardScore(lo, []) ? id : lo), target[0])
 }
