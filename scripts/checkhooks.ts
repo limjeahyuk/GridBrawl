@@ -429,6 +429,92 @@ console.log('\n파이터 방향 — 자리가 아니라 상대 위치를 따라�
   check('모든 시트에 facesRight가 명시돼 있다', wrong.map(([k]) => k), [])
 }
 
+// --- 엔진 방향도 위치 기준 (2026-08-05) --------------------------------------
+// 스프라이트만 상대를 보고 돌아서고 **판정은 좌석에 못 박혀 있던** 것을 맞췄다.
+// 그 어긋남이 "넉백을 하다보면 이상하게 흘러간다"의 정체였다.
+console.log('\n엔진 방향 — 넉백·사거리가 상대를 지나쳐도 맞는 쪽을 본다')
+{
+  const b = new CardBattle('warrior', 'warrior')
+  b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
+  check('상대가 오른쪽이면 +1', b.facing(0), 1)
+  check('상대가 왼쪽이면 −1', b.facing(1), -1)
+  // 지나친 뒤 — 좌석은 그대로인데 둘 다 뒤집혀야 한다.
+  b.state.pos = [{ col: 4, row: 1 }, { col: 1, row: 1 }]
+  check('지나치면 p0도 뒤집힌다', b.facing(0), -1)
+  check('지나치면 p1도 뒤집힌다', b.facing(1), 1)
+  // 같은 칸이면 겨룰 기준이 없다 — 좌석으로 떨어진다(랜덤 없음).
+  b.state.pos = [{ col: 2, row: 1 }, { col: 2, row: 1 }]
+  check('같은 칸이면 좌석 기준', [b.facing(0), b.facing(1)], [1, -1])
+}
+{
+  // 넉백은 **언제나 나에게서 멀어지는 쪽**이다. 좌석 기준이던 시절엔 상대를
+  // 지나친 순간 밀어내기가 상대를 자기 쪽으로 끌어당겼다.
+  const shove: CardDef = {
+    id: 'test-shove', name: '테스트 밀치기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 2, cooldown: 0,
+  }
+  const away = (p0col: number, p1col: number) => {
+    const b = battleWith({}, {})
+    b.state.pos = [{ col: p0col, row: 1 }, { col: p1col, row: 1 }]
+    b.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+    return b.state.pos[1].col
+  }
+  check('오른쪽 상대를 밀면 더 오른쪽으로', away(1, 2), 4)
+  check('지나쳐서 왼쪽에 있는 상대는 더 왼쪽으로', away(4, 3), 1)
+}
+
+// --- 넉백 재판정 (2026-08-05) ------------------------------------------------
+// 신고: "넉백을 당하면 넉백당한 자리에서 공격해야 하는데 이전 자리에서 공격을 당한다."
+// 같은 슬롯 트레이드는 둘 다 **밀리기 전 판**으로 계산해 두므로, 밀어내기가 같은
+// 슬롯 안에서 아무 일도 하지 않았다. 이제 밀려난 쪽은 새 자리에서 다시 겨눈다.
+console.log('\n넉백 재판정 — 밀려나면 그 슬롯 공격은 새 자리에서 다시 겨눈다')
+{
+  const shove: CardDef = {
+    id: 'test-shove2', name: '테스트 밀치기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 2, cooldown: 0,
+  }
+  /** 사거리 1칸짜리 반격 — 두 칸 밀려나면 닿을 수 없다. */
+  const jab: CardDef = {
+    id: 'test-jab', name: '테스트 잽', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 30, energyCost: 0, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  const hp0 = b.state.hp[0]
+  b.resolveTurn([shove, card('c-energy'), card('c-energy')], [jab, card('c-energy'), card('c-energy')])
+  check('밀어낸 쪽은 두 칸 밀어냈다', b.state.pos[1].col, 4)
+  check('밀려난 쪽의 반격은 빗나간다', hp0 - b.state.hp[0], 0)
+}
+{
+  // 밀어내도 **여전히 닿으면** 그대로 맞는다 — 넉백은 면죄부가 아니다.
+  const nudge: CardDef = {
+    id: 'test-nudge', name: '테스트 살짝밀기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 1, cooldown: 0,
+  }
+  const reach: CardDef = {
+    id: 'test-reach', name: '테스트 장창', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }, { df: 2, du: 0 }], damage: 30, energyCost: 0, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  const hp0 = b.state.hp[0]
+  b.resolveTurn([nudge, card('c-energy'), card('c-energy')], [reach, card('c-energy'), card('c-energy')])
+  check('한 칸 밀려도 사거리 안이면 그대로 맞는다', hp0 - b.state.hp[0], 30)
+}
+{
+  // 서로 밀어내면 **대칭이라 재판정하지 않는다** — 누구를 먼저 놓느냐로 결과가
+  // 갈리면 호스트가 유리해진다(락스텝에서 절대 하면 안 되는 것).
+  const shove: CardDef = {
+    id: 'test-shove3', name: '테스트 맞밀치기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 7, energyCost: 0, push: 2, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  const hp = [b.state.hp[0], b.state.hp[1]]
+  b.resolveTurn([shove, card('c-energy'), card('c-energy')], [shove, card('c-energy'), card('c-energy')])
+  check('서로 밀면 둘 다 그대로 맞는다', [hp[0] - b.state.hp[0], hp[1] - b.state.hp[1]], [7, 7])
+}
+
 // --- 쓰러진 뒤엔 못 때린다(2026-08-04) ---------------------------------------
 console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다')
 {

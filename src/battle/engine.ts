@@ -10,6 +10,7 @@ import {
   START_CELLS,
   STATUS_POWER_CAP,
   STATUS_TURNS,
+  facingBetween,
   inBounds,
   isCollapsedCell,
   isDot,
@@ -160,9 +161,24 @@ export class CardBattle {
     return this.state.status[p].length > 0
   }
 
-  /** + for player (faces right), - for opponent (faces left). */
+  /**
+   * 이 파이터가 **지금 바라보는 쪽**. + = 오른쪽(열 증가), − = 왼쪽.
+   *
+   * ⚠ 2026-08-05에 **자리 기준 → 위치 기준**으로 바꿨다. 전엔 `p === 0 ? 1 : -1`로
+   * 좌석에 못 박혀 있어서, 대시·넉백으로 상대를 지나친 뒤에도 계속 원래 쪽을
+   * 향했다. 그 결과:
+   *   - 전방 전용 공격이 **상대 반대편**을 때렸다(등 뒤를 노리는 셈)
+   *   - `push`가 상대를 **내 쪽으로 끌어당겼다** — 밀어내라고 만든 능력이
+   *     거꾸로 붙였고, 이게 "넉백을 하다보면 이상하게 흘러간다"의 정체다
+   *   - 스프라이트는 이미 `faceToward`로 상대를 보고 돌아섰으므로(2026-08-03),
+   *     **보이는 방향과 실제 판정이 반대**였다
+   *
+   * 같은 칸이면 겨룰 기준이 없으므로 **자리 기준으로 떨어진다**(p0=오른쪽).
+   * 상태에서만 유도하는 순수 함수라 랜덤이 없고, 두 피어가 같은 판을 보면 같은
+   * 값을 낸다 — 멀티 락스텝은 그대로 안전하다.
+   */
   facing(p: number): number {
-    return p === 0 ? 1 : -1
+    return facingBetween(this.state.pos[p], this.state.pos[1 - p], p)
   }
 
   cooldownOf(p: number, id: string): number {
@@ -419,6 +435,23 @@ export class CardBattle {
       }
     }
 
+    /**
+     * 이 공격이 **지금 판에서** 상대에게 닿는가.
+     *
+     * 밀착(같은 셀): 어떤 카드의 range도 자기 셀을 덮지 않으므로 여기서 따로
+     * 판정한다. 대부분의 카드는 겹친 상대를 그대로 때리고, `pointBlank: false`인
+     * "바로 옆이 사각"짜리 원거리 카드만 빗나간다.
+     *
+     * 같은 슬롯 트레이드에서 **밀려난 뒤 다시 겨누는 데도** 쓴다(아래 재판정).
+     */
+    const connectsNow = (p: number, c: CardDef): boolean => {
+      const d = 1 - p
+      return (
+        (sameCell(s.pos[p], s.pos[d]) && c.pointBlank !== false) ||
+        this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
+      )
+    }
+
     // spend energy and measure one attack against the current board. Energy /
     // shield / drain effects apply immediately; HP · push are returned for the
     // caller to apply (deferred in a simultaneous trade).
@@ -449,13 +482,7 @@ export class CardBattle {
       if (c.dashForward) this.applyDash(p, c.dashForward)
       const recoil = c.recoil ?? 0
       const d = 1 - p
-      // 밀착(같은 셀): 어떤 카드의 range도 자기 셀을 덮지 않으므로 여기서 따로
-      // 판정한다. 대부분의 카드는 겹친 상대를 그대로 때리고, `pointBlank: false`인
-      // "바로 옆이 사각"짜리 원거리 카드만 빗나간다.
-      const connects =
-        (sameCell(s.pos[p], s.pos[d]) && c.pointBlank !== false) ||
-        this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
-      if (!connects) return { ...zero, recoil, result: 'whiff' as Step['result'] }
+      if (!connectsNow(p, c)) return { ...zero, recoil, result: 'whiff' as Step['result'] }
       const atkPas = this.passive[p]
       const defPas = this.passive[d]
       // raw 피해 = 카드 + attackBonus(유물) + empowered(이 전투 누적 각성),
@@ -540,6 +567,9 @@ export class CardBattle {
 
     // 넉백/끌어당김: 공격자가 바라보는 방향(pull은 반대)으로 상대를 옮긴다.
     // 벽에서만 멈추고 겹침은 허용.
+    // ⚠ `facing`이 **위치 기준**이 된 뒤로(2026-08-05) 이건 언제나 "나에게서 멀어지는
+    //   쪽"이다. 좌석 기준이던 시절엔 상대를 지나친 순간 넉백이 상대를 **내 쪽으로
+    //   끌어당겼다** — 밀어내라고 만든 능력이 정반대로 작동했다.
     const applyShove = (attacker: number, n: number, toward: boolean) => {
       const d = 1 - attacker
       const f = this.facing(attacker) * (toward ? -1 : 1)
@@ -681,12 +711,53 @@ export class CardBattle {
          *   동시 KO 타이브레이크·무승부(`koWinner`)가 그대로 살아 있고, 둘 중
          *   누구를 먼저 놓느냐로 승자가 갈리는 비대칭(호스트 유리)이 안 생긴다.
          */
-        const order = mutual ? [0, 1] : lethal[1] ? [1, 0] : [0, 1]
+        /**
+         * **넉백 재판정**(2026-08-05 신고: "밀려났는데 밀리기 전 자리에서 때린다").
+         *
+         * 전엔 밀어내기가 같은 슬롯 안에서 **아무 일도 하지 않았다** — 둘 다 밀리기
+         * 전 판으로 계산해 두었으니, 상대를 두 칸 밀어내도 그 상대의 주먹은 원래
+         * 자리에서 그대로 들어왔다. 밀어내라고 만든 능력이 같은 슬롯에선 무의미했다.
+         *
+         * 이제 **한쪽만 상대를 밀어낼 때** 미는 쪽을 먼저 적용하고, 밀려난 쪽의
+         * 공격은 **새 자리에서 다시 겨눈다**. 닿지 않으면 헛친다.
+         *   - 피해·보호막·상태이상 수치는 여전히 **밀리기 전 같은 판**에서 잰 값이다
+         *     (트레이드의 핵심 — 먼저 맞았다고 위력이 깎이면 안 된다). 바뀌는 건
+         *     **닿느냐 마느냐** 하나뿐이다.
+         *   - 서로를 밀어내면 **대칭이라 재판정하지 않는다**. 누구를 먼저 놓느냐로
+         *     결과가 갈리면 호스트가 유리해진다.
+         *   - 기력·보호막 전개·기력 흡수·이동공격은 카드를 낸 대가로 **이미 치러진**
+         *     것이라 되돌리지 않는다(`computeAttack`이 즉시 적용한다).
+         * KO 순서가 먼저다 — 쓰러뜨리는 쪽은 언제나 앞선다.
+         */
+        const shoves = banked.map((r) => (r.push ?? 0) + (r.pull ?? 0) > 0)
+        // 서로 밀어내면 대칭이라 재판정하지 않는다(순서로 승부가 갈리면 안 된다).
+        const crossShove = shoves[0] && shoves[1]
+        const order = mutual
+          ? [0, 1]
+          : lethal[1]
+            ? [1, 0]
+            : lethal[0]
+              ? [0, 1]
+              : shoves[1] && !shoves[0]
+                ? [1, 0]
+                : [0, 1]
+        /** 이 슬롯에서 밀려난 진영 — 다음 공격을 새 자리에서 다시 겨눈다. */
+        const shoved = new Set<number>()
         for (const i of order) {
           const e = banked[i]
           if (!mutual && s.hp[e.p] <= 0) continue
+          if (!crossShove && shoved.has(e.p) && !connectsNow(e.p, e.card)) {
+            // 밀려나서 빗나갔다 — 피해·넉백·상태이상이 전부 사라지고 반동만 남는다.
+            const miss = { ...e, result: 'whiff' as Step['result'] }
+            for (const k of ['dmg', 'heal', 'push', 'pull', 'stun', 'poison', 'burn', 'freeze'] as const)
+              miss[k] = 0
+            applyOutcome(miss)
+            emit(e.p, e.card, miss.result, 0, 0, e.drain, e.recoil)
+            continue
+          }
           applyOutcome(e)
           emit(e.p, e.card, e.result, e.dmg, e.heal, e.drain, e.recoil)
+          if ((e.push ?? 0) + (e.pull ?? 0) > 0) shoved.add(1 - e.p)
         }
       } else {
         for (const e of here) {

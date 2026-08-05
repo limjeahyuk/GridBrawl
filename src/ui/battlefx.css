@@ -585,6 +585,33 @@
   padding-right: 12px;
   border-right: 1px solid var(--panel-edge);
 }
+/* 빙결 — 화살표 자리를 통째로 이유가 대신한다. 칩 격자(2줄 × N열)와 달리
+   한 덩어리라 흐름을 되돌린다. */
+.cards__moves--frozen {
+  display: flex;
+  align-items: center;
+}
+.movechip__frozen {
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--neon-cyan) 45%, var(--panel-edge));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--neon-cyan) 12%, var(--bg-2));
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.movechip__frozen em {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
 .movechip {
   width: 30px;
   height: 30px;

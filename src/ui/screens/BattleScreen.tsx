@@ -26,6 +26,7 @@ import {
   GRID_COLS,
   GRID_ROWS,
   MOVE_DELTA,
+  facingBetween,
   inBounds,
   isCollapsedCell,
   MIRROR_DIR,
@@ -456,7 +457,19 @@ export function BattleScreen({
   // 모든 공격 카드(같은 공격 반복 금지 — 3공격은 서로 다른 카드로만 가능).
   const placedNoRepeat = (c: CardDef) =>
     ((c.cooldown ?? 0) >= 1 || c.kind === 'attack') && slots.some((s) => s?.id === c.id)
-  const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c)
+  /**
+   * 빙결 — 이번 턴 **이동 카드가 통째로 무효**다(엔진 `resolvePrep`). 카드는
+   * 그대로 소모되고 쿨타임까지 돈다.
+   *
+   * ⚠ 2026-08-05 신고 "넉백이나 다른 걸 당하고 나서 이동이 안 된다"의 정체가
+   *   이거였다. 화면은 아무 말 없이 **갈 수 있는 칸을 노랗게 밝히고** 눌러서
+   *   슬롯에 담기까지 했는데, 실행하면 엔진이 조용히 무효 처리했다 — 게임이
+   *   "가능하다"고 해 놓고 안 해 주니 버그로 읽힐 수밖에 없다. 이제 이동을
+   *   아예 못 고르게 막고 **왜인지 그 자리에 적는다**.
+   */
+  const frozen = !!battle.statusOf(localSide, 'frozen')
+  const selectable = (c: CardDef) =>
+    cdLeft(c.id) === 0 && !placedNoRepeat(c) && !(frozen && c.kind === 'move')
 
   const addCard = (c: CardDef) => {
     if (phase !== 'select' || !selectable(c) || !canAfford(c)) return
@@ -527,7 +540,7 @@ export function BattleScreen({
     const cur = view.pos[localSide]
     const none = { ghost: null as Cell | null, cells: [] as Cell[] }
     if (phase !== 'select') return none
-    const facing = battle.facing(localSide)
+    const foe = view.pos[1 - localSide]
     let at = { ...cur }
     // 공격 범위는 **누적하지 않는다** — 여러 장을 고르면 빨간 칸이 뒤섞여 헷갈리므로
     // 가장 마지막에 고른 공격의 범위만 남긴다(위치는 앞선 이동까지 반영된 값).
@@ -535,7 +548,10 @@ export function BattleScreen({
     for (const c of slots) {
       if (!c) continue
       if (c.kind === 'move') at = applyMovePreview(at, c)
-      else if (c.kind === 'attack') cells = attackCells(at, c, facing, view.pos[1 - localSide])
+      // ⚠ 방향은 **그 카드가 나갈 자리에서** 다시 잰다(2026-08-05) — 앞선 이동으로
+      //   상대를 지나쳤으면 사거리도 같이 뒤집힌다. 엔진과 같은 규칙.
+      else if (c.kind === 'attack')
+        cells = attackCells(at, c, facingBetween(at, foe, localSide), foe)
     }
     const moved = at.col !== cur.col || at.row !== cur.row
     return { ghost: moved ? at : null, cells }
@@ -595,7 +611,12 @@ export function BattleScreen({
   const targetCells = useMemo(
     () =>
       hoveredCard?.kind === 'attack'
-        ? attackCells(preview.from, hoveredCard, battle.facing(localSide), view.pos[1 - localSide])
+        ? attackCells(
+            preview.from,
+            hoveredCard,
+            facingBetween(preview.from, view.pos[1 - localSide], localSide),
+            view.pos[1 - localSide],
+          )
         : planPreview.cells,
     [hoveredCard, preview, battle, localSide, planPreview],
   )
@@ -715,7 +736,9 @@ export function BattleScreen({
           cells: attackCells(
             step.snapshot.pos[actor],
             step.card,
-            battle.facing(actor),
+            // ⚠ **이 스텝의 스냅샷**으로 방향을 잰다 — `battle.facing()`은 이미 턴이
+            //   끝난 뒤의 위치를 보므로, 재생 중에 사거리가 엉뚱한 쪽에 그려진다.
+            facingBetween(step.snapshot.pos[actor], step.snapshot.pos[foe], actor),
             step.snapshot.pos[foe],
           ),
           actor,
@@ -1097,8 +1120,15 @@ export function BattleScreen({
           <div className="cards__row">
             {/* 이동 칩 — 판을 눌러도 되지만, **쿨타임과 남은 이동 수단이 한눈에**
                 보여야 계획을 세울 수 있다. 화살표만 남긴 최소 형태. */}
-            <div className="cards__moves">
-              {hand.filter((c) => c.kind === 'move').map((c) => {
+            {/* 얼어붙었으면 화살표를 통째로 **이유로 바꾼다** — 흐린 화살표만 남기면
+                "왜 안 눌리지"가 되고, 그게 이동 불가 신고의 원인이었다. */}
+            <div className={`cards__moves ${frozen ? 'cards__moves--frozen' : ''}`}>
+              {frozen ? (
+                <span className="movechip__frozen">
+                  ❄ 얼어붙음
+                  <em>이번 턴 이동 불가</em>
+                </span>
+              ) : hand.filter((c) => c.kind === 'move').map((c) => {
                 const cd = cdLeft(c.id)
                 const usable = selectable(c) && canAfford(c)
                 const f = faceCard(c)
@@ -1115,7 +1145,8 @@ export function BattleScreen({
                     {cd > 0 && <span className="movechip__cd">{cd}</span>}
                   </button>
                 )
-              })}
+              })
+              }
             </div>
             <div className="cards__hand">
             {hand.filter((c) => c.kind !== 'move').map((c) => {

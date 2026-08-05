@@ -27,10 +27,25 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
  */
 const SRC = { file: 'public/sprites/hero-knight/idle.png', frameW: 90, frameH: 50, frame: 0 }
 
-/** 아이콘에서 캐릭터가 차지할 높이 비율. 너무 크면 홈 화면에서 답답해 보인다. */
-const FIGURE_H = 0.62
-/** 발끝을 바닥에서 얼마나 띄울지(캔버스 높이 비율). 살짝 아래에 세운다. */
-const FOOT_MARGIN = 0.16
+/**
+ * **얼굴만 잘라 쓴다**(2026-08-05 요청: "앱아이콘 얼굴만 나오도록, 예전 아이콘처럼").
+ *
+ * 전엔 전신을 넣었는데, 홈 화면 아이콘은 실제로 **48px까지 줄어든다** — 90×50짜리
+ * 스프라이트의 전신을 거기 담으면 얼굴이 두세 화소로 뭉개지고, 뻗은 검이 폭을
+ * 잡아먹어 캐릭터는 더 작아진다. 지워진 옛 사이버 아이콘이 잘 읽혔던 이유는
+ * 취향이 아니라 구도였다 — **대상 하나가 캔버스를 꽉 채우고 대비가 셌다.**
+ *
+ * 좌표는 `cutFigure()`가 잘라 낸 **bbox 안의 화소**다(현재 44×40). 얼굴·투구
+ * 머리칼 + 어깨와 붉은 망토 윗단까지 담아 "누구인지"가 읽히게 한다 — 눈코입만
+ * 따면 7×8 화소라 어떤 크기에서도 얼룩으로만 보인다.
+ * ⚠ 시트를 갈아 끼우면 이 값이 그대로 어긋난다. `--preview`로 눈으로 맞출 것.
+ */
+const FACE = { x: 26, y: 0, w: 14, h: 13 }
+
+/** 잘라 낸 얼굴이 아이콘에서 차지할 비율. 옛 아이콘과 같은 "꽉 찬" 구도. */
+const FIGURE_H = 0.78
+/** 시선이 가운데보다 살짝 위에 오도록 내려 앉히는 양(캔버스 높이 비율). */
+const DROP = 0.04
 /** 마스터 캔버스. 여기서 한 번 그리고 각 크기로 줄인다. */
 const MASTER = 1024
 
@@ -86,36 +101,45 @@ function cutFigure() {
     const from = ((y0 + y) * im.w + frame * fw + x0) * 4
     im.px.copy(px, y * w * 4, from, from + w * 4)
   }
-  /**
-   * 가운데를 **bbox가 아니라 화소 무게중심**으로 잡는다. 뻗은 검이 bbox를 한쪽으로
-   * 크게 늘려서, bbox 기준으로 맞추면 몸이 반대쪽으로 밀려 보인다.
-   */
-  let mass = 0
-  let sum = 0
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const a = px[(y * w + x) * 4 + 3]
-      mass += a
-      sum += a * x
+  return { w, h, px }
+}
+
+/**
+ * bbox에서 **얼굴 부분만** 다시 잘라 낸다(`FACE`). 정사각 아이콘이므로 짧은 변을
+ * 늘려 정사각으로 맞추고, 넓힌 만큼은 **아래로**(가슴 쪽) 준다 — 위로 주면 머리
+ * 위 빈 공간만 커진다. 프레임 밖으로 나가는 부분은 투명으로 남겨 두면 되므로
+ * 잘라 낸 범위가 원본을 벗어나도 안전하다.
+ */
+function cutFace(fig) {
+  const side = Math.max(FACE.w, FACE.h)
+  const x0 = Math.round(FACE.x - (side - FACE.w) / 2)
+  const y0 = FACE.y // 정수리를 기준으로 아래로 늘린다
+  const px = Buffer.alloc(side * side * 4)
+  for (let y = 0; y < side; y++) {
+    const sy = y0 + y
+    if (sy < 0 || sy >= fig.h) continue
+    for (let x = 0; x < side; x++) {
+      const sx = x0 + x
+      if (sx < 0 || sx >= fig.w) continue
+      fig.px.copy(px, (y * side + x) * 4, (sy * fig.w + sx) * 4, (sy * fig.w + sx) * 4 + 4)
     }
   }
-  return { w, h, px, cx: sum / mass }
+  return { w: side, h: side, px }
 }
 
 // ---- 배치 -------------------------------------------------------------------
 
 /**
- * 전사를 캔버스 어디에 얼마나 크게 놓을지. **가로는 bbox 기준으로 가운데** —
- * 무게중심에 맞추면 뻗은 검(왼쪽 1/3을 차지한다)이 가장자리에 닿아 잘린다.
- * 대신 몸통 위치(`bodyX`)를 함께 돌려줘서 **배경의 후광을 몸 뒤에 놓는다**:
- * 시선이 몸으로 모이므로 검이 왼쪽으로 치우쳐도 구도가 기울어 보이지 않는다.
+ * 잘라 낸 얼굴을 캔버스 가운데에 놓는다. 정사각 크롭이라 가로세로가 같이 정해지고,
+ * `DROP`만큼만 내려 앉혀 시선이 중앙보다 살짝 위에 오게 한다(초상화의 기본 구도).
+ * `bodyX`는 배경 후광의 중심 — 얼굴이 곧 주인공이므로 캔버스 가운데다.
  */
 function layout(size, fig) {
   const scale = Math.max(1, Math.round((size * FIGURE_H) / fig.h))
   const w = fig.w * scale
   const h = fig.h * scale
   const x0 = Math.round((size - w) / 2)
-  return { scale, w, h, x0, y0: Math.round(size * (1 - FOOT_MARGIN) - h), bodyX: x0 + fig.cx * scale }
+  return { scale, w, h, x0, y0: Math.round((size - h) / 2 + size * DROP), bodyX: size / 2 }
 }
 
 // ---- 그리기 -----------------------------------------------------------------
@@ -171,22 +195,11 @@ function drawBackdrop(px, size, { bodyX, span = size }) {
  * ⚠ 시트가 **오른쪽을 본다**(`sprites.ts`의 `facesRight: true`). 게임의 "앞 =
  *   오른쪽" 규약과 같으므로 뒤집지 않는다.
  */
-function drawFigure(px, size, fig, { shadow = true } = {}) {
-  const { scale, w, h, x0, y0, bodyX } = layout(size, fig)
+function drawFigure(px, size, fig) {
+  const { scale, w, h, x0, y0 } = layout(size, fig)
 
-  // 발밑 그림자 — 캐릭터가 배경 위에 떠 보이지 않게 붙잡아 준다
-  if (shadow) {
-    const cy = y0 + h
-    const rx = size * 0.2
-    const ry = size * 0.035
-    for (let y = Math.max(0, (cy - ry) | 0); y < Math.min(size, cy + ry); y++) {
-      for (let x = Math.max(0, (bodyX - rx) | 0); x < Math.min(size, bodyX + rx); x++) {
-        const d = Math.hypot((x - bodyX) / rx, (y - cy) / ry)
-        over(px, (y * size + x) * 4, BG_EDGE, (1 - smooth(d)) * 0.7)
-      }
-    }
-  }
-
+  // 발밑 그림자는 없앴다 — 얼굴 크롭이라 발이 없다. 얼굴을 배경에서 떼어 놓는
+  // 일은 이제 배경의 횃불 후광(`drawBackdrop` ②)이 혼자 한다.
   for (let y = 0; y < h; y++) {
     const sy = (y / scale) | 0
     const dy = y0 + y
@@ -254,7 +267,7 @@ function circleMask(px, size) {
 
 // ---- 굽기 -------------------------------------------------------------------
 
-const fig = cutFigure()
+const fig = cutFace(cutFigure())
 
 /** 배경 + 전사(홈 화면에 그대로 놓이는 완성본). */
 const master = Buffer.alloc(MASTER * MASTER * 4)
@@ -277,7 +290,7 @@ const background = Buffer.alloc(FG * FG * 4)
   const inner = Math.round(FG * SAFE)
   const off = Math.round((FG - inner) / 2)
   const tmp = Buffer.alloc(inner * inner * 4)
-  drawFigure(tmp, inner, fig, { shadow: false })
+  drawFigure(tmp, inner, fig)
   for (let y = 0; y < inner; y++)
     tmp.copy(foreground, ((y + off) * FG + off) * 4, y * inner * 4, (y + 1) * inner * 4)
   // 배경은 캔버스 전체에 그리되 후광은 안전 영역 안의 몸통 뒤에 맞춘다 —

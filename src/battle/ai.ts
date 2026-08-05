@@ -5,6 +5,7 @@ import {
   GRID_COLS,
   MOVE_DELTA,
   inBounds,
+  facingBetween,
   isCollapsedCell,
   isFullyCollapsed,
   type Cell,
@@ -46,13 +47,21 @@ interface ArchMod {
   energyFloor: number
   /** >0이면 카이팅 — 상대와의 가로 간격이 이 값보다 좁아지면 물러난다. */
   keepGap: number
+  /**
+   * **걸음걸이**(2026-08-05) — 접근 경로의 모양. 같은 거리에서도 성격마다 다른
+   * 길로 와야 "다른 몬스터와 싸운다"가 읽힌다(`approachCards`).
+   *   diag  대각선으로 곧장 파고든다(돌격·기본)
+   *   lane  줄부터 갈아타고 옆에서 들어온다(교란)
+   *   hold  줄을 안 쫓고 가로로만 좁힌다(거북이)
+   */
+  gait: 'diag' | 'lane' | 'hold'
 }
 const ARCH: Record<Archetype, ArchMod> = {
-  rusher: { aggression: +0.06, guardChance: -0.12, panicGuard: -0.25, energyFloor: -6, keepGap: 0 },
-  kiter: { aggression: -0.02, guardChance: +0.05, panicGuard: +0.05, energyFloor: +2, keepGap: 2 },
-  turtle: { aggression: -0.12, guardChance: +0.3, panicGuard: +0.25, energyFloor: +4, keepGap: 0 },
-  skirmisher: { aggression: 0, guardChance: +0.05, panicGuard: 0, energyFloor: 0, keepGap: 1 },
-  balanced: { aggression: 0, guardChance: 0, panicGuard: 0, energyFloor: 0, keepGap: 0 },
+  rusher: { aggression: +0.06, guardChance: -0.12, panicGuard: -0.25, energyFloor: -6, keepGap: 0, gait: 'diag' },
+  kiter: { aggression: -0.02, guardChance: +0.05, panicGuard: +0.05, energyFloor: +2, keepGap: 2, gait: 'diag' },
+  turtle: { aggression: -0.12, guardChance: +0.3, panicGuard: +0.25, energyFloor: +4, keepGap: 0, gait: 'hold' },
+  skirmisher: { aggression: 0, guardChance: +0.05, panicGuard: 0, energyFloor: 0, keepGap: 1, gait: 'lane' },
+  balanced: { aggression: 0, guardChance: 0, panicGuard: 0, energyFloor: 0, keepGap: 0, gait: 'diag' },
 }
 
 /**
@@ -106,8 +115,13 @@ export function decideAI(
     energyFloor: Math.max(0, base.energyFloor + a.energyFloor),
   }
   const keepGap = a.keepGap
-  const facing = self === 0 ? 1 : -1
+  const gait = a.gait
   const opp = state.pos[1 - self]
+  // ⚠ 방향은 **지금 서 있는 자리**에서 상대를 보고 정한다(2026-08-05, 엔진과 같은
+  //   규칙). 좌석 고정이던 시절엔 AI가 상대를 지나친 뒤에도 반대쪽을 겨눠서,
+  //   "닿는다"고 판단한 공격이 엔진에서 헛쳤다. `pos`는 슬롯마다 갱신되므로
+  //   상수가 아니라 함수여야 한다.
+  const facingAt = (from: Cell) => facingBetween(from, opp, self)
 
   // local, mutable view of self for planning across the 3 slots
   const pos: Cell = { col: state.pos[self].col, row: state.pos[self].row }
@@ -164,26 +178,58 @@ export function decideAI(
     pos.row = cur.row
   }
 
-  // ordered movement wishes to line up with / close on the opponent
+  /**
+   * 접근 이동 — 상대에게 붙거나 줄을 맞추려는 희망 목록(앞에 있는 것부터 시도).
+   *
+   * ⚠ 2026-08-05 신고: "몬스터들이 그냥 직선으로만 오기 때문에 엄청 루즈하다."
+   *   원인은 여기가 **상하좌우 네 방향만 골랐다**는 것이다. 대각 이동 카드 4장은
+   *   진작 공용 풀에 있었는데(`m-ur`/`m-ul`/`m-dr`/`m-dl`) `moveCard`를
+   *   `'right'|'left'|'up'|'down'`으로만 불러서 한 번도 쓰이지 않았다. 그래서
+   *   가로·세로가 둘 다 어긋나면 **슬롯 두 장을 써서 ㄱ자로** 돌아왔고,
+   *   20종이 전부 같은 계단 모양으로 걸어왔다.
+   *
+   * 두 가지를 넣었다:
+   *   ⓐ 두 축이 모두 어긋나면 **대각선 한 장으로 둘 다 좁힌다**(슬롯 하나 절약).
+   *   ⓑ 순서를 **성격(archetype)이 고른다** — 같은 거리라도 돌격형은 파고들고,
+   *      교란형은 줄부터 옮기고, 거북이는 줄을 안 쫓는다. 걸어오는 모양이 달라야
+   *      "다른 몬스터와 싸운다"가 읽힌다.
+   */
   function approachCards(): CardDef[] {
     const dcol = opp.col - pos.col
     const drow = opp.row - pos.row
     const wishes: (CardDef | undefined)[] = []
     const hdir: MoveDir = dcol >= 0 ? 'right' : 'left'
     const vdir: MoveDir = drow >= 0 ? 'down' : 'up'
+    const diag = `${vdir}-${hdir}` as MoveDir // 'down-right' 등 — MoveDir와 이름이 같다
+    const offAxis = dcol !== 0 && drow !== 0
     // 겹친 상태: 밀착으로 때릴 카드가 하나도 없을 때만 한 칸 빠져 공격 위치를
     // 회복한다. 대부분의 카드는 겹친 상대를 그대로 때리므로 굳이 자리를 뜨지 않는다.
     if (dcol === 0 && drow === 0 && !canPointBlank) {
-      const back: MoveDir = facing > 0 ? 'left' : 'right'
+      const back: MoveDir = facingAt(pos) > 0 ? 'left' : 'right'
       wishes.push(moveCard(back, 1), moveCard('up', 1), moveCard('down', 1))
     }
-    if (Math.abs(dcol) >= 2) wishes.push(moveCard(hdir, 2))
-    if (Math.abs(dcol) >= 3) {
+    if (gait === 'lane') {
+      // 교란형 — 줄부터 갈아탄다. 옆에서 들어오는 그림이 나온다.
+      if (drow !== 0) wishes.push(moveCard(vdir, 1))
+      if (offAxis) wishes.push(moveCard(diag, 1))
+      if (Math.abs(dcol) >= 2) wishes.push(moveCard(hdir, 2))
+      if (dcol !== 0) wishes.push(moveCard(hdir, 1))
+    } else if (gait === 'hold') {
+      // 거북이 — 줄을 쫓지 않고 가로로만 좁힌다. 상대가 오게 두는 쪽이다.
+      if (Math.abs(dcol) >= 2) wishes.push(moveCard(hdir, 2))
       if (dcol !== 0) wishes.push(moveCard(hdir, 1))
       if (drow !== 0) wishes.push(moveCard(vdir, 1))
     } else {
-      if (drow !== 0) wishes.push(moveCard(vdir, 1))
-      if (dcol !== 0) wishes.push(moveCard(hdir, 1))
+      // 돌격형·기본 — 대각선으로 파고드는 게 언제나 가장 빠르다.
+      if (offAxis) wishes.push(moveCard(diag, 1))
+      if (Math.abs(dcol) >= 2) wishes.push(moveCard(hdir, 2))
+      if (Math.abs(dcol) >= 3) {
+        if (dcol !== 0) wishes.push(moveCard(hdir, 1))
+        if (drow !== 0) wishes.push(moveCard(vdir, 1))
+      } else {
+        if (drow !== 0) wishes.push(moveCard(vdir, 1))
+        if (dcol !== 0) wishes.push(moveCard(hdir, 1))
+      }
     }
     // 덱에 없어 undefined인 이동은 제외. 상대 셀에 올라서는 이동은 밀착 공격
     // 수단이 있을 때만 허용한다 — 없으면 올라타 봤자 공격이 전부 빗나간다.
@@ -251,7 +297,7 @@ export function decideAI(
 
     // 2) attack if one connects right now and we roll aggressive
     const ready = attacks
-      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0) && hits(pos, facing, a, opp))
+      .filter((a) => usable(a) && energy >= (a.energyCost ?? 0) && hits(pos, facingAt(pos), a, opp))
       .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
     if (ready.length > 0 && Math.random() < cfg.aggression) {
       take(ready[0])

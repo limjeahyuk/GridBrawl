@@ -21,7 +21,10 @@
  *    - `cards.ts`·`roster.ts`의 카드 수치·사거리·능력 (id 추가·삭제 포함)
  *  연출·UI·밸런스 시뮬처럼 `resolveTurn`의 출력에 닿지 않는 변경은 올리지 않아도 된다.
  */
-export const RULES_VERSION = 1
+// 2 (2026-08-05): ① `facing`이 좌석 고정 → **상대 위치 기준**(넉백·사거리 방향이
+//     상대를 지나친 뒤에도 맞는다) ② 같은 슬롯 트레이드에서 **밀려난 쪽의 공격을
+//     새 자리에서 재판정**한다. 둘 다 `resolveTurn` 출력이 바뀐다.
+export const RULES_VERSION = 2
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
@@ -278,6 +281,22 @@ export const isFullyCollapsed = (turn: number): boolean =>
 /** 다음 턴에 붕괴가 시작되거나 한 단계 더 번지는가(경고용). */
 export const collapseEscalatesNext = (turn: number): boolean =>
   collapseStageAt(turn + 1) > collapseStageAt(turn)
+/**
+ * 파이터가 바라보는 쪽(+1 오른쪽 / −1 왼쪽) — **상대 위치로만 정한다**(2026-08-05).
+ *
+ * 엔진·AI·UI가 **같은 답을 내야 하는** 규칙이라 여기 한 곳에 둔다. 예전엔 각자
+ * `p === 0 ? 1 : -1`을 손으로 적어 좌석에 못 박혀 있었고, 대시·넉백으로 상대를
+ * 지나치면 셋 다 반대쪽을 향했다(그런데 스프라이트만 `faceToward`로 제대로
+ * 돌아서서, 보이는 방향과 판정이 어긋났다).
+ *
+ * 같은 열이면 겨룰 기준이 없으므로 `seat`으로 떨어진다(p0=오른쪽). 순수 함수라
+ * 랜덤이 없고, 같은 판을 보는 두 피어는 같은 값을 낸다 — 멀티 락스텝 안전.
+ */
+export function facingBetween(me: Cell, foe: Cell, seat: number): number {
+  if (foe.col === me.col) return seat === 0 ? 1 : -1
+  return foe.col > me.col ? 1 : -1
+}
+
 /** Both fighters start on the middle row at opposite ends, facing each other. */
 export const START_CELLS: readonly [Cell, Cell] = [
   { col: 0, row: 1 },
