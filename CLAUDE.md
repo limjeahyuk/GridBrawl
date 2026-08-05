@@ -252,7 +252,9 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
   - ⚠ **`LoginScreen`의 "게스트로 시작"은 어떤 조건에서도 사라지면 안 된다.** 앱 전체가 로그인 뒤에 막혀 있어서, 게스트 경로가 없으면 **네트워크 없는 첫 실행에서 앱이 통째로 잠긴다** — 오프라인에서 아무것도 못 보는 앱은 iOS 심사 2.1/4.2 반려 사유다. 구글 로그인을 네이티브에 붙여도 병행 유지한다.
   - ⚠ **네이티브 구글 로그인을 붙이면 Sign in with Apple이 의무가 된다**(심사지침 4.8 — 제3자 로그인을 쓰면 동등한 프라이버시 옵션을 같이 제공해야 한다). 게스트는 계정 서비스가 아니라 대체재가 안 된다. 계정을 지원하면 **앱 안에서 계정 삭제**(5.1.1(v))도 필요하고, RTDB `decks/<uid>`도 같이 지워야 한다.
   - ⚠ **iOS는 iPhone 전용이다**(`TARGETED_DEVICE_FAMILY = 1`, 2026-08-04). iPad를 포함하면 App Store 업로드가 **가로 2방향만으로는 거부된다** — iPad 멀티태스킹은 세로 2방향까지 전부 선언하라고 요구한다. UI에 반응형 대응이 전혀 없고(판이 1280×302 가로 띠) 세로에서는 레이아웃이 무너지므로 iPhone 전용으로 내렸다. iPad를 열려면 **세로 레이아웃을 먼저 만들어야** 한다.
-  - ⚠ **`ios/App/App/public/`은 `npx cap sync`가 굽는 사본이다** — 이걸 빼먹으면 오래된 웹 빌드가 그대로 앱에 담긴다(2026-08-03에 7/26자 사본이 남아 있어 **스프라이트·배경이 통째로 빠진 상태**였다). 아카이브 전에는 반드시 `npm run build && npx cap sync ios`.
+  - ⚠ **`ios/App/App/public/`은 `npx cap sync`가 굽는 사본이다** — 이걸 빼먹으면 오래된 웹 빌드가 그대로 앱에 담긴다(2026-08-03에 7/26자 사본이 남아 있어 **스프라이트·배경이 통째로 빠진 상태**였다). 2026-08-05에 **또 같은 일이 있었다**(8/04 10:13 사본 — 지도 개편·타이틀 변경·배경 3개 커밋이 앱에 없었다). 이 폴더는 **gitignore돼 있어 다른 머신에서 클론하면 아예 비어 있다** — 앱을 만지는 모든 머신에서 매번 `npm run build && npx cap sync ios`를 돌려야 하고, 아카이브 전에는 필수다.
+  - ⚠ **Capacitor 8.4.1은 Xcode 16.2(Swift 6.0.3)에서 컴파일되지 않는다**(2026-08-05 확인). 배포되는 `Capacitor.xcframework`가 더 새 Swift로 구워져서 `CAPPluginCall.reject`가 `#if compiler(>=5.3) && $NonescapableTypes` 안에 들어가 있고, 그 기능이 없는 컴파일러에선 **선언 자체가 사라져** `@capacitor/app`이 `value of type 'CAPPluginCall' has no member 'reject'`로 터진다(플러그인 버전 문제가 아니다). **Xcode 26 이상에서 빌드한다.** 판정은 한 줄로 된다 — `#if $NonescapableTypes`를 `swiftc`로 컴파일해 보면 그 Xcode가 되는지 바로 나온다.
+  - ⚠ **`.env`도 gitignore다**(`VITE_FIREBASE_DB_URL`·`VITE_FIREBASE_API_KEY`). 값은 **빌드 시점에 번들에 박히므로**, 새 머신에서 `.env` 없이 `npm run build`를 하면 온라인 멀티·구글 로그인이 조용히 죽은 앱이 나온다. 클론 직후 `.env`부터 복사할 것.
 
 ### 앱 아이콘 — 전사 (2026-08-04)
 
