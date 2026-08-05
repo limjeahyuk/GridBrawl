@@ -2,6 +2,18 @@
 
 > 이 파일은 매 세션 자동 로드됩니다. **전투/카드/토너먼트 관련 작업 전에는 반드시 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)를 먼저 읽으세요.**
 
+## 🚫 지금은 PvP를 건드리지 않는다 (2026-08-05 · 사용자 결정)
+
+**로그라이크가 완성될 때까지 PvP는 작업 대상이 아니다.** 밸런스도 **고려 대상이 아니다.**
+
+- **PvP 밸런스를 맞추려고 하지 말 것.** 매치업이 아무리 기울어 있어도(현재 전사 편중) 그건 지금 고칠 문제가 아니다.
+- **`npm run sim`(1:1 시뮬)을 밸런스 판단에 쓰지 말 것.** 밸런스의 기준은 **`npm run sim:run -- --sweep`(런 클리어율·밴드) 하나뿐**이다.
+- **엔진 룰 변경이 PvP에 미치는 영향을 저울에 올리지 말 것.** 룰이 바뀌면 PvP도 같이 움직이지만(런 전용인 `SIGNATURE.runEffect`와 달리), 그걸 이유로 룰 변경을 미루거나 절충하지 않는다. 로그라이크에 옳은 결정을 그대로 한다.
+- **보고할 때도 PvP 수치를 꺼내지 말 것.** 물어보지 않은 걱정거리를 만들 뿐이다.
+- 예외는 **깨짐**이다 — PvP가 크래시하거나 온라인 매칭이 안 되거나 desync가 나면 그건 밸런스가 아니라 버그이므로 고친다. `RULES_VERSION`은 계속 규칙대로 올린다(락스텝 안전장치라 밸런스와 무관하다).
+
+이 방침은 **로그라이크가 완성되면 해제된다.** 그때까지 PvP 밸런스 관련 기록(아래 매치업 승률 등)은 **과거 측정치일 뿐 목표가 아니다.**
+
 ## 무엇을 만드는가
 
 *이누야샤 데몬 토너먼트*의 룰을 차용한 **1:1 토너먼트 카드 전투 게임**. 한 턴에 카드 3장을 골라 순서대로 실행해 상대 HP를 깎고, 이기면 다음 상대로 진행. 다크 판타지 세계관의 오리지널 캐릭터를 쓴다. 전체 룰/설계는 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
@@ -77,7 +89,7 @@
 
 **남은 것 (다음 후보)**
 1. ~~대형 몬스터 시트~~ — **2026-08-03 완료.** 20종이 직업 시트 3개를 돌려 쓰던 상태가 끝났다(13개 시트). 새 팩을 더할 때의 절차는 [public/sprites/README.md](public/sprites/README.md)
-2. **PvP 밸런스** — 3직업 개편 이후 **한 번도 안 맞췄다**(사용자 결정으로 후순위). `npm run sim`의 매치업 승률로 본다. ⚠ 이 시뮬은 시드가 없어 ±0.05턴 흔들리니 큰 차이만 신뢰할 것
+2. ~~PvP 밸런스~~ — **동결**(2026-08-05 사용자 결정). 로그라이크가 완성될 때까지 손대지 않고, **밸런스 문제로 취급하지도 않는다**. 위 "🚫 지금은 PvP를 건드리지 않는다" 참고
 3. ~~보스 연출~~ — **2026-08-05 완료**(아래 "보스 전용 카드·무대·컷인")
 4. **다인 전투(Phase 2)** — 엔진이 엄격히 1:1(`pos/hp/chars`)이라 코어 재작성이 필요. 상세 [docs/ROGUELIKE.md](docs/ROGUELIKE.md)
 
@@ -156,9 +168,9 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 
 - React 19 + TypeScript + Vite. 외부 게임 엔진 없음 — 전투는 순수 TS(`CardBattle`)로 시뮬레이션 후 React 렌더.
 - 개발 `npm run dev` · 빌드 `npm run build` · 타입검사 `npm run typecheck`
-- **밸런스 시뮬 2종** — 수치를 바꾸면 해당 시뮬로 확인한다:
-  - `npm run sim [판수]` — 단판 1:1(`scripts/simulate.ts`, AI vs AI 36매치업 → 평균 턴·승률). 목표는 "5턴 페이싱".
-  - `npm run sim:run [런수] [-- --seed=N --skill=hard|normal|easy --policy=greedy|random --char=warrior --sweep]` — **로그라이크 런 전체**(`scripts/simrun.ts` → 클리어율·층별 관문·몬스터별 승률·캐릭터별 클리어율). 시드 고정으로 튜닝 전후를 비교한다. 1800런 ≈ 1초. 읽는 법·현재 수치는 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑩.
+- **밸런스 시뮬** — 수치를 바꾸면 이걸로 확인한다:
+  - `npm run sim:run [런수] [-- --seed=N --skill=hard|normal|easy --policy=greedy|random --char=warrior --sweep]` — **로그라이크 런 전체**(`scripts/simrun.ts` → 클리어율·층별 관문·몬스터별 승률·캐릭터별 클리어율). 시드 고정으로 튜닝 전후를 비교한다. 1800런 ≈ 1초. 읽는 법·현재 수치는 [docs/ROGUELIKE.md](docs/ROGUELIKE.md) ⑩. **지금 밸런스의 기준은 이것 하나뿐이다.**
+  - 🚫 `npm run sim [판수]` — 단판 1:1(`scripts/simulate.ts`, AI vs AI 매치업 승률). **PvP 동결 중이라 밸런스 판단에 쓰지 않는다**(위 "🚫 지금은 PvP를 건드리지 않는다"). 스크립트는 남겨 두지만, 돌려서 나온 승률로 카드·패시브를 조정하지 말 것.
 - 코드 변경(특히 전투 로직) 후에는 `npm run typecheck`로 확인.
 
 ## 코드 지도
