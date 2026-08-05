@@ -10,6 +10,7 @@ import { ROSTER, getChar } from '../../data/roster'
 import { getRelic, signatureRelicId } from '../../game/relics'
 import { startingDeck } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
+import { useCardZoom } from '../CardDetail'
 
 export function RunStartScreen({
   onStart,
@@ -20,6 +21,8 @@ export function RunStartScreen({
 }) {
   const [charId, setCharId] = useState<string>(ROSTER[0].id)
   const char = getChar(charId)
+  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+  const zoom = useCardZoom(char.accent)
   const sigRelic = getRelic(signatureRelicId(charId))
   // 시작 덱은 공용 카드 + 그 직업의 기본기 3장이라 캐릭터를 바꾸면 같이 바뀐다.
   const startCards = useMemo(() => {
@@ -72,6 +75,7 @@ export function RunStartScreen({
               key={c.id}
               className="runstart__card"
               style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
+              {...zoom.bind(c)}
             >
               <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
             </div>
@@ -84,6 +88,7 @@ export function RunStartScreen({
           그리드로 출발 ▶
         </button>
       </div>
+      {zoom.sheet}
     </div>
   )
 }

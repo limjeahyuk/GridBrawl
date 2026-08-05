@@ -574,27 +574,17 @@
   max-width: 100%;
   min-width: 0;
 }
-.cards__moves {
-  /* 세로 2줄로 채우고 필요한 만큼 열이 늘어난다 — 이동 카드는 4~10장으로
-     덱마다 달라서, 열 수를 고정하면 어떤 덱에선 너무 높아진다. */
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, auto);
-  gap: 4px;
-  flex: none;
-  padding-right: 12px;
-  border-right: 1px solid var(--panel-edge);
-}
-/* 빙결 — 화살표 자리를 통째로 이유가 대신한다. 칩 격자(2줄 × N열)와 달리
-   한 덩어리라 흐름을 되돌린다. */
-.cards__moves--frozen {
-  display: flex;
-  align-items: center;
-}
-.movechip__frozen {
+/* ---- 얼어붙음 알림 -------------------------------------------------------
+   이동 칩(화살표 격자)은 2026-08-05에 통째로 뺐다 — 이동은 판의 칸을 눌러서
+   하므로 같은 일을 두 번 하는 자리였고, 좁은 손패 폭만 잡아먹었다. 다만
+   **얼었을 때 이유를 놓을 자리**는 남겨야 한다("왜 칸이 안 밝지"). */
+.cards__note {
   display: grid;
   gap: 2px;
+  align-content: center;
+  flex: none;
   padding: 6px 10px;
+  margin-right: 10px;
   border: 1px solid color-mix(in srgb, var(--neon-cyan) 45%, var(--panel-edge));
   border-radius: 8px;
   background: color-mix(in srgb, var(--neon-cyan) 12%, var(--bg-2));
@@ -605,55 +595,9 @@
   color: var(--text);
   white-space: nowrap;
 }
-.movechip__frozen em {
+.cards__note em {
   font-style: normal;
   font-weight: 600;
   font-size: 10px;
   color: var(--text-dim);
-}
-
-.movechip {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  position: relative;
-  padding: 0;
-  border: 1px solid var(--panel-edge);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--neon-yellow) 8%, var(--bg-2));
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
-}
-.movechip:not(:disabled):hover {
-  border-color: var(--neon-yellow);
-  background: color-mix(in srgb, var(--neon-yellow) 22%, var(--bg-2));
-  color: var(--text);
-}
-.movechip:not(:disabled):active {
-  transform: translateY(1px);
-}
-.movechip.is-dim {
-  opacity: 0.32;
-  cursor: not-allowed;
-}
-.movechip__arrow {
-  font-size: 13px;
-  line-height: 1;
-  letter-spacing: -1px;
-}
-.movechip__cd {
-  position: absolute;
-  right: -3px;
-  top: -4px;
-  min-width: 14px;
-  padding: 0 3px;
-  border-radius: 7px;
-  background: var(--bg-0);
-  border: 1px solid var(--panel-edge);
-  font-family: var(--font-display);
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--neon-yellow);
 }

@@ -7,6 +7,7 @@ import {
   advanceFloor, buyShopItem, rollShop, type RunState, type ShopItem,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
+import { useCardZoom } from '../CardDetail'
 import { RunBar } from '../RunBar'
 
 
@@ -16,6 +17,8 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
   const [bought, setBought] = useState<Set<string>>(new Set())
   const [pending, setPending] = useState<ShopItem | null>(null) // 카드 선택 대기(제거/획득)
   const char = getChar(cur.charId)
+  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+  const zoom = useCardZoom(char.accent)
 
   const buy = (item: ShopItem) => {
     if (bought.has(item.id)) return
@@ -52,7 +55,11 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
                 key={`${id}-${i}`}
                 className="reward__card"
                 style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                onClick={() => pickCard(id)}
+                {...zoom.bind(c)}
+                onClick={() => {
+                  if (zoom.consumedClick()) return
+                  pickCard(id)
+                }}
               >
                 <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
               </button>
@@ -81,7 +88,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
           const card = item.kind === 'card' ? resolveRunCard(cur.charId, item.cardId) : null
           return (
             <div key={item.id} className={`shop__item ${owned ? 'is-owned' : ''}`}>
-              <div className="shop__item-body">
+              <div className="shop__item-body" {...(card ? zoom.bind(card) : {})}>
                 {card && <CardFace card={card} accent={cardAccent(card, char.accent)} compact />}
                 {relic && (
                   <div className="shop__relic">
@@ -117,6 +124,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
       <button className="btn shop__leave" onClick={() => onDone(advanceFloor(cur))}>
         상점을 떠난다 ▶
       </button>
+      {zoom.sheet}
     </div>
   )
 }

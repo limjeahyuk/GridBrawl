@@ -16,7 +16,8 @@ import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine
 import type { BattleScene } from '../../game/run'
 import type { BossCinematic } from '../../game/bosses'
 import { deckFor } from '../../battle/cards'
-import { CardFace, cardAccent, moveIcon } from '../CardFace'
+import { CardFace, cardAccent } from '../CardFace'
+import { CardDetail, useLongPress } from '../CardDetail'
 import { PortraitSvg } from '../PortraitSvg'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
@@ -401,6 +402,20 @@ export function BattleScreen({
   const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
   // 필살기 컷인(시그니처 카드 발동 순간 화면을 덮는 연출)
   const [cutIn, setCutIn] = useState<{ seq: number; actor: 0 | 1; card: CardDef } | null>(null)
+  /**
+   * 꾹 눌러 여는 **카드 상세**(2026-08-05). 압축 카드에서 뺀 설명·능력의 뜻이
+   * 여기로 갔다. 누른 카드는 ref로 기억한다 — 훅은 화면에 하나뿐이라 손패 카드마다
+   * 따로 걸 수 없다.
+   */
+  const [zoomCard, setZoomCard] = useState<CardDef | null>(null)
+  const pressedCard = useRef<CardDef | null>(null)
+  const longPress = useLongPress(() => {
+    if (!pressedCard.current) return
+    setZoomCard(pressedCard.current)
+    setHoveredCard(null)
+    setHoverSlot(null)
+    playSfx('ui')
+  })
   // 보스 컷인 — 등장(전투 시작)과 격노(페이즈 전환) 두 번뿐이다. 필살기 컷인과
   // **별개의 레이어**다: 저쪽은 카드 한 장을 못 박고 이쪽은 상대가 누구인지를 못 박는다.
   const [bossCut, setBossCut] = useState<{ seq: number; kind: 'entrance' | 'enrage' } | null>(null)
@@ -1071,22 +1086,37 @@ export function BattleScreen({
               <button
                 key={i}
                 className={`slot ${c ? 'slot--filled' : ''}`}
-                onClick={() => clearSlot(i)}
+                onClick={() => {
+                  // 슬롯도 꾹 누르면 읽힌다 — 담아 놓고 "이게 뭐였지" 할 때가 있다.
+                  if (longPress.consumedClick()) return
+                  clearSlot(i)
+                }}
                 onPointerEnter={(e) => {
                   if (e.pointerType !== 'mouse') return
                   setHoveredCard(c && (c.kind === 'attack' || c.kind === 'move') ? c : null)
                   setHoverSlot(i)
                 }}
                 onPointerDown={(e) => {
+                  pressedCard.current = c
+                  if (c) longPress.handlers.onPointerDown(e)
                   if (e.pointerType === 'mouse') return
                   setHoveredCard(c && (c.kind === 'attack' || c.kind === 'move') ? c : null)
                   setHoverSlot(i)
                 }}
-                onPointerLeave={() => setHoveredCard(null)}
+                onPointerMove={longPress.handlers.onPointerMove}
+                onContextMenu={longPress.handlers.onContextMenu}
+                onPointerLeave={() => {
+                  longPress.handlers.onPointerLeave()
+                  setHoveredCard(null)
+                }}
                 onPointerUp={(e) => {
+                  longPress.handlers.onPointerUp()
                   if (e.pointerType !== 'mouse') setHoveredCard(null)
                 }}
-                onPointerCancel={() => setHoveredCard(null)}
+                onPointerCancel={() => {
+                  longPress.handlers.onPointerCancel()
+                  setHoveredCard(null)
+                }}
                 style={c ? { ['--accent' as string]: cardAccent(c, local.accent) } : undefined}
               >
                 <span className="slot__no">{i + 1}</span>
@@ -1115,39 +1145,19 @@ export function BattleScreen({
             </div>
           </div>
 
-          {/* 탭 없음 — 이동은 판을 눌러서 한다(`moveTargets`). 손패에는 공격·수비만
-              남으므로 탭을 오갈 이유가 사라졌다. */}
+          {/* ⚠ **이동 카드는 선택창에 없다**(2026-08-05 사용자 요청). 이동은 판의
+              칸을 눌러서 하므로(`moveTargets`) 화살표 칩은 같은 일을 두 번 하는
+              자리였고, 좁은 손패 폭만 잡아먹었다. 쿨타임·기력으로 못 쓰는 이동은
+              **칸이 아예 안 밝혀지는** 것으로 이미 드러난다. */}
           <div className="cards__row">
-            {/* 이동 칩 — 판을 눌러도 되지만, **쿨타임과 남은 이동 수단이 한눈에**
-                보여야 계획을 세울 수 있다. 화살표만 남긴 최소 형태. */}
-            {/* 얼어붙었으면 화살표를 통째로 **이유로 바꾼다** — 흐린 화살표만 남기면
-                "왜 안 눌리지"가 되고, 그게 이동 불가 신고의 원인이었다. */}
-            <div className={`cards__moves ${frozen ? 'cards__moves--frozen' : ''}`}>
-              {frozen ? (
-                <span className="movechip__frozen">
-                  ❄ 얼어붙음
-                  <em>이번 턴 이동 불가</em>
-                </span>
-              ) : hand.filter((c) => c.kind === 'move').map((c) => {
-                const cd = cdLeft(c.id)
-                const usable = selectable(c) && canAfford(c)
-                const f = faceCard(c)
-                return (
-                  <button
-                    key={c.id}
-                    className={`movechip ${usable ? '' : 'is-dim'}`}
-                    onClick={() => addCard(c)}
-                    disabled={!usable}
-                    title={f.name}
-                    aria-label={f.name}
-                  >
-                    <span className="movechip__arrow">{moveIcon(f.dir, f.steps ?? 1)}</span>
-                    {cd > 0 && <span className="movechip__cd">{cd}</span>}
-                  </button>
-                )
-              })
-              }
-            </div>
+            {/* 얼어붙었으면 손패 앞에 이유를 세워 둔다 — 이동 칩이 사라진 뒤에도
+                "왜 칸이 안 밝지"에 답할 자리는 남아 있어야 한다. */}
+            {frozen && (
+              <span className="cards__note">
+                ❄ 얼어붙음
+                <em>이번 턴 이동 불가</em>
+              </span>
+            )}
             <div className="cards__hand">
             {hand.filter((c) => c.kind !== 'move').map((c) => {
               const onCd = cdLeft(c.id) > 0
@@ -1159,10 +1169,13 @@ export function BattleScreen({
               return (
                 <button
                   key={c.id}
-                  className={`handcard handcard--${c.kind} ${unusable ? 'is-dim' : ''} ${
-                    unusable ? 'is-locked' : ''
-                  }`}
-                  onClick={() => addCard(c)}
+                  className={`handcard handcard--${c.kind} ${unusable ? 'is-dim is-locked' : ''}`}
+                  onClick={() => {
+                    // 꾹 눌러 상세를 연 손짓이면 이번 클릭은 삼킨다 — 읽으려고
+                    // 눌렀을 뿐인데 카드가 슬롯에 담기면 안 된다.
+                    if (longPress.consumedClick()) return
+                    addCard(c)
+                  }}
                   onPointerEnter={(e) => {
                     // 마우스: 올려두면 미리보기(hover). 못 쓰는 카드는 예측 없음.
                     if (unusable || e.pointerType !== 'mouse') return
@@ -1170,17 +1183,32 @@ export function BattleScreen({
                     setHoverSlot(null)
                   }}
                   onPointerDown={(e) => {
+                    pressedCard.current = c
+                    longPress.handlers.onPointerDown(e)
                     // 터치/펜: 누르는 동안만 미리보기(떼면 배치되며 지워짐).
                     if (unusable || e.pointerType === 'mouse') return
                     setHoveredCard(c)
                     setHoverSlot(null)
                   }}
-                  onPointerLeave={() => setHoveredCard(null)}
+                  onPointerMove={longPress.handlers.onPointerMove}
+                  onContextMenu={longPress.handlers.onContextMenu}
+                  onPointerLeave={() => {
+                    longPress.handlers.onPointerLeave()
+                    setHoveredCard(null)
+                  }}
                   onPointerUp={(e) => {
+                    longPress.handlers.onPointerUp()
                     if (e.pointerType !== 'mouse') setHoveredCard(null)
                   }}
-                  onPointerCancel={() => setHoveredCard(null)}
-                  disabled={unusable}
+                  onPointerCancel={() => {
+                    longPress.handlers.onPointerCancel()
+                    setHoveredCard(null)
+                  }}
+                  // ⚠ `disabled`를 걸지 않는다 — 못 쓰는 버튼은 포인터 이벤트를 아예
+                  //   안 받아서 **꾹 눌러 읽을 수조차 없어진다**. 정작 설명이 가장
+                  //   궁금한 건 "왜 못 쓰지" 싶은 그 카드다. 선택은 `addCard`가 막는다.
+                  aria-disabled={unusable}
+                  title="꾹 누르면 자세히"
                   style={{ ['--accent' as string]: cardAccent(c, local.accent) }}
                 >
                   <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} compact />
@@ -1207,6 +1235,15 @@ export function BattleScreen({
                   .join('     ') || ' '}
           </div>
         </div>
+      )}
+
+      {/* 꾹 눌러 편 카드 상세 — 판 위 어디든 덮는다(읽는 동안 전투는 멈춰 있다). */}
+      {zoomCard && (
+        <CardDetail
+          card={faceCard(zoomCard)}
+          accent={local.accent}
+          onClose={() => setZoomCard(null)}
+        />
       )}
 
       {cutIn && (

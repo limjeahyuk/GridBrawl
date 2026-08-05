@@ -7,12 +7,15 @@ import {
   advanceFloor, resolveEventEffect, rollEvent, type EventEffect, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
+import { useCardZoom } from '../CardDetail'
 import { RunBar } from '../RunBar'
 
 
 export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
   const ev = useMemo(() => rollEvent(), [run])
   const char = getChar(run.charId)
+  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+  const zoom = useCardZoom(char.accent)
   const [pending, setPending] = useState<EventEffect | null>(null) // 카드 제거 대기
   const [result, setResult] = useState<{ run: RunState; relicId?: string } | null>(null)
 
@@ -66,13 +69,18 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
                 key={`${id}-${i}`}
                 className="reward__card"
                 style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                onClick={() => pickRemove(id)}
+                {...zoom.bind(c)}
+                onClick={() => {
+                  if (zoom.consumedClick()) return
+                  pickRemove(id)
+                }}
               >
                 <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
               </button>
             )
           })}
         </div>
+        {zoom.sheet}
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>
