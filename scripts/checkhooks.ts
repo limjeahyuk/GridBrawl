@@ -68,33 +68,33 @@ console.log('\n=== 유물·카드 훅 검증 ===\n')
 // --- 누적 기력 트리거 -------------------------------------------------------
 console.log('누적 기력 트리거(energyTriggers)')
 {
-  // 내려치기(기력 10) 3장 = 턴당 30 소모. per:60이면 2턴째에 한 번 발동해야 한다.
-  const b = battleWith({ energyTriggers: [{ per: 60, heal: 999 }] })
+  // 내려치기(기력 5) 3장 = 턴당 15 소모. per:30이면 2턴째에 한 번 발동해야 한다.
+  const b = battleWith({ energyTriggers: [{ per: 30, heal: 999 }] })
   b.state.hp[0] = 100
   const atk3 = [card('c-strike'), card('c-strike'), card('c-strike')]
   b.resolveTurn(atk3, IDLE) // 누적 10 (같은 공격은 한 턴에 한 번 → 나머지는 중복이라 그대로 소모)
   const after1 = b.state.energySpent[0]
   b.resolveTurn(atk3, IDLE)
-  check('per 60 · 누적 기력이 60을 넘기면 발동', b.state.energySpent[0] >= 60 && b.state.hp[0] > 100, true)
-  check('1턴 만에는 발동 안 함(누적 < 60)', after1 < 60, true)
+  check('per 30 · 누적 기력이 30을 넘기면 발동', b.state.energySpent[0] >= 30 && b.state.hp[0] > 100, true)
+  check('1턴 만에는 발동 안 함(누적 < 30)', after1 < 30, true)
 }
 {
-  // per:20 · 한 턴에 30을 쓰면 같은 슬롯 정산에서 **여러 번** 터져야 한다.
-  const b = battleWith({ energyTriggers: [{ per: 20, shield: 5 }] })
+  // per:10 · 한 턴에 15를 쓰면 같은 슬롯 정산에서 **여러 번** 터져야 한다.
+  const b = battleWith({ energyTriggers: [{ per: 10, shield: 5 }] })
   b.resolveTurn([card('c-strike'), card('c-strike'), card('c-strike')], IDLE)
-  check('per 20 · 한 턴 30 소모 → 1회 이상 발동(보호막)', b.state.energySpent[0] === 30, true)
+  check('per 10 · 한 턴 15 소모 → 1회 이상 발동(보호막)', b.state.energySpent[0] === 15, true)
 }
 {
   // 주기가 다른 두 트리거는 **각자** 터진다(합치지 않는다).
   const merged = mergeRelics(['capacitor', 'circuit'])
   check('유물 2개의 트리거는 배열로 누적', merged.energyTriggers?.length, 2)
-  check('주기가 섞이지 않는다', merged.energyTriggers?.map((t) => t.per), [200, 100])
+  check('주기가 섞이지 않는다', merged.energyTriggers?.map((t) => t.per), [100, 50])
 }
 
 // --- 기절 ------------------------------------------------------------------
 console.log('\n기절(stun)')
 {
-  const b = battleWith({ energyTriggers: [{ per: 10, stun: 1 }] })
+  const b = battleWith({ energyTriggers: [{ per: 5, stun: 1 }] })
   b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('트리거가 상대에게 기절을 걸었다', b.state.stunned[1] >= 1, true)
   const hpBefore = b.state.hp[0]
@@ -155,9 +155,9 @@ console.log('\n관통(alwaysPierce) · 각성(empower) · 선제 보호막(openi
 {
   const b = battleWith({})
   b.resolveTurn([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
-  check('피의 각인 1회 → 각성 +6', b.state.empowered[0], 6)
+  check('피의 각인 1회 → 각성 +3', b.state.empowered[0], 3)
   b.resolveTurn([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
-  check('각성은 중첩된다 → +12', b.state.empowered[0], 12)
+  check('각성은 중첩된다 → +6', b.state.empowered[0], 6)
 }
 {
   const b = battleWith({ openingShield: 40 })
@@ -247,8 +247,8 @@ console.log('\n상태이상 — 지속피해·빙결·시너지')
   const b = battleWith({}, {})
   const hp0 = b.state.hp[1]
   b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  // 타격 10 + 같은 턴 독 틱 5 = 15
-  check('독 — 맞은 턴에 바로 1틱(10+5)', hp0 - b.state.hp[1], 15)
+  // 타격 5 + 같은 턴 독 틱 5 = 10
+  check('독 — 맞은 턴에 바로 1틱(5+5)', hp0 - b.state.hp[1], 10)
   check('독이 3턴짜리로 걸린다(1틱 소모 후 2턴 남음)', b.statusOf(1, 'poison')?.turns, 2)
   const hp1 = b.state.hp[1]
   b.resolveTurn(HOLD, HOLD) // 때리지 않아도 계속 갉아야 한다
@@ -581,9 +581,9 @@ console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다
 
   // ① 신고된 버그 — 내가 죽이면 적의 공격은 아예 안 나간다.
   {
-    const { b, attacks } = trade(200, 1)
+    const { b, attacks } = trade(103, 1)
     check('죽인 적의 공격은 해소되지 않는다', attacks.length, 1)
-    check('죽인 적에게 피해를 안 입는다', b.state.hp[0], 204) // 200 + 패시브 재생 4
+    check('죽인 적에게 피해를 안 입는다', b.state.hp[0], 103) // 풀피(103) 유지 — 재생은 상한에서 막힘
     check('적은 쓰러졌고 내가 이긴다', [b.state.hp[1], b.state.over, b.state.winner], [0, true, 0])
   }
   // ② 아무도 안 죽으면 예전 그대로 — 양쪽 다 맞는 트레이드.
@@ -624,7 +624,7 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   plain.resolveTurn([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
   const boosted = battleWith({ guardPowerPct: 50 })
   boosted.resolveTurn([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
-  check('guardPowerPct 50% — 가드 50 → 75', boosted.state.shield[0] - plain.state.shield[0], 25)
+  check('guardPowerPct 50% — 가드 25 → 38', boosted.state.shield[0] - plain.state.shield[0], 13)
   const std = battleWith({ turnShield: 20 })
   const std2 = battleWith({ turnShield: 20, guardPowerPct: 100 })
   check('guardPowerPct는 매 턴 보호막엔 안 붙는다', std2.state.shield[0], std.state.shield[0])
@@ -634,7 +634,7 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   const b = battleWith({ healPowerPct: 100 })
   b.state.hp[0] = 50
   b.resolveTurn([card('c-repair'), card('c-energy'), card('c-energy')], IDLE)
-  check('healPowerPct 100% — 상처 봉합 20 → 40', b.state.hp[0], 90)
+  check('healPowerPct 100% — 상처 봉합 10 → 20', b.state.hp[0], 70)
   const r = battleWith({ regen: 10, healPowerPct: 50 })
   r.state.hp[0] = 50
   r.resolveTurn(IDLE, IDLE)
@@ -658,7 +658,7 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   check('상대가 만피면 처형 배율 없음', full.maxHp[1] - full.state.hp[1], normal)
 
   const low = battleWith({ executeBonusPct: 100 })
-  low.state.hp[1] = 100 // 205의 절반 이하 — 대신 한 방에 안 죽을 만큼은 남긴다
+  low.state.hp[1] = 40 // 103의 절반 이하 — 대신 한 방에 안 죽을 만큼은 남긴다
   const before = low.state.hp[1]
   low.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('상대가 반피 이하 + 100% → 피해 2배', before - low.state.hp[1], normal * 2)
@@ -683,10 +683,10 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
     b.resolveTurn(HOLD, HOLD)
     return hp - b.state.hp[0] // battleWith는 패시브를 통째로 갈아끼우므로 regen이 없다
   }
-  check('붕괴 1단계 — 턴당 10', at(6, {}), 10)
-  check('붕괴 2단계 — 턴당 16', at(9, {}), 16)
-  check('붕괴 3단계 — 턴당 24', at(12, {}), 24)
-  check('collapseResist가 붕괴 피해를 깎는다', at(6, { collapseResist: 6 }), 4)
+  check('붕괴 1단계 — 턴당 5', at(6, {}), 5)
+  check('붕괴 2단계 — 턴당 8', at(9, {}), 8)
+  check('붕괴 3단계 — 턴당 12', at(12, {}), 12)
+  check('collapseResist가 붕괴 피해를 깎는다', at(6, { collapseResist: 3 }), 2)
   check('collapseResist가 크면 아예 안 아프다', at(6, { collapseResist: 99 }), 0)
 }
 {
@@ -967,12 +967,12 @@ console.log('\n지형 — 바위')
   {
     const hit: CardDef = {
       id: 'test-rockhit', name: '테스트 타격', kind: 'attack', desc: '',
-      range: [{ df: 1, du: 0 }, { df: 2, du: 0 }], damage: 26, energyCost: 0, cooldown: 0,
+      range: [{ df: 1, du: 0 }, { df: 2, du: 0 }], damage: 13, energyCost: 0, cooldown: 0,
     }
     const b = withRocks(rocks([2, 1]))
     b.resolveTurn([hit, card('c-energy'), card('c-energy')], HOLD)
-    check('가로막은 바위가 깎인다', b.state.obstacles[0]?.hp, ROCK_HP - 26)
-    // 두 번 더 때리면 부서져 판에서 사라진다.
+    check('가로막은 바위가 깎인다', b.state.obstacles[0]?.hp, ROCK_HP - 13)
+    // 한 번 더 때리면 부서져 판에서 사라진다.
     b.resolveTurn([hit, card('c-energy'), card('c-energy')], HOLD)
     check('바위가 부서지면 판에서 사라진다', b.state.obstacles.length, 0)
     // 관통은 바위를 그냥 지나간다 — 깎지도 않는다.
@@ -1016,7 +1016,7 @@ console.log('\n지형 — 바위')
       b.state.obstacles.map((r) => r.cell.col).sort((x, y) => x - y),
       [0, 2],
     )
-    check('석벽 체력은 카드가 정한다', b.state.obstacles[0]?.maxHp, 46)
+    check('석벽 체력은 카드가 정한다', b.state.obstacles[0]?.maxHp, 23)
     // 파이터가 선 칸에는 안 세운다(바위 위에 서 있는 상태를 만들면 안 된다).
     // p0=2·p1=3이면 상대 좌우는 1과 3인데, 3은 보스 자신이 서 있으므로 1만 선다.
     const c2 = withRocks([], [2, 1], [3, 1])

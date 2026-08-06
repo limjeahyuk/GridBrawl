@@ -104,11 +104,11 @@ const HP_SCALE_PER_FLOOR = 0.03
  */
 const atkScaleAt = (floor: number): number => {
   const d = floor - 1
-  return Math.round(0.06 * d + 0.008 * d * d)
+  return Math.round(0.03 * d + 0.004 * d * d)
 }
 /** 엘리트 보정 — 엘리트 노드는 같은 몬스터라도 더 두껍고 더 아프다. */
 const ELITE_HP_MULT = 1.2
-const ELITE_ATK_BONUS = 2
+const ELITE_ATK_BONUS = 1
 /**
  * 보스 보정 — 보스는 **두꺼워지는 대신 아파진다**. 마지막 층에서 층 스케일을 그대로
  * 먹으면 체력 400에 육박해 15턴 독안개 소모전이 됐고(시뮬), 그 싸움은 유물로 지속력을
@@ -117,14 +117,14 @@ const ELITE_ATK_BONUS = 2
 const BOSS_HP_SCALE_FACTOR = 0.4
 /** 보상을 포기하고 받는 회복량. 22 → 32(2026-07-30): 15층 사다리에선 누적 소모가
  *  훨씬 커서(7층 진입 체력 49%) 22는 "카드를 포기할 이유"가 못 됐다. */
-export const SKIP_HEAL = 36
+export const SKIP_HEAL = 18
 const GOLD_BASE = 15
 const GOLD_PER_FLOOR = 4
 const GOLD_ELITE_BONUS = 40
 const GOLD_BOSS_BONUS = 80
 const PRICE_CARD = 35
 const PRICE_HEAL = 30
-const PRICE_HEAL_AMOUNT = 50 // 35 → 50: 상점 회복이 층 사이 회복의 주 수단이 되게
+const PRICE_HEAL_AMOUNT = 25 // ÷2 리스케일(2026-08-05): HP 절반이라 회복량도 절반
 
 /**
  * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 버티기 + 원기). 2026-07-31에

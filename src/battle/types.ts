@@ -26,7 +26,9 @@
 //     새 자리에서 재판정**한다. 둘 다 `resolveTurn` 출력이 바뀐다.
 // 3 (2026-08-05): 격자 세로 3행 → **4행**(`GRID_ROWS`). 이동·사거리·전장 붕괴가
 //     닿는 좌표 공간이 바뀌므로 두 피어가 같은 판을 돌려야 한다.
-export const RULES_VERSION = 3
+// 4 (2026-08-05): 전투 수치 전체 ÷2 리스케일(피해·체력·보호막·기력·붕괴·바위·상수).
+//     resolveTurn 출력의 모든 값이 절반이 되므로 구버전과 붙으면 desync.
+export const RULES_VERSION = 4
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
@@ -113,7 +115,7 @@ export const STATUS_TURNS: Record<'poison' | 'burn', number> = {
 }
 
 /** 같은 종류가 겹칠 때 위력 상한. 무한 중첩으로 판이 터지는 걸 막는다. */
-export const STATUS_POWER_CAP = 30
+export const STATUS_POWER_CAP = 15
 
 /** 지속피해 종류인가(빙결 제외) — 정산 대상을 가른다. */
 export const isDot = (k: StatusKind): boolean => k === 'poison' || k === 'burn'
@@ -268,7 +270,7 @@ export interface Obstacle {
 }
 
 /** 바위 기본 체력. 카드 한 장으로는 못 깨고 두세 대를 들여야 하는 값. */
-export const ROCK_HP = 50
+export const ROCK_HP = 25
 
 /** 이 칸에 선 바위(없으면 undefined). */
 export const rockAt = (rocks: readonly Obstacle[], c: Cell): Obstacle | undefined =>
@@ -343,7 +345,7 @@ export interface RockPlan {
 export const COLLAPSE_START_TURN = 6
 export const COLLAPSE_STEP_TURNS = 3
 /** 단계별 턴당 피해(실드 무시). 단계가 오를수록 버티는 값이 커진다. */
-export const COLLAPSE_DAMAGE: readonly number[] = [10, 16, 24]
+export const COLLAPSE_DAMAGE: readonly number[] = [5, 8, 12]
 
 /** 마지막 단계 = 모든 열이 무너지는 단계. 6열이면 stage 2에서 col 0~5 전부. */
 export const COLLAPSE_MAX_STAGE = Math.ceil(GRID_COLS / 2) - 1

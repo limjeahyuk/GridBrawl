@@ -24,9 +24,9 @@ interface AICfg {
 }
 
 const DIFF: Record<Difficulty, AICfg> = {
-  easy: { aggression: 0.55, guardChance: 0.1, energyFloor: 18, panicGuard: 0.15 },
-  normal: { aggression: 0.8, guardChance: 0.2, energyFloor: 24, panicGuard: 0.4 },
-  hard: { aggression: 0.94, guardChance: 0.3, energyFloor: 30, panicGuard: 0.65 },
+  easy: { aggression: 0.55, guardChance: 0.1, energyFloor: 9, panicGuard: 0.15 },
+  normal: { aggression: 0.8, guardChance: 0.2, energyFloor: 12, panicGuard: 0.4 },
+  hard: { aggression: 0.94, guardChance: 0.3, energyFloor: 15, panicGuard: 0.65 },
 }
 
 /**
@@ -59,7 +59,7 @@ interface ArchMod {
   gait: 'diag' | 'lane' | 'hold'
 }
 const ARCH: Record<Archetype, ArchMod> = {
-  rusher: { aggression: +0.06, guardChance: -0.12, panicGuard: -0.25, energyFloor: -6, keepGap: 0, gait: 'diag' },
+  rusher: { aggression: +0.06, guardChance: -0.12, panicGuard: -0.25, energyFloor: -3, keepGap: 0, gait: 'diag' },
   kiter: { aggression: -0.02, guardChance: +0.05, panicGuard: +0.05, energyFloor: +2, keepGap: 2, gait: 'diag' },
   turtle: { aggression: -0.12, guardChance: +0.3, panicGuard: +0.25, energyFloor: +4, keepGap: 0, gait: 'hold' },
   skirmisher: { aggression: 0, guardChance: +0.05, panicGuard: 0, energyFloor: 0, keepGap: 1, gait: 'lane' },
