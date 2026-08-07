@@ -603,9 +603,15 @@
 }
 
 /* --- 지형: 바위 --------------------------------------------------------------
-   판을 막고 선 돌덩이. 이미지 파일 없이 그라디언트로만 그린다(배경 한 장을 빼면
-   이 게임의 규칙이다). 스프라이트가 정수 배율이라 여기도 각진 실루엣으로 맞춘다.
+   판을 막고 선 돌덩이. **픽셀 스프라이트다**(`public/terrain/rocks.png` — 굽는 건
+   `npm run rocks`). 예전엔 그라디언트로 그렸는데, 판 배경이 어두운 자주/갈색이라
+   같은 계열의 갈색 덩어리가 **바닥에 눌어붙은 진흙처럼** 읽혔다(사용자 신고).
+   실루엣과 하이라이트가 있는 회색 돌이라야 "저건 막힌 칸이다"가 한눈에 잡힌다.
 
+   ⚠ **배율은 정수 4배 고정**(32px 원본 → 128px). 캐릭터가 정수 배율이라 바위만
+      소수 배율이면 픽셀 크기가 어긋난다 — `image-rendering: pixelated`와 짝이다.
+   ⚠ `--v`는 스트립의 **프레임 번호**다(0~3 회색 · 4~5 이끼 · 6~7 흑요석).
+      `scripts/packrocks.mjs`의 `PICKS` 순서와 짝이라 한쪽만 바꾸면 어긋난다.
    ⚠ **클릭을 먹으면 안 된다.** 이동은 칸을 눌러서 하는데, 바위는 칸을 통째로
       덮으므로 `pointer-events`가 살아 있으면 그 자리로 가는 것도, 그 뒤 칸을
       누르는 것도 막힌다(`.fighter`가 같은 이유로 이미 뚫려 있다).
@@ -613,59 +619,50 @@
       스프라이트는 발밑 기준이라 윗줄 바위와 겹쳐 그려진다. 사람이 가려지면 안 된다. */
 .rock {
   position: absolute;
-  width: 12.4%;
-  height: 21%;
-  transform: translate(-50%, -58%);
+  width: 128px;
+  height: 128px;
+  transform: translate(-50%, -60%);
   z-index: 1;
   pointer-events: none;
   animation: rock-rise 260ms cubic-bezier(0.2, 1.3, 0.5, 1);
+  /* 스트립 8프레임 × 32px를 4배로 — 폭 1024px. `--v`번째 프레임만 보인다. */
+  background-image: url('/terrain/rocks.png');
+  background-repeat: no-repeat;
+  background-size: 1024px 128px;
+  background-position: calc(var(--v, 0) * -128px) 0;
+  image-rendering: pixelated;
+  /* 판 위에 얹혀 있다는 접지감. 그림자를 실루엣에서 직접 뽑으므로 돌 종류가
+     바뀌어도 따로 손볼 데가 없다(예전 `::after` 타원은 모양이 안 맞았다). */
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.8));
 }
-.rock::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  /* 각진 돌덩이 — 왼쪽 위 모서리가 횃불을 받고 오른쪽 아래로 갈수록 그늘진다.
-     ⚠ 판 배경이 어두운 자주/보라라, 회색을 그대로 쓰면 **얼룩처럼 붕 뜬다**.
-     황동 팔레트 쪽으로 눕힌 갈색 돌에 검은 테두리를 둘러 실루엣을 잡는다. */
-  clip-path: polygon(18% 100%, 3% 58%, 14% 22%, 40% 3%, 70% 9%, 94% 38%, 90% 80%, 66% 100%);
-  background: linear-gradient(206deg, #6a5b48 0%, #423729 30%, #241d16 64%, #100c0a 100%);
-  box-shadow:
-    inset 2px 2px 0 rgba(214, 190, 146, 0.3),
-    inset -4px -10px 14px rgba(0, 0, 0, 0.7),
-    inset 0 0 0 2px rgba(8, 6, 5, 0.66);
-  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.75));
-}
-/* 발밑 그림자 — 바닥에 얹혀 있다는 것만 알려주는 최소한의 접지. */
-.rock::after {
-  content: '';
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  bottom: -6%;
-  height: 16%;
-  border-radius: 50%;
-  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.5), transparent 72%);
-}
-/* 남은 체력 = 금이 간 정도. 숫자를 안 읽어도 "한 대 더면 깨진다"가 보여야 한다. */
+/* 남은 체력 = 금이 간 정도. 숫자를 안 읽어도 "한 대 더면 깨진다"가 보여야 한다.
+   ⚠ 금은 **돌 위에만** 그려야 한다 — 스프라이트 자체를 마스크로 써서 네모난
+      상자에 금이 그어지는 걸 막는다(clip-path로는 돌마다 모양이 달라 못 맞춘다). */
 .rock__hp {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: calc(1 - var(--frac, 1));
   background:
-    linear-gradient(126deg, transparent 46%, rgba(18, 10, 8, 0.85) 47% 49%, transparent 50%),
-    linear-gradient(72deg, transparent 58%, rgba(18, 10, 8, 0.7) 59% 61%, transparent 62%);
-  clip-path: polygon(18% 100%, 3% 58%, 14% 22%, 40% 3%, 70% 9%, 94% 38%, 90% 80%, 66% 100%);
+    linear-gradient(126deg, transparent 46%, rgba(12, 7, 6, 0.9) 47% 50%, transparent 51%),
+    linear-gradient(72deg, transparent 58%, rgba(12, 7, 6, 0.75) 59% 62%, transparent 63%);
+  mask-image: url('/terrain/rocks.png');
+  mask-repeat: no-repeat;
+  mask-size: 1024px 128px;
+  mask-position: calc(var(--v, 0) * -128px) 0;
+  -webkit-mask-image: url('/terrain/rocks.png');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 1024px 128px;
+  -webkit-mask-position: calc(var(--v, 0) * -128px) 0;
 }
-/* 마지막 단계는 붉게 달아오른다 — 다음 한 대에 깨진다는 신호. */
-.rock--wear2::before {
-  box-shadow:
-    inset 0 3px 0 rgba(214, 198, 172, 0.2),
-    inset 0 -6px 10px rgba(0, 0, 0, 0.5),
-    0 0 10px rgba(198, 78, 40, 0.45),
-    0 6px 10px rgba(0, 0, 0, 0.45);
+/* 마지막 단계는 붉게 달아오른다 — 다음 한 대에 깨진다는 신호. 실루엣에서 뽑은
+   빛이라 돌 모양을 그대로 따라간다. */
+.rock--wear2 {
+  filter:
+    drop-shadow(0 3px 2px rgba(0, 0, 0, 0.8))
+    drop-shadow(0 0 6px rgba(198, 78, 40, 0.75));
 }
 @keyframes rock-rise {
-  from { transform: translate(-50%, -20%) scaleY(0.2); opacity: 0; }
-  to { transform: translate(-50%, -58%) scaleY(1); opacity: 1; }
+  from { transform: translate(-50%, -26%) scaleY(0.2); opacity: 0; }
+  to { transform: translate(-50%, -60%) scaleY(1); opacity: 1; }
 }

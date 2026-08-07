@@ -138,6 +138,22 @@ function applyMovePreview(from: Cell, card: CardDef, rocks: readonly Obstacle[] 
   return cur
 }
 
+/**
+ * 그 칸에 설 바위의 **스트립 프레임 번호**(`public/terrain/rocks.png`의 `--v`).
+ * 재질은 무대가 정하고(묘지=이끼 · 용암=흑요석 · 나머지=회색), 그 안에서 어느
+ * 덩이인지는 **칸 좌표로** 고른다 — 판에 두세 덩이가 동시에 서므로 다 같은 모양이면
+ * 도장을 찍은 것처럼 읽힌다. 좌표를 쓰는 이유는 재현성이다: 렌더마다 굴리면 바위가
+ * 맞을 때마다 다른 돌로 바뀌고, 랜덤을 쓰면 두 피어의 화면이 달라진다.
+ * ⚠ 프레임 구간은 `scripts/packrocks.mjs`의 `PICKS` 순서와 짝이다.
+ */
+function rockVariant(cell: Cell, scene: BattleScene): number {
+  const [base, count] = scene === 'lava' ? [6, 2] : scene === 'cemetery' ? [4, 2] : [0, 4]
+  // ⚠ 계수는 `5·2`여야 한다. 재질이 둘뿐일 때(`count = 2`) 이 식은 **열의 홀짝**으로
+  //   떨어지는데, 계수를 둘 다 홀수로 잡으면 `(열+행)`의 홀짝이 되어 묘지 배치의
+  //   두 바위 (2,0)·(3,3)가 **같은 그림**을 받는다(실제로 그렇게 나왔다).
+  return base + ((cell.col * 5 + cell.row * 2) % count)
+}
+
 const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   hit: '명중!',
   blocked: '가드됨',
@@ -1042,6 +1058,7 @@ export function BattleScreen({
           {view.obstacles.map((r) => {
             const frac = r.hp / Math.max(1, r.maxHp)
             const wear = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2
+            const v = rockVariant(r.cell, scene)
             return (
               <div
                 key={`rock-${r.cell.col},${r.cell.row}`}
@@ -1049,10 +1066,11 @@ export function BattleScreen({
                 style={{
                   left: `${cellX(dcol(r.cell.col))}%`,
                   top: `${cellY(r.cell.row)}%`,
+                  ['--v' as string]: v,
                 }}
                 aria-hidden
               >
-                <span className="rock__hp" style={{ ['--frac' as string]: frac }} />
+                <span className="rock__hp" style={{ ['--frac' as string]: frac, ['--v' as string]: v }} />
               </div>
             )
           })}

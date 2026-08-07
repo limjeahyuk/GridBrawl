@@ -688,8 +688,13 @@ export class CardBattle {
      */
     const raiseRocks = (p: number, plan: RockPlan): Cell[] => {
       const anchor = plan.where === 'flankFoe' ? s.pos[1 - p] : s.pos[p]
+      // `ahead`는 내가 바라보는 쪽으로 한 칸만 세운다(좌우 두 칸이 아니다).
+      const cols =
+        plan.where === 'ahead'
+          ? [this.facing(p) * Math.max(1, Math.round(plan.dist ?? 1))]
+          : [-1, 1]
       const made: Cell[] = []
-      for (const dc of [-1, 1]) {
+      for (const dc of cols) {
         const cell: Cell = { col: anchor.col + dc, row: anchor.row }
         if (!inBounds(cell)) continue
         if (sameCell(cell, s.pos[0]) || sameCell(cell, s.pos[1])) continue
@@ -777,7 +782,10 @@ export class CardBattle {
       // 돌아갔으므로 여기 오지 않는다. 이동공격은 **거기에 더해** 움직인 칸만큼 더 문다.
       tickPoison(p, 1)
       if (c.dashForward) tickPoison(p, this.applyDash(p, c.dashForward))
-      if (c.raiseRocks) raiseRocks(p, c.raiseRocks)
+      // ⚠ 공격 카드의 바위는 여기서 세우지 않는다 — `settleAttack`이 **넉백 뒤에**
+      //   세운다. 지형 카드는 "밀어내고 그 자리에 바위를 세운다"가 요점이라, 여기서
+      //   세우면 상대가 아직 그 칸에 서 있어서 `raiseRocks`가 건너뛰고 만다.
+      //   (가드 카드의 석벽은 넉백이 없으므로 지금처럼 가드 스텝 직후에 세운다.)
       const recoil = c.recoil ?? 0
       const d = 1 - p
       const atkPas = this.passive[p]
@@ -997,6 +1005,23 @@ export class CardBattle {
       // "밀려났다 → 독이 퍼졌다"로 순서대로 읽힌다.
       tickPoison(1 - r.p, shoved)
       if (r.rocks.length) damageRocks(r.p, r.rocks, r.rockDmg)
+      // 지형 카드가 세우는 바위 — **넉백이 끝난 뒤**다(전사 「돌기둥 세우기」·마법사
+      // 「석순 소환」). 그래야 "밀어내고 그 자리를 막는다"가 실제로 성립한다: 상대가
+      // 아직 그 칸이면 `raiseRocks`가 건너뛰므로, **밀어내지 못하면 못 세운다**가
+      // 그대로 규칙이 된다(벽에 처박혀 기절한 대신 길은 안 막힌다).
+      // ⚠ 기력이 모자라 불발(`nofuel`)이면 아무 대가도 안 치렀으므로 세우지 않는다.
+      if (r.card.raiseRocks && r.result !== 'nofuel' && raiseRocks(r.p, r.card.raiseRocks).length)
+        steps.push({
+          phase: 'rock',
+          actor: r.p,
+          card: ROCK_RAISE_CARD,
+          result: 'rock',
+          damage: 0,
+          heal: 0,
+          drain: 0,
+          recoil: 0,
+          snapshot: this.snapshot(),
+        })
       // 안개는 공격 스텝 **뒤에** 실어야 "맞았다 → 그 자리에 안개가 깔렸다"로 읽힌다.
       if (r.fog)
         steps.push({

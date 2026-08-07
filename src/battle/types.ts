@@ -48,7 +48,13 @@
 //     · 중독은 **이동 1칸당** 피해(보호막 관통) · 화상은 **피격 1회당** 추가 피해
 //     (보호막 관통) · 빙결은 맞으면 깨지고 그 타격에 추가 피해 · 독안개 타일 추가.
 //     `resolveRound` 출력이 통째로 달라진다.
-export const RULES_VERSION = 5
+// 6 (2026-08-07): **바위가 PvP 판에 놓인다.** 전사 `war-menhir`·마법사 `mag-menhir`가
+//     판에 바위를 세우는 플레이어 카드로 들어왔다 — 그전까지 바위는 런 전용
+//     (`BattleOpts.obstacles`)이라 PvP에서는 지형 규칙 전체가 no-op이었고, 그게
+//     RULES_VERSION을 안 올려도 됐던 근거였다. 이제 카드 두 장이 그 전제를 깬다.
+//     같은 커밋에서 `RockPlan.where`에 `'ahead'`가 생기고, 공격 카드의 바위 세우기가
+//     **넉백 뒤**로 옮겨졌다(`settleAttack`) — 둘 다 `resolveRound` 출력에 닿는다.
+export const RULES_VERSION = 6
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
@@ -430,7 +436,7 @@ export function shadowRock(
   return undefined // 대각으로 어긋난 칸 — 바위가 가리지 않는다
 }
 
-/** 카드가 판에 세우는 바위. 지금은 보스 카드(수호기사)만 쓴다. */
+/** 카드가 판에 세우는 바위. 보스 카드(수호기사)와 전사·마법사의 지형 카드가 쓴다. */
 export interface RockPlan {
   /** 세울 바위의 체력. */
   hp: number
@@ -438,8 +444,14 @@ export interface RockPlan {
    * 어디에 세우는가.
    *   flankFoe  상대의 좌우 두 칸 — **가둔다**(줄을 바꿔야 빠져나온다)
    *   flankSelf 내 좌우 두 칸 — 나에게 붙는 길을 막는다
+   *   ahead     내 facing 기준 `dist`칸 앞 한 칸 — **길을 낸다**(플레이어 카드)
    */
-  where: 'flankFoe' | 'flankSelf'
+  where: 'flankFoe' | 'flankSelf' | 'ahead'
+  /**
+   * `where: 'ahead'`일 때 몇 칸 앞인가(기본 1). 절대 방향이 아니라 **상대 방향**이라
+   * 멀티 미러링이 필요 없다(`dashForward`와 같은 근거).
+   */
+  dist?: number
 }
 
 // ---------------------------------------------------------------------------

@@ -141,6 +141,15 @@ export function abilityList(c: CardDef): AbilityInfo[] {
       meaning: `쓸 때마다 내 체력이 ${c.recoil} 깎인다. 빗나가도 깎인다.`,
       bad: true,
     })
+  if (c.raiseRocks)
+    out.push({
+      icon: '🪨',
+      label: `바위 ${c.raiseRocks.hp}`,
+      meaning:
+        c.raiseRocks.where === 'ahead'
+          ? `내 앞 ${c.raiseRocks.dist ?? 1}칸에 체력 ${c.raiseRocks.hp}짜리 바위를 세운다. 바위 칸은 아무도 못 들어가고, 같은 줄·같은 열의 사격선을 끊는다(대각은 안 가린다). 상대가 그 칸에 있었다면 먼저 밀려나고, 밀어내지 못하면 바위가 서지 않는다.`
+          : `체력 ${c.raiseRocks.hp}짜리 바위를 판에 세운다. 바위 칸은 아무도 못 들어가고, 같은 줄·같은 열의 사격선을 끊는다.`,
+    })
   // 겹친 상대를 못 때리는 원거리 카드만 알려준다 — 대부분의 카드는 때릴 수 있다.
   if (c.kind === 'attack' && c.pointBlank === false)
     out.push({

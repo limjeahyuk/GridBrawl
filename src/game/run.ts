@@ -19,7 +19,7 @@ import {
   type Relic,
   type RunMods,
 } from './relics'
-import { getMonster, monstersOfTier, type MonsterDef } from './monsters'
+import { getMonster, monstersOfTier, type MonsterDef, type TerrainId } from './monsters'
 import { bossScene } from './bosses'
 import { RUN_CARDS } from './runcards'
 import { ROCK_HP, type Obstacle } from '../battle/types'
@@ -374,19 +374,32 @@ export function sceneFor(run: RunState): BattleScene {
 
 // --- 지형(바위) -------------------------------------------------------------
 /**
- * 그 무대에 미리 서 있는 바위(`BattleOpts.obstacles`). **무대마다 다르다** — 판이
- * 6×4짜리 빈 격자뿐이면 어느 전투나 "가로로 붙었다 떨어졌다"만 반복되므로, 무대가
- * 바뀔 때 **판의 모양도 바뀌어야** 층을 내려가는 게 느껴진다. 규칙은 `types.ts`의
- * 지형 절(못 들어간다 · 사격선을 끊는다 · 부술 수 있다).
+ * 판에 미리 서 있는 바위(`BattleOpts.obstacles`). 규칙은 `types.ts`의 지형 절
+ * (못 들어간다 · 사격선을 끊는다 · 부술 수 있다).
+ *
+ * **누가 데려오는가 (2026-08-07 사용자 결정으로 뒤집힘)** — 2026-08-05에는 지형이
+ * **무대**에 붙어 있었다. 1층 묘지부터 비석 둘이 서 있었고, 그래서 첫 전투부터
+ * 판이 막혀 있었다. 사용자 신고: *"바위가 처음부터 나오는 건 좀 별로 — 중간 보스나
+ * 골렘 같은 몇몇 애들한테 나오도록."* 지형이 **분위기**가 아니라 **그 적의 능력**이
+ * 되면, 판이 막힌 것 자체가 "이번 상대는 다르다"는 신호가 된다. 그래서 이제:
+ *   ⓐ 몬스터가 `MonsterDef.terrain`을 가졌으면 그 배치 (골렘 · 가디언 · 화염군주)
+ *   ⓑ 보스 전용 무대면 **빈 판** — 심연은 "도망칠 수 없다"가 정체성이라 엄폐물이
+ *      컨셉과 부딪히고, 성소의 바위는 수호기사가 직접 세우는 것이라 미리 깔면
+ *      「석벽 소환」이 무슨 일을 한 건지 안 보인다
+ *   ⓒ 그 밖의 **엘리트 칸**이면 무너진 무대(`ELITE_TERRAIN`) — 첫 엘리트가 7층이라
+ *      바위를 처음 보는 것도 그때다
+ *   ⓓ 일반 전투는 **빈 판**
  *
  * 배치 원칙 셋 — 이걸 어기면 재미가 아니라 짜증이 된다:
  *   ① **열을 완전히 막지 않는다.** 어느 열에도 최소 두 칸은 뚫려 있어야 한다.
  *      한 열이 통째로 막히면 접근 자체가 불가능해지는 개전이 나온다.
  *   ② **끝열(0·5)에 두지 않는다.** 양쪽 시작 자리이고, 6턴에 가장 먼저 무너지는
  *      열이라 바위를 세워 봐야 금방 사라진다.
- *   ③ **`hall`은 비워 둔다.** 전부 지형이 있으면 지형이 배경이 돼 버린다 — 빈 판이
- *      섞여 있어야 "이 층은 다르다"가 읽힌다.
- * ⚠ **런 전용이다.** PvP·봇전은 `BattleOpts.obstacles`를 안 넘기므로 빈 판 그대로다.
+ *   ③ **대부분의 전투는 빈 판이다.** 전부 지형이 있으면 지형이 배경이 돼 버린다 —
+ *      빈 판이 기본이어야 "이 전투는 다르다"가 읽힌다.
+ * ⚠ **여기서 나오는 바위는 런 전용이다.** PvP·봇전은 `terrainFor`를 안 부른다.
+ *   다만 2026-08-07부터 **카드가 세우는 바위**(`raiseRocks`)는 PvP에도 있다 —
+ *   그래서 `RULES_VERSION`이 6으로 올랐다(`types.ts`).
  * ⚠ 여기 손대면 `npm run sim:run -- --sweep`으로 밴드를 다시 잰다 — 바위는 접근
  *   경로와 사격선을 동시에 바꾸므로 직업마다 다르게 얹힌다.
  */
@@ -396,28 +409,29 @@ const rock = (col: number, row: number, hp = ROCK_HP): Obstacle => ({
   maxHp: hp,
 })
 
-/** 무대별 바위 배치. `npm run check`가 위 원칙 ①②를 이 표에서 직접 검사한다. */
-export const SCENE_TERRAIN: Record<BattleScene, readonly Obstacle[]> = {
-  // 묘지 — 기울어진 비석 둘. 대각으로 어긋나게 둬서 어느 줄도 막지 않는다.
-  // 가장 약하다(1~5층은 지형을 **배우는** 구간이라 부수기 쉬워야 한다).
-  cemetery: [rock(2, 0, 34), rock(3, 3, 34)],
-  // 대전당 — 기본 무대는 빈 판(원칙 ③).
-  hall: [],
-  // 회랑 — 무너진 기둥이 같은 열에 둘. col 3이 아래 두 줄로만 지나가는 **좁은 문**이
-  // 된다. 후반부라 제일 단단하다.
-  corridor: [rock(3, 0, 62), rock(3, 1, 62)],
-  // 용암 — 굳은 용암 덩이 하나. 가운데를 가로막아 직선 접근을 꺾는다.
-  lava: [rock(3, 1)],
-  // 심연(오버로드) — 비워 둔다. "도망칠 수 없다"가 이 보스의 정체성이라, 엄폐물이
-  // 생기면 컨셉과 정면으로 부딪힌다.
-  abyss: [],
-  // 성소(수호기사) — **비워 둔다.** 이 무대의 바위는 보스가 직접 세우는 것이라
-  // 미리 깔아 두면 「석벽 소환」이 무슨 일을 한 건지 안 보인다.
-  sanctum: [],
+/** 이름 붙은 바위 배치. `npm run check`가 위 원칙 ①②를 이 표에서 직접 검사한다. */
+export const TERRAIN: Record<TerrainId, readonly Obstacle[]> = {
+  // 무너진 잔해 둘. 대각으로 어긋나게 둬서 어느 줄도 막지 않는다 — 엘리트 칸의
+  // 기본 배치이자 골렘이 데려오는 것.
+  rubble: [rock(2, 0, 34), rock(3, 3, 34)],
+  // 무너진 기둥이 같은 열에 둘. col 3이 아래 두 줄로만 지나가는 **좁은 문**이 된다.
+  // 가디언(거북이)과 짝이라 제일 단단하다.
+  pillars: [rock(3, 0, 62), rock(3, 1, 62)],
+  // 굳은 용암 덩이 하나. 가운데를 가로막아 직선 접근을 꺾는다.
+  lavaslab: [rock(3, 1)],
 }
 
+/** 몬스터가 자기 지형을 안 가진 엘리트 칸의 기본 배치. */
+const ELITE_TERRAIN: TerrainId = 'rubble'
+
 export function terrainFor(run: RunState): readonly Obstacle[] {
-  return SCENE_TERRAIN[sceneFor(run)]
+  const node = currentNode(run)
+  const own = node.monsterId ? getMonster(node.monsterId).terrain : undefined
+  if (own) return TERRAIN[own]
+  // 보스 전용 무대는 비워 둔다(ⓑ) — 엘리트 칸으로 나오는 보스가 있으므로 아래
+  // 엘리트 규칙보다 **먼저** 걸러야 한다.
+  if (node.monsterId && bossScene(node.monsterId)) return []
+  return node.type === 'elite' ? TERRAIN[ELITE_TERRAIN] : []
 }
 
 // --- 파생값 -----------------------------------------------------------------

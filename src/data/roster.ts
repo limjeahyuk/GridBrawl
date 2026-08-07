@@ -1,4 +1,4 @@
-import type { BuffKind, CardDef, Offset } from '../battle/types'
+import { ROCK_HP, type BuffKind, type CardDef, type Offset } from '../battle/types'
 
 // ---------------------------------------------------------------------------
 // 로스터. **테마는 다크 판타지**(2026-07-31 리스킨 — 사이버 아레나에서 전환).
@@ -319,6 +319,10 @@ export const ROSTER: CharacterDef[] = [
       atk({ id: 'war-grudge', name: '응보의 일격', range: both(1), damage: 10, energyCost: 9, selfShield: 15, fx: 'slash', desc: '앞뒤 한 칸을 치면서 몸을 사린다 — 사용 시 보호막 +15. 맞고 버티며 갚는 카드.' }),
       buff({ id: 'war-cry', name: '불굴의 함성', buff: 'defUp', buffPower: 5, buffRounds: 3, buffCost: 10, accent: '#8fb6d6', desc: '3라운드간 받는 공격 피해 -5. 버티는 구간을 통째로 사 온다 — 쿨타임 2라운드.' }),
       buff({ id: 'war-blood', name: '피의 맹세', buff: 'atkUp', buffPower: 7, buffRounds: 3, buffCost: 13, fx: 'quake', accent: '#c9713a', desc: '3라운드간 내 공격 피해 +7. 방벽을 올리고 버틴 뒤 한 번에 갚을 때.' }),
+      // 지형 카드(2026-08-07) — 판의 모양을 **내가** 바꾸는 첫 플레이어 카드. 규칙·근거는
+      // 아래 `mag-menhir` 옆 주석에 함께 적었다. 전사는 **바로 앞 한 칸**이라 밀착
+      // 싸움에 그대로 얹힌다: 붙은 상대를 떼어내고 그 자리를 막아 다시 못 붙게 한다.
+      atk({ id: 'war-menhir', name: '돌기둥 세우기', range: [fwd(1)], damage: 8, energyCost: 11, push: 1, stun: 1, cooldown: 2, pointBlank: false, raiseRocks: { hp: ROCK_HP, where: 'ahead', dist: 1 }, fx: 'quake', accent: '#c9b183', desc: `바닥을 갈라 바로 앞 한 칸에 돌기둥을 세운다(체력 ${ROCK_HP}). 그 칸에 상대가 서 있었다면 한 칸 밀려나며 피해를 입고 이 라운드 기절한다. 쿨타임 2라운드.` }),
     ],
   },
   {
@@ -384,6 +388,21 @@ export const ROSTER: CharacterDef[] = [
       buff({ id: 'mag-ward', name: '혼백의 장막', buff: 'defUp', buffPower: 5, buffRounds: 3, buffCost: 12, accent: '#6fc0b0', desc: '3라운드간 받는 공격 피해 -5. 큰 주문을 모으는 동안 몸을 지킨다.' }),
       atk({ id: 'mag-blink', name: '그림자 도약', range: CROSS, damage: 10, energyCost: 11, burn: 1, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 상·하·좌·우를 태운다 — 화상 1라운드. 포위를 빠져나오는 카드.' }),
       atk({ id: 'mag-hex', name: '속박의 저주', range: barBoth(1), damage: 11, energyCost: 14, bind: 1, pull: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 세로 3줄을 저주해 상대를 한 칸 끌어당기고 이 라운드 동안 속박한다. 잡아 온 자리에 묶어 두는 카드 — 쿨타임 2라운드.' }),
+      // ---- 지형 카드(2026-08-07) ------------------------------------------------
+      // 판의 모양을 **내가** 바꾸는 첫 플레이어 카드. 그전까지 바위는 무대가 주는
+      // 것이라 플레이어에겐 순수한 방해물이었다.
+      //
+      // ⚠ **앞뒤 대칭 원칙의 예외 둘 중 하나다.** 뒤에도 바위를 세우면 내 등 뒤를
+      //   내가 막아 도망칠 곳이 사라진다 — 이 카드는 방향이 곧 뜻이라 대칭이 성립하지
+      //   않는다(전방 전용을 "정말 강한 것"에만 남긴다는 규칙의 진짜 예외).
+      // ⚠ **바위 위에 사람이 서 있는 상태는 만들 수 없다.** 그래서 그 칸에 상대가
+      //   있으면 넉백 1 + 피해 + 기절로 **먼저 밀어낸다**. 밀어내지 못하면(벽·바위)
+      //   엔진의 처박기가 피해와 기절을 대신 주고 바위는 안 선다 — `raiseRocks`가
+      //   파이터가 선 칸을 건너뛰기 때문이고, 그게 곧 규칙이다.
+      // ⚠ 마법사는 **두 칸 앞**이라 붙기 전에 길을 끊는다. 전사의 한 칸(`war-menhir`)이
+      //   "떼어내고 막는다"라면 이쪽은 "오지 못하게 한다"다 — 낮은 단일 화력을
+      //   거리로 메우는 직업 정체성과 같은 방향이다.
+      atk({ id: 'mag-menhir', name: '석순 소환', range: [fwd(2)], damage: 7, energyCost: 13, push: 1, stun: 1, cooldown: 2, pointBlank: false, raiseRocks: { hp: ROCK_HP, where: 'ahead', dist: 2 }, fx: 'orb', accent: '#c9b183', desc: `두 칸 앞 바닥에서 석순을 끌어올린다(체력 ${ROCK_HP}). 그 칸에 상대가 서 있었다면 한 칸 밀려나며 피해를 입고 이 라운드 기절한다. 쿨타임 2라운드.` }),
     ],
   },
 ]

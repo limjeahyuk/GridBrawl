@@ -33,8 +33,26 @@ export interface MonsterDef {
   /** 몬스터 고유 상시 능력(인라인 패시브). 유물 시스템과 같은 훅을 쓴다. */
   passive: Omit<Passive, 'desc'>
   deckCardIds: string[] // AI가 낼 수 있는 카드
+  /**
+   * **이 몬스터가 데려오는 바위**(`run.ts`의 `TERRAIN`이 실제 배치를 갖는다).
+   * 2026-08-07 전까지는 지형이 **무대**에 붙어 있어서 1층 묘지부터 바위가 서 있었는데,
+   * 사용자 결정으로 "처음부터 나오는 건 별로 — 중간 보스나 골렘 같은 몇몇에게만"으로
+   * 바꿨다. 그래서 지형은 이제 **누구와 싸우느냐**가 정한다:
+   *   ⓐ 여기 값이 있으면 그 배치(골렘처럼 몸이 곧 돌인 것들)
+   *   ⓑ 없고 **엘리트 칸**이면 무너진 무대(`ELITE_TERRAIN`)
+   *   ⓒ 그 외 일반 전투는 **빈 판**
+   * ⚠ 비워 두는 것이 기본이다. 전부 지형이 있으면 지형이 배경이 된다.
+   */
+  terrain?: TerrainId
   note: string // 정체성 한 줄(보상/조우 안내용)
 }
+
+/**
+ * 바위 배치의 이름. 실제 좌표는 `run.ts`의 `TERRAIN`에 있다 — 판 기하는 배치
+ * 원칙(끝열 금지·열을 통째로 막지 않기)과 같은 곳에 두는 게 맞고, `monsters.ts`가
+ * `run.ts`를 import하면 순환이 된다.
+ */
+export type TerrainId = 'rubble' | 'pillars' | 'lavaslab'
 
 // 모든 카드(공용 + 전 캐릭터 고유 + 보스 전용)를 id로 조회 — 몬스터 덱 해석용.
 // ⚠ 보스 전용 카드(`bosscards.ts`)는 **여기서만** 풀에 들어간다. 플레이어 쪽
@@ -157,6 +175,8 @@ export const MONSTERS: MonsterDef[] = [
     aiLevel: 'normal',
     passive: { turnShield: 8, damageReduction: 3 },
     deckCardIds: ['war-wall', 'war-bash', 'war-oath', 'c-energy'],
+    // 무너진 기둥 사이에 선다 — 거북이 성격과 짝이라 "돌아 들어가야 하는" 판이 된다.
+    terrain: 'pillars',
     note: '방벽을 세우고 한 방을 노린다. 뚫기 전엔 안 죽는다.',
   },
   {
@@ -275,6 +295,8 @@ export const MONSTERS: MonsterDef[] = [
     aiLevel: 'normal',
     passive: { damageReduction: 5, turnShield: 5 },
     deckCardIds: ['war-quake', 'war-wall', 'war-bash'],
+    // 몸이 곧 돌인 유일한 몬스터 — 일반 전투로 만나도 판에 바위를 데려온다.
+    terrain: 'rubble',
     note: '거대한 바위 몸. 딜을 뚫기 전엔 꿈쩍도 안 한다.',
   },
   {
@@ -351,6 +373,8 @@ export const MONSTERS: MonsterDef[] = [
     aiLevel: 'hard',
     passive: { attackBonus: 4, revive: 25, turnEnergy: 5 },
     deckCardIds: ['b-pyre-inferno', 'b-pyre-pillar', 'b-pyre-lash', 'b-pyre-ember'],
+    // 굳은 용암 한 덩이. 가운데를 막아 직선 접근을 꺾는다.
+    terrain: 'lavaslab',
     note: '엘리트 — 불씨를 모을수록 무거워진다. 길게 끌면 인페르노가 터진다.',
   },
 ]

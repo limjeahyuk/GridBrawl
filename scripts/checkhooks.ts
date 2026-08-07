@@ -30,9 +30,12 @@ import {
   rollRewards,
   rollShop,
   startRun,
+  terrainFor,
+  type NodeType,
+  type RunState,
 } from '../src/game/run'
 import { RUN_CARDS, RUN_CARD_BY_ID } from '../src/game/runcards'
-import { SCENE_TERRAIN } from '../src/game/run'
+import { TERRAIN } from '../src/game/run'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster, MONSTERS } from '../src/game/monsters'
@@ -1202,10 +1205,12 @@ console.log('\n보스 전용 패턴 (bosses.ts + bosscards.ts)')
   check('스크립트가 쓰는 공격은 몬스터 덱에도 있다', [...new Set(outOfDeck)], [])
 }
 
-// --- 지형: 바위 (2026-08-05) -------------------------------------------------
-// 규칙 셋(못 들어간다 · 사격선을 끊는다 · 부술 수 있다) + 처박기 기절. 지형은
-// **런 전용**이라 마지막 검사가 제일 중요하다 — 바위가 없으면 예전과 완전히 같아야
-// `RULES_VERSION`을 안 올리고 갈 수 있다(PvP 락스텝 안전).
+// --- 지형: 바위 (2026-08-05 · 2026-08-07 개편) -------------------------------
+// 규칙 셋(못 들어간다 · 사격선을 끊는다 · 부술 수 있다) + 처박기 기절.
+// ⚠ **2026-08-07에 전제가 하나 바뀌었다**: 전사·마법사의 지형 카드가 들어오면서
+//   바위가 PvP 판에도 놓인다. 그래서 "바위는 런 전용이라 RULES_VERSION을 안 올린다"는
+//   근거는 더 이상 없고, 같은 커밋에서 5 → 6으로 올렸다. 마지막 검사(빈 지형 = 지형
+//   인자 없음)는 여전히 유효하지만 이제 그 근거가 아니라 **회귀 방지**용이다.
 console.log('\n지형 — 바위')
 {
   const rocks = (...cells: [number, number][]) =>
@@ -1362,10 +1367,53 @@ console.log('\n지형 — 바위')
     check('시작 칸·격자 밖 바위는 버린다', b.state.obstacles.map((r) => r.cell.col), [3])
   }
 
-  // ⑦ 무대별 지형 — 열을 통째로 막으면 접근 자체가 불가능한 개전이 나온다.
+  // ⑤-bis 지형 카드(2026-08-07) — 전사·마법사가 **앞에** 바위를 세운다.
+  // 요점은 "바위 위에 사람이 서 있는 상태를 만들 수 없다"는 것이다: 그 칸에 상대가
+  // 있으면 먼저 밀어내고, 밀어내지 못하면 바위가 서지 않는다.
+  {
+    const wm = getChar('warrior').cards.find((c) => c.id === 'war-menhir')!
+    const mm = getChar('mage').cards.find((c) => c.id === 'mag-menhir')!
+
+    // 빈 칸이면 그냥 선다 — 전사는 앞 1칸, 마법사는 앞 2칸.
+    const a = withRocks([], [1, 1], [5, 1])
+    a.resolveRound([wm, card('c-energy'), card('c-energy')], HOLD)
+    check('돌기둥은 바로 앞 한 칸에 선다', a.state.obstacles.map((r) => r.cell.col), [2])
+    check('돌기둥 체력은 ROCK_HP', a.state.obstacles[0]?.maxHp, ROCK_HP)
+
+    const m = new CardBattle('mage', 'warrior', {
+      chars: [getChar('mage'), getChar('warrior')],
+      passives: [{ desc: '' }, { desc: '' }],
+      startCells: [{ col: 1, row: 1 }, { col: 5, row: 1 }],
+      obstacles: [],
+    })
+    m.resolveRound([mm, card('c-energy'), card('c-energy')], HOLD)
+    check('석순은 두 칸 앞에 선다', m.state.obstacles.map((r) => r.cell.col), [3])
+
+    // 그 칸에 상대가 서 있으면: 밀려나고(넉백 1) 피해를 받고 기절한 **뒤에** 바위가 선다.
+    const b = withRocks([], [1, 1], [2, 1])
+    const hp0 = b.state.hp[1]
+    const st = b.resolveRound([wm, card('c-energy'), card('c-energy')], HOLD)
+    check('상대가 선 칸이면 한 칸 밀려난다', b.state.pos[1].col, 3)
+    check('밀려난 자리에 바위가 선다', b.state.obstacles.map((r) => r.cell.col), [2])
+    check('밀어내며 피해를 준다', b.state.hp[1] > 0 && hp0 - b.state.hp[1] > 0, true)
+    check('밀어내며 기절시킨다', st.some((x) => x.result === 'stun' && x.actor === 1), true)
+
+    // 밀어내지 못하면(등 뒤가 벽) 바위는 서지 않는다 — 대신 처박기가 대가를 치른다.
+    const c3 = withRocks([], [4, 1], [5, 1])
+    const st3 = c3.resolveRound([wm, card('c-energy'), card('c-energy')], HOLD)
+    check('못 밀어내면 바위가 안 선다', c3.state.obstacles.length, 0)
+    check('못 밀어내도 처박혀 기절한다', st3.some((x) => x.result === 'stun' && x.actor === 1), true)
+
+    // `ahead`는 좌석이 아니라 **facing**이다 — 상대를 지나치면 바위도 반대쪽에 선다.
+    const d = withRocks([], [4, 1], [1, 1])
+    d.resolveRound([wm, card('c-energy'), card('c-energy')], HOLD)
+    check('앞은 좌석이 아니라 상대 쪽이다', d.state.obstacles.map((r) => r.cell.col), [3])
+  }
+
+  // ⑦ 이름 붙은 지형 — 열을 통째로 막으면 접근 자체가 불가능한 개전이 나온다.
   {
     const bad: string[] = []
-    for (const [scene, list] of Object.entries(SCENE_TERRAIN)) {
+    for (const [scene, list] of Object.entries(TERRAIN)) {
       for (let col = 0; col < GRID_COLS; col++) {
         const blocked = list.filter((r) => r.cell.col === col).length
         if (blocked >= GRID_ROWS - 1) bad.push(`${scene}:col${col}`)
@@ -1375,7 +1423,33 @@ console.log('\n지형 — 바위')
     check('열을 통째로 막는 무대가 없다', bad, [])
   }
 
-  // ⑧ **바위가 없으면 예전과 똑같다** — 이게 `RULES_VERSION`을 안 올리는 근거다.
+  // ⑦-bis **지형은 누가 데려오는가**(2026-08-07). 층·무대가 아니라 **상대**가 정한다 —
+  // 일반 전투는 빈 판이어야 하고(1층부터 바위가 서 있으면 안 된다), 바위는 엘리트나
+  // 몸이 곧 돌인 몬스터에게서 처음 나온다.
+  {
+    const terrainOf = (type: NodeType, monsterId?: string) =>
+      terrainFor({
+        ...startRun('warrior'),
+        floor: 1,
+        map: [[{ type, monsterId, lane: 1, next: [] }]],
+        picked: [0],
+      } as RunState).length
+
+    check('일반 전투는 빈 판', terrainOf('combat', 'slime'), 0)
+    check('엘리트 칸에는 바위가 선다', terrainOf('elite', 'knight') > 0, true)
+    check('골렘은 일반 전투에도 바위를 데려온다', terrainOf('combat', 'golem') > 0, true)
+    // 보스 전용 무대는 비워 둔다 — 심연은 "도망칠 수 없다"가 정체성이고, 성소의 바위는
+    // 수호기사가 직접 세워야 「석벽 소환」이 무슨 일을 한 건지 보인다.
+    check('심연(오버로드)은 빈 판', terrainOf('boss', 'overlord'), 0)
+    check('성소(수호기사)는 빈 판', terrainOf('elite', 'warden'), 0)
+    // 몬스터가 자기 지형을 가졌으면 보스라도 그게 이긴다(화염군주 = 굳은 용암).
+    check('화염군주는 자기 지형을 가진다', terrainOf('elite', 'pyrelord') > 0, true)
+    // 이벤트·상점 칸은 전투가 아니라 애초에 지형이 없다.
+    check('전투가 아닌 칸은 빈 판', terrainOf('shop'), 0)
+  }
+
+  // ⑧ **바위가 없으면 지형 규칙이 통째로 no-op이다** — 바위도 지형 카드도 없는 판은
+  //    예전과 완전히 같아야 한다(지형 코드가 빈 판에 부작용을 흘리지 않는다는 회귀 검사).
   {
     const plan = [card('m-right'), card('c-strike'), card('c-guard')]
     const run = (obstacles: ReturnType<typeof rocks>) => {
