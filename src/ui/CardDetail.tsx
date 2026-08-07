@@ -132,13 +132,13 @@ export function CardDetail({
           {(card.cooldown ?? 0) > 0 && (
             <div className="cardzoom__stat">
               <b>{card.cooldown}</b>
-              <span>턴 쿨타임</span>
+              <span>라운드 쿨타임</span>
             </div>
           )}
           {card.kind === 'buff' && (
             <div className="cardzoom__stat">
-              <b>{card.buffTurns ?? 1}</b>
-              <span>턴 지속</span>
+              <b>{card.buffRounds ?? 1}</b>
+              <span>라운드 지속</span>
             </div>
           )}
         </div>

@@ -11,7 +11,7 @@ import { COMMON_CARDS, ENERGY_REGEN, deckFor } from '../src/battle/cards'
 import { SHEETS, placeSprite } from '../src/art/sprites'
 import { faceToward } from '../src/ui/screens/BattleScreen'
 import { getChar, ROSTER, type CharacterDef, type Passive } from '../src/data/roster'
-import { mergeRelics, mergeRunMods } from '../src/game/relics'
+import { mergeRelics, mergeRunMods, RELICS, REWARD_RELICS } from '../src/game/relics'
 import {
   LADDER_FLOORS,
   LOCKED_CARD_IDS,
@@ -35,8 +35,19 @@ import { RUN_CARDS, RUN_CARD_BY_ID } from '../src/game/runcards'
 import { SCENE_TERRAIN } from '../src/game/run'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
-import { getMonster } from '../src/game/monsters'
-import { GRID_COLS, GRID_ROWS, ROCK_HP, type CardDef } from '../src/battle/types'
+import { getMonster, MONSTERS } from '../src/game/monsters'
+import {
+  BURN_HIT_DAMAGE,
+  FOG_DAMAGE,
+  FREEZE_SHATTER_BONUS,
+  GRID_COLS,
+  GRID_ROWS,
+  KNOCKBACK_BLOCK_DAMAGE,
+  POISON_TICK_DAMAGE,
+  ROCK_HP,
+  STATUS_STACK_CAP,
+  type CardDef,
+} from '../src/battle/types'
 
 let failed = 0
 function check(name: string, got: unknown, want: unknown) {
@@ -72,16 +83,16 @@ console.log('누적 기력 트리거(energyTriggers)')
   const b = battleWith({ energyTriggers: [{ per: 30, heal: 999 }] })
   b.state.hp[0] = 100
   const atk3 = [card('c-strike'), card('c-strike'), card('c-strike')]
-  b.resolveTurn(atk3, IDLE) // 누적 10 (같은 공격은 한 턴에 한 번 → 나머지는 중복이라 그대로 소모)
+  b.resolveRound(atk3, IDLE) // 누적 10 (같은 공격은 한 턴에 한 번 → 나머지는 중복이라 그대로 소모)
   const after1 = b.state.energySpent[0]
-  b.resolveTurn(atk3, IDLE)
+  b.resolveRound(atk3, IDLE)
   check('per 30 · 누적 기력이 30을 넘기면 발동', b.state.energySpent[0] >= 30 && b.state.hp[0] > 100, true)
   check('1턴 만에는 발동 안 함(누적 < 30)', after1 < 30, true)
 }
 {
   // per:10 · 한 턴에 15를 쓰면 같은 슬롯 정산에서 **여러 번** 터져야 한다.
   const b = battleWith({ energyTriggers: [{ per: 10, shield: 5 }] })
-  b.resolveTurn([card('c-strike'), card('c-strike'), card('c-strike')], IDLE)
+  b.resolveRound([card('c-strike'), card('c-strike'), card('c-strike')], IDLE)
   check('per 10 · 한 턴 15 소모 → 1회 이상 발동(보호막)', b.state.energySpent[0] === 15, true)
 }
 {
@@ -91,37 +102,58 @@ console.log('누적 기력 트리거(energyTriggers)')
   check('주기가 섞이지 않는다', merged.energyTriggers?.map((t) => t.per), [100, 50])
 }
 
-// --- 기절 ------------------------------------------------------------------
-console.log('\n기절(stun)')
+// --- 기절 (2026-08-07 새 규칙: **그 라운드 한정**) ---------------------------
+// 사용자 확정: "1턴 공격에서 기절을 맞으면 이후 두 카드가 발동하지 못하고, 3번째
+// 턴에서 기절에 걸리면 라운드가 끝나고 다음 3장은 정상 발동" → 기절은 **라운드를
+// 넘어가지 않는다**. 그래서 마지막 슬롯에 기절기를 넣을 이유가 없다.
+console.log('\n기절(stun) — 이 라운드 남은 슬롯만 지운다')
 {
-  const b = battleWith({ energyTriggers: [{ per: 5, stun: 1 }] })
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('트리거가 상대에게 기절을 걸었다', b.state.stunned[1] >= 1, true)
-  const hpBefore = b.state.hp[0]
-  const steps = b.resolveTurn(IDLE, [card('c-strike'), card('c-strike'), card('c-strike')])
-  check('기절한 쪽 카드는 전부 무효(피해 0)', b.state.hp[0], hpBefore)
-  check('기절 스텝이 로그에 남는다', steps.some((s) => s.phase === 'stun' && s.actor === 1), true)
-  check('기절은 한 턴만 — 다음 턴엔 풀린다', b.state.stunned[1], 0)
+  // 1번 슬롯에서 기절시키면 상대의 2·3번 카드가 통째로 사라진다.
+  const b = battleWith({})
+  const hp0 = b.state.hp[0]
+  const steps = b.resolveRound(
+    [card('r-stunrod'), card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-strike')],
+  )
+  check('1번 슬롯 기절 → 상대의 2·3번 카드가 안 나간다', b.state.hp[0], hp0)
+  check('기절 스텝이 로그에 남는다', steps.filter((s) => s.result === 'stun' && s.actor === 1).length, 2)
+  check('기절은 라운드를 넘기지 않는다', b.statusOf(1, 'stunned'), undefined)
 }
 {
-  // 카드 `stun`(뇌명의 지팡이) — 피해가 들어가야 걸린다.
+  // 다음 라운드는 멀쩡히 나간다 — 기절이 넘어오지 않는다는 뜻.
   const b = battleWith({})
-  b.resolveTurn([card('r-stunrod'), card('c-energy'), card('c-energy')], HOLD)
-  check('뇌명의 지팡이 적중 → 상대 기절 1턴', b.state.stunned[1], 1)
+  b.resolveRound([card('r-stunrod'), card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[0]
+  b.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  check('다음 라운드엔 상대 카드가 정상 발동', b.state.hp[0] < hp0, true)
+}
+{
+  // 마지막 슬롯의 기절은 아무것도 막지 못한다(그래서 넣을 이유가 없다).
+  const b = battleWith({})
+  b.resolveRound([card('c-energy'), card('c-energy'), card('r-stunrod')], HOLD)
+  check('3번 슬롯 기절 — 라운드가 끝나 아무 효과가 없다', b.statusOf(1, 'stunned'), undefined)
+}
+{
+  const b = battleWith({ energyTriggers: [{ per: 5, stun: 1 }] })
+  const steps = b.resolveRound(
+    [card('c-strike'), card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-strike')],
+  )
+  check('유물 트리거 기절도 남은 슬롯을 지운다', steps.some((s) => s.result === 'stun' && s.actor === 1), true)
 }
 {
   // 가드로 완전히 막힌 타격은 기절시키지 못한다.
   const b = battleWith({})
-  b.resolveTurn(
+  b.resolveRound(
     [card('r-stunrod'), card('c-energy'), card('c-energy')],
     [card('c-guard'), card('c-energy'), card('c-energy')],
   )
-  check('가드에 막힌 타격은 기절 없음(피해 0)', [b.state.stunned[1], b.state.hp[1]], [0, b.maxHp[1]])
+  check('가드에 막힌 타격은 기절 없음(피해 0)', [b.statusOf(1, 'stunned'), b.state.hp[1]], [undefined, b.maxHp[1]])
 }
 {
   // 유물 stunOnHit — stunCap 만큼만.
   const b = battleWith(mergeRelics(['concussor']))
-  for (let t = 0; t < 4; t++) b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  for (let t = 0; t < 4; t++) b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('강타의 인장은 전투당 stunCap(2)회까지만', b.state.stunsUsed[0], 2)
 }
 
@@ -129,17 +161,17 @@ console.log('\n기절(stun)')
 console.log('\n저체력 폭주(lowHpBonusPct)')
 {
   const base = battleWith({})
-  base.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  base.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   const normal = base.maxHp[1] - base.state.hp[1]
 
   const b = battleWith({ lowHpBonusPct: 100 })
   b.state.hp[0] = 10 // 절반 이하
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   const boosted = b.maxHp[1] - b.state.hp[1]
   check('체력 절반 이하 + 100% → 피해 2배', boosted, normal * 2)
 
   const c = battleWith({ lowHpBonusPct: 100 })
-  c.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  c.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('체력이 충분하면 배율 없음', c.maxHp[1] - c.state.hp[1], normal)
 
   check('두 유물의 배율은 합산(50+100=150)', mergeRelics(['lastditch', 'deathwish']).lowHpBonusPct, 150)
@@ -149,23 +181,23 @@ console.log('\n저체력 폭주(lowHpBonusPct)')
 console.log('\n관통(alwaysPierce) · 각성(empower) · 선제 보호막(openingShield)')
 {
   const b = battleWith(mergeRelics(['voidedge']))
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], [card('c-guard'), card('c-energy'), card('c-energy')])
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], [card('c-guard'), card('c-energy'), card('c-energy')])
   check('공허의 날 — 가드를 무시하고 피해가 들어간다', b.state.hp[1] < b.maxHp[1], true)
 }
 {
   const b = battleWith({})
-  b.resolveTurn([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
   check('피의 각인 1회 → 각성 +3', b.state.empowered[0], 3)
-  b.resolveTurn([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([card('r-protocol'), card('c-energy'), card('c-energy')], HOLD)
   check('각성은 중첩된다 → +6', b.state.empowered[0], 6)
 }
 {
   const b = battleWith({ openingShield: 40 })
-  check('선제 방벽 — 1턴에만', b.state.turn, 1)
-  b.resolveTurn(IDLE, IDLE)
+  check('선제 방벽 — 1턴에만', b.state.round, 1)
+  b.resolveRound(IDLE, IDLE)
   const b2 = battleWith({ openingShield: 40 })
-  b2.resolveTurn(IDLE, IDLE) // 2턴 시작 시 보호막에 40이 안 붙어야 한다
-  b2.resolveTurn(IDLE, IDLE)
+  b2.resolveRound(IDLE, IDLE) // 2턴 시작 시 보호막에 40이 안 붙어야 한다
+  b2.resolveRound(IDLE, IDLE)
   check('2턴부터는 선제 보호막 없음', b2.state.shield[0], 0)
 }
 
@@ -239,99 +271,373 @@ console.log('\n런 진행 규칙')
   check('이벤트 녹이기 — 잠긴 카드를 고르면 다시 고르게 한다', [melt.needsCardPick, melt.gainedRelicId], [true, undefined])
 }
 
-// --- 상태이상(독·화상·빙결) -------------------------------------------------
-console.log('\n상태이상 — 지속피해·빙결·시너지')
+// --- 상태이상 (2026-08-07 전면 재정의) ---------------------------------------
+// 중독=움직이면 아프다 / 화상=맞으면 더 아프다 / 빙결=이 라운드 정지(맞으면 깨짐)
+// / 속박=이 라운드 이동 불가. 셋(빙결·기절·속박)은 라운드를 넘지 않는다.
+console.log('\n상태이상 — 중독(이동) · 화상(피격) · 빙결 · 속박 · 독안개')
 {
-  // 카드에 직접 붙인 독. 내려치기(10dmg)를 독 5짜리로 바꿔 때린다.
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-poison', poison: 5 }
+  // 중독 — **움직인 칸마다** 3. 제자리에서 싸우면 아프지 않다.
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-poison', poison: 2 }
   const b = battleWith({}, {})
-  const hp0 = b.state.hp[1]
-  b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  // 타격 5 + 같은 턴 독 틱 5 = 10
-  check('독 — 맞은 턴에 바로 1틱(5+5)', hp0 - b.state.hp[1], 10)
-  check('독이 3턴짜리로 걸린다(1틱 소모 후 2턴 남음)', b.statusOf(1, 'poison')?.turns, 2)
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  check('중독이 2라운드짜리 한 겹으로 걸린다', [b.stacksOf(1, 'poison'), b.statusOf(1, 'poison')?.rounds], [1, 1])
+  check('중독 한 겹의 위력 = 이동 1칸당 3', b.statusPower(1, 'poison'), POISON_TICK_DAMAGE)
   const hp1 = b.state.hp[1]
-  b.resolveTurn(HOLD, HOLD) // 때리지 않아도 계속 갉아야 한다
-  check('독 — 때리지 않은 턴에도 갉는다', hp1 - b.state.hp[1], 5)
-  b.resolveTurn(HOLD, HOLD)
-  check('독 — 지속이 끝나면 사라진다', b.statusOf(1, 'poison'), undefined)
+  b.resolveRound(HOLD, HOLD) // 안 움직이면 아무 일도 없어야 한다
+  check('중독 — 안 움직이면 갉지 않는다', b.state.hp[1], hp1)
 }
 {
-  // 중첩: 위력은 합산되고 지속은 갱신된다.
-  const p3: CardDef = { ...card('c-strike'), id: 'test-p3', poison: 3 }
+  // 한 칸 이동 = 3, 대시(2칸) = 6, 대각선 한 장 = 3.
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pmove', poison: 3 }
   const b = battleWith({}, {})
-  b.resolveTurn([p3, card('c-energy'), card('c-energy')], HOLD)
-  b.resolveTurn([p3, card('c-energy'), card('c-energy')], HOLD)
-  check('독 중첩 — 위력 합산(3+3)', b.statusOf(1, 'poison')?.power, 6)
-  check('독 중첩 — 지속은 갱신(3턴에서 1틱 소모)', b.statusOf(1, 'poison')?.turns, 2)
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('중독 — 한 칸 이동에 3', hp0 - b.state.hp[1], POISON_TICK_DAMAGE)
+  const hp1 = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-left2'), card('c-energy'), card('c-energy')])
+  check('중독 — 두 칸 대시는 두 번 움직인 것(6)', hp1 - b.state.hp[1], POISON_TICK_DAMAGE * 2)
 }
 {
-  // 가드에 완전히 막히면 상태이상도 안 묻는다(기절과 같은 규칙).
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pblock', poison: 9 }
+  // 대각선 한 장은 **한 번 움직인 것**(사용자 확정) — 두 축을 한 번에 좁혀도 3.
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pdiag', poison: 3 }
   const b = battleWith({}, {})
-  b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], [card('c-guard'), card('c-energy'), card('c-energy')])
-  check('가드로 완전히 막히면 독이 안 묻는다', b.statusOf(1, 'poison'), undefined)
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-ur'), card('c-energy'), card('c-energy')])
+  check('중독 — 대각선은 한 번 움직인 것(3)', hp0 - b.state.hp[1], POISON_TICK_DAMAGE)
 }
 {
-  // 빙결 — 이동 카드만 무효. 카드는 소모되고 기절과 달리 공격은 나간다.
+  // 중첩 — 겹마다 따로 산다. 한 라운드에 세 대 맞으면 세 겹, 이동 1칸에 9.
+  const jab = (n: number): CardDef => ({ ...card('c-strike'), id: `test-ps${n}`, poison: 3 })
+  const b = battleWith({}, {})
+  b.resolveRound([jab(1), jab(2), jab(3)], HOLD)
+  check('중독 — 한 대에 한 겹씩 쌓인다', b.stacksOf(1, 'poison'), 3)
+  const hp0 = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('중독 3겹 — 한 칸 이동에 9', hp0 - b.state.hp[1], POISON_TICK_DAMAGE * 3)
+}
+{
+  // 중첩 상한 — 네 대를 맞아도 세 겹까지만.
+  const jab = (n: number): CardDef => ({ ...card('c-strike'), id: `test-pc${n}`, poison: 3 })
+  const b = battleWith({}, {})
+  b.resolveRound([jab(1), jab(2), jab(3)], HOLD)
+  b.resolveRound([jab(4), card('c-energy'), card('c-energy')], HOLD)
+  check('중독 중첩 상한 3겹', b.stacksOf(1, 'poison'), STATUS_STACK_CAP)
+}
+{
+  // 중독은 **보호막을 관통한다**(사용자 확정 예시2). 보호막은 라운드 시작에 다시
+  // 서므로 상시 보호막 패시브로 세워 둔다(직접 대입하면 라운드 시작에 지워진다).
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-ppierce', poison: 3, pierce: true }
+  const b = battleWith({}, { turnShield: 50 })
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('중독 — 보호막을 관통한다', hp0 - b.state.hp[1], POISON_TICK_DAMAGE)
+  check('중독 — 보호막은 안 깎인다', b.state.shield[1], 50)
+}
+{
+  // 화상 — **맞을 때마다** 5. 지속피해가 아니라 증폭기다.
+  const burnJab: CardDef = { ...card('c-strike'), id: 'test-burn', burn: 3 }
+  const plain = battleWith({}, {})
+  const hpP = plain.state.hp[1]
+  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const base = hpP - plain.state.hp[1]
+
+  const b = battleWith({}, {})
+  b.resolveRound([burnJab, card('c-energy'), card('c-energy')], HOLD)
+  check('화상이 3라운드로 걸린다(1라운드 소모 후 2 남음)', b.statusOf(1, 'burn')?.rounds, 2)
+  const hp0 = b.state.hp[1]
+  b.resolveRound(HOLD, HOLD)
+  check('화상 — 안 맞으면 아프지 않다', b.state.hp[1], hp0)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('화상 — 맞으면 피해 +5', hp0 - b.state.hp[1], base + BURN_HIT_DAMAGE)
+}
+{
+  // 화상은 보호막을 관통한다 — 가드로 완전히 막아도 5는 들어온다.
+  const burnJab: CardDef = { ...card('c-strike'), id: 'test-burn2', burn: 3 }
+  const b = battleWith({}, {})
+  b.resolveRound([burnJab, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[1]
+  b.resolveRound(
+    [card('c-strike'), card('c-energy'), card('c-energy')],
+    [card('c-guard'), card('c-energy'), card('c-energy')],
+  )
+  check('화상 — 가드로 막아도 5는 들어온다', hp0 - b.state.hp[1], BURN_HIT_DAMAGE)
+}
+{
+  // 가드에 완전히 막히면 상태이상은 안 묻는다(기절과 같은 규칙).
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pblock', poison: 3 }
+  const b = battleWith({}, {})
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], [card('c-guard'), card('c-energy'), card('c-energy')])
+  check('가드로 완전히 막히면 중독이 안 묻는다', b.statusOf(1, 'poison'), undefined)
+}
+{
+  // 빙결 — 이 라운드 남은 카드를 통째로 막는다(기절과 같은 봉인).
   const freezeJab: CardDef = { ...card('c-strike'), id: 'test-freeze', freeze: 1 }
   const b = battleWith({}, {})
-  b.resolveTurn([freezeJab, card('c-energy'), card('c-energy')], HOLD)
-  // 걸린 턴엔 지속을 안 깎는다 — 안 그러면 온전한 한 턴을 못 막고 사라진다
-  check('빙결이 걸리고, 걸린 턴엔 지속이 안 깎인다', b.statusOf(1, 'frozen')?.turns, 1)
-  const before = { ...b.state.pos[1] }
-  const steps = b.resolveTurn(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('빙결 — 다음 턴 이동 카드가 무효(위치 그대로)', b.state.pos[1], before)
-  check('빙결 — 결과가 frozen으로 표시된다', steps.some((s) => s.result === 'frozen'), true)
-  check('빙결 — 한 턴을 막고 나면 풀린다', b.statusOf(1, 'frozen'), undefined)
-  const moved = b.resolveTurn(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('빙결이 풀리면 다시 움직인다', b.state.pos[1].col !== before.col, true)
-  void moved
-}
-{
-  // 빙결은 기절과 다르다 — 이동만 막고 공격은 그대로 나간다.
-  const freezeJab: CardDef = { ...card('c-strike'), id: 'test-freeze2', freeze: 1 }
-  const b = battleWith({}, {})
-  b.resolveTurn([freezeJab, card('c-energy'), card('c-energy')], HOLD)
   const hp0 = b.state.hp[0]
-  b.resolveTurn(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
-  check('빙결 — 공격은 막지 않는다(기절과 구별)', b.state.hp[0] < hp0, true)
+  const steps = b.resolveRound(
+    [freezeJab, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-strike')],
+  )
+  check('빙결 — 남은 슬롯이 통째로 막힌다', b.state.hp[0], hp0)
+  check('빙결 — 결과가 frozen으로 표시된다', steps.some((s) => s.result === 'frozen'), true)
+  check('빙결 — 라운드를 넘기지 않는다', b.statusOf(1, 'frozen'), undefined)
 }
 {
-  // 유물 훅: poisonOnHit + statusPowerPct + bonusVsAfflicted
-  const b = battleWith({ poisonOnHit: 4 }, {})
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('poisonOnHit — 평범한 카드에도 독이 묻는다', b.statusOf(1, 'poison')?.power, 4)
+  // 빙결은 **맞으면 깨진다** — 그 타격에 +5(보호막 관통).
+  const freezeJab: CardDef = { ...card('c-strike'), id: 'test-freeze2', freeze: 1 }
+  const plain = battleWith({}, {})
+  const hpP = plain.state.hp[1]
+  plain.resolveRound([card('c-strike'), card('c-strike'), card('c-energy')], HOLD)
+  const twoHits = hpP - plain.state.hp[1]
+
+  const b = battleWith({}, {})
+  const hp0 = b.state.hp[1]
+  b.resolveRound([freezeJab, card('c-strike'), card('c-energy')], HOLD)
+  check('빙결 — 깨뜨린 타격은 5 더 아프다', hp0 - b.state.hp[1], twoHits + FREEZE_SHATTER_BONUS)
 }
 {
-  const b = battleWith({ poisonOnHit: 10, statusPowerPct: 50 }, {})
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('statusPowerPct 50% — 위력 10 → 15', b.statusOf(1, 'poison')?.power, 15)
+  // 속박 — 이동만 막고 공격·수비는 그대로 나간다.
+  const bindJab: CardDef = { ...card('c-strike'), id: 'test-bind', bind: 1 }
+  const b = battleWith({}, {})
+  const before = { ...b.state.pos[1] }
+  const hp0 = b.state.hp[0]
+  const steps = b.resolveRound(
+    [bindJab, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('m-left'), card('c-strike')],
+  )
+  check('속박 — 이동이 무효(위치 그대로)', b.state.pos[1], before)
+  check('속박 — 결과가 bind로 표시된다', steps.some((s) => s.result === 'bind'), true)
+  check('속박 — 공격은 그대로 나간다', b.state.hp[0] < hp0, true)
+  check('속박 — 라운드를 넘기지 않는다', b.statusOf(1, 'bind'), undefined)
+}
+{
+  // 독안개 — 라운드 종료에 그 칸에 선 쪽을 10 갉는다(보호막 무시).
+  const fogJab: CardDef = { ...card('c-strike'), id: 'test-fog', fog: 2 }
+  const b = battleWith({}, {})
+  const hp0 = b.state.hp[1]
+  b.resolveRound([fogJab, card('c-energy'), card('c-energy')], HOLD)
+  check('독안개가 상대 칸에 깔린다', !!b.fogAt(b.state.pos[1]), true)
+  const dealt = hp0 - b.state.hp[1]
+  check('독안개 — 깔린 라운드에 바로 밟는다', dealt > FOG_DAMAGE, true)
+  b.state.shield[1] = 50
+  const hp1 = b.state.hp[1]
+  b.resolveRound(HOLD, HOLD)
+  check('독안개 — 보호막을 무시한다', hp1 - b.state.hp[1], FOG_DAMAGE)
+  const hp2 = b.state.hp[1]
+  b.resolveRound(HOLD, HOLD)
+  check('독안개 — 지속이 끝나면 걷힌다', hp2 - b.state.hp[1], 0)
+}
+{
+  // 유물 훅: poisonOnHit는 이제 **지속 라운드**다(위력이 아니다).
+  const b = battleWith({ poisonOnHit: 2 }, {})
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('poisonOnHit — 평범한 카드에도 중독 한 겹이 묻는다', b.stacksOf(1, 'poison'), 1)
+  check('poisonOnHit 2 → 2라운드(1라운드 소모 후 1 남음)', b.statusOf(1, 'poison')?.rounds, 1)
+}
+{
+  // statusPowerPct는 이제 **한 겹의 위력**을 키운다(이동 1칸당 피해).
+  const b = battleWith({ poisonOnHit: 2, statusPowerPct: 100 }, {})
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('statusPowerPct 100% — 이동 1칸당 3 → 6', b.statusPower(1, 'poison'), POISON_TICK_DAMAGE * 2)
+}
+{
+  // 카드와 유물이 둘 다 걸면 **지속이 긴 쪽** 한 겹(두 겹이 되면 안 된다).
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pboth', poison: 1 }
+  const b = battleWith({ poisonOnHit: 3 }, {})
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  check('카드+유물 — 한 대에 한 겹만', b.stacksOf(1, 'poison'), 1)
+  check('카드+유물 — 지속은 긴 쪽', b.statusOf(1, 'poison')?.rounds, 2)
 }
 {
   // 이미 걸려 있는 상대에게만 보너스. 첫 타격은 아직 안 걸렸으므로 보너스 없음.
   const plain = battleWith({}, {})
   const hpPlain = plain.state.hp[1]
-  plain.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   const baseDmg = hpPlain - plain.state.hp[1]
 
   const b = battleWith({ poisonOnHit: 2, bonusVsAfflicted: 7 }, {})
   const hp0 = b.state.hp[1]
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  const t1 = hp0 - b.state.hp[1] // 타격(보너스 없음) + 독 2
-  check('bonusVsAfflicted — 첫 타격엔 안 붙는다', t1, baseDmg + 2)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('bonusVsAfflicted — 첫 타격엔 안 붙는다', hp0 - b.state.hp[1], baseDmg)
   const hp1 = b.state.hp[1]
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  // 2턴째: 이미 중독 → 타격 +7, 독은 2+2=4가 틱
-  check('bonusVsAfflicted — 걸린 뒤엔 +7', hp1 - b.state.hp[1], baseDmg + 7 + 4)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('bonusVsAfflicted — 걸린 뒤엔 +7', hp1 - b.state.hp[1], baseDmg + 7)
 }
 {
-  // 지속피해로도 KO가 나야 한다(독안개와 같은 자리).
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pko', poison: 8 }
+  // 자기 버프(atkUp)는 `afflicted`가 아니다 — 시너지 유물이 켜지면 안 된다.
+  const defBuff: CardDef = {
+    id: 'test-afflict-buff', name: '테스트 방버프', kind: 'buff', desc: '',
+    buff: 'defUp', buffPower: 5, buffRounds: 2, buffCost: 0,
+  }
   const b = battleWith({}, {})
-  b.state.hp[1] = 12 // 타격 10을 견디고 2 남은 뒤 독 8에 쓰러진다
-  b.resolveTurn([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  check('독으로 KO — 전투가 끝난다', [b.state.over, b.state.winner], [true, 0])
+  b.resolveRound([defBuff, card('c-energy'), card('c-energy')], HOLD)
+  check('버프가 걸려 있다', !!b.statusOf(0, 'defUp'), true)
+  check('버프는 상태이상 시너지 대상이 아니다', b.afflicted(0), false)
+}
+{
+  // 독안개로도 KO가 나야 한다(전장 붕괴와 같은 자리).
+  const fogJab: CardDef = { ...card('c-strike'), id: 'test-fogko', fog: 2 }
+  const b = battleWith({}, {})
+  b.state.hp[1] = 12 // 타격 5을 견디고 7 남은 뒤 안개 10에 쓰러진다
+  b.resolveRound([fogJab, card('c-energy'), card('c-energy')], HOLD)
+  check('독안개로 KO — 전투가 끝난다', [b.state.over, b.state.winner], [true, 0])
+}
+
+// --- 넉백 × 중독 (2026-08-07 3차 · 사용자 예시 그대로) -------------------------
+// "중독에 걸린 유저를 넉백 3으로 밀었는데 벽이 2칸 뒤 → 2칸 밀리고 1칸 막힘 →
+//  5(넉백) + 6(중독 2칸) = 11 피해 + 기절"
+console.log('\n넉백 × 중독 — 밀려난 칸도 독이 문다')
+{
+  const shove: CardDef = {
+    id: 'test-poisonshove', name: '테스트 넉백3', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 0, energyCost: 0, push: 3, cooldown: 0,
+  }
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-psh', poison: 3 }
+  const b = battleWith({}, {})
+  // 먼저 중독 한 겹을 묻힌다(붙어 선 상태에서).
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  check('중독 한 겹이 걸렸다', b.statusPower(1, 'poison'), POISON_TICK_DAMAGE)
+  // p1을 벽에서 두 칸 떨어진 자리(col 3)에 세우고 p0가 바로 왼쪽(col 2)에서 민다.
+  // 오른쪽 벽은 col 5 → 3 → 4 → 5까지 두 칸 가고 세 번째가 막힌다.
+  b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }]
+  const hp = b.state.hp[1]
+  const steps = b.resolveRound(
+    [shove, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-strike')],
+  )
+  check('두 칸 밀리고 벽에 부딪힌다', b.state.pos[1].col, GRID_COLS - 1)
+  check(
+    '넉백 5 + 중독 6 = 11',
+    hp - b.state.hp[1],
+    KNOCKBACK_BLOCK_DAMAGE + POISON_TICK_DAMAGE * 2,
+  )
+  check('그리고 기절한다', steps.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+}
+{
+  // 막히지 않고 끝까지 밀리면 넉백 피해는 없고 **중독만** 문다.
+  const shove: CardDef = {
+    id: 'test-poisonshove2', name: '테스트 넉백2', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 0, energyCost: 0, push: 2, cooldown: 0,
+  }
+  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-psh2', poison: 3 }
+  const b = battleWith({}, {})
+  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  const hp = b.state.hp[1]
+  b.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
+  check('끝까지 밀리면 중독만(3×2)', hp - b.state.hp[1], POISON_TICK_DAMAGE * 2)
+}
+{
+  // 중독이 없으면 밀려나도 아무 일 없다(회귀).
+  const shove: CardDef = {
+    id: 'test-poisonshove3', name: '테스트 넉백2', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 0, energyCost: 0, push: 2, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  const hp = b.state.hp[1]
+  b.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
+  check('중독이 없으면 넉백만으로는 안 아프다', hp - b.state.hp[1], 0)
+}
+
+// --- 지속 연장 유물 (2026-08-07 2차) — 런 전용 전설 ---------------------------
+// 시간을 사는 훅이라 다른 모든 훅과 곱해진다. 검사의 핵심은 **무한 봉인이 안 된다**는
+// 것과 **PvP에는 이 규칙이 존재조차 하지 않는다**는 것 둘이다.
+console.log('\n지속 연장 유물 — 중독·화상·기절·빙결·속박')
+{
+  // 중독 연장 — 기본 3라운드 상한을 유물이 밀어 올린다.
+  const jab: CardDef = { ...card('c-strike'), id: 'test-plong', poison: 3 }
+  const plain = battleWith({}, {})
+  plain.resolveRound([jab, card('c-energy'), card('c-energy')], HOLD)
+  const b = battleWith({ poisonRoundBonus: 1 }, {})
+  b.resolveRound([jab, card('c-energy'), card('c-energy')], HOLD)
+  check('중독 연장 — 상한(3)을 넘겨 1라운드 더', [plain.statusOf(1, 'poison')?.rounds, b.statusOf(1, 'poison')?.rounds], [2, 3])
+}
+{
+  // 화상 연장.
+  const jab: CardDef = { ...card('c-strike'), id: 'test-blong', burn: 2 }
+  const b = battleWith({ burnRoundBonus: 1 }, {})
+  b.resolveRound([jab, card('c-energy'), card('c-energy')], HOLD)
+  check('화상 연장 — 2 → 3라운드(1 소모 후 2)', b.statusOf(1, 'burn')?.rounds, 2)
+}
+{
+  // 기절 연장 — 사용자가 못박은 시나리오를 그대로 재현한다.
+  //   1라운드 기절 → 2라운드도 기절(그 라운드에 또 맞아도 갱신 안 됨) → 3라운드 기상.
+  const b = battleWith({ stunRoundBonus: 1 })
+  const hp0 = b.state.hp[0]
+  b.resolveRound(
+    [card('r-stunrod'), card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-strike')],
+  )
+  check('R1 — 기절해서 남은 슬롯이 죽는다', b.state.hp[0], hp0)
+  check('R1 종료 — 기절이 다음 라운드까지 남는다', b.statusOf(1, 'stunned')?.rounds, 1)
+
+  // R2: 통째로 봉인. 그 안에서 또 기절을 걸어도 **갱신되지 않는다**(재부여 가드).
+  const st2 = b.resolveRound(
+    [card('c-strike'), card('c-strike'), card('c-strike')],
+    [card('c-strike'), card('c-strike'), card('c-strike')],
+  )
+  check('R2 — 세 슬롯이 통째로 봉인된다', st2.filter((x) => x.result === 'stun' && x.actor === 1).length, 3)
+  check('R2 종료 — 기절이 갱신되지 않고 풀린다', b.statusOf(1, 'stunned'), undefined)
+
+  // R3: 반드시 일어난다.
+  const hp1 = b.state.hp[0]
+  b.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  check('R3 — 깨어나서 정상 발동(유물 하나로 영구 봉인 불가)', b.state.hp[0] < hp1, true)
+}
+{
+  // 처박기 기절은 연장을 타지 않는다 — 넉백 한 장이 판을 잠그면 안 된다.
+  const shove: CardDef = {
+    id: 'test-slamlong', name: '테스트 처박기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 2, cooldown: 0,
+  }
+  const b = battleWith({ stunRoundBonus: 1 })
+  b.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }]
+  b.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
+  check('처박기 기절은 연장을 안 탄다', b.statusOf(1, 'stunned'), undefined)
+}
+{
+  // 빙결 연장 — 다음 라운드까지 가지만 **맞으면 여전히 깨진다**.
+  const freezeJab: CardDef = { ...card('c-strike'), id: 'test-flong', freeze: 1 }
+  const b = battleWith({ freezeRoundBonus: 1 }, {})
+  b.resolveRound([freezeJab, card('c-energy'), card('c-energy')], HOLD)
+  check('빙결 연장 — 다음 라운드까지 남는다', b.statusOf(1, 'frozen')?.rounds, 1)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('빙결 연장 — 그래도 맞으면 깨진다', b.statusOf(1, 'frozen'), undefined)
+}
+{
+  // 속박 연장 — 다음 라운드에도 이동이 막힌다.
+  const bindJab: CardDef = { ...card('c-strike'), id: 'test-bindlong', bind: 1 }
+  const b = battleWith({ bindRoundBonus: 1 }, {})
+  b.resolveRound([bindJab, card('c-energy'), card('c-energy')], HOLD)
+  const before = { ...b.state.pos[1] }
+  const st = b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('속박 연장 — 다음 라운드에도 이동 불가', b.state.pos[1], before)
+  check('속박 연장 — 공격은 여전히 나간다', st.some((x) => x.result === 'bind'), true)
+  check('속박 연장 — 두 라운드로 끝난다', b.statusOf(1, 'bind'), undefined)
+}
+{
+  // ⚠ **런 전용 보장** — 이 훅들이 유물 밖으로 새면 PvP 락스텝이 깨진다.
+  const BONUS_HOOKS = [
+    'poisonRoundBonus', 'burnRoundBonus', 'stunRoundBonus', 'freezeRoundBonus', 'bindRoundBonus',
+  ] as const
+  const inRoster = ROSTER.some((c) => BONUS_HOOKS.some((h) => (c.passive as Record<string, unknown>)[h] != null))
+  check('연장 훅은 ROSTER.passive에 없다(PvP 불변)', inRoster, false)
+  const inMonsters = MONSTERS.some((m) =>
+    BONUS_HOOKS.some((h) => (m.passive as Record<string, unknown> | undefined)?.[h] != null),
+  )
+  check('연장 훅은 몬스터에도 없다', inMonsters, false)
+  // 전부 legend여야 한다 — "시간을 사는" 훅이라 흔하면 판이 무너진다.
+  const carriers = RELICS.filter((r) =>
+    BONUS_HOOKS.some((h) => (r.effect as Record<string, unknown>)[h] != null),
+  )
+  check('연장 유물이 존재한다', carriers.length >= 6, true)
+  check('연장 유물은 전부 전설', carriers.every((r) => r.rarity === 'legend'), true)
+  // 시그니처가 아니라 **보상 풀**에 들어 있어야 실제로 얻을 수 있다.
+  check('연장 유물은 보상 풀에 있다', carriers.every((r) => REWARD_RELICS.includes(r)), true)
 }
 
 // --- 버프 카드 + 이동공격 (2026-08-01) ---------------------------------------
@@ -340,48 +646,48 @@ console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForwa
   // 버프는 수비 티어라 **같은 턴 뒤 슬롯의 공격**에 이미 얹힌다.
   const atkBuff: CardDef = {
     id: 'test-atkup', name: '테스트 공버프', kind: 'buff', desc: '',
-    buff: 'atkUp', buffPower: 15, buffTurns: 2, buffCost: 0, cooldown: 0,
+    buff: 'atkUp', buffPower: 15, buffRounds: 2, buffCost: 0, cooldown: 0,
   }
   const plain = battleWith({}, {})
   const hp0 = plain.state.hp[1]
-  plain.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   const base = hp0 - plain.state.hp[1]
 
   const b = battleWith({}, {})
   const h0 = b.state.hp[1]
-  b.resolveTurn([atkBuff, card('c-strike'), card('c-energy')], HOLD)
+  b.resolveRound([atkBuff, card('c-strike'), card('c-energy')], HOLD)
   check('atkUp — 같은 턴 뒤 슬롯 공격에 바로 얹힌다', h0 - b.state.hp[1], base + 15)
   const h1 = b.state.hp[1]
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('atkUp — 다음 턴에도 남아 있다', h1 - b.state.hp[1], base + 15)
   const h2 = b.state.hp[1]
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('atkUp — 2턴이 지나면 사라진다', h2 - b.state.hp[1], base)
 }
 {
   const defBuff: CardDef = {
     id: 'test-defup', name: '테스트 방버프', kind: 'buff', desc: '',
-    buff: 'defUp', buffPower: 6, buffTurns: 3, buffCost: 0, cooldown: 0,
+    buff: 'defUp', buffPower: 6, buffRounds: 3, buffCost: 0, cooldown: 0,
   }
   const plain = battleWith({}, {})
   const hp0 = plain.state.hp[0]
-  plain.resolveTurn(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  plain.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
   const base = hp0 - plain.state.hp[0]
 
   const b = battleWith({}, {})
   const h0 = b.state.hp[0]
-  b.resolveTurn([defBuff, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-energy'), card('c-energy')])
+  b.resolveRound([defBuff, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-energy'), card('c-energy')])
   check('defUp — 받는 피해가 줄어든다', h0 - b.state.hp[0], Math.max(0, base - 6))
 }
 {
   // freeCast: 켜진 동안 기력을 한 톨도 안 쓴다.
   const free: CardDef = {
     id: 'test-free', name: '테스트 무아지경', kind: 'buff', desc: '',
-    buff: 'freeCast', buffTurns: 2, buffCost: 0, cooldown: 0,
+    buff: 'freeCast', buffRounds: 2, buffCost: 0, cooldown: 0,
   }
   const b = battleWith({}, {})
   b.state.energy[0] = 30 // 내려치기(10) 3장도 빠듯한 양
-  b.resolveTurn([free, card('c-strike'), card('c-guard')], HOLD)
+  b.resolveRound([free, card('c-strike'), card('c-guard')], HOLD)
   check('freeCast — 켠 턴의 뒤 카드가 기력을 안 쓴다', b.state.energy[0], 30 + ENERGY_REGEN)
   // 엔진과 UI 판정이 같아야 한다(안 그러면 "낼 수 있다는데 불발")
   check(
@@ -404,7 +710,7 @@ console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForwa
   const b = battleWith({}, {})
   b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }] // 바로 앞 — 사거리 2칸은 원래 빗나간다
   const hp0 = b.state.hp[1]
-  b.resolveTurn([kite, card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([kite, card('c-energy'), card('c-energy')], HOLD)
   check('dashForward — 물러난 뒤 쏘므로 2칸 사거리가 맞는다', hp0 - b.state.hp[1], 10)
   check('dashForward — 실제로 한 칸 물러나 있다', b.state.pos[0].col, 1)
 }
@@ -416,7 +722,7 @@ console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForwa
   }
   const b = battleWith({}, {})
   b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
-  b.resolveTurn([back, card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([back, card('c-energy'), card('c-energy')], HOLD)
   check('dashForward — 벽에서 멈춘다(판 밖으로 안 나감)', b.state.pos[0].col, 0)
 }
 
@@ -482,7 +788,7 @@ console.log('\n엔진 방향 — 넉백·사거리가 상대를 지나쳐도 맞
   const away = (p0col: number, p1col: number) => {
     const b = battleWith({}, {})
     b.state.pos = [{ col: p0col, row: 1 }, { col: p1col, row: 1 }]
-    b.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
     return b.state.pos[1].col
   }
   check('오른쪽 상대를 밀면 더 오른쪽으로', away(1, 2), 4)
@@ -506,7 +812,7 @@ console.log('\n엔진 방향 — 넉백·사거리가 상대를 지나쳐도 맞
   const shoved = (meCol: number, foeCol: number) => {
     const b = battleWith({}, {})
     b.state.pos = [{ col: meCol, row: 1 }, { col: foeCol, row: 1 }]
-    b.resolveTurn([bash, card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([bash, card('c-energy'), card('c-energy')], HOLD)
     return b.state.pos[1].col
   }
   check('① 몬스터가 내 오른쪽 → 오른쪽으로 한 칸', shoved(2, 3), 4)
@@ -532,7 +838,7 @@ console.log('\n넉백 재판정 — 밀려나면 그 슬롯 공격은 새 자리
   const b = battleWith({}, {})
   b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
   const hp0 = b.state.hp[0]
-  b.resolveTurn([shove, card('c-energy'), card('c-energy')], [jab, card('c-energy'), card('c-energy')])
+  b.resolveRound([shove, card('c-energy'), card('c-energy')], [jab, card('c-energy'), card('c-energy')])
   check('밀어낸 쪽은 두 칸 밀어냈다', b.state.pos[1].col, 4)
   check('밀려난 쪽의 반격은 빗나간다', hp0 - b.state.hp[0], 0)
 }
@@ -549,7 +855,7 @@ console.log('\n넉백 재판정 — 밀려나면 그 슬롯 공격은 새 자리
   const b = battleWith({}, {})
   b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
   const hp0 = b.state.hp[0]
-  b.resolveTurn([nudge, card('c-energy'), card('c-energy')], [reach, card('c-energy'), card('c-energy')])
+  b.resolveRound([nudge, card('c-energy'), card('c-energy')], [reach, card('c-energy'), card('c-energy')])
   check('한 칸 밀려도 사거리 안이면 그대로 맞는다', hp0 - b.state.hp[0], 30)
 }
 {
@@ -560,9 +866,11 @@ console.log('\n넉백 재판정 — 밀려나면 그 슬롯 공격은 새 자리
     range: [{ df: 1, du: 0 }], damage: 7, energyCost: 0, push: 2, cooldown: 0,
   }
   const b = battleWith({}, {})
-  b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  // ⚠ 양쪽 다 두 칸을 **온전히** 밀릴 수 있는 자리에 세운다 — 2026-08-07부터 벽에
+  //   막혀 못 밀린 칸은 피해가 되므로, 구석에 세우면 이 검사가 넉백 피해까지 재게 된다.
+  b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }]
   const hp = [b.state.hp[0], b.state.hp[1]]
-  b.resolveTurn([shove, card('c-energy'), card('c-energy')], [shove, card('c-energy'), card('c-energy')])
+  b.resolveRound([shove, card('c-energy'), card('c-energy')], [shove, card('c-energy'), card('c-energy')])
   check('서로 밀면 둘 다 그대로 맞는다', [hp[0] - b.state.hp[0], hp[1] - b.state.hp[1]], [7, 7])
 }
 
@@ -575,7 +883,7 @@ console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다
     const b = new CardBattle('warrior', 'warrior', { startHp: [hp0, hp1] })
     b.state.pos[0] = { col: 2, row: 1 }
     b.state.pos[1] = { col: 3, row: 1 }
-    const steps = b.resolveTurn([hew], [hew])
+    const steps = b.resolveRound([hew], [hew])
     return { b, steps, attacks: steps.filter((s) => s.phase === 'attack') }
   }
 
@@ -612,18 +920,21 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
 {
   // freezeOnHit — 피해가 들어가야 걸리고, freezeCap 만큼만 걸린다.
   const b = battleWith({ freezeOnHit: 1, freezeCap: 2 })
-  b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('freezeOnHit — 적중하면 빙결이 걸린다', b.statusOf(1, 'frozen')?.turns, 1)
+  const steps = b.resolveRound(
+    [card('c-strike'), card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-strike')],
+  )
+  check('freezeOnHit — 적중하면 남은 슬롯이 얼어붙는다', steps.filter((x) => x.result === 'frozen').length, 2)
   for (let t = 0; t < 4; t++)
-    b.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('freezeOnHit — 전투당 freezeCap(2)회까지만', b.state.freezesUsed[0], 2)
 }
 {
   // guardPowerPct — 수비 카드만 커진다(매 턴 보호막 turnShield는 그대로).
   const plain = battleWith({})
-  plain.resolveTurn([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
+  plain.resolveRound([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
   const boosted = battleWith({ guardPowerPct: 50 })
-  boosted.resolveTurn([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
+  boosted.resolveRound([card('c-guard'), card('c-energy'), card('c-energy')], IDLE)
   check('guardPowerPct 50% — 가드 25 → 38', boosted.state.shield[0] - plain.state.shield[0], 13)
   const std = battleWith({ turnShield: 20 })
   const std2 = battleWith({ turnShield: 20, guardPowerPct: 100 })
@@ -633,11 +944,11 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   // healPowerPct — 힐 카드와 regen 둘 다 키운다.
   const b = battleWith({ healPowerPct: 100 })
   b.state.hp[0] = 50
-  b.resolveTurn([card('c-repair'), card('c-energy'), card('c-energy')], IDLE)
+  b.resolveRound([card('c-repair'), card('c-energy'), card('c-energy')], IDLE)
   check('healPowerPct 100% — 상처 봉합 10 → 20', b.state.hp[0], 70)
   const r = battleWith({ regen: 10, healPowerPct: 50 })
   r.state.hp[0] = 50
-  r.resolveTurn(IDLE, IDLE)
+  r.resolveRound(IDLE, IDLE)
   check('healPowerPct — regen 10 → 15', r.state.hp[0], 65)
 }
 {
@@ -650,24 +961,24 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
 {
   // executeBonusPct — **상대가** 반피 이하일 때만. lowHpBonusPct와는 합산.
   const base = battleWith({})
-  base.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  base.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   const normal = base.maxHp[1] - base.state.hp[1]
 
   const full = battleWith({ executeBonusPct: 100 })
-  full.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  full.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('상대가 만피면 처형 배율 없음', full.maxHp[1] - full.state.hp[1], normal)
 
   const low = battleWith({ executeBonusPct: 100 })
   low.state.hp[1] = 40 // 103의 절반 이하 — 대신 한 방에 안 죽을 만큼은 남긴다
   const before = low.state.hp[1]
-  low.resolveTurn([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  low.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('상대가 반피 이하 + 100% → 피해 2배', before - low.state.hp[1], normal * 2)
 }
 {
   // 카드 `shatter` — 적중하면 상대 보호막이 통째로 날아간다.
   const b = battleWith({})
   b.state.energy = [100, 100]
-  b.resolveTurn(
+  b.resolveRound(
     [card('c-energy'), card('r-havoc'), card('c-energy')],
     [card('c-guard'), card('c-energy'), card('c-energy')],
   )
@@ -677,10 +988,10 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   // 전장 붕괴 — 무너진 칸에 서 있으면 턴 종료에 피해. `collapseResist`가 깎는다.
   const at = (turn: number, pas: Partial<Passive>) => {
     const b = battleWith(pas)
-    b.state.turn = turn
+    b.state.round = turn
     b.state.pos = [{ col: 0, row: 1 }, { col: 3, row: 1 }] // 왼쪽 끝 = 가장 먼저 무너지는 열
     const hp = b.state.hp[0]
-    b.resolveTurn(HOLD, HOLD)
+    b.resolveRound(HOLD, HOLD)
     return hp - b.state.hp[0] // battleWith는 패시브를 통째로 갈아끼우므로 regen이 없다
   }
   check('붕괴 1단계 — 턴당 5', at(6, {}), 5)
@@ -692,15 +1003,15 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
 {
   // ⚠ **무너진 칸으로 들어갈 수 있어야 한다**(사용자 신고 — 소프트 위험지대).
   const b = battleWith({})
-  b.state.turn = 6
+  b.state.round = 6
   b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
-  b.resolveTurn([card('m-left'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([card('m-left'), card('c-energy'), card('c-energy')], HOLD)
   check('무너진 칸으로 이동이 막히지 않는다', b.state.pos[0].col, 0)
 }
 {
   // 전면 붕괴 뒤에는 AI가 도망치지 않고 계속 싸운다 — 예전엔 슬롯을 전부 이동에 썼다.
   const b = battleWith({})
-  b.state.turn = 12 // 판 전체가 무너진 단계
+  b.state.round = 12 // 판 전체가 무너진 단계
   b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }]
   const plan = decideAI(b.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.concat(getChar('warrior').basics))
   check('전면 붕괴 뒤 AI는 이동만 하지 않는다', plan.every((c) => c.kind === 'move'), false)
@@ -819,7 +1130,7 @@ console.log('\n회귀 — 옵션을 안 주면 예전과 같아야 한다')
     getChar('archer').passive.attackBonus,
     getChar('warrior').passive.damageReduction,
   ])
-  check('누적 기력·기절 상태는 0에서 시작', [b.state.energySpent, b.state.stunned], [[0, 0], [0, 0]])
+  check('누적 기력·상태이상은 비어 있다', [b.state.energySpent, b.state.status], [[0, 0], [[], []]])
 }
 {
   const b = new CardBattle('warrior', 'warrior', { startHp: [77, undefined] })
@@ -917,13 +1228,13 @@ console.log('\n지형 — 바위')
   // ① 못 들어간다 — 이동이 바위 앞에서 멈춘다(벽과 같은 규칙).
   {
     const b = withRocks(rocks([2, 1]))
-    b.resolveTurn([card('m-right'), card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([card('m-right'), card('c-energy'), card('c-energy')], HOLD)
     check('바위 앞에서 이동이 멈춘다', b.state.pos[0].col, 1)
     const b2 = withRocks(rocks([3, 1]))
-    b2.resolveTurn([card('m-right2'), card('c-energy'), card('c-energy')], HOLD)
+    b2.resolveRound([card('m-right2'), card('c-energy'), card('c-energy')], HOLD)
     check('2칸 이동은 바위 직전까지만 간다', b2.state.pos[0].col, 2)
     const b3 = withRocks(rocks([2, 1]))
-    b3.resolveTurn([card('m-up'), card('m-right'), card('c-energy')], HOLD)
+    b3.resolveRound([card('m-up'), card('m-right'), card('c-energy')], HOLD)
     check('줄을 바꾸면 바위를 지나갈 수 있다', [b3.state.pos[0].col, b3.state.pos[0].row], [2, 0])
   }
 
@@ -936,13 +1247,13 @@ console.log('\n지형 — 바위')
     }
     const b = withRocks(rocks([2, 1]))
     const hp1 = b.state.hp[1]
-    b.resolveTurn([beam, card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([beam, card('c-energy'), card('c-energy')], HOLD)
     check('바위 뒤 상대는 안 맞는다', hp1 - b.state.hp[1], 0)
 
     // 관통은 바위를 무시하고 뒤를 그대로 때린다(궁수·마법사의 답).
     const bp = withRocks(rocks([2, 1]))
     const hpp = bp.state.hp[1]
-    bp.resolveTurn([{ ...beam, id: 'test-beam-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
+    bp.resolveRound([{ ...beam, id: 'test-beam-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
     check('관통은 바위를 뚫고 맞힌다', hpp - bp.state.hp[1] > 0, true)
 
     // 유물 `alwaysPierce`도 같은 규칙(엔진 piercesRock 한 곳을 본다).
@@ -953,13 +1264,13 @@ console.log('\n지형 — 바위')
       obstacles: rocks([2, 1]),
     })
     const hpa = ba.state.hp[1]
-    ba.resolveTurn([beam, card('c-energy'), card('c-energy')], HOLD)
+    ba.resolveRound([beam, card('c-energy'), card('c-energy')], HOLD)
     check('alwaysPierce 유물도 바위를 뚫는다', hpa - ba.state.hp[1] > 0, true)
 
     // 다른 줄의 바위는 아무것도 안 가린다 — 우회로가 늘 남아 있어야 한다.
     const bd = withRocks(rocks([2, 0]))
     const hpd = bd.state.hp[1]
-    bd.resolveTurn([beam, card('c-energy'), card('c-energy')], HOLD)
+    bd.resolveRound([beam, card('c-energy'), card('c-energy')], HOLD)
     check('다른 줄 바위는 사격선을 안 막는다', hpd - bd.state.hp[1] > 0, true)
   }
 
@@ -970,18 +1281,21 @@ console.log('\n지형 — 바위')
       range: [{ df: 1, du: 0 }, { df: 2, du: 0 }], damage: 13, energyCost: 0, cooldown: 0,
     }
     const b = withRocks(rocks([2, 1]))
-    b.resolveTurn([hit, card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([hit, card('c-energy'), card('c-energy')], HOLD)
     check('가로막은 바위가 깎인다', b.state.obstacles[0]?.hp, ROCK_HP - 13)
     // 한 번 더 때리면 부서져 판에서 사라진다.
-    b.resolveTurn([hit, card('c-energy'), card('c-energy')], HOLD)
+    b.resolveRound([hit, card('c-energy'), card('c-energy')], HOLD)
     check('바위가 부서지면 판에서 사라진다', b.state.obstacles.length, 0)
     // 관통은 바위를 그냥 지나간다 — 깎지도 않는다.
     const bp = withRocks(rocks([2, 1]))
-    bp.resolveTurn([{ ...hit, id: 'test-rockhit-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
+    bp.resolveRound([{ ...hit, id: 'test-rockhit-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
     check('관통은 바위를 깎지 않는다', bp.state.obstacles[0]?.hp, ROCK_HP)
   }
 
-  // ④ 처박기 — 밀어낼 곳이 바위면 한 칸도 안 밀리고 1턴 기절. **벽은 아니다.**
+  // ④ 처박기(2026-08-07 사용자 확정) — 밀려날 곳이 막혀 있으면 **벽이든 바위든**
+  //    못 간 칸마다 KNOCKBACK_BLOCK_DAMAGE, 한 칸도 못 밀리면 그 라운드 기절.
+  //    ⚠ 2026-08-05까지는 바위만 대상이었다(구석 좌석 운으로 무한 기절을 막으려고).
+  //      사용자가 벽도 포함하도록 확정해 뒤집었고, **기절은 0칸일 때만**으로 남겼다.
   {
     const shove: CardDef = {
       id: 'test-slam', name: '테스트 처박기', kind: 'attack', desc: '',
@@ -989,20 +1303,35 @@ console.log('\n지형 — 바위')
     }
     const b = withRocks(rocks([3, 1]))
     b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
-    b.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+    const hp = b.state.hp[1]
+    const st = b.resolveRound([shove, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-strike'), card('c-strike')])
     check('바위에 막히면 한 칸도 안 밀린다', b.state.pos[1].col, 2)
-    check('바위에 처박히면 기절한다', b.state.stunned[1], 1)
+    check('바위에 처박히면 2칸분 피해(1 + 5×2)', hp - b.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE * 2)
+    check('바위에 처박히면 그 라운드 기절', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
 
-    // 벽에 몰린 상대는 기절하지 않는다 — 좌석 운으로 매 턴 기절하면 안 된다.
+    // 벽도 같다 — 판 끝에 몰린 상대는 밀려날 곳이 없어 그대로 부딪힌다.
     const w = withRocks([])
     w.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }]
-    w.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
-    check('벽에 몰려도 기절하지 않는다', w.state.stunned[1], 0)
+    const hpw = w.state.hp[1]
+    w.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
+    check('벽에 몰려도 똑같이 처박힌다', hpw - w.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE * 2)
 
-    // 한 칸이라도 밀리면 기절하지 않는다(완전히 막혔을 때만).
+    // **부분 차단도 기절한다**(2026-08-07 사용자 예시). 못 간 칸만 피해가 된다.
     const p = withRocks(rocks([4, 1]), [1, 1], [2, 1])
-    p.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
-    check('한 칸이라도 밀리면 기절 없음', [p.state.pos[1].col, p.state.stunned[1]], [3, 0])
+    const hpp = p.state.hp[1]
+    const sp = p.resolveRound(
+      [shove, card('c-energy'), card('c-energy')],
+      [card('c-energy'), card('c-strike'), card('c-strike')],
+    )
+    check('부분 차단 — 한 칸 밀리고 막혔다', p.state.pos[1].col, 3)
+    check('부분 차단 — 못 간 한 칸만 피해(1 + 5)', hpp - p.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE)
+    check('부분 차단도 기절한다', sp.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+
+    // 온전히 밀리면 넉백 피해가 없다.
+    const f = withRocks([], [1, 1], [2, 1])
+    const hpf = f.state.hp[1]
+    f.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
+    check('끝까지 밀리면 넉백 피해 없음', [f.state.pos[1].col, hpf - f.state.hp[1]], [4, 1])
   }
 
   // ⑤ 세우기 — 「석벽 소환」이 상대 좌우에 바위를 만든다.
@@ -1010,7 +1339,7 @@ console.log('\n지형 — 바위')
     const menhir = BOSS_CARDS.find((c) => c.id === 'b-ward-menhir')!
     // p1(보스)이 내면 **상대(p0) 좌우**에 선다.
     const b = withRocks([], [1, 1], [3, 1])
-    b.resolveTurn(HOLD, [menhir, card('c-energy'), card('c-energy')])
+    b.resolveRound(HOLD, [menhir, card('c-energy'), card('c-energy')])
     check(
       '석벽은 상대 좌우에 선다',
       b.state.obstacles.map((r) => r.cell.col).sort((x, y) => x - y),
@@ -1020,7 +1349,7 @@ console.log('\n지형 — 바위')
     // 파이터가 선 칸에는 안 세운다(바위 위에 서 있는 상태를 만들면 안 된다).
     // p0=2·p1=3이면 상대 좌우는 1과 3인데, 3은 보스 자신이 서 있으므로 1만 선다.
     const c2 = withRocks([], [2, 1], [3, 1])
-    c2.resolveTurn(HOLD, [menhir, card('c-energy'), card('c-energy')])
+    c2.resolveRound(HOLD, [menhir, card('c-energy'), card('c-energy')])
     check('파이터가 선 칸엔 안 세운다', c2.state.obstacles.map((r) => r.cell.col), [1])
   }
 
@@ -1051,7 +1380,7 @@ console.log('\n지형 — 바위')
     const plan = [card('m-right'), card('c-strike'), card('c-guard')]
     const run = (obstacles: ReturnType<typeof rocks>) => {
       const b = new CardBattle('warrior', 'archer', { obstacles })
-      const out = [b.resolveTurn(plan, HOLD), b.resolveTurn(plan, HOLD)]
+      const out = [b.resolveRound(plan, HOLD), b.resolveRound(plan, HOLD)]
       return JSON.stringify(out)
     }
     check('빈 지형은 지형 인자를 안 준 것과 동일', run([]), run(undefined as never))

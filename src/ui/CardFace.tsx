@@ -198,7 +198,7 @@ export function CardFace({
       {card.kind === 'buff' && (
         <div className="cardface__meta">
           <span>{BUFF_LABEL[card.buff ?? 'atkUp'](card.buffPower ?? 0)}</span>
-          <span>{card.buffTurns}턴</span>
+          <span>{card.buffRounds}라운드</span>
           <span>기력 {card.buffCost}</span>
         </div>
       )}

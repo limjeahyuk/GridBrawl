@@ -2,8 +2,8 @@
 // Per-match plan exchange. Both peers run the IDENTICAL deterministic engine
 // (host = side 0, guest = side 1). Each turn a peer sends its three chosen card
 // ids and waits for the other's; once both plans are known, both call the same
-// `resolveTurn(planA, planB)` and animate the same steps — so the simulation
-// stays in lockstep with no authoritative server. (`engine.resolveTurn` uses no
+// `resolveRound(planA, planB)` and animate the same steps — so the simulation
+// stays in lockstep with no authoritative server. (`engine.resolveRound` uses no
 // randomness; the CPU AI is not involved in PvP.)
 // ---------------------------------------------------------------------------
 import { deckFor } from '../battle/cards'
@@ -51,7 +51,7 @@ export function createPlanExchange(transport: NetTransport, localSide: 0 | 1): P
 
   const getOpponentPlan = (localPlan: CardDef[], b: CardBattle): Promise<CardDef[] | null> => {
     if (!oppDeck) oppDeck = deckFor(b.chars[oppSide])
-    const turn = b.state.turn
+    const turn = b.state.round
     transport.send({ t: 'plan', turn, cards: localPlan.map((c) => c.id) })
     const early = buffered.get(turn)
     if (early) {

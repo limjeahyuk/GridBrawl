@@ -10,7 +10,7 @@ export const ENERGY_REGEN = 10 // passive energy regained at the start of each t
 // common attack/guard cards are deliberately WEAK — every fighter has them as a
 // baseline, and the exciting versions are each character's unique cards (and,
 // later, cards obtained from draws/purchases). All non-attacks resolve before
-// attacks within a slot (see engine `resolveTurn`).
+// attacks within a slot (see engine `resolveRound`).
 export const COMMON_CARDS: CardDef[] = [
   { id: 'm-right', name: '오른쪽', kind: 'move', dir: 'right', steps: 1, cooldown: 0, desc: '오른쪽으로 한 칸 이동. (>)' },
   { id: 'm-left', name: '왼쪽', kind: 'move', dir: 'left', steps: 1, cooldown: 0, desc: '왼쪽으로 한 칸 이동. (<)' },

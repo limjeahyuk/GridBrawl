@@ -81,8 +81,8 @@ const ABYSS: CardDef[] = [
   }),
   atk({
     id: 'b-abyss-brand', name: '심연의 낙인', range: [...CROSS, ...both(2)], damage: 9, energyCost: 10,
-    burn: 3, freeze: 1, fx: 'flame', accent: '#8f5fd4',
-    desc: '십자 네 칸 + 앞뒤 2칸째에 낙인을 새긴다. 화상 3 + 1턴 빙결.',
+    burn: 2, freeze: 1, fx: 'flame', accent: '#8f5fd4',
+    desc: '십자 네 칸 + 앞뒤 2칸째에 낙인을 새긴다. 화상 2라운드 + 이 라운드 빙결.',
   }),
   atk({
     id: 'b-abyss-maw', name: '집어삼키는 아가리', range: [...RING, ...both(2)], damage: 21, energyCost: 23,
@@ -92,17 +92,17 @@ const ABYSS: CardDef[] = [
 ]
 
 // --- 수호기사 · 봉인의 파수꾼 ------------------------------------------------
-// 정체성: **때릴 타이밍이 정해져 있다.** 방벽 턴엔 화력을 버리게 만들고, 커튼을
-// 여는 턴에 보호막을 통째로 깨며 되갚는다. 플레이어에게 "기다렸다 친다"를 가르친다.
+// 정체성: **때릴 타이밍이 정해져 있다.** 방벽 라운드엔 화력을 버리게 만들고, 커튼을
+// 여는 라운드에 보호막을 통째로 깨며 되갚는다. 플레이어에게 "기다렸다 친다"를 가르친다.
 const SANCTUM: CardDef[] = [
   {
     id: 'b-ward-bulwark', name: '봉인의 방벽', kind: 'guard', block: 44, guardCost: 8, cooldown: 0,
     fx: 'shield', accent: '#c9a24a',
-    desc: '이번 턴 받는 피해를 최대 88 막는다. 이 턴에 큰 카드를 쓰면 통째로 삼켜진다.',
+    desc: '이번 라운드 받는 피해를 최대 88 막는다. 이 라운드에 큰 카드를 쓰면 통째로 삼켜진다.',
   },
   {
     // **석벽 소환** — 이 보스의 새 축(2026-08-05). 플레이어 **양옆**에 바위를 세워
-    // 가로 이동을 끊는다. 빠져나가려면 줄을 바꿔야 하고, 그 한 턴이 곧 수호기사가
+    // 가로 이동을 끊는다. 빠져나가려면 줄을 바꿔야 하고, 그 한 라운드가 곧 수호기사가
     // 방벽을 세우는 시간이다. 「돌파 창격」과 짝이다 — 바위에 등을 댄 채로 밀리면
     // 한 칸도 못 밀려 **처박혀 기절한다**(엔진 `slammed`).
     // ⚠ 세우는 위치는 상대 **좌우**뿐이다. 위아래까지 막으면 갇혀서 못 빠져나온다.
@@ -124,14 +124,14 @@ const SANCTUM: CardDef[] = [
   atk({
     id: 'b-ward-verdict', name: '최후의 심판', range: [...barBoth(1), ...both(2)], damage: 22, energyCost: 22,
     shatter: true, stun: 1, fx: 'quake', signature: true, accent: '#e6c05f',
-    desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째에 심판을 내린다. 보호막을 남김없이 부수고 1턴 기절시킨다.',
+    desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째에 심판을 내린다. 보호막을 남김없이 부수고 이 라운드 동안 기절시킨다.',
   }),
 ]
 
 // --- 화염군주 · 잿불의 폭군 ---------------------------------------------------
-// 정체성: **충전이 실제로 쌓인다.** 예고 턴에 쓰는 「불씨 모으기」가 `empower`로
+// 정체성: **충전이 실제로 쌓인다.** 예고 라운드에 쓰는 「불씨 모으기」가 `empower`로
 // 이 전투 내내 남는 공격력이 된다 — 예전엔 "모은다"가 문구뿐이었고 실제로는 아무
-// 것도 쌓이지 않았다. 그래서 오래 끌수록 위험해지고, 충전 턴이 곧 반격 창이다.
+// 것도 쌓이지 않았다. 그래서 오래 끌수록 위험해지고, 충전 라운드가 곧 반격 창이다.
 const PYRE: CardDef[] = [
   atk({
     id: 'b-pyre-ember', name: '불씨 모으기', range: both(1), damage: 6, energyCost: 7,
@@ -140,18 +140,18 @@ const PYRE: CardDef[] = [
   }),
   atk({
     id: 'b-pyre-lash', name: '화염 채찍', range: beamBoth(1, 3), damage: 12, energyCost: 12,
-    burn: 3, fx: 'flame', accent: '#e0663a',
-    desc: '같은 줄 앞뒤 3칸까지 채찍처럼 뻗는 불길. 화상 3.',
+    burn: 2, fx: 'flame', accent: '#e0663a',
+    desc: '같은 줄 앞뒤 3칸까지 채찍처럼 뻗는 불길. 화상 2라운드.',
   }),
   atk({
     id: 'b-pyre-pillar', name: '화염 기둥', range: [...bar(1), ...bar(-1), ...both(2)], damage: 12, energyCost: 15,
-    burn: 3, fx: 'flame', accent: '#e0663a',
-    desc: '앞뒤 세로 3줄 + 앞뒤 2칸째에서 불기둥이 솟는다. 화상 3.',
+    burn: 2, fx: 'flame', accent: '#e0663a',
+    desc: '앞뒤 세로 3줄 + 앞뒤 2칸째에서 불기둥이 솟는다. 화상 2라운드.',
   }),
   atk({
     id: 'b-pyre-inferno', name: '인페르노', range: [...barBoth(1), ...barBoth(2)], damage: 16, energyCost: 24,
-    burn: 5, fx: 'flame', signature: true, accent: '#ff8a3d',
-    desc: '시그니처. 앞뒤 1~2칸의 세 줄을 통째로 불바다로 만든다. 화상 5 — 모아 둔 불씨가 전부 얹힌다.',
+    burn: 3, fx: 'flame', signature: true, accent: '#ff8a3d',
+    desc: '시그니처. 앞뒤 1~2칸의 세 줄을 통째로 불바다로 만든다. 화상 3라운드 — 모아 둔 불씨가 전부 얹힌다.',
   }),
 ]
 

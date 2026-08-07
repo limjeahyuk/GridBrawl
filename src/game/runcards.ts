@@ -8,7 +8,7 @@
 //   · 기력을 많이 쓰는 카드 → 누적 기력 유물(기절·회복 트리거)과 맞물린다
 //   · 기력을 벌어오는 카드(강탈·기력의 성수) → 그 트리거를 더 빨리 돌린다
 //   · 각성(`empower`)·저체력 배율 유물 → 길게 끌수록 무거워지는 빌드
-//   · 기절·끌어당김 → 상대 턴을 지우거나 사거리로 끌어오는 통제
+//   · 기절·끌어당김 → 상대의 라운드를 지우거나 사거리로 끌어오는 통제
 // 강한 조합을 막지 않는 대신, 재료가 다 모이기가 어렵다(유물 희귀도 가중 + 덱 상한).
 // ---------------------------------------------------------------------------
 import { COMMON_CARDS } from '../battle/cards'
@@ -62,7 +62,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-stunrod', name: '뇌명의 지팡이', range: both(1), damage: 9, energyCost: 15, stun: 1, cooldown: 3,
     fx: 'bolt', accent: '#7fd4ff',
-    desc: '앞뒤 한 칸. 피해를 주면 상대를 1턴 기절시킨다(카드를 못 냄). 쿨타임 3턴.',
+    desc: '앞뒤 한 칸. 피해를 주면 이 라운드 동안 기절시킨다(남은 카드를 못 냄). 쿨타임 3라운드.',
   }),
   atk({
     id: 'r-hook', name: '사슬 갈고리', range: beamBoth(2, 3), damage: 8, energyCost: 8, pull: 2, pointBlank: false,
@@ -80,7 +80,7 @@ export const RUN_CARDS: CardDef[] = [
   }),
   {
     id: 'r-cell', name: '기력의 성수', kind: 'energy', gain: 30, cooldown: 2,
-    desc: '기력을 30 회복한다. 쿨타임 2턴 — 큰 카드를 연달아 쏘거나 누적 기력 유물을 돌린다.',
+    desc: '기력을 30 회복한다. 쿨타임 2라운드 — 큰 카드를 연달아 쏘거나 누적 기력 유물을 돌린다.',
   },
   {
     id: 'r-overclock', name: '각성의 주문', kind: 'energy', gain: 23, cooldown: 1,
@@ -91,7 +91,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-protocol', name: '피의 각인', range: both(1), damage: 6, energyCost: 12, empower: 3, cooldown: 1,
     fx: 'shield', accent: '#f7c948',
-    desc: '피해는 작지만 이번 전투 내내 내 모든 공격 피해 +3(중첩). 쓸수록 뒷 턴이 무거워진다.',
+    desc: '피해는 작지만 이번 전투 내내 내 모든 공격 피해 +3(중첩). 쓸수록 뒷 라운드가 무거워진다.',
   }),
   atk({
     id: 'r-resonance', name: '울림의 파문', range: barBoth(1), damage: 12, energyCost: 17, empower: 2,
@@ -128,7 +128,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-annihilate', name: '소멸 포격', range: [...bar(1), ...bar(2)], damage: 33, energyCost: 29, cooldown: 2,
     fx: 'orb', accent: '#d45fae', signature: true,
-    desc: '앞 두 칸 × 세 줄을 지우는 최종 포격. 기력 29·쿨 2턴 — 기력을 굴릴 수 있어야 쓴다.',
+    desc: '앞 두 칸 × 세 줄을 지우는 최종 포격. 기력 29·쿨 2라운드 — 기력을 굴릴 수 있어야 쓴다.',
   }),
   atk({
     id: 'r-lifedrain', name: '생명 흡수', range: both(1), damage: 13, energyCost: 11, leech: 8,
@@ -138,15 +138,15 @@ export const RUN_CARDS: CardDef[] = [
   // --- 수비·회복 -------------------------------------------------------------
   {
     id: 'r-bastion', name: '불락의 성채', kind: 'guard', block: 48, guardCost: 13, cooldown: 2, fx: 'shield',
-    desc: '기력 13 소모. 이번 턴 받는 피해를 최대 95 막는다. 쿨타임 2턴 — 예고된 대격변용.',
+    desc: '기력 13 소모. 이번 라운드 받는 피해를 최대 95 막는다. 쿨타임 2라운드 — 예고된 대격변용.',
   },
   {
     id: 'r-deflector', name: '편향 장막', kind: 'guard', block: 28, guardCost: 6, cooldown: 1, fx: 'shield',
-    desc: '기력 6 소모. 이번 턴 받는 피해를 최대 55 막는다. 싸고 자주 쓴다.',
+    desc: '기력 6 소모. 이번 라운드 받는 피해를 최대 55 막는다. 싸고 자주 쓴다.',
   },
   {
     id: 'r-medkit', name: '치유의 성수', kind: 'heal', healHp: 23, healCost: 15, cooldown: 2,
-    desc: '기력 15을 체력 23로 바꾼다. 쿨타임 2턴 — 층 사이로 체력을 이어가는 핵심 카드.',
+    desc: '기력 15을 체력 23로 바꾼다. 쿨타임 2라운드 — 층 사이로 체력을 이어가는 핵심 카드.',
   },
   {
     id: 'r-transfuse', name: '수혈', kind: 'heal', healHp: 13, healCost: 7, cooldown: 1,
@@ -156,11 +156,11 @@ export const RUN_CARDS: CardDef[] = [
   // --- 이동 ------------------------------------------------------------------
   {
     id: 'r-blink', name: '순간 이동', kind: 'move', dir: 'right', steps: 3, cooldown: 2,
-    desc: '오른쪽으로 세 칸 도약. 쿨타임 2턴 — 한 턴에 붙어서 때린다.',
+    desc: '오른쪽으로 세 칸 도약. 쿨타임 2라운드 — 한 라운드에 붙어서 때린다.',
   },
   {
     id: 'r-backblink', name: '역행 이동', kind: 'move', dir: 'left', steps: 3, cooldown: 2,
-    desc: '왼쪽으로 세 칸 후퇴. 쿨타임 2턴 — 원거리 빌드가 거리를 되찾는다.',
+    desc: '왼쪽으로 세 칸 후퇴. 쿨타임 2라운드 — 원거리 빌드가 거리를 되찾는다.',
   },
   {
     id: 'r-sidestep', name: '비껴 딛기', kind: 'move', dir: 'up-right', steps: 2, cooldown: 1,
@@ -186,53 +186,53 @@ export const RUN_CARDS: CardDef[] = [
 
   // --- ① 자기 강화 ----------------------------------------------------------
   {
-    id: 'r-whet', name: '숫돌 갈기', kind: 'buff', buff: 'atkUp', buffPower: 5, buffTurns: 3,
+    id: 'r-whet', name: '숫돌 갈기', kind: 'buff', buff: 'atkUp', buffPower: 5, buffRounds: 3,
     buffCost: 9, cooldown: 2, fx: 'slash', accent: '#e0a34a',
-    desc: '3턴간 내 공격 피해 +5. 슬롯 하나를 다음 두 턴에 투자한다.',
+    desc: '3라운드간 내 공격 피해 +5. 슬롯 하나를 다음 두 라운드에 투자한다.',
   },
   {
-    id: 'r-bulwarkcry', name: '결속의 외침', kind: 'buff', buff: 'defUp', buffPower: 4, buffTurns: 3,
+    id: 'r-bulwarkcry', name: '결속의 외침', kind: 'buff', buff: 'defUp', buffPower: 4, buffRounds: 3,
     buffCost: 9, cooldown: 2, fx: 'shield', accent: '#7fa8d4',
-    desc: '3턴간 받는 공격 피해 -4. 큰 카드를 모으는 동안 버틴다.',
+    desc: '3라운드간 받는 공격 피해 -4. 큰 카드를 모으는 동안 버틴다.',
   },
   {
-    id: 'r-warpaint', name: '전투 문신', kind: 'buff', buff: 'atkUp', buffPower: 9, buffTurns: 2,
+    id: 'r-warpaint', name: '전투 문신', kind: 'buff', buff: 'atkUp', buffPower: 9, buffRounds: 2,
     buffCost: 15, cooldown: 3, fx: 'quake', accent: '#c9713a',
-    desc: '2턴간 내 공격 피해 +9. 짧고 굵게 — 쿨타임 3턴.',
+    desc: '2라운드간 내 공격 피해 +9. 짧고 굵게 — 쿨타임 3라운드.',
   },
   {
-    id: 'r-freerein', name: '무아의 경지', kind: 'buff', buff: 'freeCast', buffTurns: 2, buffCost: 21,
+    id: 'r-freerein', name: '무아의 경지', kind: 'buff', buff: 'freeCast', buffRounds: 2, buffCost: 21,
     cooldown: 4, fx: 'orb', accent: '#d45fae',
-    desc: '2턴간 모든 카드의 기력 소모가 0. 선불이 비싸고 쿨이 길다 — 켜진 동안 최대 화력.',
+    desc: '2라운드간 모든 카드의 기력 소모가 0. 선불이 비싸고 쿨이 길다 — 켜진 동안 최대 화력.',
   },
 
   // --- ② 상태이상 -----------------------------------------------------------
   atk({
-    id: 'r-plaguebolt', name: '역병 화살', range: beamBoth(1, 2), damage: 10, energyCost: 9, poison: 4,
-    fx: 'bolt', accent: '#3cbf7a', desc: '앞뒤 1~2칸. 피해를 주면 독 4(3턴). 독 유물과 겹칠수록 커진다.',
+    id: 'r-plaguebolt', name: '역병 화살', range: beamBoth(1, 2), damage: 10, energyCost: 9, poison: 2, fog: 1,
+    fx: 'bolt', accent: '#3cbf7a', desc: '앞뒤 1~2칸. 피해를 주면 중독 2라운드 + 맞은 자리에 독안개 1라운드. 서 있어도 아프고 비켜도 아프다.',
   }),
   atk({
-    id: 'r-emberburst', name: '불티 폭발', range: CROSS, damage: 11, energyCost: 10, burn: 4,
-    fx: 'flame', accent: '#e2703c', desc: '상·하·좌·우 네 칸. 피해를 주면 화상 4(2턴).',
+    id: 'r-emberburst', name: '불티 폭발', range: CROSS, damage: 11, energyCost: 10, burn: 1,
+    fx: 'flame', accent: '#e2703c', desc: '상·하·좌·우 네 칸. 피해를 주면 화상 2라운드 — 그동안 맞을 때마다 5씩 더 아프다.',
   }),
   atk({
     id: 'r-frostnova', name: '서리 폭발', range: barBoth(1), damage: 10, energyCost: 13, freeze: 1, cooldown: 2,
-    fx: 'orb', accent: '#7fd4ff', desc: '앞뒤 세로 3줄을 얼린다 — 1턴 빙결(이동 불가). 쿨타임 2턴.',
+    fx: 'orb', accent: '#7fd4ff', desc: '앞뒤 세로 3줄을 얼린다 — 이 라운드 빙결(남은 카드를 못 낸다. 때리면 깨진다). 쿨타임 2라운드.',
   }),
   atk({
     id: 'r-blightwave', name: '역병의 물결', range: [...barBoth(1), ...both(2)], damage: 15, energyCost: 19,
-    poison: 3, burn: 3, fx: 'quake', accent: '#8f6fb8',
+    poison: 2, burn: 2, fx: 'quake', accent: '#8f6fb8',
     desc: '앞뒤 세 줄 + 앞뒤 2칸째. 독 3과 화상 3을 함께 묻힌다.',
   }),
   atk({
-    id: 'r-witherpulse', name: '쇠약의 파동', range: barBoth(1), damage: 9, energyCost: 11, poison: 3, drain: 8,
+    id: 'r-witherpulse', name: '쇠약의 파동', range: barBoth(1), damage: 9, energyCost: 11, poison: 2, drain: 8,
     fx: 'orb', accent: '#6fa88f', desc: '앞뒤 세 줄을 훑어 독 3을 묻히고 상대 기력을 8 빼앗는다.',
   }),
 
   // --- ③ 값싼 반복기 (누적 기력 트리거를 돌린다) -----------------------------
   atk({
     id: 'r-tap', name: '연타', range: both(1), damage: 7, energyCost: 3,
-    fx: 'punch', desc: '앞뒤 한 칸. 값이 아주 싸서 매 턴 낼 수 있다 — 기력을 꾸준히 태운다.',
+    fx: 'punch', desc: '앞뒤 한 칸. 값이 아주 싸서 매 라운드 낼 수 있다 — 기력을 꾸준히 태운다.',
   }),
   atk({
     id: 'r-scattershot', name: '산탄', range: FORK, damage: 8, energyCost: 6,
@@ -244,7 +244,7 @@ export const RUN_CARDS: CardDef[] = [
   }),
   {
     id: 'r-trickle', name: '실낱 기력', kind: 'energy', gain: 14, cooldown: 0,
-    desc: '기력을 14 회복한다. **쿨타임이 없다** — 매 턴 써서 트리거를 돌릴 수 있다.',
+    desc: '기력을 14 회복한다. **쿨타임이 없다** — 매 라운드 써서 트리거를 돌릴 수 있다.',
   },
 
   // --- 순수 화력·통제 보강 ---------------------------------------------------
@@ -268,7 +268,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-havoc', name: '파멸의 일격', range: barBoth(1), damage: 26, energyCost: 22, cooldown: 1, shatter: true,
     fx: 'quake', accent: '#e05050',
-    desc: '앞뒤 세 줄을 통째로 부순다. 적중하면 상대 보호막이 남김없이 날아간다 — 쿨타임 1턴.',
+    desc: '앞뒤 세 줄을 통째로 부순다. 적중하면 상대 보호막이 남김없이 날아간다 — 쿨타임 1라운드.',
   }),
   atk({
     id: 'r-gale', name: '질풍 연격', range: beamBoth(1, 2), damage: 17, energyCost: 15, dashForward: 1, push: 1,
@@ -281,25 +281,25 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-shockwave', name: '충격파', range: [...barBoth(1), ...barBoth(2)], damage: 14, energyCost: 20, stun: 1,
     cooldown: 3, fx: 'quake', accent: '#7fd4ff',
-    desc: '앞뒤 1~2칸의 세 줄을 통째로 흔든다. 피해를 주면 1턴 기절 — 쿨타임 3턴.',
+    desc: '앞뒤 1~2칸의 세 줄을 통째로 흔든다. 피해를 주면 이 라운드 기절 — 쿨타임 3라운드.',
   }),
 
   // --- 수비·회복·이동 보강 ---------------------------------------------------
   {
     id: 'r-parry', name: '받아넘기기', kind: 'guard', block: 17, guardCost: 4, cooldown: 0, fx: 'shield',
-    desc: '기력 4로 이번 턴 34를 막는다. 쿨타임이 없어 방벽 증폭 유물과 매 턴 돌아간다.',
+    desc: '기력 4로 이번 라운드 34를 막는다. 쿨타임이 없어 방벽 증폭 유물과 매 라운드 돌아간다.',
   },
   {
     id: 'r-ironwall', name: '무쇠 성벽', kind: 'guard', block: 65, guardCost: 17, cooldown: 3, fx: 'shield',
-    desc: '기력 17로 이번 턴 130을 막는다. 쿨타임 3턴 — 보스의 예고된 한 방을 받아 내는 카드.',
+    desc: '기력 17로 이번 라운드 130을 막는다. 쿨타임 3라운드 — 보스의 예고된 한 방을 받아 내는 카드.',
   },
   {
     id: 'r-syringe', name: '약초 침', kind: 'heal', healHp: 9, healCost: 4, cooldown: 0,
-    desc: '기력 4을 체력 9로 바꾼다. **쿨타임 없음** — 치유 증폭 유물과 매 턴 돌아간다.',
+    desc: '기력 4을 체력 9로 바꾼다. **쿨타임 없음** — 치유 증폭 유물과 매 라운드 돌아간다.',
   },
   {
     id: 'r-lifeline', name: '생명선', kind: 'heal', healHp: 35, healCost: 22, cooldown: 3,
-    desc: '기력 22를 체력 35으로 바꾼다. 쿨타임 3턴 — 층을 넘길 체력을 한 번에 만든다.',
+    desc: '기력 22를 체력 35으로 바꾼다. 쿨타임 3라운드 — 층을 넘길 체력을 한 번에 만든다.',
   },
   {
     id: 'r-vault', name: '도약의 발판', kind: 'move', dir: 'up-right', steps: 3, cooldown: 2,

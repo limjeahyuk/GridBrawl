@@ -61,7 +61,7 @@ const overlord: BossScript = ({ turn, hpFrac }) => {
   if (beat === 0)
     return { plan: ['b-abyss-grasp', 'b-abyss-tide', 'm-left'], phase: 1, telegraph: null } // 상시 압박
   if (beat === 1)
-    return { plan: ['b-abyss-brand', 'b-abyss-grasp', 'm-left'], phase: 1, telegraph: '오버로드가 심연을 연다… 다음 턴 집어삼킨다!' }
+    return { plan: ['b-abyss-brand', 'b-abyss-grasp', 'm-left'], phase: 1, telegraph: '오버로드가 심연을 연다… 다음 라운드 집어삼킨다!' }
   return { plan: ['b-abyss-maw', 'b-abyss-tide', 'm-left'], phase: 1, telegraph: '☠ 집어삼키는 아가리! 보호막이 통하지 않는다 — 멀리 피하라' }
 }
 
@@ -84,7 +84,7 @@ const warden: BossScript = ({ turn, hpFrac }) => {
   if (beat === 0)
     return { plan: ['b-ward-menhir', 'm-left', 'm-left'], phase: 1, telegraph: '🪨 수호기사가 바닥을 내리친다 — 좌우에 바위가 솟는다' }
   if (beat === 1)
-    return { plan: ['b-ward-bulwark', 'm-left', 'm-left'], phase: 1, telegraph: '🛡 방벽을 올린다 — 이번 턴 공격은 대부분 막힌다. 지금 자리를 옮겨라' }
+    return { plan: ['b-ward-bulwark', 'm-left', 'm-left'], phase: 1, telegraph: '🛡 방벽을 올린다 — 이번 라운드 공격은 대부분 막힌다. 지금 자리를 옮겨라' }
   if (beat === 2)
     return { plan: ['b-ward-lance', 'm-left', 'm-left'], phase: 1, telegraph: '⚡ 창을 겨눈다 — 등 뒤가 바위면 처박혀 기절한다' }
   return { plan: ['b-ward-riposte', 'b-ward-verdict', 'm-left'], phase: 1, telegraph: '⚔ 커튼을 열고 심판! 보호막이 부서진다' }
@@ -112,7 +112,7 @@ const pyrelord: BossScript = ({ turn, hpFrac }) => {
   if (beat === 1)
     return { plan: ['b-pyre-ember', 'm-left', 'm-left'], phase: 1, telegraph: '🔥 불씨를 모은다… 공격력이 쌓인다. 지금이 반격할 때다' }
   if (beat === 2)
-    return { plan: ['b-pyre-ember', 'b-pyre-lash', 'm-left'], phase: 1, telegraph: '🔥🔥 불길이 극에 달한다 — 다음 턴 인페르노!' }
+    return { plan: ['b-pyre-ember', 'b-pyre-lash', 'm-left'], phase: 1, telegraph: '🔥🔥 불길이 극에 달한다 — 다음 라운드 인페르노!' }
   return { plan: ['b-pyre-inferno', 'b-pyre-pillar', 'm-left'], phase: 1, telegraph: '☄ 인페르노! 전방위 불바다 — 막거나 멀리 피하라' } // 대폭발
 }
 

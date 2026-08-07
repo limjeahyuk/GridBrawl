@@ -21,7 +21,7 @@ import { CardDetail, useLongPress } from '../CardDetail'
 import { PortraitSvg } from '../PortraitSvg'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
-  COLLAPSE_START_TURN,
+  COLLAPSE_START_ROUND,
   collapseDamageAt,
   collapseEscalatesNext,
   GRID_COLS,
@@ -170,9 +170,28 @@ const STATUS_CHIP: Record<string, string> = {
   poison: '☠',
   burn: '🔥',
   frozen: '❄',
+  stunned: '💫',
+  bind: '🕸',
   atkUp: '🔺',
   defUp: '🔷',
   freeCast: '🌀',
+}
+
+/**
+ * 상태이상 목록을 **종류별로 묶는다**. 중독·화상은 겹마다 따로 살아 있어서
+ * (남은 라운드가 겹마다 다르다) 그대로 그리면 같은 아이콘이 세 개씩 늘어선다.
+ * 위력은 합(한 번에 들어오는 총 피해), 남은 라운드는 최대(그때까지는 남아 있다).
+ */
+function statusChips(list: readonly StatusEffect[]): { kind: string; power: number; rounds: number }[] {
+  const out: { kind: string; power: number; rounds: number }[] = []
+  for (const e of list) {
+    const cur = out.find((c) => c.kind === e.kind)
+    if (cur) {
+      cur.power += e.power
+      cur.rounds = Math.max(cur.rounds, e.rounds)
+    } else out.push({ kind: e.kind, power: e.power, rounds: e.rounds })
+  }
+  return out
 }
 
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
@@ -499,18 +518,20 @@ export function BattleScreen({
   const placedNoRepeat = (c: CardDef) =>
     ((c.cooldown ?? 0) >= 1 || c.kind === 'attack') && slots.some((s) => s?.id === c.id)
   /**
-   * 빙결 — 이번 턴 **이동 카드가 통째로 무효**다(엔진 `resolvePrep`). 카드는
-   * 그대로 소모되고 쿨타임까지 돈다.
+   * **봉인이 라운드를 넘어온 경우**만 손패에 이유를 세운다(2026-08-07).
    *
-   * ⚠ 2026-08-05 신고 "넉백이나 다른 걸 당하고 나서 이동이 안 된다"의 정체가
-   *   이거였다. 화면은 아무 말 없이 **갈 수 있는 칸을 노랗게 밝히고** 눌러서
-   *   슬롯에 담기까지 했는데, 실행하면 엔진이 조용히 무효 처리했다 — 게임이
-   *   "가능하다"고 해 놓고 안 해 주니 버그로 읽힐 수밖에 없다. 이제 이동을
-   *   아예 못 고르게 막고 **왜인지 그 자리에 적는다**.
+   * 기절·빙결·속박은 기본적으로 걸린 라운드 안에서만 살기 때문에, 카드를 고르는 이
+   * 시점에는 보통 아무것도 안 걸려 있다(예전 "넉백 당하고 이동이 안 된다" 함정은
+   * 그래서 규칙째로 사라졌다). 예외는 **런 전용 전설 유물**(`stunRoundBonus` 계열)로
+   * 지속이 2라운드가 된 봉인뿐이다 — 그때는 고른 카드가 통째로 무효가 되므로
+   * **왜인지 말해 주지 않으면 "실행했는데 아무 일도 안 일어난다"가 된다**.
+   *
+   * ⚠ 카드를 **못 고르게 막지는 않는다**. 봉인은 엔진이 슬롯마다 다시 판정하고
+   *   (같은 라운드 안에서 풀릴 수도 있다 — 빙결은 맞으면 깨진다), 여기서 잠그면
+   *   그 경우에 낼 수 있었던 카드를 화면이 먼저 빼앗는 셈이 된다.
    */
-  const frozen = !!battle.statusOf(localSide, 'frozen')
-  const selectable = (c: CardDef) =>
-    cdLeft(c.id) === 0 && !placedNoRepeat(c) && !(frozen && c.kind === 'move')
+  const roundLock = battle.lockedThisRound(localSide) ?? battle.statusOf(localSide, 'bind')
+  const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c)
 
   const addCard = (c: CardDef) => {
     if (phase !== 'select' || !selectable(c) || !canAfford(c)) return
@@ -708,10 +729,10 @@ export function BattleScreen({
     // host is side 0, guest side 1 — feed plans in canonical order
     const planA = localSide === 0 ? localPlan : oppPlan
     const planB = localSide === 0 ? oppPlan : localPlan
-    // ⚠ resolveTurn은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
+    // ⚠ resolveRound은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
     //   준비 동작에 쓸 턴 시작 화면은 그 전에 떠 둬야 한다.
     const turnStart = baseView(battle)
-    const steps = battle.resolveTurn(planA, planB)
+    const steps = battle.resolveRound(planA, planB)
 
     /** 이 스텝의 피해로 정말 쓰러졌는가 — 뒤에 부활 스텝이 오면 KO가 아니다. */
     const koAt = (si: number, target: 0 | 1) =>
@@ -963,7 +984,7 @@ export function BattleScreen({
         maxHp={battle.maxHp}
         localSide={localSide}
         view={view}
-        turn={battle.state.turn}
+        turn={battle.state.round}
         remain={remain}
         boss={boss}
         onQuit={onQuit}
@@ -987,7 +1008,7 @@ export function BattleScreen({
             //   예전엔 이동 강조가 붕괴 표시를 통째로 덮어써서, 갈 수 있는 칸은 전부
             //   멀쩡해 보였고 "이동하면 안개에 안 들어간다"로 읽혔다.
             const cell = { col: ccol, row }
-            const turn = battle.state.turn
+            const turn = battle.state.round
             const hazard = isCollapsedCell(cell, turn)
               ? ' cell--fog'
               : isCollapsedCell(cell, turn + 1)
@@ -1129,7 +1150,7 @@ export function BattleScreen({
           telegraph &&
           (() => {
             const opp = (1 - localSide) as 0 | 1
-            const msg = telegraph(battle.state.turn, battle.state.hp[opp] / battle.maxHp[opp])
+            const msg = telegraph(battle.state.round, battle.state.hp[opp] / battle.maxHp[opp])
             return msg ? (
               <div className={`board__telegraph ${boss ? 'board__telegraph--boss' : ''}`}>{msg}</div>
             ) : null
@@ -1207,12 +1228,18 @@ export function BattleScreen({
               자리였고, 좁은 손패 폭만 잡아먹었다. 쿨타임·기력으로 못 쓰는 이동은
               **칸이 아예 안 밝혀지는** 것으로 이미 드러난다. */}
           <div className="cards__row">
-            {/* 얼어붙었으면 손패 앞에 이유를 세워 둔다 — 이동 칩이 사라진 뒤에도
-                "왜 칸이 안 밝지"에 답할 자리는 남아 있어야 한다. */}
-            {frozen && (
+            {/* 봉인이 라운드를 넘어왔을 때만 뜬다(전설 유물 상대). 이 자리가 없으면
+                "카드를 냈는데 아무 일도 안 일어난다"가 되고, 그건 버그로 읽힌다. */}
+            {roundLock && (
               <span className="cards__note">
-                ❄ 얼어붙음
-                <em>이번 턴 이동 불가</em>
+                {roundLock.kind === 'frozen' ? '❄ 얼어붙음' : roundLock.kind === 'bind' ? '🕸 속박' : '💫 기절'}
+                <em>
+                  {roundLock.kind === 'bind'
+                    ? '이번 라운드 이동 불가'
+                    : roundLock.kind === 'frozen'
+                      ? '맞으면 풀린다'
+                      : '이번 라운드 행동 불가'}
+                </em>
               </span>
             )}
             <div className="cards__hand">
@@ -1473,11 +1500,14 @@ function FighterSprite({
       {v.stunned[idx] && <div className="fighter__stun">💫 기절</div>}
       {v.status[idx].length > 0 && (
         <div className="fighter__status">
-          {v.status[idx].map((e) => (
-            <span key={e.kind} className={`stchip stchip--${e.kind}`}>
-              {STATUS_CHIP[e.kind]}
-              {e.power > 0 ? e.power : ''}
-              <b>{e.turns}</b>
+          {/* 중독·화상은 겹마다 한 칸씩 들어 있다 — 칩은 **종류별로 묶어** 보여준다
+              (겹 수만큼 아이콘이 늘어서면 발밑이 금세 넘친다). 앞의 수치는 한 번에
+              들어오는 총 피해, 굵은 수치는 가장 오래 남는 겹의 남은 라운드다. */}
+          {statusChips(v.status[idx]).map((c) => (
+            <span key={c.kind} className={`stchip stchip--${c.kind}`}>
+              {STATUS_CHIP[c.kind]}
+              {c.power > 0 ? c.power : ''}
+              <b>{c.rounds}</b>
             </span>
           ))}
         </div>
@@ -1562,7 +1592,7 @@ function BattleHud({
     <div className="bhud">
       <BhudSide char={chars[li]} maxHp={maxHp[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
       <div className="bhud__turn">
-        <div className="bhud__turnno">TURN {turn}</div>
+        <div className="bhud__turnno">ROUND {turn}</div>
         {remain !== null && (
           <div className={`bhud__timer ${remain <= 5 ? 'bhud__timer--urgent' : ''}`}>
             ⏱ {remain}s
@@ -1570,11 +1600,11 @@ function BattleHud({
         )}
         {collapseEscalatesNext(turn) && (
           <div className="bhud__fog bhud__fog--warn">
-            {turn < COLLAPSE_START_TURN ? '⚠ 다음 턴부터 전장이 무너진다!' : '⚠ 다음 턴 붕괴 확대!'}
+            {turn < COLLAPSE_START_ROUND ? '⚠ 다음 라운드부터 전장이 무너진다!' : '⚠ 다음 라운드 붕괴 확대!'}
           </div>
         )}
-        {turn >= COLLAPSE_START_TURN && (
-          <div className="bhud__fog">🪨 무너진 칸 턴당 -{collapseDamageAt(turn)}</div>
+        {turn >= COLLAPSE_START_ROUND && (
+          <div className="bhud__fog">🪨 무너진 칸 라운드당 -{collapseDamageAt(turn)}</div>
         )}
         <div className="bhud__buttons">
           <SfxToggle />

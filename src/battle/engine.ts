@@ -1,25 +1,35 @@
 import { getChar, type CharacterDef, type Passive } from '../data/roster'
+import { isBuff } from './types'
 import { ENERGY_REGEN } from './cards'
 import {
-  COLLAPSE_START_TURN,
-  collapseDamageAt,
+  BURN_HIT_DAMAGE,
+  COLLAPSE_START_ROUND,
+  FOG_DAMAGE,
+  FREEZE_SHATTER_BONUS,
   GRID_COLS,
   GRID_ROWS,
+  KNOCKBACK_BLOCK_DAMAGE,
   LOW_HP_FRAC,
   MOVE_DELTA,
+  POISON_TICK_DAMAGE,
   START_CELLS,
-  STATUS_POWER_CAP,
-  STATUS_TURNS,
+  STATUS_MAX_ROUNDS,
+  STATUS_STACK_CAP,
   canStand,
+  collapseDamageAt,
   facingBetween,
+  fogAt,
   inBounds,
   isCollapsedCell,
-  isDot,
+  isFullLock,
+  isRoundLock,
+  isStacking,
   rockAt,
   shadowRock,
   type BattleSnapshot,
   type Cell,
   type CardDef,
+  type FogTile,
   type Obstacle,
   type RockPlan,
   type StatusEffect,
@@ -34,11 +44,11 @@ const COLLAPSE_CARD: CardDef = { id: 'collapse', name: '붕괴', kind: 'guard', 
 const REVIVE_CARD: CardDef = { id: 'revive', name: '잿불 부활', kind: 'guard', desc: '쓰러진 자리에서 불씨로 되살아난다.' }
 const STUN_CARD: CardDef = { id: 'stun', name: '기절', kind: 'guard', desc: '기절해서 이 턴에 아무것도 못 한다.' }
 const TRIGGER_CARD: CardDef = { id: 'trigger', name: '유물 발동', kind: 'guard', desc: '누적 기력이 유물을 깨웠다.' }
-const STATUS_CARD: Record<'poison' | 'burn', CardDef> = {
-  poison: { id: 'st-poison', name: '중독', kind: 'guard', desc: '독이 몸을 갉는다.' },
-  burn: { id: 'st-burn', name: '화상', kind: 'guard', desc: '불길이 살을 태운다.' },
-}
-const FROZEN_CARD: CardDef = { id: 'st-frozen', name: '빙결', kind: 'guard', desc: '얼어붙어 움직일 수 없다.' }
+const POISON_CARD: CardDef = { id: 'st-poison', name: '중독', kind: 'guard', desc: '움직이자 독이 퍼진다.' }
+const FOG_CARD: CardDef = { id: 'st-fog', name: '독안개', kind: 'guard', desc: '독안개가 폐를 태운다.' }
+const FOG_LAY_CARD: CardDef = { id: 'fog-lay', name: '독안개', kind: 'guard', desc: '바닥에 독안개가 깔렸다.' }
+const FROZEN_CARD: CardDef = { id: 'st-frozen', name: '빙결', kind: 'guard', desc: '얼어붙어 아무것도 못 한다.' }
+const BIND_CARD: CardDef = { id: 'st-bind', name: '속박', kind: 'guard', desc: '발이 묶여 움직일 수 없다.' }
 const ROCK_BREAK_CARD: CardDef = { id: 'rock-break', name: '바위 파괴', kind: 'guard', desc: '가로막던 바위가 부서졌다.' }
 const ROCK_RAISE_CARD: CardDef = { id: 'rock-raise', name: '석벽', kind: 'guard', desc: '바닥에서 바위가 솟았다.' }
 const cloneCell = (c: Cell): Cell => ({ col: c.col, row: c.row })
@@ -57,19 +67,26 @@ export interface BattleState {
   energySpent: [number, number]
   /** 트리거를 마지막으로 판정한 시점의 `energySpent`(주기 경계 통과 감지용). */
   energySeen: [number, number]
-  /** 남은 기절 턴 수. >0이면 그 턴 카드를 못 낸다(턴 시작에 1 감소). */
-  stunned: [number, number]
   /** `stunOnHit`으로 이번 전투에 기절시킨 횟수(`stunCap` 제한). */
   stunsUsed: [number, number]
   /** `freezeOnHit`으로 이번 전투에 얼린 횟수(`freezeCap` 제한). */
   freezesUsed: [number, number]
-  /** 카드 `empower`로 이 전투 내내 누적된 공격 피해 보너스. */
+  /**
+   * **힘**(카드 `empower`) — 이 전투 내내 누적되는 공격 피해 보너스. 전투가 끝나면
+   * 사라진다(다음 몬스터와는 다시 0부터 — 사용자 확정 규칙).
+   */
   empowered: [number, number]
-  /** 걸려 있는 지속 상태이상(독·화상·빙결). 종류당 최대 1개로 합쳐 둔다. */
+  /**
+   * 걸려 있는 상태이상. 중독·화상은 **겹마다 한 칸**(최대 `STATUS_STACK_CAP`),
+   * 나머지는 종류당 한 칸. 라운드 한정 제약(빙결·기절·속박)은 라운드 시작에 지워진다.
+   */
   status: [StatusEffect[], StatusEffect[]]
   /** 판 위의 바위(지형). 비어 있으면 지형 규칙이 통째로 no-op — PvP·봇전이 그렇다. */
   obstacles: Obstacle[]
-  turn: number
+  /** 판에 깔린 독안개. 카드가 깔고 라운드 종료마다 그 칸에 선 쪽을 갉는다. */
+  fog: FogTile[]
+  /** 지금 몇 **라운드**인가(1부터). 한 라운드 = 카드 3장 = 3턴. */
+  round: number
   over: boolean
   winner: number | null
 }
@@ -168,26 +185,45 @@ export class CardBattle {
       revived: [false, false],
       energySpent: [0, 0],
       energySeen: [0, 0],
-      stunned: [0, 0],
       stunsUsed: [0, 0],
       freezesUsed: [0, 0],
       empowered: [0, 0],
       status: [[], []],
       obstacles,
-      turn: 1,
+      fog: [],
+      round: 1,
       over: false,
       winner: null,
     }
   }
 
-  /** 이 진영에 걸린 상태이상 하나(없으면 undefined). */
+  /** 이 진영에 걸린 상태이상 **첫 겹**(없으면 undefined). */
   statusOf(p: number, kind: StatusKind): StatusEffect | undefined {
     return this.state.status[p].find((e) => e.kind === kind)
   }
 
-  /** 지속 상태이상이 하나라도 걸려 있는가 — `bonusVsAfflicted` 판정용. */
+  /** 이 종류가 몇 겹 걸려 있는가(중독·화상은 겹마다 따로 산다). */
+  stacksOf(p: number, kind: StatusKind): number {
+    return this.state.status[p].reduce((n, e) => (e.kind === kind ? n + 1 : n), 0)
+  }
+
+  /** 이 종류의 겹들이 한 번에 주는 피해 총합(중독=이동 1칸당, 화상=피격 1회당). */
+  statusPower(p: number, kind: StatusKind): number {
+    return this.state.status[p].reduce((n, e) => (e.kind === kind ? n + e.power : n), 0)
+  }
+
+  /**
+   * **디버프**가 하나라도 걸려 있는가 — `bonusVsAfflicted` 판정용.
+   * ⚠ 자기 버프(atkUp 등)를 세면 안 된다. 강화 카드를 쓴 상대에게 시너지 유물이
+   *   터지는 건 "상태이상 시너지"가 아니다.
+   */
   afflicted(p: number): boolean {
-    return this.state.status[p].length > 0
+    return this.state.status[p].some((e) => !isBuff(e.kind))
+  }
+
+  /** 이 라운드에 카드를 못 내는가(빙결·기절). 슬롯 루프가 이걸 보고 건너뛴다. */
+  lockedThisRound(p: number): StatusEffect | undefined {
+    return this.state.status[p].find((e) => isFullLock(e.kind))
   }
 
   /**
@@ -224,7 +260,13 @@ export class CardBattle {
       // 깊은 복사 — 스냅샷은 연출용 과거 기록이라 이후 턴에 같이 변하면 안 된다
       status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
       obstacles: s.obstacles.map((r) => ({ ...r, cell: cloneCell(r.cell) })),
+      fog: s.fog.map((f) => ({ ...f, cell: cloneCell(f.cell) })),
     }
+  }
+
+  /** 이 칸에 독안개가 깔려 있는가 — UI가 엔진과 같은 규칙을 보도록 여기서 판다. */
+  fogAt(c: Cell): FogTile | undefined {
+    return fogAt(this.state.fog, c)
   }
 
   /** 이 칸에 바위가 서 있는가 — UI·AI가 엔진과 같은 규칙을 보도록 여기서 판다. */
@@ -247,18 +289,25 @@ export class CardBattle {
     return (card.range ?? []).map((o) => ({ col: from.col + f * o.df, row: from.row - o.du }))
   }
 
-  private applyMove(p: number, card: CardDef) {
+  /**
+   * 이동 카드 한 장. **실제로 밟은 칸 수를 돌려준다** — 중독이 "움직인 칸마다"
+   * 갉으므로 호출부가 이 값을 그대로 쓴다(대시 `<<`는 2, 대각선은 1 — 사용자 확정).
+   */
+  private applyMove(p: number, card: CardDef): number {
     const s = this.state
     const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
     const steps = card.steps ?? 1
     let cur = cloneCell(s.pos[p])
+    let moved = 0
     for (let k = 0; k < steps; k++) {
       const next: Cell = { col: cur.col + dc, row: cur.row + dr }
       // 벽과 **바위**에서 멈춘다 — 바위는 통과도 착지도 안 된다(지형 규칙 ①).
       if (!canStand(s.obstacles, next)) break
       cur = next // 상대 셀 통과·정지 모두 가능(겹침 허용)
+      moved += 1
     }
     s.pos[p] = cur
+    return moved
   }
 
   /**
@@ -266,31 +315,35 @@ export class CardBattle {
    * (+ 전진 / − 후퇴) 멀티에서 좌우 미러링이 필요 없다 — 절대 방향 이동 카드와
    * 달리 `faceCard`가 손댈 게 없다. 벽에 막히면 갈 수 있는 만큼만 간다.
    */
-  private applyDash(p: number, forward: number) {
+  private applyDash(p: number, forward: number): number {
     const s = this.state
     const step = this.facing(p) * Math.sign(forward)
     let cur = cloneCell(s.pos[p])
+    let moved = 0
     for (let k = 0; k < Math.abs(forward); k++) {
       const next: Cell = { col: cur.col + step, row: cur.row }
       if (!canStand(s.obstacles, next)) break // 벽·바위에 막히면 거기까지만
       cur = next
+      moved += 1
     }
     s.pos[p] = cur
+    return moved
   }
 
   /**
-   * Resolve a full turn. Cards play in the SELECTED slot order (1→2→3). Within
-   * a single slot, the two fighters' cards resolve by type priority — move,
-   * then defense (guard/energy), then attack — so moving/guarding sets up
-   * against an attack landing in that same slot. Two attacks in one slot trade
-   * simultaneously. Mutates state; returns ordered steps for animation.
+   * **한 라운드**(카드 3장 = 3턴)를 통째로 해소한다. 카드는 고른 슬롯 순서대로
+   * (1→2→3) 나가고, 한 슬롯 안에서는 양측 카드가 종류 우선순위(이동 → 수비 →
+   * 공격)로 정렬된다 — 그래서 같은 슬롯에서 움직이거나 막으면 그 슬롯의 공격을
+   * 피하거나 견딜 수 있다. 같은 슬롯의 공격 둘은 트레이드로 함께 계산한다.
+   * 상태를 바꾸고, 연출용 스텝 목록을 순서대로 돌려준다.
    */
-  resolveTurn(planA: CardDef[], planB: CardDef[]): Step[] {
+  resolveRound(planA: CardDef[], planB: CardDef[]): Step[] {
     const s = this.state
-    const plans: [CardDef[], CardDef[]] = [planA, planB]
+    // 복사본으로 돈다 — 봉인된 슬롯을 비워 내므로 호출부의 배열을 건드리면 안 된다.
+    const plans: [CardDef[], CardDef[]] = [planA.slice(), planB.slice()]
     const steps: Step[] = []
 
-    // 동시 KO 타이브레이크용: 이 턴이 시작될 때의 체력 비율을 기억해 둔다.
+    // 동시 KO 타이브레이크용: 이 라운드가 시작될 때의 체력 비율을 기억해 둔다.
     const startHpRatio: [number, number] = [
       s.hp[0] / this.maxHp[0],
       s.hp[1] / this.maxHp[1],
@@ -303,15 +356,20 @@ export class CardBattle {
       return s.hp[0] <= 0 ? 1 : 0
     }
 
-    // start of turn: clear last turn's guard, apply passive energy regen, then
-    // each fighter's effective passive (bonus energy / standing shield / HP regen).
+    // 라운드 시작: 지난 라운드의 보호막을 지운다(보호막은 **한 라운드짜리**다 — 사용자 확정).
+    //
+    // ⚠ 봉인(빙결·기절·속박)은 **여기서 지우지 않는다**. 라운드 종료의 `tickStatuses`가
+    //   지속을 1씩 깎아 자연히 끝나므로, 기본 1라운드짜리는 걸린 라운드의 남은 슬롯만
+    //   막고 사라진다(결과는 예전에 여기서 지우던 것과 같다). 다른 점은 런 전용 전설
+    //   유물로 지속이 2가 됐을 때뿐이다 — 그때는 **다음 라운드까지** 이어져야 하는데,
+    //   여기서 지워 버리면 그 유물이 통째로 무효가 된다.
     s.shield = [0, 0]
     for (let p = 0; p < 2; p++) {
       const pas = this.passive[p]
       const bonus = ENERGY_REGEN + (pas.turnEnergy ?? 0)
       s.energy[p] = clamp(s.energy[p] + bonus, 0, this.chars[p].maxEnergy)
       s.shield[p] += pas.turnShield ?? 0
-      if (s.turn === 1 && pas.openingShield) s.shield[p] += pas.openingShield
+      if (s.round === 1 && pas.openingShield) s.shield[p] += pas.openingShield
       // 지속 회복도 `healPowerPct`로 증폭된다 — 힐 카드와 같은 손잡이를 쓴다.
       if (pas.regen) {
         const heal = Math.round(pas.regen * (1 + (pas.healPowerPct ?? 0) / 100))
@@ -373,7 +431,11 @@ export class CardBattle {
               damage = Math.min(s.hp[d], t.damage) // 보호막 무시 고정 피해
               s.hp[d] -= damage
             }
-            if (t.stun) s.stunned[d] += t.stun
+            // 유물 트리거 기절도 카드가 거는 기절과 같은 규칙 — 연장 유물을 탄다.
+            if (t.stun) {
+              const n = 1 + (this.passive[p].stunRoundBonus ?? 0)
+              applyStatus(d, 'stunned', 0, n, n)
+            }
             steps.push({
               phase: t.stun ? 'stun' : 'trigger',
               actor: p,
@@ -392,24 +454,96 @@ export class CardBattle {
     }
 
     /**
-     * 상태이상을 건다. 같은 종류는 **한 칸으로 합친다** — 항목이 늘어나면 스냅샷도
-     * UI도 무한정 자라고, "몇 개 걸렸나"가 아니라 "얼마나 아픈가"가 읽혀야 한다.
-     * 위력은 합산(`STATUS_POWER_CAP` 상한), 지속은 더 긴 쪽으로 갱신.
+     * 상태이상을 건다. 종류에 따라 **쌓는 방식이 다르다**:
+     *   중독·화상  한 겹씩 따로 쌓인다(`STATUS_STACK_CAP`까지). 겹마다 남은 라운드가
+     *              달라서 합칠 수 없다 — `중독2`+`중독1`은 이번 라운드엔 6, 다음
+     *              라운드엔 3이다. 꽉 차 있으면 **가장 짧은 겹을 갱신**한다(겹 수를
+     *              늘리지 않고 지속만 새로 받는다 — 계속 때리면 계속 유지된다).
+     *   그 외      종류당 한 칸. 위력은 큰 쪽, 지속은 긴 쪽으로 갱신.
      */
-    const applyStatus = (p: number, kind: StatusKind, power: number, turns: number) => {
-      if (turns <= 0) return
+    const applyStatus = (
+      p: number,
+      kind: StatusKind,
+      power: number,
+      rounds: number,
+      /**
+       * 지속 상한. 기본은 봉인 1라운드 / 중독·화상 `STATUS_MAX_ROUNDS`이고, 런 전용
+       * 전설 유물(`*RoundBonus`)이 이걸 밀어 올린다. 호출부가 이미 보너스를 더한
+       * `rounds`를 넘기므로 상한도 같이 넘겨야 한다 — 안 그러면 유물이 무효가 된다.
+       */
+      maxRounds = isRoundLock(kind) ? 1 : STATUS_MAX_ROUNDS,
+    ) => {
+      if (rounds <= 0) return
+      const cap = Math.min(rounds, maxRounds)
+      // ⚠ **봉인 재부여 가드**(2026-08-07 2차). 이미 걸려 있는 기절·빙결·속박은
+      //   **다시 걸리지 않는다**. 지속 연장 유물이 없으면 아무것도 안 바뀌지만
+      //   (어차피 1라운드짜리라 갱신해도 같은 값), 유물이 붙는 순간 이 한 줄이
+      //   무한 봉인을 막는 유일한 장치가 된다 — 봉인된 상대를 계속 때려도 지속이
+      //   새로 채워지지 않으므로 "이번 + 다음 라운드"에서 반드시 끝난다.
+      //   (빙결은 맞으면 먼저 깨지므로(`thaw`) 깨진 뒤 다시 거는 건 그대로 된다.)
+      if (isRoundLock(kind) && s.status[p].some((e) => e.kind === kind)) return
+      if (isStacking(kind)) {
+        const mine = s.status[p].filter((e) => e.kind === kind)
+        if (mine.length >= STATUS_STACK_CAP) {
+          // 가장 먼저 사라질 겹을 되살린다 — 중첩 상한에 닿아도 유지가 끊기지 않게.
+          const shortest = mine.reduce((a, b) => (b.rounds < a.rounds ? b : a))
+          shortest.rounds = Math.max(shortest.rounds, cap)
+          shortest.power = Math.max(shortest.power, power)
+          shortest.since = s.round
+          return
+        }
+        s.status[p].push({ kind, rounds: cap, power, since: s.round })
+        return
+      }
       const cur = s.status[p].find((e) => e.kind === kind)
       if (cur) {
-        cur.turns = Math.max(cur.turns, turns)
-        cur.power = Math.min(STATUS_POWER_CAP, cur.power + power)
-        cur.since = s.turn // 다시 걸면 유예도 다시 — 계속 얼려 두면 계속 못 움직인다
+        cur.rounds = Math.max(cur.rounds, cap)
+        cur.power = Math.max(cur.power, power)
+        cur.since = s.round
       } else {
-        s.status[p].push({ kind, turns, power: Math.min(STATUS_POWER_CAP, power), since: s.turn })
+        s.status[p].push({ kind, rounds: cap, power, since: s.round })
       }
     }
 
     /** 지금 걸려 있는 버프의 위력(없으면 0). */
     const buffPower = (p: number, kind: StatusKind): number => this.statusOf(p, kind)?.power ?? 0
+
+    /**
+     * **중독 정산** — 이 진영이 `times`번 **행동**했다. 겹 수 × `POISON_TICK_DAMAGE`를
+     * 행동마다 물린다. 보호막을 관통하고(사용자 확정) KO도 낼 수 있다.
+     *
+     * 행동 = **이동 1칸** + **공격 카드 1장**(2026-08-07 2차 · 사용자 요청). 처음엔
+     * 이동만 셌는데, 붙어서 제자리 공격만 하는 몬스터에게 중독이 아무 일도 하지 않아
+     * 궁수 정체성이 성립하지 않았다. **수비·기력·회복·강화는 안 센다** — 중독에
+     * 걸리면 "버티는 것"만 공짜로 남는다는 게 이 규칙의 요점이다.
+     */
+    const tickPoison = (p: number, times: number) => {
+      if (times <= 0) return
+      const per = this.statusPower(p, 'poison')
+      if (per <= 0) return
+      const dealt = Math.min(s.hp[p], per * times)
+      if (dealt <= 0) return
+      s.hp[p] -= dealt
+      steps.push({
+        phase: 'status',
+        actor: p,
+        card: POISON_CARD,
+        result: 'status',
+        damage: 0,
+        heal: 0,
+        drain: 0,
+        recoil: dealt, // 자기 몸에 뜨는 피해 — UI가 본인에게 -N을 띄운다
+        snapshot: this.snapshot(),
+      })
+    }
+
+    /** 이 칸에 독안개를 깐다(이미 있으면 지속만 길게). */
+    const layFog = (cell: Cell, rounds: number) => {
+      if (rounds <= 0 || !inBounds(cell)) return
+      const cur = fogAt(s.fog, cell)
+      if (cur) cur.rounds = Math.max(cur.rounds, rounds)
+      else s.fog.push({ cell: cloneCell(cell), rounds })
+    }
 
     /**
      * 이 카드가 실제로 낼 기력. `freeCast` 버프가 걸려 있으면 **공짜**다.
@@ -428,14 +562,28 @@ export class CardBattle {
     // resolve one move/guard/energy card in place
     const resolvePrep = (p: number, c: CardDef) => {
       if (c.kind === 'move') {
-        // 빙결: 이동만 막는다. 카드는 그대로 소모되고 쿨다운도 돈다 — 기절(카드를
-        // 통째로 못 냄)과 구별되는 지점이다.
-        if (this.statusOf(p, 'frozen')) {
-          emit(p, c, 'frozen')
+        // 속박: **이동만** 막는다(공격·수비는 그대로 나간다). 카드는 소모되고
+        // 쿨다운도 돈다 — 빙결·기절(카드를 통째로 못 냄)과 구별되는 지점이다.
+        // 빙결·기절은 여기까지 오지 않는다: 슬롯 루프가 앞에서 걸러 낸다.
+        if (this.statusOf(p, 'bind')) {
+          steps.push({
+            phase: 'move',
+            actor: p,
+            card: BIND_CARD,
+            result: 'bind',
+            damage: 0,
+            heal: 0,
+            drain: 0,
+            recoil: 0,
+            snapshot: this.snapshot(),
+          })
           return
         }
-        this.applyMove(p, c)
+        // 중독은 **움직인 칸마다** 갉는다 — 이동한 뒤에 정산해야 새 자리 스냅샷과
+        // 피해가 같은 순간으로 읽힌다.
+        const moved = this.applyMove(p, c)
         emit(p, c, 'move')
+        tickPoison(p, moved)
       } else if (c.kind === 'guard') {
         const cost = costOf(p, c)
         if (s.energy[p] >= cost) {
@@ -485,7 +633,10 @@ export class CardBattle {
         const cost = costOf(p, c)
         if (s.energy[p] >= cost) {
           spend(p, cost)
-          applyStatus(p, c.buff ?? 'atkUp', c.buffPower ?? 0, c.buffTurns ?? 1)
+          // **힘**(`empower`)은 버프 카드에서도 붙는다 — 지속이 없는 영구 누적이라
+          // 상태이상 목록이 아니라 `empowered`에 쌓인다(전투가 끝나면 사라진다).
+          if (c.empower) s.empowered[p] += c.empower
+          if (c.buff) applyStatus(p, c.buff, c.buffPower ?? 0, c.buffRounds ?? 1)
           emit(p, c, 'buff')
         } else {
           emit(p, c, 'nofuel')
@@ -543,7 +694,7 @@ export class CardBattle {
         if (!inBounds(cell)) continue
         if (sameCell(cell, s.pos[0]) || sameCell(cell, s.pos[1])) continue
         if (rockAt(s.obstacles, cell)) continue
-        if (isCollapsedCell(cell, s.turn)) continue
+        if (isCollapsedCell(cell, s.round)) continue
         const hp = Math.max(1, Math.round(plan.hp))
         s.obstacles.push({ cell, hp, maxHp: hp })
         made.push(cell)
@@ -583,16 +734,32 @@ export class CardBattle {
       const zero = {
         p,
         card: c,
+        /** 최종 피해(보호막·경감을 통과한 몫 + 화상·빙결파쇄 추가피해). */
         dmg: 0,
+        /**
+         * **보호막·경감을 실제로 뚫은 몫.** 화상·빙결 파쇄는 보호막을 관통하므로
+         * `dmg`에는 들어가지만 여기엔 안 들어간다 — 흡혈·기절·상태이상 부여는
+         * "가드로 막힌 타격으론 안 걸린다"는 기존 규칙을 지켜야 하므로 이 값을 본다.
+         */
+        core: 0,
         heal: 0,
         drain: 0,
         recoil: 0,
         push: 0,
         pull: 0,
         stun: 0,
+        bind: 0,
+        /** 중독 — 거는 겹의 지속 라운드(0이면 안 건다). */
         poison: 0,
+        /** 그 겹이 이동 1칸당 주는 피해(`statusPowerPct` 반영 후). */
+        poisonPow: 0,
         burn: 0,
+        burnPow: 0,
         freeze: 0,
+        /** 이 타격이 상대의 빙결을 깨뜨렸는가 — 깨면 그 자리에서 빙결이 사라진다. */
+        thaw: false,
+        /** 상대가 선 칸에 깔 독안개의 지속 라운드. */
+        fog: 0,
         rocks: [] as Obstacle[],
         rockDmg: 0,
       }
@@ -605,7 +772,11 @@ export class CardBattle {
       // 쏘면서 움직이는 카드 — **사거리를 재기 전에** 옮긴다. 공격 페이즈라 상대가
       // 이미 이동을 끝낸 뒤이고, 빙결에도 막히지 않는다(이동 카드가 아니라 공격의
       // 일부다). 벽에 막히면 갈 수 있는 만큼만 간다.
-      if (c.dashForward) this.applyDash(p, c.dashForward)
+      // 중독 — **공격도 행동이다**(2026-08-07 2차). 기력을 낸 시점에 한 번 물린다:
+      // 빗나가도 휘두른 건 휘두른 것이고, 기력이 모자라 불발(`nofuel`)이면 위에서 이미
+      // 돌아갔으므로 여기 오지 않는다. 이동공격은 **거기에 더해** 움직인 칸만큼 더 문다.
+      tickPoison(p, 1)
+      if (c.dashForward) tickPoison(p, this.applyDash(p, c.dashForward))
       if (c.raiseRocks) raiseRocks(p, c.raiseRocks)
       const recoil = c.recoil ?? 0
       const d = 1 - p
@@ -647,11 +818,21 @@ export class CardBattle {
       // pierce: 보호막을 소모시키지 않고 그대로 통과한다(유물 alwaysPierce도 같은 효과).
       const absorbed = c.pierce || atkPas.alwaysPierce ? 0 : Math.min(s.shield[d], raw)
       s.shield[d] -= absorbed
-      // 방어 감소: 유물·패시브의 상시 damageReduction + 방어 버프(N턴 한정).
-      const dmg = Math.max(
+      // 방어 감소: 유물·패시브의 상시 damageReduction + 방어 버프(N라운드 한정).
+      const core = Math.max(
         0,
         raw - absorbed - (defPas.damageReduction ?? 0) - buffPower(d, 'defUp'),
       )
+      // **화상** — 걸린 겹마다 이 타격에 `BURN_HIT_DAMAGE`가 얹힌다(사용자 확정).
+      // 지속피해가 아니라 **증폭기**다: 화상 상태로 세 대 맞으면 세 번 다 더 아프다.
+      // ⚠ 보호막·경감을 **관통한다**("보호막이 막을 수 없는 데미지") — 그래서
+      //   `core`가 아니라 그 밖에서 더한다. 가드로 완전히 막아도 화상은 들어온다.
+      const burnBonus = this.statusPower(d, 'burn')
+      // **빙결 파쇄** — 얼어 있는 상대를 때리면 그 자리에서 녹고(움직일 수 있게 되고)
+      // 그 타격에 `FREEZE_SHATTER_BONUS`가 얹힌다. 얼려 놓고 안 때리면 상대는
+      // 라운드 내내 못 움직이지만, 때리는 순간 그 봉인은 끝난다 — 그게 교환이다.
+      const thaw = !!this.statusOf(d, 'frozen')
+      const dmg = core + burnBonus + (thaw ? FREEZE_SHATTER_BONUS : 0)
       // drain: 적중하면(가드로 막혀도) 상대 기력을 빼앗아 흡수.
       let drain = 0
       if (c.drain) {
@@ -660,29 +841,36 @@ export class CardBattle {
         s.energy[p] = clamp(s.energy[p] + drain, 0, this.chars[p].maxEnergy)
       }
       // 회복: 카드 흡혈(leech) + 패시브 흡혈(lifesteal 고정치), 피해가 들어갔을 때만.
+      // ⚠ 기준은 `core`다 — 화상·빙결 파쇄로 얹힌 관통 피해로는 흡혈이 돌지 않는다.
       let heal = 0
-      if (dmg > 0) {
+      if (core > 0) {
         heal += c.leech ?? 0
         heal += atkPas.lifesteal ?? 0 // 패시브 + 송곳니류 유물
       }
-      // 기절: 카드의 `stun` + 유물 `stunOnHit`(전투당 `stunCap`회). 피해가 실제로
-      // 들어갔을 때만 — 가드에 막힌 타격으로는 기절하지 않는다.
-      let stun = dmg > 0 ? (c.stun ?? 0) : 0
+      // 기절: 카드의 `stun` + 유물 `stunOnHit`(전투당 `stunCap`회). 보호막을 실제로
+      // 뚫었을 때만 — 가드에 막힌 타격으로는 기절하지 않는다.
+      // 값은 "몇 라운드"가 아니라 **이번 라운드 봉인**이라는 표시일 뿐이다.
+      let stun = core > 0 ? (c.stun ?? 0) : 0
       const onHit = atkPas.stunOnHit ?? 0
-      if (dmg > 0 && onHit > 0 && s.stunsUsed[p] < (atkPas.stunCap ?? 1)) {
+      if (core > 0 && onHit > 0 && s.stunsUsed[p] < (atkPas.stunCap ?? 1)) {
         s.stunsUsed[p] += 1
         stun += onHit
       }
-      // 상태이상: 기절과 같은 규칙 — **피해가 실제로 들어갔을 때만** 걸린다.
-      // 가드에 완전히 막힌 타격으로는 독도 화상도 빙결도 묻지 않는다.
-      // 위력 보정(statusPowerPct)은 여기서 한 번 계산해 확정한다.
-      const poison = dmg > 0 ? scaledPower(p, (c.poison ?? 0) + (atkPas.poisonOnHit ?? 0)) : 0
-      const burn = dmg > 0 ? scaledPower(p, (c.burn ?? 0) + (atkPas.burnOnHit ?? 0)) : 0
+      // 상태이상 부여도 같은 규칙 — 가드에 완전히 막힌 타격으로는 아무것도 안 묻는다.
+      // 카드와 유물이 둘 다 걸면 **지속이 긴 쪽**을 쓴다(겹이 두 번 붙지는 않는다 —
+      // 한 대에 한 겹이 이 규칙의 골자라, 유물 하나로 두 겹이 되면 안 된다).
+      // 지속은 **런 전용 전설 유물**(`*RoundBonus`)만큼 늘어난다. 유물이 없으면 0이라
+      // 예전과 완전히 같다 — PvP·봇전에는 이 훅이 존재조차 하지 않는다.
+      const poisonBase = core > 0 ? Math.max(c.poison ?? 0, atkPas.poisonOnHit ?? 0) : 0
+      const burnBase = core > 0 ? Math.max(c.burn ?? 0, atkPas.burnOnHit ?? 0) : 0
+      const poisonPlus = atkPas.poisonRoundBonus ?? 0
+      const burnPlus = atkPas.burnRoundBonus ?? 0
+      const poison = poisonBase > 0 ? poisonBase + poisonPlus : 0
+      const burn = burnBase > 0 ? burnBase + burnPlus : 0
       // 빙결 부여 유물(freezeOnHit) — 기절과 같은 구조로 **전투당 freezeCap회**까지만.
-      // 상한이 없으면 상대가 영원히 못 움직인다(빙결은 지속이 갱신되므로).
-      let freeze = dmg > 0 ? (c.freeze ?? 0) : 0
+      let freeze = core > 0 ? (c.freeze ?? 0) : 0
       const onFreeze = atkPas.freezeOnHit ?? 0
-      if (dmg > 0 && onFreeze > 0 && s.freezesUsed[p] < (atkPas.freezeCap ?? 2)) {
+      if (core > 0 && onFreeze > 0 && s.freezesUsed[p] < (atkPas.freezeCap ?? 2)) {
         s.freezesUsed[p] += 1
         freeze += onFreeze
       }
@@ -691,15 +879,25 @@ export class CardBattle {
         ...zero,
         result,
         dmg,
+        core,
         heal,
         drain,
         recoil,
         push: c.push ?? 0,
         pull: c.pull ?? 0,
-        stun,
+        // 봉인 지속 = 1 + 유물 연장(`stunRoundBonus` 등). 1이면 이번 라운드만이고,
+        // 2 이상이면 다음 라운드까지 이어진다(재부여 가드가 그 이상을 막는다).
+        stun: stun > 0 ? 1 + (atkPas.stunRoundBonus ?? 0) : 0,
+        bind: core > 0 && c.bind ? 1 + (atkPas.bindRoundBonus ?? 0) : 0,
         poison,
+        // 겹의 위력(이동 1칸당 / 피격 1회당)은 **거는 순간** 확정한다 — 유물을
+        // 나중에 얻어도 이미 걸린 겹까지 소급되지 않게.
+        poisonPow: scaledPower(p, POISON_TICK_DAMAGE),
         burn,
-        freeze,
+        burnPow: scaledPower(p, BURN_HIT_DAMAGE),
+        freeze: freeze > 0 ? 1 + (atkPas.freezeRoundBonus ?? 0) : 0,
+        thaw,
+        fog: core > 0 ? (c.fog ?? 0) : 0,
         rocks,
         rockDmg,
       }
@@ -711,36 +909,34 @@ export class CardBattle {
     //   쪽"이다. 좌석 기준이던 시절엔 상대를 지나친 순간 넉백이 상대를 **내 쪽으로
     //   끌어당겼다** — 밀어내라고 만든 능력이 정반대로 작동했다.
     //
-    // **바위에 처박기**(2026-08-05): 밀어낼 곳에 바위가 서 있으면 상대는 한 칸도
-    // 밀리지 않고 **1턴 기절**한다. 벽은 그렇지 않다 — 판 가장자리는 늘 거기 있어서
-    // 벽까지 포함하면 "구석에 몰린 상대를 매 턴 기절"이 되고, 그건 지형을 만든
-    // 대가가 아니라 그냥 좌석 운이다. 바위는 누군가가 세웠거나 그 층이 준 것이라,
-    // **밀어붙일 곳을 골랐다**는 판단에 값을 치르는 게 맞다.
-    // 돌려주는 값: 실제로 밀려난 칸 수와, 0칸이 된 이유가 바위인지.
+    // **처박기**(2026-08-07 사용자 확정 — 벽 포함 · **부분 차단도 기절**):
+    // 밀려날 곳이 막혀 있으면(판 가장자리든 바위든) 넉백은 그냥 없던 일이 되는 게
+    // 아니라 **벽에 부딪힌다** — 못 밀린 칸 수 × `KNOCKBACK_BLOCK_DAMAGE` 피해 + 그
+    // 라운드 기절.
+    //   예) 넉백3인데 바로 뒤가 판 끝 → 3칸 다 막힘 → 15 피해 + 기절
+    //       넉백3인데 두 칸 밀리고 막힘 → 1칸 막힘 → **5 피해 + 기절**(사용자 예시)
+    // ⚠ 2026-08-05까지는 **바위만** 처박기 대상이었고, 2026-08-07 1차에선 벽을 넣되
+    //   기절을 "0칸일 때만"으로 좁혔다(구석에 몰린 상대를 매 라운드 기절시키는 좌석
+    //   운을 피하려고). 사용자 예시가 **부분 차단에도 기절**을 명시해 그 안전판을
+    //   걷어냈다 — 이제 벽을 등지고 싸우는 것 자체가 큰 위험이다.
+    // 돌려주는 값: 실제로 밀려난 칸 수와 막혀서 못 간 칸 수.
     const applyShove = (
       attacker: number,
       n: number,
       toward: boolean,
-    ): { moved: number; rockWall: boolean } => {
+    ): { moved: number; blocked: number } => {
       const d = 1 - attacker
       const f = this.facing(attacker) * (toward ? -1 : 1)
       let moved = 0
-      let rockWall = false
       for (let k = 0; k < n; k++) {
         const next: Cell = { col: s.pos[d].col + f, row: s.pos[d].row }
         if (next.col < 0 || next.col >= GRID_COLS) break
-        if (rockAt(s.obstacles, next)) {
-          rockWall = true
-          break
-        }
+        if (rockAt(s.obstacles, next)) break
         s.pos[d] = next
         moved += 1
       }
-      return { moved, rockWall }
+      return { moved, blocked: n - moved }
     }
-
-    /** 강제 이동이 **바위에 완전히 막혔는가** — 그때만 처박기 기절이 붙는다. */
-    const slammed = (r: { moved: number; rockWall: boolean }) => r.moved === 0 && r.rockWall
 
     // apply a measured attack's HP / board consequences
     const applyOutcome = (r: ReturnType<typeof computeAttack>) => {
@@ -748,21 +944,45 @@ export class CardBattle {
       s.hp[d] = Math.max(0, s.hp[d] - r.dmg)
       // thorns(유물): 피해를 실제로 입은 방어자가 공격자에게 N 반사
       const thorns = this.passive[d].thorns ?? 0
-      if (r.dmg > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
+      if (r.core > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
       if (r.recoil) s.hp[r.p] = Math.max(0, s.hp[r.p] - r.recoil)
       if (r.heal) s.hp[r.p] = Math.min(this.maxHp[r.p], s.hp[r.p] + r.heal)
-      // 강제 이동. 바위에 처박혀 한 칸도 못 밀렸으면 1턴 기절이 붙는다.
-      let slam = false
-      if (r.push) slam = slammed(applyShove(r.p, r.push, false)) || slam
-      if (r.pull) slam = slammed(applyShove(r.p, r.pull, true)) || slam
-      // 이 턴 시작에 감소 판정이 이미 끝났으므로, 여기서 더한 값은 다음 턴부터 소모된다.
-      if (r.stun) s.stunned[d] += r.stun
-      if (slam) s.stunned[d] += 1
-      // 상태이상 부여도 여기서 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤
-      // 함께 적용돼야 선후가 안 생긴다.
-      if (r.poison) applyStatus(d, 'poison', r.poison, STATUS_TURNS.poison)
-      if (r.burn) applyStatus(d, 'burn', r.burn, STATUS_TURNS.burn)
-      if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze)
+      // 강제 이동 — 막히면 못 간 칸만큼 벽에 부딪힌다(피해 + 기절).
+      // ⚠ **밀려난 칸도 중독이 센다**(2026-08-07 사용자 확정). 1차에선 "내가 낸 카드가
+      //   아니다"를 이유로 뺐는데, 사용자 예시가 넉백 2칸 = 중독 6을 명시했다 — 즉
+      //   중독은 **어떻게든 몸이 옮겨졌으면** 아프다. 실제 피해는 `settleAttack`이
+      //   공격 스텝 뒤에 물린다(밀려나는 연출보다 먼저 숫자가 뜨면 안 읽힌다).
+      let moved = 0
+      let blocked = 0
+      if (r.push) {
+        const k = applyShove(r.p, r.push, false)
+        moved += k.moved
+        blocked += k.blocked
+      }
+      if (r.pull) {
+        const k = applyShove(r.p, r.pull, true)
+        moved += k.moved
+        blocked += k.blocked
+      }
+      // **한 칸이라도 막히면 기절**한다(사용자 예시: 3칸 중 2칸만 밀려도 기절).
+      const slammed = blocked > 0
+      if (blocked > 0) s.hp[d] = Math.max(0, s.hp[d] - blocked * KNOCKBACK_BLOCK_DAMAGE)
+      // 라운드 한정 봉인. 지금 슬롯 이후의 카드를 막고, 라운드가 끝나면 지워진다.
+      // 처박기 기절은 **연장 유물을 안 탄다** — 넉백 자체가 이미 피해+봉인 둘을 주는
+      // 자리라, 여기까지 늘리면 밀어내기 카드 하나가 통째로 판을 잠근다.
+      if (slammed) applyStatus(d, 'stunned', 0, 1)
+      else if (r.stun) applyStatus(d, 'stunned', 0, r.stun, r.stun)
+      if (r.bind) applyStatus(d, 'bind', 0, r.bind, r.bind)
+      // 빙결은 **깨진 뒤에** 다시 걸릴 수 있다 — 순서가 뒤바뀌면 방금 얼린 걸
+      // 같은 타격이 도로 녹인다.
+      if (r.thaw) s.status[d] = s.status[d].filter((e) => e.kind !== 'frozen')
+      if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze, r.freeze)
+      // 중독·화상 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤 함께 적용돼야
+      // 선후가 안 생긴다.
+      if (r.poison) applyStatus(d, 'poison', r.poisonPow, r.poison, Math.max(STATUS_MAX_ROUNDS, r.poison))
+      if (r.burn) applyStatus(d, 'burn', r.burnPow, r.burn, Math.max(STATUS_MAX_ROUNDS, r.burn))
+      if (r.fog) layFog(s.pos[d], r.fog)
+      return moved
     }
 
     /**
@@ -771,9 +991,25 @@ export class CardBattle {
      * 부딪힌 바위는 상대에게 빗나갔어도 깎인다(지형 ③ — 대개 그 바위가 막은 것이다).
      */
     const settleAttack = (r: ReturnType<typeof computeAttack>) => {
-      applyOutcome(r)
+      const shoved = applyOutcome(r)
       emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil)
+      // 넉백으로 옮겨진 칸도 중독이 문다 — 공격 스텝 **뒤에** 실어야
+      // "밀려났다 → 독이 퍼졌다"로 순서대로 읽힌다.
+      tickPoison(1 - r.p, shoved)
       if (r.rocks.length) damageRocks(r.p, r.rocks, r.rockDmg)
+      // 안개는 공격 스텝 **뒤에** 실어야 "맞았다 → 그 자리에 안개가 깔렸다"로 읽힌다.
+      if (r.fog)
+        steps.push({
+          phase: 'rock',
+          actor: r.p,
+          card: FOG_LAY_CARD,
+          result: 'fog',
+          damage: 0,
+          heal: 0,
+          drain: 0,
+          recoil: 0,
+          snapshot: this.snapshot(),
+        })
     }
 
     // 부활(영원의 불씨 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
@@ -807,62 +1043,71 @@ export class CardBattle {
     }
 
     /**
-     * 지속 상태이상 정산 — 턴 종료. 독안개와 같은 규칙(보호막 무시 고정 피해).
-     * 이 턴에 새로 걸린 것도 함께 틱한다: "맞자마자 타들어간다"가 읽히고, 기절처럼
-     * 한 턴 미루면 지속 2턴짜리 화상이 사실상 1턴이 돼 카드가 죽는다.
-     * 정산 뒤 남은 턴을 1 깎고 0이 된 것은 제거한다. 순서는 p0 → p1 고정(랜덤 없음).
+     * 라운드 종료 정산 — 남은 지속을 1 깎고 0이 된 겹을 치운다.
+     *
+     * ⚠ 2026-08-07부터 **여기서 피해를 주지 않는다.** 중독은 행동할 때(`tickPoison`),
+     *   화상은 맞을 때(`computeAttack`의 `burnBonus`) 이미 정산됐다 — 예전처럼
+     *   라운드 종료에 또 갉으면 같은 상태이상을 두 번 받는 셈이 된다.
+     *   라운드 종료에 갉는 건 이제 **독안개와 전장 붕괴**(자리 값)뿐이다.
+     *
+     * 라운드 한정 제약(빙결·기절·속박)은 어차피 다음 라운드 시작에 통째로 지워지므로
+     * 여기서 따로 볼 게 없다. 순서는 p0 → p1 고정(랜덤 없음).
      */
     const tickStatuses = () => {
       for (let p = 0; p < 2; p++) {
-        for (const e of s.status[p]) {
-          if (!isDot(e.kind) || e.power <= 0) continue
-          const dealt = Math.min(s.hp[p], e.power)
-          s.hp[p] -= dealt
-          steps.push({
-            phase: 'status',
-            actor: p,
-            card: STATUS_CARD[e.kind as 'poison' | 'burn'],
-            result: 'status',
-            damage: 0,
-            heal: 0,
-            drain: 0,
-            // 자기 몸에 뜨는 피해라 독안개와 같이 recoil로 싣는다(UI가 -N을 본인에게)
-            recoil: dealt,
-            snapshot: this.snapshot(),
-          })
-        }
-        // 지속피해는 방금 갉았으니, 버프는 이 턴 공격에 이미 얹혔으니(수비 티어라
-        // 같은 슬롯의 공격보다 먼저 걸린다) 둘 다 이 턴을 소모한 것으로 친다.
-        // **빙결만** 예외 — 걸린 턴엔 온전히 한 턴을 막지 못한다(`StatusEffect.since`).
         s.status[p] = s.status[p]
-          .map((e) => (e.kind !== 'frozen' || e.since < s.turn ? { ...e, turns: e.turns - 1 } : e))
-          .filter((e) => e.turns > 0)
+          .map((e) => ({ ...e, rounds: e.rounds - 1 }))
+          .filter((e) => e.rounds > 0)
       }
     }
 
-    // 기절 판정 — 남은 기절 턴이 있으면 이 턴 카드를 통째로 버린다(기력 회복은 받는다).
-    // 감소를 여기서 하므로, 이 턴 중에 새로 걸린 기절은 다음 턴부터 소모된다.
-    for (let p = 0; p < 2; p++) {
-      if (s.stunned[p] <= 0) continue
-      s.stunned[p] -= 1
-      plans[p] = []
-      steps.push({
-        phase: 'stun',
-        actor: p,
-        card: STUN_CARD,
-        result: 'stun',
-        damage: 0,
-        heal: 0,
-        drain: 0,
-        recoil: 0,
-        snapshot: this.snapshot(),
-      })
+    /** 독안개 — 라운드 종료에 그 칸에 선 쪽을 갉는다(보호막 무시). 그다음 한 라운드 걷힌다. */
+    const tickFog = () => {
+      if (!s.fog.length) return
+      for (let p = 0; p < 2; p++) {
+        if (!fogAt(s.fog, s.pos[p])) continue
+        const dealt = Math.min(s.hp[p], FOG_DAMAGE)
+        if (dealt <= 0) continue
+        s.hp[p] -= dealt
+        steps.push({
+          phase: 'status',
+          actor: p,
+          card: FOG_CARD,
+          result: 'status',
+          damage: 0,
+          heal: 0,
+          drain: 0,
+          recoil: dealt, // 자기 몸에 뜨는 피해 — UI가 본인에게 -N을 띄운다
+          snapshot: this.snapshot(),
+        })
+      }
+      s.fog = s.fog.map((f) => ({ ...f, rounds: f.rounds - 1 })).filter((f) => f.rounds > 0)
     }
 
     const prio = (c: CardDef) => (c.kind === 'move' ? 0 : c.kind === 'attack' ? 2 : 1)
 
     for (let slot = 0; slot < 3; slot++) {
       // cards present this slot, ordered move < defense < attack (p0 first on a tie)
+      // ⚠ **빙결·기절은 여기서 걸러 낸다** — 이번 라운드에 봉인된 쪽은 남은 슬롯의
+      //   카드를 통째로 못 낸다(카드는 소모되지 않고 쿨다운도 안 돈다: 애초에 낸
+      //   적이 없다). 봉인은 슬롯 도중에 걸리므로 **슬롯마다 다시 본다** —
+      //   1번 슬롯에서 기절하면 2·3번이 막히고, 3번에서 걸리면 아무것도 안 막힌다.
+      for (let p = 0; p < 2; p++) {
+        const lock = plans[p][slot] ? this.lockedThisRound(p) : undefined
+        if (!lock) continue
+        plans[p][slot] = undefined as unknown as CardDef
+        steps.push({
+          phase: 'stun',
+          actor: p,
+          card: lock.kind === 'frozen' ? FROZEN_CARD : STUN_CARD,
+          result: lock.kind === 'frozen' ? 'frozen' : 'stun',
+          damage: 0,
+          heal: 0,
+          drain: 0,
+          recoil: 0,
+          snapshot: this.snapshot(),
+        })
+      }
       const here = ([0, 1] as const)
         .map((p) => ({ p: p as number, card: plans[p][slot] }))
         .filter((e): e is { p: number; card: CardDef } => !!e.card)
@@ -952,24 +1197,27 @@ export class CardBattle {
       if (settleKo()) break
     }
 
-    // 지속 상태이상(독·화상) — 붕괴보다 **먼저** 갉는다. 붕괴는 무한전을 끊는
-    // 최후의 장치라 마지막에 두는 게 읽기 좋다.
+    // 독안개 — 붕괴보다 **먼저** 갉는다. 붕괴는 무한전을 끊는 최후의 장치라
+    // 마지막에 두는 게 읽기 좋다. 그다음 남은 지속을 한 라운드 깎는다.
     if (!s.over) {
-      tickStatuses()
+      tickFog()
       settleKo()
     }
+    tickStatuses()
 
-    // 전장 붕괴: COLLAPSE_START_TURN부터, 턴 종료 시 무너진 칸에 서 있으면 피해.
+    // 전장 붕괴: COLLAPSE_START_ROUND부터, 라운드 종료 시 무너진 칸에 서 있으면 피해.
     // 실드는 무시하지만 유물의 `collapseResist`만큼은 줄어든다(발판 유물).
     // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
-    if (!s.over && s.turn >= COLLAPSE_START_TURN) {
+    if (!s.over && s.round >= COLLAPSE_START_ROUND) {
       // 무너진 칸의 **바위도 같이 무너진다**. 남겨 두면 판이 좁아지는 속도에 지형이
       // 곱해져, 마지막 단계에서 "무너진 칸에도 들어갈 수 있다"는 안전판(붕괴 설계의
       // 핵심)이 바위 때문에 사라진다 — 밀려날 곳도 도망칠 곳도 없는 판이 된다.
-      s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, s.turn))
-      const base = collapseDamageAt(s.turn)
+      s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, s.round))
+      // 안개도 같은 이유로 무너진 칸에서는 사라진다(그 칸 자체가 없어진다).
+      s.fog = s.fog.filter((f) => !isCollapsedCell(f.cell, s.round))
+      const base = collapseDamageAt(s.round)
       for (let p = 0; p < 2; p++) {
-        if (!isCollapsedCell(s.pos[p], s.turn)) continue
+        if (!isCollapsedCell(s.pos[p], s.round)) continue
         const dmg = Math.max(0, base - (this.passive[p].collapseResist ?? 0))
         if (dmg <= 0) continue
         s.hp[p] = Math.max(0, s.hp[p] - dmg)
@@ -988,7 +1236,8 @@ export class CardBattle {
       settleKo()
     }
 
-    // end of turn: advance cooldowns, then lock cards used this turn
+    // 라운드 종료: 쿨다운을 한 칸 돌리고, 이 라운드에 **실제로 낸** 카드를 잠근다
+    // (봉인돼 못 낸 슬롯은 비어 있으므로 쿨다운도 안 돈다).
     for (let p = 0; p < 2; p++) {
       const cds = s.cooldowns[p]
       for (const id of Object.keys(cds)) cds[id] = Math.max(0, cds[id] - 1)
@@ -997,7 +1246,7 @@ export class CardBattle {
       }
     }
 
-    if (!s.over) s.turn += 1
+    if (!s.over) s.round += 1
     return steps
   }
 }

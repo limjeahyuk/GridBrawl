@@ -9,7 +9,14 @@
 // ⚠ 여기 적는 뜻은 **엔진이 실제로 하는 일**이어야 한다(`battle/engine.ts`).
 //   능력을 새로 만들거나 규칙을 바꾸면 이 파일도 같은 커밋에서 고친다.
 // ---------------------------------------------------------------------------
-import type { CardDef } from '../battle/types'
+import {
+  BURN_HIT_DAMAGE,
+  FOG_DAMAGE,
+  FREEZE_SHATTER_BONUS,
+  KNOCKBACK_BLOCK_DAMAGE,
+  POISON_TICK_DAMAGE,
+  type CardDef,
+} from '../battle/types'
 
 export interface AbilityInfo {
   /** 압축 카드에 그대로 찍히는 아이콘. 한 글자여야 카드 폭을 안 먹는다. */
@@ -44,37 +51,50 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '👊',
       label: `넉백 ${c.push}`,
-      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽에 닿으면 거기서 멈추고, 바위에 막혀 한 칸도 못 밀리면 그 상대는 1턴 기절한다.`,
+      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 밀려난 칸만큼 독도 함께 받는다.`,
     })
   if (c.pull)
     out.push({
       icon: '🪝',
       label: `끌어당김 ${c.pull}`,
-      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 도망치는 적을 사거리 안으로 잡아 오고, 바위에 막혀 한 칸도 못 오면 그 상대는 1턴 기절한다.`,
+      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 끌려온 칸만큼 독도 함께 받는다.`,
     })
   if (c.stun)
     out.push({
       icon: '💫',
-      label: `기절 ${c.stun}턴`,
-      meaning: `맞은 상대는 ${c.stun}턴 동안 카드를 한 장도 못 낸다. 피해가 실제로 들어가야 걸린다.`,
+      label: '기절',
+      meaning:
+        '맞은 상대는 이번 라운드 남은 카드를 한 장도 못 낸다. 앞 슬롯에 넣을수록 많이 지운다(마지막 슬롯이면 아무것도 못 막는다). 피해가 실제로 들어가야 걸린다.',
     })
   if (c.freeze)
     out.push({
       icon: '❄',
-      label: `빙결 ${c.freeze}턴`,
-      meaning: `맞은 상대는 ${c.freeze}턴 동안 이동할 수 없다. 공격과 수비는 그대로 나간다.`,
+      label: '빙결',
+      meaning: `맞은 상대는 이번 라운드 남은 카드를 못 낸다. 단 때리면 깨진다 — 깨뜨린 타격은 ${FREEZE_SHATTER_BONUS} 더 아프다(보호막 무시).`,
+    })
+  if (c.bind)
+    out.push({
+      icon: '🕸',
+      label: '속박',
+      meaning: '맞은 상대는 이번 라운드 이동 카드를 쓸 수 없다. 공격과 수비는 그대로 나간다.',
     })
   if (c.poison)
     out.push({
       icon: '☠',
-      label: `독 ${c.poison}`,
-      meaning: `턴이 끝날 때마다 ${c.poison} 피해. 보호막을 무시하고 그대로 깎는다.`,
+      label: `중독 ${c.poison}라운드`,
+      meaning: `${c.poison}라운드 동안, 그 상대는 몸이 움직이거나 공격할 때마다 ${POISON_TICK_DAMAGE} 피해를 받는다 — 이동 한 칸, 공격 카드 한 장, 넉백으로 밀려난 한 칸 모두 한 번씩(보호막 무시). 겹쳐 걸면 그만큼 배가 된다. 수비·기력·회복은 아프지 않다.`,
     })
   if (c.burn)
     out.push({
       icon: '🔥',
-      label: `화상 ${c.burn}`,
-      meaning: `턴이 끝날 때마다 ${c.burn} 피해. 보호막을 무시하고 그대로 깎는다.`,
+      label: `화상 ${c.burn}라운드`,
+      meaning: `${c.burn}라운드 동안, 그 상대가 맞을 때마다 피해가 ${BURN_HIT_DAMAGE} 늘어난다(보호막 무시). 겹쳐 걸면 그만큼 배가 된다.`,
+    })
+  if (c.fog)
+    out.push({
+      icon: '🌫',
+      label: `독안개 ${c.fog}라운드`,
+      meaning: `맞은 자리에 독안개를 ${c.fog}라운드 깐다. 라운드가 끝날 때 그 칸에 서 있으면 ${FOG_DAMAGE} 피해(보호막 무시). 비키게 만드는 카드다.`,
     })
   if (c.leech)
     out.push({
@@ -97,8 +117,8 @@ export function abilityList(c: CardDef): AbilityInfo[] {
   if (c.empower)
     out.push({
       icon: '📈',
-      label: `각성 +${c.empower}`,
-      meaning: `이 전투가 끝날 때까지 내 모든 공격의 피해가 ${c.empower} 오른다. 쓸수록 쌓인다.`,
+      label: `힘 +${c.empower}`,
+      meaning: `이 전투가 끝날 때까지 내 모든 공격의 피해가 ${c.empower} 오른다. 쓸수록 쌓이고, 전투가 끝나면 사라진다(다음 적과는 다시 0부터).`,
     })
   if (c.dashForward)
     out.push(
@@ -148,9 +168,9 @@ export function primaryStat(c: CardDef): { value: string; unit: string } | null 
     case 'heal':
       return { value: `+${c.healHp ?? 0}`, unit: '체력' }
     case 'buff':
-      // 무아지경(freeCast)은 수치가 없다 — 지속 턴이 곧 카드의 크기다.
+      // 무아지경(freeCast)은 수치가 없다 — 지속 라운드가 곧 카드의 크기다.
       return c.buff === 'freeCast'
-        ? { value: `${c.buffTurns ?? 1}`, unit: '턴' }
+        ? { value: `${c.buffRounds ?? 1}`, unit: '라운드' }
         : { value: `${c.buffPower ?? 0}`, unit: c.buff === 'defUp' ? '경감' : '공격' }
     default:
       return null

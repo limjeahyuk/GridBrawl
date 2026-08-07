@@ -306,8 +306,8 @@ export function decideAI(
     //    없는데도 매 슬롯 중앙으로 걷기만 해서, 마지막 단계부터 AI가 아예 공격을
     //    멈췄다 — 무한전을 끊으라고 넣은 장치가 오히려 판을 늘리고 있었다.
     if (
-      !isFullyCollapsed(state.turn + 1) &&
-      (isCollapsedCell(pos, state.turn) || isCollapsedCell(pos, state.turn + 1))
+      !isFullyCollapsed(state.round + 1) &&
+      (isCollapsedCell(pos, state.round) || isCollapsedCell(pos, state.round + 1))
     ) {
       const toCenter: MoveDir = pos.col <= (GRID_COLS - 1) / 2 ? 'right' : 'left'
       const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)].filter(
@@ -317,7 +317,7 @@ export function decideAI(
       // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05).
       const m =
         esc.find(
-          (c) => usable(c) && goesSomewhere(c) && !isCollapsedCell(landingOf(c), state.turn + 1),
+          (c) => usable(c) && goesSomewhere(c) && !isCollapsedCell(landingOf(c), state.round + 1),
         ) ?? esc.find((c) => usable(c) && goesSomewhere(c))
       if (m) {
         take(m)

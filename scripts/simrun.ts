@@ -158,16 +158,16 @@ async function playFight(run: RunState): Promise<FightResult> {
   const fp = runFightProps(run)
   const battle = new CardBattle(fp.p0CharId, fp.p1CharId, fp.battleOpts)
   const pChar = fp.battleOpts.chars![0]
-  while (!battle.state.over && battle.state.turn <= MAX_TURNS) {
+  while (!battle.state.over && battle.state.round <= MAX_TURNS) {
     const p0 = decideAI(battle.state, 0, pChar, SKILL, fp.deck)
     const p1 = (await fp.getOpponentPlan(p0, battle)) ?? []
-    battle.resolveTurn(p0, p1)
+    battle.resolveRound(p0, p1)
   }
   // 무승부·타임아웃은 화면(BattleScreen)과 같게 플레이어 패배로 본다.
   return {
     won: battle.state.over && battle.state.winner === 0,
     hpLeft: battle.state.hp[0],
-    turns: battle.state.turn,
+    turns: battle.state.round,
   }
 }
 

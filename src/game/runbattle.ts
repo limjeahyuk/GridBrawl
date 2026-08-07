@@ -75,7 +75,7 @@ export function runFightProps(run: RunState): RunFightProps {
     getOpponentPlan: (_local, b) => {
       // 보스는 스크립트 패턴으로, 그 외엔 일반 AI로.
       if (scripted) {
-        const ctx = { turn: b.state.turn, hpFrac: b.state.hp[1] / b.maxHp[1] }
+        const ctx = { turn: b.state.round, hpFrac: b.state.hp[1] / b.maxHp[1] }
         const plan = bossPlan(enemy.id, ctx)
         if (plan) return Promise.resolve(plan)
       }
