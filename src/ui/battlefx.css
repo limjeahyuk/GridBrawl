@@ -452,6 +452,256 @@
   filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45));
 }
 
+/* ---- 벽 격돌 (2026-08-08) -------------------------------------------------
+   넉백이 판 끝 암벽에 막히면 상대는 그 자리에서 **등이 돌에 찍힌다**. 그전까진
+   벽에 몰린 것과 한 칸 밀려난 것이 화면에서 똑같이 보였다 — 넉백 카드가 벽을
+   등지고 있을 때 제일 아프다는 게 판에 전혀 안 드러났다.
+
+   ⚠ **연출뿐이다. 룰은 안 건드렸다** — 격돌해도 추가 피해도 기절도 없다
+   (엔진 `Step.slam` 주석 참고). 밸런스 재측정이 필요 없는 이유다.
+   ⚠ 방향(`--slam`)은 **화면 좌표**다. 엔진은 정규 좌표로 주므로 `BattleScreen`이
+     `flip`을 반영해 넘긴다 — 멀티에서 side 1을 잡으면 판이 좌우로 뒤집힌다. */
+.fighter.is-slam {
+  animation: slam-body 0.52s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes slam-body {
+  0% {
+    transform: translate(-50%, -72%);
+  }
+  16% {
+    transform: translate(calc(-50% + var(--slam, 1) * 24px), -68%) scaleX(0.78) scaleY(1.16);
+  }
+  38% {
+    transform: translate(calc(-50% - var(--slam, 1) * 15px), -74%) scaleX(1.1) scaleY(0.92);
+  }
+  62% {
+    transform: translate(calc(-50% + var(--slam, 1) * 7px), -72%);
+  }
+  82% {
+    transform: translate(calc(-50% - var(--slam, 1) * 3px), -72%);
+  }
+  100% {
+    transform: translate(-50%, -72%);
+  }
+}
+/* 스프라이트는 기준점 보정(--anchor/--foot)이 붙어 있어 키프레임이 따로다.
+   ⚠ 위 `hitshake-sprite`(피격 흔들림)보다 **뒤에** 있어야 이긴다 — 같은 특이도라
+     순서로 갈린다. 사방으로 떠는 그림과 한 방향으로 처박히는 그림은 겹치면
+     둘 다 죽는다. */
+.fighter--sprite.is-slam {
+  animation: slam-sprite 0.52s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes slam-sprite {
+  0% {
+    transform: translate(var(--anchor), var(--foot));
+  }
+  16% {
+    transform: translate(calc(var(--anchor) + var(--slam, 1) * 24px), calc(var(--foot) + 4px))
+      scaleX(0.78) scaleY(1.16);
+  }
+  38% {
+    transform: translate(calc(var(--anchor) - var(--slam, 1) * 15px), calc(var(--foot) - 3px))
+      scaleX(1.1) scaleY(0.92);
+  }
+  62% {
+    transform: translate(calc(var(--anchor) + var(--slam, 1) * 7px), var(--foot));
+  }
+  82% {
+    transform: translate(calc(var(--anchor) - var(--slam, 1) * 3px), var(--foot));
+  }
+  100% {
+    transform: translate(var(--anchor), var(--foot));
+  }
+}
+.fighter__slam {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  color: #ffd9a8;
+  background: rgba(46, 24, 8, 0.92);
+  border: 1px solid #ff9a3d;
+  border-radius: 12px;
+  padding: 2px 10px;
+  text-shadow: 0 0 8px rgba(255, 154, 61, 0.65);
+  z-index: 5;
+  pointer-events: none;
+  animation: slamtag 0.7s ease-out forwards;
+}
+.fighter--sprite .fighter__slam {
+  left: calc(var(--anchorpx, 0) * 1px);
+}
+@keyframes slamtag {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  16% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.18);
+  }
+  30% {
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-14px) scale(1);
+  }
+}
+
+/* 부딪힌 **벽 쪽**에서 터지는 균열 섬광 + 돌먼지. 판 가장자리(격자 바깥 70px)를
+   쓰므로 파이터를 가리지 않는다. `--edge`가 빛이 새어 나오는 기준점이고
+   `--dust`는 돌가루가 날아가는 방향(벽 반대쪽)이다. */
+.board__slam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 132px;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+  --edge: 0%;
+  --dust: 1;
+}
+.board__slam--right {
+  right: 0;
+  --edge: 100%;
+  --dust: -1;
+}
+.board__slam--left {
+  left: 0;
+}
+/* 균열은 벽면에 딱 붙어야 한다 — `--edge`(%)로 두면 반대쪽 절반이 잘려 나간다 */
+.board__slam--left::after {
+  left: 0;
+}
+.board__slam--right::after {
+  right: 0;
+}
+/* 충격 섬광 — 벽에서 판 안쪽으로 번진다 */
+.board__slam::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--edge) 50%;
+  background: radial-gradient(
+    78% 52% at var(--edge) 50%,
+    rgba(255, 246, 224, 0.98),
+    rgba(255, 170, 74, 0.6) 34%,
+    rgba(255, 120, 40, 0.22) 58%,
+    transparent 78%
+  );
+  animation: slamflash 0.44s ease-out forwards;
+}
+/* 벽면에 그어지는 균열 — 딱 한 줄이라 "여기 부딪혔다"가 못 박힌다 */
+.board__slam::after {
+  content: '';
+  position: absolute;
+  top: 6%;
+  bottom: 6%;
+  width: 8px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 245, 214, 1) 22%,
+    rgba(255, 178, 84, 0.95) 55%,
+    transparent
+  );
+  box-shadow: 0 0 26px rgba(255, 190, 100, 0.95);
+  animation: slamcrack 0.5s ease-out forwards;
+}
+.board__slamdust {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(9px 9px at var(--edge) 24%, rgba(240, 224, 198, 0.95), transparent 70%),
+    radial-gradient(13px 13px at var(--edge) 47%, rgba(240, 224, 198, 0.92), transparent 70%),
+    radial-gradient(8px 8px at var(--edge) 63%, rgba(210, 190, 160, 0.88), transparent 70%),
+    radial-gradient(11px 11px at var(--edge) 78%, rgba(210, 190, 160, 0.82), transparent 70%),
+    radial-gradient(7px 7px at var(--edge) 36%, rgba(240, 224, 198, 0.8), transparent 70%),
+    radial-gradient(6px 6px at var(--edge) 88%, rgba(210, 190, 160, 0.75), transparent 70%);
+  animation: slamdust 0.66s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+@keyframes slamflash {
+  from {
+    opacity: 1;
+    transform: scaleX(0.55);
+  }
+  to {
+    opacity: 0;
+    transform: scaleX(1.3);
+  }
+}
+@keyframes slamcrack {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.3);
+  }
+  14% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+@keyframes slamdust {
+  from {
+    opacity: 0.95;
+    transform: translateX(0) scale(0.75);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--dust) * 58px)) scale(1.7);
+  }
+}
+/* 히트스톱은 격돌 연출까지 얼려야 한다 — 타격은 멈췄는데 돌먼지만 흐르면
+   그 순간이 통째로 미끄러진다. */
+.battle.is-hitstop .board__slam,
+.battle.is-hitstop .board__slam::before,
+.battle.is-hitstop .board__slam::after,
+.battle.is-hitstop .board__slamdust,
+.battle.is-hitstop .fighter__slam {
+  animation-play-state: paused !important;
+}
+
+/* ---- HUD 상태이상 줄 (2026-08-08) -----------------------------------------
+   파이터 발밑 칩(`.fighter__status`)만으로는 안 보였다 — 스프라이트·불꽃·피해
+   숫자가 그 자리를 계속 덮고, 판이 302px밖에 안 돼 칩이 아래로 잘리기도 한다.
+   그래서 **기력 바 바로 아래**에 같은 칩을 한 줄 더 둔다. 체력·기력과 한 덩어리로
+   읽히는 자리라 "지금 내 상태"를 눈을 옮기지 않고 확인한다.
+
+   ⚠ **`.bhud`의 높이(96px)를 늘리면 안 된다.** `.board`가 `flex: 1`이라 HUD가
+     커진 만큼 판이 줄고, 그러면 장면 배경의 잘림 위치(`background-position`)가
+     전부 어긋난다. 그래서 이 줄은 **레이아웃 밖으로 흘러넘치게** 두고 판의 위쪽
+     여백(격자 inset 22px) 위에 얹는다. 클릭은 통과시킨다(칸을 눌러 이동). */
+.bhud__status {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+  min-height: 17px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.bhud__side--right .bhud__status {
+  justify-content: flex-end;
+}
+/* 발밑 칩보다 한 치수 크게 — 여기가 "읽는" 자리고 발밑은 "어느 몸에 걸렸나"다 */
+.stchip--hud {
+  padding: 1px 7px;
+  font-size: 11px;
+  background: rgba(8, 12, 20, 0.94);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.55);
+}
+.stchip--hud b {
+  font-size: 10px;
+}
+
 /* ---- 접근성 --------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .fighter__art {
@@ -465,6 +715,16 @@
   }
   .bhud__side.is-shock {
     animation: none;
+  }
+  /* 격돌은 "부딪혔다"는 정보 자체라 없애지 않고 **짧게 한 번만** 보여 준다 */
+  .fighter.is-slam,
+  .fighter--sprite.is-slam {
+    animation: none;
+  }
+  .board__slam::before,
+  .board__slam::after,
+  .board__slamdust {
+    animation-duration: 0.2s;
   }
 }
 

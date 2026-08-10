@@ -16,7 +16,9 @@
 | `mage` | `wizard` | Wizard Pack (LuizMelo) |
 | 몬스터 slime·splitter | `slime` | Monsters Creatures Fantasy 2 |
 | 몬스터 bat·phantom | `bat` | 〃 |
-| 몬스터 goblin·grunt | `rat` | 〃 |
+| 몬스터 goblin | `goblin` | Monsters Creatures Fantasy (LuizMelo, CC0) |
+| 몬스터 grunt(철퇴병) | `medieval-warrior` | Medieval Warrior Pack 2 (LuizMelo, CC0) |
+| *(쓰는 곳 없음)* | `rat` | Monsters Creatures Fantasy 2 |
 | 몬스터 vampire | `mimic` | 〃 |
 | 몬스터 witch·shaman·overlord·pyrelord | `evil-wizard` | Evil Wizard 3 (LuizMelo) |
 | 몬스터 knight·assassin·berserker·crossbow | `martial-hero` | Martial Hero 3 (LuizMelo) |
@@ -29,8 +31,17 @@
 | **보스** pyrelord | `dragon` | 〃 (Grotto Escape 2 보스 용) |
 | **보스** warden | `terrible-knight` | 〃 |
 
-**20종이 시트 3개를 돌려 쓰던 상태는 끝났다** — 이제 13개 시트를 쓰고 직업 시트를
+**20종이 시트 3개를 돌려 쓰던 상태는 끝났다** — 이제 15개 시트를 쓰고 직업 시트를
 빌려 쓰는 몬스터는 없다.
+
+- ⚠ **`Monsters Creatures Fantasy`(1편)는 버전 폴더가 통짜 재배포가 아니라 패치다.**
+  1.0이 본체(Idle·Run·Attack·Take Hit·Death), `(Version 1.2)`가 Attack2, `(Version 1.3)`이
+  Attack3만 담고 있다. 그래서 `goblin` 항목은 root를 `assets-raw`로 잡고 클립마다 전체
+  경로를 적는다 — 한 폴더만 보고 "프레임이 모자란다"고 판단하지 말 것.
+- ⚠ **Medieval Warrior Pack 2에는 도끼가 없다**(레이피어·대검·창·철퇴 4종). 원래 이
+  자리의 몬스터 이름이 '도끼병'이었는데, 그림에 맞춰 **'철퇴병'으로 바꿨다**. 철퇴는
+  `attack2`에 넣는다 — 이 몬스터의 카드가 전부 `fx: 'punch'`라 실제로 재생되는 게
+  그 클립뿐이다.
 
 - ⚠ **Gothicvania 계열은 hurt·death 클립이 대부분 없다**(`terrible-knight`만 Hurt 보유). 원본에 그 동작이 없어서다. `clipOrFallback`이 attack1 → idle로 대신하므로 게임은 정상 동작하고, 피격·사망 때 대기 자세가 나온다.
 - ⚠ **Gothicvania 원본은 팔레트(colorType 3) PNG다.** 패커가 원래 8bit RGBA만 읽어서 통째로 건너뛰고 있었다(`✗ … 건너뜀`). `decodePng`에 PLTE·tRNS 확장을 넣어 해결했다 — 앞으로 ansimuz 팩은 그냥 들어온다.

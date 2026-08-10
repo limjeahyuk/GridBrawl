@@ -120,7 +120,7 @@ export function CardFace({
     <div
       className={`cardface cardface--${card.kind} ${tags.length > 0 ? 'cardface--tagged' : ''} ${
         compact ? 'cardface--compact' : ''
-      }`}
+      } ${card.upgraded ? 'cardface--upgraded' : ''}`}
       style={{ ['--accent' as string]: accent }}
     >
       {/* 압축 카드에선 종류 아이콘을 우상단 구석으로 뺀다 — 주역은 이름·수치·범위.
@@ -131,6 +131,10 @@ export function CardFace({
         {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>
       <div className="cardface__name">{card.name}</div>
+      {/* 강화 내역 — 원본 설명은 강화 전 수치로 쓰여 있어서(예: "독 6(3턴)") 그대로
+          두면 카드 앞면이 스스로와 어긋난다. 무엇이 올랐는지 한 줄로 못 박는다.
+          압축 카드에서도 남긴다 — 전투 중에 "이게 강화된 그 카드"임을 알아야 한다. */}
+      {card.upgradeNote && <div className="cardface__upnote">⬆ {card.upgradeNote}</div>}
       {/* 설명은 카드를 고르며 읽는 화면(덱 빌더·도감)에서만. 전투에선 생략. */}
       {!compact && <p className="cardface__desc">{card.desc}</p>}
       {compact && card.kind === 'move' && <div className="cardface__moveart">{icon}</div>}

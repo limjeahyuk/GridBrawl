@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
 import { resolveRunCard } from '../../game/runcards'
+import { upgradedCard } from '../../game/upgrades'
 import {
-  advanceFloor, buyShopItem, rollShop, type RunState, type ShopItem,
+  advanceFloor, buyShopItem, cardLevel, rollShop, runCard, type RunState, type ShopItem,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { RunBar } from '../RunBar'
@@ -45,7 +46,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
         <h2 className="shop__title">{removing ? '제거할 카드를 고르세요' : '버릴 카드를 고르세요'}</h2>
         <div className="reward__deck">
           {cur.deck.map((id, i) => {
-            const c = resolveRunCard(cur.charId, id)
+            const c = runCard(cur, id)
             if (!c) return null
             return (
               <button
@@ -78,10 +79,17 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
           const owned = bought.has(item.id)
           const poor = cur.gold < item.price
           const relic = item.kind === 'relic' ? getRelic(item.relicId) : null
-          const card = item.kind === 'card' ? resolveRunCard(cur.charId, item.cardId) : null
+          // 진열된 카드가 이미 덱에 있으면 그건 **강화 상품**이다(2026-08-08) — 사고
+          // 나면 장수가 아니라 단계가 오르므로, 진열도 강화 후 모습으로 그린다.
+          const base = item.kind === 'card' ? resolveRunCard(cur.charId, item.cardId) : null
+          const isUp = item.kind === 'card' && cur.deck.includes(item.cardId)
+          const card = base && isUp && item.kind === 'card'
+            ? upgradedCard(base, cardLevel(cur, item.cardId) + 1)
+            : base
           return (
             <div key={item.id} className={`shop__item ${owned ? 'is-owned' : ''}`}>
               <div className="shop__item-body">
+                {isUp && <span className="reward__uptag">강화</span>}
                 {card && <CardFace card={card} accent={cardAccent(card, char.accent)} compact />}
                 {relic && (
                   <div className="shop__relic">

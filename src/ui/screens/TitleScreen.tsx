@@ -25,6 +25,7 @@ export function TitleScreen({
   onStart,
   onPvp,
   onCodex,
+  admin,
 }: {
   user: AuthUser | null
   onLogout: () => void
@@ -33,6 +34,13 @@ export function TitleScreen({
   /** PVP = 덱 선택 → 봇전·온라인(`deck-select`). */
   onPvp: () => void
   onCodex: () => void
+  /**
+   * 밸런스 어드민 입구. **개발 빌드에서만 넘어온다** — 배포 빌드에서는 undefined이고,
+   * 아래 JSX도 `import.meta.env.DEV &&`로 한 번 더 막아 **버튼 문자열까지** 번들에서
+   * 사라지게 한다(`false && …`는 죽은 코드라 통째로 지워진다).
+   * `dirty`는 지금 소스와 다르게 고쳐 둔 항목 수다.
+   */
+  admin?: { open: () => void; dirty: number }
 }) {
   const [showControls, setShowControls] = useState(false)
   return (
@@ -84,6 +92,11 @@ export function TitleScreen({
           <button className="btn btn--ghost" onClick={() => setShowControls((v) => !v)}>
             조작법
           </button>
+          {import.meta.env.DEV && admin && (
+            <button className="btn btn--ghost" onClick={admin.open}>
+              ⚙ 어드민{admin.dirty > 0 ? ` ·${admin.dirty}` : ''}
+            </button>
+          )}
         </div>
       </div>
 

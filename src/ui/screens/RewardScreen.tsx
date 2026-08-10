@@ -1,11 +1,16 @@
-// 승리 보상 — 5장 중 1택(아주 낮은 확률로 유물 포함). 또는 회복하고 지나가기.
+// 승리 보상 — 6장 중 1택(아주 낮은 확률로 유물 포함). 또는 회복하고 지나가기.
 // 덱이 꽉 찬 상태로 카드를 받으면 버릴 카드를 고른다.
+//
+// 이미 가진 카드는 **강화**로 나온다(2026-08-08) — 카드 앞면을 강화 후 모습으로
+// 그리고 "강화" 리본을 붙인다. 더 올릴 게 없는 카드는 애초에 풀에서 빠지므로
+// (`cardRewardPool`) 여기서 "아무 일도 안 하는 칸"은 나오지 않는다.
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
+import { upgradedCard } from '../../game/upgrades'
 import { resolveRunCard } from '../../game/runcards'
 import {
-  advanceFloor, grantCard, grantRelic, rollRewards, skipRewardForHeal,
+  advanceFloor, cardLevel, grantCard, grantRelic, rollRewards, runCard, skipRewardForHeal,
   SKIP_HEAL, type Reward, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
@@ -44,7 +49,7 @@ export function RewardScreen({
         <h2 className="reward__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
         <div className="reward__deck">
           {run.deck.map((id, i) => {
-            const c = resolveRunCard(run.charId, id)
+            const c = runCard(run, id)
             if (!c) return null
             return (
               <button
@@ -82,15 +87,20 @@ export function RewardScreen({
               </button>
             )
           }
-          const c = resolveRunCard(run.charId, r.cardId)
-          if (!c) return null
+          const base = resolveRunCard(run.charId, r.cardId)
+          if (!base) return null
+          // 이미 덱에 있으면 이 칸은 "새 카드"가 아니라 "강화"다 — 받은 뒤의 모습을
+          // 그대로 보여 준다. 무엇이 오르는지는 카드 앞면의 ⬆ 줄이 말해 준다.
+          const owned = run.deck.includes(r.cardId)
+          const c = owned ? upgradedCard(base, cardLevel(run, r.cardId) + 1) : base
           return (
             <button
               key={i}
-              className="reward__opt reward__card"
+              className={`reward__opt reward__card ${owned ? 'reward__card--upgrade' : ''}`}
               style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
               onClick={() => take(r)}
             >
+              {owned && <span className="reward__uptag">강화</span>}
               <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
             </button>
           )

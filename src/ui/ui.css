@@ -2446,6 +2446,34 @@
 .cardface--tagged .cardface__desc {
   -webkit-line-clamp: 2;
 }
+/* ---- 강화된 카드 (2026-08-08) --------------------------------------------
+   같은 카드를 또 얻으면 강화된다(`game/upgrades.ts`). 이름에 `+`가 붙지만 그것만으론
+   덱을 훑을 때 눈에 안 띈다 — 테두리를 횃불 금색으로 바꿔 **한 칸씩 안 읽어도**
+   강화된 카드가 어디 있는지 보이게 한다. 강조색(`--accent`)은 카드 종류·캐릭터별로
+   달라야 하므로 건드리지 않고, 강화 표시만 고정 금색을 쓴다. */
+.cardface--upgraded {
+  border-color: var(--up);
+  border-left-color: var(--up);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--up) 45%, transparent);
+}
+/* 무엇이 올랐는지 한 줄. 원본 설명은 강화 전 수치로 쓰여 있어서 이 줄이 없으면
+   카드가 스스로와 어긋나 보인다("독 6(3턴)"이라 적힌 카드가 실제로는 독 9). */
+.cardface__upnote {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--up);
+  margin: 0 0 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cardface--compact .cardface__upnote {
+  order: 1; /* 수치줄 바로 위 — 강화가 얹힌 수치와 붙여 읽게 */
+  font-size: 11px;
+  margin-bottom: 3px;
+}
 /* 전투용 압축 카드 — 이름 → 수치(기력·데미지) → 사거리만. 설명이 없어 남는
    자리는 이름 아래 auto 마진이 먹고, 수치를 사거리 위로 올린다(요청 순서). */
 .cardface--compact {
@@ -3344,14 +3372,35 @@
   position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 900;
   color: var(--bg-1); background: #c98bff; border-radius: 6px; padding: 1px 6px;
 }
-.reward__card { width: 150px; height: 190px; padding: 0; border: none; background: none; }
+.reward__card { width: 150px; height: 190px; padding: 0; border: none; background: none; position: relative; }
+/* "강화" 리본 — 이미 가진 카드가 보상·상점에 나오면 그 칸은 새 카드가 아니라 강화다
+   (2026-08-08). 카드 앞면은 이미 강화 후 모습이라 `+`와 ⬆ 줄이 붙어 있지만, 여섯
+   칸을 훑을 때 **고르기 전에** 성격이 갈려 보여야 해서 칸 자체에도 표를 단다. */
+.reward__uptag {
+  position: absolute; top: -7px; left: 50%; transform: translateX(-50%); z-index: 2;
+  font-family: var(--font-display); font-size: 10px; font-weight: 900; letter-spacing: 0.12em;
+  color: var(--ink); background: var(--up); border-radius: 6px; padding: 2px 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
 .reward__skip { margin-top: 6px; }
 .reward__deck {
   display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
   max-width: 1100px; max-height: 460px; overflow-y: auto;
 }
-.reward__deck .reward__card { width: 104px; height: 132px; cursor: pointer; }
+/* 104×132 → 116×152(2026-08-08). 강화 내역(⬆ 줄)이 한 줄을 더 먹으면서 능력 칩이
+   둘 이상인 카드(종언의 만가+ 등)는 사거리표가 잘려 나갔다. 목록은 원래 스크롤되므로
+   (max-height) 조금 키워도 화면 구성이 안 바뀐다. */
+.reward__deck .reward__card { width: 116px; height: 152px; cursor: pointer; }
 .reward__deck .reward__card:hover { transform: translateY(-4px); }
+/* 덱을 통째로 늘어놓는 목록(버릴/녹일/벼릴 카드 고르기)은 카드가 104×132로 가장
+   작다. 압축 카드의 기본 글자 크기(이름 18px)는 이 폭에서 두 줄로 접히고, 강화
+   내역(⬆ 줄)이 들어오면 그 한 줄이 넘쳐 이름과 겹쳤다(2026-08-08 실측).
+   카드를 키우는 대신 이 목록에서만 글자를 줄인다 — 20장이 한 화면에 들어와야
+   고르기 쉽고, 여기서 필요한 건 "무엇이 있나"지 정독이 아니다. */
+.reward__deck .cardface--compact .cardface__name { font-size: 14px; }
+.reward__deck .cardface--compact .cardface__meta { font-size: 13px; gap: 1px 7px; }
+.reward__deck .cardface--compact .cardface__upnote { font-size: 9px; margin-bottom: 2px; }
 
 /* ---- 이벤트 화면 --------------------------------------------------------- */
 .event__topbar { width: 100%; }
@@ -3364,6 +3413,10 @@
 .event__desc { color: var(--text-dim); font-size: 16px; line-height: 1.6; }
 .event__options { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 10px; }
 .event__opt { width: 100%; padding: 14px; font-size: 15px; }
+/* 못 고르는 이유를 선택지 안에 적는다 — 눌러 봐야 아무 일도 없는 것보다 낫다. */
+.event__opt-why { color: var(--text-faint); font-size: 13px; font-weight: 600; }
+/* 강화 결과 — 글로 설명하는 대신 강화된 카드 앞면을 그대로 띄운다. */
+.event__upcard { width: 168px; height: 214px; }
 .event__result {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 16px; text-align: center;
@@ -3380,7 +3433,7 @@
   background: rgba(8, 12, 20, 0.5);
 }
 .shop__item.is-owned { opacity: 0.4; }
-.shop__item-body { width: 128px; height: 168px; display: grid; place-items: center; }
+.shop__item-body { width: 128px; height: 168px; display: grid; place-items: center; position: relative; }
 .shop__item-body .cardface { width: 128px; height: 168px; }
 .shop__relic, .shop__service {
   display: flex; flex-direction: column; align-items: center; justify-content: center;

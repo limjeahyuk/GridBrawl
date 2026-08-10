@@ -22,17 +22,20 @@ import { ROSTER, getChar } from '../src/data/roster'
 import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
 import { RUN_CARDS } from '../src/game/runcards'
+import { upgradedCard } from '../src/game/upgrades'
 import {
   LADDER_FLOORS,
   advanceFloor,
   afterLoss,
   afterWin,
   buyShopItem,
+  cardLevel,
   chooseBranch,
   currentNode,
   currentOptions,
   grantCard,
   grantRelic,
+  upgradableDeckCards,
   resolveEventEffect,
   rollEvent,
   rollRewards,
@@ -100,19 +103,31 @@ const ALL_CARDS: CardDef[] = [
 ]
 const cardById = (id: string): CardDef | undefined => ALL_CARDS.find((c) => c.id === id)
 
-/** 봇이 카드를 고를 때 쓰는 대략적 가치. 중복은 (한 턴에 한 번만 쓰므로) 깎는다. */
-function cardScore(id: string, deck: string[]): number {
+/** 카드 한 장 자체의 대략적 가치(강화 여부와 무관한 소재값). */
+function rawScore(c: CardDef): number {
+  if (c.kind === 'attack')
+    return (c.damage ?? 0) * (1 + 0.08 * (c.range?.length ?? 1)) - 0.4 * (c.energyCost ?? 0)
+  if (c.kind === 'guard') return 0.5 * (c.block ?? 0) - 0.3 * (c.guardCost ?? 0)
+  if (c.kind === 'heal') return 16
+  if (c.kind === 'energy') return 10
+  return 6 // move
+}
+/**
+ * 봇이 보상·상점에서 카드를 고를 때 쓰는 값.
+ *
+ * **이미 가진 카드는 강화로 들어온다**(2026-08-08). 예전엔 중복이 순수 낭비라
+ * 일괄로 0.35배를 곱했는데, 이제는 그 칸의 값이 "강화로 얼마나 좋아지는가"다 —
+ * 강화 후 카드와 지금 카드의 **차이**로 잰다. 덱 칸을 안 먹는다는 이점이 있어
+ * 조금 얹어 준다(×1.5). 더 올릴 게 없는 카드는 0 — 애초에 풀에서도 빠진다.
+ */
+function cardScore(id: string, deck: string[], run?: RunState): number {
   const c = cardById(id)
   if (!c) return 0
-  let s = 0
-  if (c.kind === 'attack')
-    s = (c.damage ?? 0) * (1 + 0.08 * (c.range?.length ?? 1)) - 0.4 * (c.energyCost ?? 0)
-  else if (c.kind === 'guard') s = 0.5 * (c.block ?? 0) - 0.3 * (c.guardCost ?? 0)
-  else if (c.kind === 'heal') s = 16
-  else if (c.kind === 'energy') s = 10
-  else s = 6 // move
-  if (deck.includes(id)) s *= 0.35
-  return s
+  if (!deck.includes(id)) return rawScore(c)
+  const lvl = run ? cardLevel(run, id) : 0
+  const up = upgradedCard(c, lvl + 1)
+  if (up === c) return 0
+  return Math.max(0, rawScore(up) - rawScore(c)) * 1.5
 }
 /** 덱에서 가장 값이 낮은 카드(교체·제거용). 이동 4방향은 남겨 둔다. */
 function worstCard(deck: string[]): string {
@@ -181,7 +196,7 @@ function takeReward(run: RunState): RunState {
   if (run.hp / run.maxHp < 0.35) return skipRewardForHeal(run)
   const best = rewards
     .filter((r): r is Extract<Reward, { kind: 'card' }> => r.kind === 'card')
-    .sort((a, b) => cardScore(b.cardId, run.deck) - cardScore(a.cardId, run.deck))[0]
+    .sort((a, b) => cardScore(b.cardId, run.deck, run) - cardScore(a.cardId, run.deck, run))[0]
   return advanceFloor(best ? applyReward(run, best) : run)
 }
 function applyReward(run: RunState, r: Reward): RunState {
@@ -205,9 +220,23 @@ function wantEffect(run: RunState, e: EventEffect): boolean {
     case 'removeCardGainRelic': return true
     case 'loseHpGainGold': return hpPct > 0.6
     case 'payGoldHeal': return run.gold >= e.gold && hpPct < 0.7
+    // 강화(2026-08-08) — 올릴 카드가 있어야 의미가 있다. 값은 유물보다 싸게 본다.
+    case 'upgradeCard': return upgradableDeckCards(run).length > 0
+    case 'loseHpUpgradeCard': return upgradableDeckCards(run).length > 0 && run.hp - e.hp > run.maxHp * 0.35
+    case 'payGoldUpgradeCard': return upgradableDeckCards(run).length > 0 && run.gold >= e.gold
     case 'loseHp': return false
     default: return false
   }
+}
+/**
+ * 이벤트에서 강화할 카드 — 덱에서 **가장 좋은** 카드를 벼린다. 강화는 그 카드의
+ * 수치를 비율로 올리므로 이미 센 카드에 붙일수록 값이 크다(제거·교체가 최약 카드를
+ * 고르는 것과 정확히 반대 방향이다).
+ */
+function bestUpgradeTarget(run: RunState): string | undefined {
+  const pool = upgradableDeckCards(run)
+  if (!pool.length) return undefined
+  return pool.reduce((hi, id) => (cardScore(id, run.deck, run) > cardScore(hi, run.deck, run) ? id : hi), pool[0])
 }
 function doEvent(run: RunState): RunState {
   const ev = rollEvent()
@@ -216,7 +245,16 @@ function doEvent(run: RunState): RunState {
       ? ev.options[Math.floor(Math.random() * ev.options.length)]
       : (ev.options.find((o) => wantEffect(run, o.effect)) ?? ev.options[ev.options.length - 1])
   let res = resolveEventEffect(run, opt.effect)
-  if (res.needsCardPick) res = resolveEventEffect(run, opt.effect, worstCard(run.deck))
+  if (res.needsCardPick) {
+    // 카드 선택의 뜻이 효과마다 반대다 — 강화형은 **가장 좋은** 카드를, 제거형은
+    // **가장 나쁜** 카드를 고른다. 하나로 뭉뚱그리면 강화 이벤트가 쓰레기 카드를 벼린다.
+    const isUp =
+      opt.effect.type === 'upgradeCard' ||
+      opt.effect.type === 'loseHpUpgradeCard' ||
+      opt.effect.type === 'payGoldUpgradeCard'
+    const pick = isUp ? bestUpgradeTarget(run) : worstCard(run.deck)
+    if (pick) res = resolveEventEffect(run, opt.effect, pick)
+  }
   if (res.gainedRelicId) relicPick[res.gainedRelicId] = (relicPick[res.gainedRelicId] ?? 0) + 1
   return advanceFloor(res.run)
 }
@@ -244,7 +282,7 @@ function doShop(run: RunState): RunState {
     if (cur.hp / cur.maxHp < 0.8) buy(item)
   for (const item of items.filter((i) => i.kind === 'card')) {
     if (item.kind !== 'card') continue
-    if (cardScore(item.cardId, cur.deck) > 12) buy(item)
+    if (cardScore(item.cardId, cur.deck, cur) > 12) buy(item)
   }
   return advanceFloor(cur)
 }

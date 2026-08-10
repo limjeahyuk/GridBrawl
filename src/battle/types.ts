@@ -195,6 +195,16 @@ export interface CardDef {
   accent?: string
   signature?: boolean
   fx?: 'slash' | 'bolt' | 'orb' | 'quake' | 'flame' | 'shield' | 'rush' | 'punch'
+
+  /**
+   * 카드 강화 표식(2026-08-08) — **표시 전용**. 로그라이크 런에서 같은 카드를 또
+   * 얻으면 `game/upgrades.ts`가 수치를 올린 사본을 만들고 여기에 단계를 적는다.
+   * 엔진은 이 두 필드를 보지 않고(수치 자체가 이미 올라가 있다), PvP·봇전의 원본
+   * 카드에는 절대 붙지 않으므로 `RULES_VERSION`과 무관하다.
+   */
+  upgraded?: number
+  /** 무엇이 좋아졌는지 한 줄 요약("피해 +5 · 독 +3"). CardFace가 그린다. */
+  upgradeNote?: string
 }
 
 export const GRID_COLS = 6
@@ -333,5 +343,15 @@ export interface Step {
   heal: number // HP the actor recovered this action (leech card / lifesteal passive)
   drain: number // energy stolen from the opponent this action
   recoil: number // HP the actor lost to their own card's recoil
+  /**
+   * 넉백·끌어당김이 **판 끝의 암벽에 막혀 멈췄다**(격돌). 값은 밀려나던 방향
+   * (정규 좌표 기준 +1 = col 5 쪽 벽 / −1 = col 0 쪽 벽)이고, 부딪힌 쪽은 항상
+   * 방어자(`1 - actor`)다.
+   *
+   * ⚠ **연출 전용 주석이다 — 룰이 아니다.** 격돌해도 추가 피해도 기절도 없고
+   *   판 상태는 이 값이 없을 때와 완전히 같다. 그래서 `RULES_VERSION`도 안 올린다
+   *   (락스텝은 `resolveTurn`이 만든 **상태**가 같으면 성립한다).
+   */
+  slam?: -1 | 1
   snapshot: BattleSnapshot
 }

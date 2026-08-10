@@ -316,13 +316,20 @@ export const RUN_CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(
 )
 
 /**
- * 런에서 쓰이는 카드 전체(공용 + 그 캐릭터 고유 + 런 전용)에서 id로 찾는다.
+ * 런에서 쓰이는 카드 전체(공용 + 그 직업의 기본기·고유 + 런 전용)에서 id로 찾는다.
  * 보상·상점·이벤트 화면이 전부 이걸 쓴다 — 한 곳만 빠뜨리면 카드가 빈칸으로 보인다.
+ *
+ * ⚠ **`basics`를 빠뜨리면 안 된다**(2026-08-08 수정). 시작 덱 9장 중 3장이 직업
+ * 기본기인데 여기서 안 찾아 줘서, "버릴 카드를 고르세요"·"녹일 카드를 고르세요"
+ * 같은 **덱을 늘어놓는 화면에서 그 3장이 통째로 안 보였다**(`c` 가 undefined면
+ * 화면이 `null`을 그린다). 강화 대상 고르기도 같은 목록을 쓴다.
  */
 export function resolveRunCard(charId: string, id: string): CardDef | undefined {
+  const char = getChar(charId)
   return (
     RUN_CARD_BY_ID[id] ??
     COMMON_CARDS.find((c) => c.id === id) ??
-    getChar(charId).cards.find((c) => c.id === id)
+    char.basics.find((c) => c.id === id) ??
+    char.cards.find((c) => c.id === id)
   )
 }

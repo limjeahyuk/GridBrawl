@@ -60,6 +60,11 @@ interface View {
   damage: [number, number]
   heal: [number, number]
   stunned: [boolean, boolean] // 이 턴을 통째로 버리는 기절
+  /**
+   * 넉백이 판 끝 암벽에 막혀 처박혔다 — **정규 좌표** 기준 방향(+1 = col 5 쪽 벽,
+   * −1 = col 0 쪽 벽, 0 = 없음). 화면에 그릴 땐 `flip`으로 뒤집어야 한다.
+   */
+  slam: [number, number]
   /** 지금 걸려 있는 지속효과(독·화상·빙결 + 강화 버프) — 파이터 발밑 칩으로 표시 */
   status: [StatusEffect[], StatusEffect[]]
   fx: [Fx | null, Fx | null]
@@ -204,6 +209,7 @@ function baseView(b: CardBattle): View {
     damage: [0, 0],
     heal: [0, 0],
     stunned: [false, false],
+    slam: [0, 0],
     status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
     fx: [null, null],
     say: ['', ''],
@@ -227,6 +233,9 @@ function stepToView(step: Step, seq: number): View {
   if (step.heal > 0) heal[a] = step.heal
   const stunned: [boolean, boolean] = [false, false]
   if (step.card.id === 'stun') stunned[a] = true // 이 턴을 통째로 버리는 기절
+  // 넉백이 벽에 막혔다 — 부딪힌 쪽은 언제나 방어자다(`Step.slam`).
+  const slam: [number, number] = [0, 0]
+  if (step.slam) slam[d] = step.slam
   const fx: [Fx | null, Fx | null] = [null, null]
   if (step.card.kind === 'attack' && step.result !== 'nofuel')
     fx[a] = { kind: step.card.fx ?? 'punch', result: step.result }
@@ -246,6 +255,7 @@ function stepToView(step: Step, seq: number): View {
     damage,
     heal,
     stunned,
+    slam,
     fx,
     say,
     seq,
@@ -420,6 +430,9 @@ export function BattleScreen({
   } | null>(null)
   // KO 순간 화면을 덮는 백색 섬광
   const [koFlash, setKoFlash] = useState(0)
+  // 벽 격돌 — 넉백이 판 끝 암벽에 막힌 순간 그 가장자리에서 터지는 돌먼지.
+  // `side`는 **화면 기준**이라 `flip`을 이미 반영한 값이 들어온다.
+  const [wallSlam, setWallSlam] = useState<{ seq: number; side: 'left' | 'right' } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
   /**
@@ -668,20 +681,31 @@ export function BattleScreen({
         color: opts.blocked ? '#9fc2ff' : dmg >= 26 ? '#fff1a8' : '#ffd9d9',
         big: dmg >= 26 || ko,
       }))
+      // 벽 격돌 — 넉백이 판 끝에 막혔으면 그 가장자리에서 돌먼지가 터진다.
+      // ⚠ 넉백은 **가드로 막혀도** 들어가므로(엔진 `computeAttack`) 아래 blocked
+      //   조기 반환보다 **먼저** 봐야 한다. 부딪히는 쪽은 언제나 방어자다.
+      const slam = target === 1 - step.actor ? (step.slam ?? 0) : 0
+      if (slam) {
+        // 정규 좌표 → 화면 좌표(내가 side 1이면 판이 좌우로 뒤집혀 있다)
+        const dir = flip ? -slam : slam
+        setWallSlam((prev) => ({ seq: (prev?.seq ?? 0) + 1, side: dir > 0 ? 'right' : 'left' }))
+        playSfx('slam')
+      }
       if (opts.blocked) {
         playSfx('block')
-        punch(1)
+        punch(slam ? 2 : 1)
         return 0
       }
-      punch(shakeLevel(dmg, ko))
+      punch(slam ? 3 : shakeLevel(dmg, ko))
       if (ko) {
         playSfx('ko')
         setKoFlash((n) => n + 1)
       } else if (opts.sound !== false) {
         playSfx('hit', dmg / 18)
       }
-      // 잠깐 얼어붙는 순간이 "묵직함"을 만든다 — 피해가 클수록 길다
-      const ms = hitstopFor(dmg, ko)
+      // 잠깐 얼어붙는 순간이 "묵직함"을 만든다 — 피해가 클수록 길다.
+      // 격돌은 그 위에 한 겹 더 얹는다 — 벽에 처박히는 순간이 제일 무겁다.
+      const ms = hitstopFor(dmg, ko) + (slam ? 60 : 0)
       setHitstop(true)
       await wait(ms)
       setHitstop(false)
@@ -730,6 +754,7 @@ export function BattleScreen({
           damage: [0, 0],
           heal: [0, 0],
           stunned: [false, false],
+          slam: [0, 0], // 격돌은 ②타격에서만 — 준비 동작에 미리 뜨면 안 된다
           seq: si + 1,
         })
         playSfx(RANGED_FX.has(step.card.fx ?? '') ? 'cast' : 'swing')
@@ -786,6 +811,7 @@ export function BattleScreen({
     setView(baseView(battle))
     setResolveHit(null)
     setSparks(null)
+    setWallSlam(null)
     setPhaseTag('')
 
     if (battle.state.over) {
@@ -1021,6 +1047,18 @@ export function BattleScreen({
           )}
         </div>
 
+        {/* 벽 격돌 — 넉백이 막힌 쪽 가장자리에서 터지는 균열 섬광 + 돌먼지.
+            ⚠ `key`로 remount해야 연달아 격돌해도 매번 처음부터 재생된다(같은
+            클래스가 유지되면 CSS 애니메이션이 다시 뛰지 않는다 — 카메라 펀치와
+            같은 이유). 판 위 레이어라 `pointer-events: none`은 CSS가 건다. */}
+        {wallSlam && (
+          <div
+            key={`slam-${wallSlam.seq}`}
+            className={`board__slam board__slam--${wallSlam.side}`}
+          >
+            <span className="board__slamdust" />
+          </div>
+        )}
         {koFlash > 0 && <div key={`ko-${koFlash}`} className="board__koflash" />}
         {hitFlash && (
           <div
@@ -1296,6 +1334,8 @@ function FighterSprite({
   //   · `fighter--stacked-*` — 겹쳤을 때 좌우로 비켜 세우는 오프셋. 서로 반대여야
   //                           둘 다 보이므로 역시 자리 기준이다
   const place = sheet ? placeSprite(sheet, face) : null
+  // 벽 격돌 방향 — 엔진은 정규 좌표로 주므로 화면 좌표로 되돌린다(멀티 미러링).
+  const slamDir = (flip ? -v.slam[idx] : v.slam[idx]) || 0
   const cls = [
     'fighter',
     `fighter--${face}`,
@@ -1308,6 +1348,9 @@ function FighterSprite({
     v.damage[idx] > 0 ? 'is-hit' : '',
     v.shield[idx] > 0 ? 'is-guard' : '',
     v.stunned[idx] ? 'is-stunned' : '',
+    // 벽 격돌 — 피격 흔들림(`is-hit`)을 **덮어쓴다**(battlefx.css가 뒤에 온다).
+    // 사방으로 떠는 것과 한 방향으로 처박히는 건 다른 그림이라 겹치면 안 된다.
+    slamDir ? 'is-slam' : '',
   ].join(' ')
   return (
     <div
@@ -1316,6 +1359,8 @@ function FighterSprite({
         left: `${cellX(flip ? GRID_COLS - 1 - v.pos[idx].col : v.pos[idx].col)}%`,
         top: `${cellY(v.pos[idx].row)}%`,
         ['--accent' as string]: accent,
+        // 격돌 키프레임이 "어느 쪽 벽으로 처박히는가"를 이 값으로 읽는다(±1)
+        ...(slamDir ? { ['--slam' as string]: slamDir } : null),
         // 캐릭터를 프레임 한가운데가 아니라 **몸통 기준점**으로 세운다
         // (프레임 폭은 공격 검기까지 담느라 한쪽으로 늘어나 있다).
         // `--artflip`은 시트 원본이 보는 방향을 바로잡는 값이다(진영 반전
@@ -1346,6 +1391,11 @@ function FighterSprite({
       )}
       {v.say[idx] && <div className="fighter__say">{v.say[idx]}</div>}
       {v.stunned[idx] && <div className="fighter__stun">💫 기절</div>}
+      {slamDir !== 0 && (
+        <div key={`slam-${v.seq}`} className="fighter__slam">
+          💥 격돌!
+        </div>
+      )}
       {v.status[idx].length > 0 && (
         <div className="fighter__status">
           {v.status[idx].map((e) => (
@@ -1435,7 +1485,15 @@ function BattleHud({
   const chars = [c0, c1] as const
   return (
     <div className="bhud">
-      <BhudSide char={chars[li]} maxHp={maxHp[li]} hp={view.hp[li]} energy={view.energy[li]} side="left" isLocal />
+      <BhudSide
+        char={chars[li]}
+        maxHp={maxHp[li]}
+        hp={view.hp[li]}
+        energy={view.energy[li]}
+        status={view.status[li]}
+        side="left"
+        isLocal
+      />
       <div className="bhud__turn">
         <div className="bhud__turnno">TURN {turn}</div>
         {remain !== null && (
@@ -1463,6 +1521,7 @@ function BattleHud({
         maxHp={maxHp[oi]}
         hp={view.hp[oi]}
         energy={view.energy[oi]}
+        status={view.status[oi]}
         side="right"
         boss={boss}
       />
@@ -1497,6 +1556,7 @@ function BhudSide({
   maxHp,
   hp,
   energy,
+  status,
   side,
   isLocal,
   boss,
@@ -1505,6 +1565,8 @@ function BhudSide({
   maxHp: number
   hp: number
   energy: number
+  /** 지금 걸려 있는 지속효과 — 기력 바 **아래**에 늘어놓는다(아래 주석 참고). */
+  status: StatusEffect[]
   side: 'left' | 'right'
   isLocal?: boolean
   /** 이 쪽이 스크립트 보스일 때만. 칭호 한 줄 + 페이즈 전환 눈금을 그린다. */
@@ -1587,6 +1649,20 @@ function BhudSide({
         <span className="bhud__energynum">
           ⚡ {Math.floor(energy)} / {char.maxEnergy}
         </span>
+      </div>
+      {/* 상태이상 — 파이터 발밑 칩은 스프라이트·이펙트에 가려 잘 안 보였다.
+          체력·기력과 **같은 자리**에 두면 "지금 내 상태"를 한 번에 읽는다.
+          ⚠ 이 줄은 `.bhud`(높이 96px 고정) 밖으로 흘러넘쳐 판 위에 얹힌다 —
+          HUD 높이를 늘리면 `.board`가 그만큼 줄어 배경 잘림 위치가 전부
+          어긋난다(battlefx.css의 장면별 `background-position` 주석 참고). */}
+      <div className="bhud__status">
+        {status.map((e) => (
+          <span key={e.kind} className={`stchip stchip--hud stchip--${e.kind}`}>
+            {STATUS_CHIP[e.kind]}
+            {e.power > 0 ? e.power : ''}
+            <b>{e.turns}</b>
+          </span>
+        ))}
       </div>
     </div>
   )

@@ -24,6 +24,7 @@ export type SfxName =
   | 'whiff'
   | 'nofuel'
   | 'stun'
+  | 'slam' // 넉백이 판 끝 암벽에 처박히는 격돌
   | 'collapse'
   | 'trigger'
   | 'cutin'
@@ -198,6 +199,13 @@ const SFX: Record<SfxName, (k: number) => void> = {
   whiff: () => burst(0.22, 0.08, 1900, 1000, { type: 'bandpass', q: 0.6 }),
   nofuel: () => tone(150, 96, 0.2, 0.13, 'square'),
   stun: () => arp([720, 520, 700, 470], 0.11, 0.09, 'triangle', 0.075),
+  // 벽 격돌 — 타격음(`hit`)보다 **낮고 둔하다**. 등이 돌에 처박히는 쿵 + 돌가루가
+  // 흘러내리는 잔향. 같은 순간에 `hit`이 이미 울리므로 고음 성분은 일부러 뺐다.
+  slam: () => {
+    tone(120, 34, 0.3, 0.4, 'sine')
+    burst(0.2, 0.26, 1600, 220)
+    burst(0.45, 0.07, 3600, 900, { delay: 0.08, type: 'bandpass', q: 0.7 })
+  },
   collapse: () => burst(0.55, 0.09, 1000, 220, { type: 'bandpass', q: 0.5 }),
   trigger: () => {
     tone(880, 1760, 0.18, 0.09)

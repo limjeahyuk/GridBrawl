@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import './ui/ui.css'
 // ui.css 뒤에 와야 한다 — 전투 연출 레이어가 같은 특이도에서 이겨야 하므로.
 import './ui/battlefx.css'
@@ -39,6 +39,23 @@ import {
 } from './game/run'
 import { runFightProps } from './game/runbattle'
 
+/**
+ * 밸런스 어드민 — **개발 빌드에만 존재한다**.
+ *
+ * ⚠ **정적 import로는 배포 번들에서 안 빠진다.** 처음엔 `import { AdminScreen }`을
+ * 위에 두고 참조만 `import.meta.env.DEV`로 가렸는데, 그러면 화면 코드와 CSS는
+ * 트리셰이킹돼도 **`game/admin.ts`의 모듈 최상단 부작용**(초안 복원)이 그대로 남았다
+ * — Rollup은 import 간선이 있으면 그 모듈의 부작용을 지우지 않는다. 실제로 배포
+ * 번들에서 `gb-admin-draft`가 검출됐다.
+ *
+ * 그래서 **동적 import**로 바꿨다. 아래 삼항의 조건이 배포 빌드에서 `false`로 박히면
+ * `import()` 식 자체가 죽은 코드가 되어 사라지고, Rollup은 그 청크를 아예 만들지
+ * 않는다. 검증은 `npm run build` 뒤 dist에서 `admin`·`어드민` grep(0건).
+ */
+const AdminScreen = import.meta.env.DEV
+  ? lazy(() => import('./ui/screens/AdminScreen').then((m) => ({ default: m.AdminScreen })))
+  : null
+
 const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
 /** 온라인 대전 턴 제한(초). 0이 되면 자동 제출 — 상대를 무한정 기다리지 않게. */
 const MP_TURN_SECONDS = 30
@@ -63,6 +80,8 @@ type Phase =
   | 'run-event'
   | 'run-shop'
   | 'run-end'
+  /** 밸런스 어드민 — 개발 빌드에서만 도달한다. */
+  | 'admin'
 
 interface BotMatch {
   oppCharId: string
@@ -77,6 +96,12 @@ export default function App() {
   const [deck, setDeck] = useState<Deck | null>(null)
   const [editingDeck, setEditingDeck] = useState<Deck | undefined>(undefined)
   const [botMatch, setBotMatch] = useState<BotMatch | null>(null)
+  /**
+   * 어드민에서 고쳐 둔 항목 수(개발 빌드 전용). 초안이 localStorage에 남아 새로고침
+   * 뒤에도 계속 반영되므로, **타이틀에서 늘 보이게** 해 둔다 — 이게 없으면 자기가
+   * 고쳐 놓은 수치를 게임 버그로 오해하게 된다.
+   */
+  const [adminDirty, setAdminDirty] = useState(0)
   const [outcome, setOutcome] = useState<Outcome>('win')
   // --- online multiplayer ---
   const [mpMatch, setMpMatch] = useState<MatchReady | null>(null)
@@ -91,6 +116,14 @@ export default function App() {
   useEffect(() => {
     if (user && !localStorage.getItem(TUTORIAL_DONE_KEY)) setPhase('tutorial')
   }, [user])
+
+  // 어드민 초안을 부팅 때 얹고(모듈이 로드되는 순간 스스로 적용한다) 고친 항목 수를
+  // 읽어 온다. 타이틀로 돌아올 때마다 다시 세므로 어드민에서 되돌린 것도 바로 반영된다.
+  // ⚠ 배포 빌드에서는 조건이 `false`로 박혀 `import()`째 사라진다.
+  useEffect(() => {
+    if (!import.meta.env.DEV || phase !== 'title') return
+    void import('./game/admin').then((m) => setAdminDirty(m.dirtyCount()))
+  }, [phase])
 
   const tutorialDone = useCallback(() => {
     localStorage.setItem(TUTORIAL_DONE_KEY, '1')
@@ -214,7 +247,14 @@ export default function App() {
         onStart={() => setPhase('run-start')}
         onPvp={() => setPhase('deck-select')}
         onCodex={() => setPhase('codex')}
+        admin={AdminScreen ? { open: () => setPhase('admin'), dirty: adminDirty } : undefined}
       />
+    )
+  } else if (phase === 'admin' && AdminScreen) {
+    screen = (
+      <Suspense fallback={<div className="screen" />}>
+        <AdminScreen onBack={toTitle} />
+      </Suspense>
     )
   } else if (phase === 'codex') {
     screen = <CodexScreen onBack={toTitle} />

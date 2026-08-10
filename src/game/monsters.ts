@@ -67,9 +67,12 @@ export const MONSTERS: MonsterDef[] = [
   {
     id: 'grunt',
     behavior: 'rusher',
-    name: '도끼병',
+    // 2026-08-08: '도끼병'이었지만 그림은 쥐였다(고블린과 시트를 나눠 쓰던 자리).
+    // 갈아 끼운 팩(Medieval Warrior Pack 2)에 도끼가 없어 이름을 무기에 맞췄다.
+    // id는 저장 상태·문서가 물고 있어 그대로 둔다(`sentry`→'감시안'과 같은 처리).
+    name: '철퇴병',
     baseArtId: 'warrior',
-    spriteId: 'rat',
+    spriteId: 'medieval-warrior',
     tier: 1,
     maxHp: 60,
     startEnergy: 50,
@@ -212,7 +215,7 @@ export const MONSTERS: MonsterDef[] = [
     behavior: 'rusher',
     name: '고블린',
     baseArtId: 'mage',
-    spriteId: 'rat',
+    spriteId: 'goblin',
     tier: 1,
     maxHp: 48,
     startEnergy: 45,

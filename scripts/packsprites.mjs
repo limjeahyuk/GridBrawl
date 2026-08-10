@@ -215,6 +215,41 @@ const JOBS = [
       }),
   },
   {
+    // 고블린 — 도끼병과 함께 쥐 시트를 빌려 쓰던 자리(2026-08-08).
+    // ⚠ 원본이 **세 버전에 흩어져 있다**: 1.0이 본체, 1.2가 Attack2, 1.3이
+    //   Attack3다(버전 폴더는 통짜 재배포가 아니라 추가분만 담긴 패치다).
+    //   그래서 root를 `assets-raw`로 잡고 클립마다 전체 경로를 적는다.
+    id: 'goblin',
+    load: () =>
+      loadFromStrips(RAW, 150, {
+        idle: 'Monsters_Creatures_Fantasy/Goblin/Idle.png',
+        run: 'Monsters_Creatures_Fantasy/Goblin/Run.png',
+        attack1: 'Monsters_Creatures_Fantasy/Goblin/Attack.png',
+        attack2: 'Monster_Creatures_Fantasy(Version 1.2)/Goblin/Attack2.png',
+        attack3: 'Monster_Creatures_Fantasy(Version 1.3)/Goblin/Attack3.png',
+        hurt: 'Monsters_Creatures_Fantasy/Goblin/Take Hit.png',
+        death: 'Monsters_Creatures_Fantasy/Goblin/Death.png',
+      }),
+  },
+  {
+    // 철퇴병 — 옛 '도끼병'. 이 팩엔 도끼가 없어서(레이피어·대검·창·철퇴)
+    // 이름을 그림에 맞췄다. ⚠ **철퇴는 attack2에 둔다** — 이 몬스터가 드는
+    // 카드(`c-strike`·`c-jab`)가 둘 다 `fx: 'punch'`라 실제로 재생되는 건
+    // attack2 하나뿐이다. attack1(대검)·attack3(창)은 나중에 이 시트를
+    // 다른 인간형에 물릴 때를 위한 여분이다.
+    id: 'medieval-warrior',
+    load: () =>
+      loadFromStrips(`${RAW}/Medieval Warrior Pack 2/Sprites`, 150, {
+        idle: 'Idle.png',
+        run: 'Run.png',
+        attack1: 'Attack2.png',
+        attack2: 'Attack4.png',
+        attack3: 'Attack3.png',
+        hurt: 'Take Hit.png',
+        death: 'Death.png',
+      }),
+  },
+  {
     id: 'mimic',
     load: () =>
       loadFromStrips(`${RAW}/Monsters Creatures Fantasy 2/Mimic`, 146, {

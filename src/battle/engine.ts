@@ -267,10 +267,23 @@ export class CardBattle {
       heal = 0,
       drain = 0,
       recoil = 0,
+      /** 넉백이 벽에 막혔으면 밀려나던 방향(연출용 — `Step.slam` 참고). */
+      slam: -1 | 1 | 0 = 0,
     ) => {
       const phase: Step['phase'] =
         card.kind === 'move' ? 'move' : card.kind === 'attack' ? 'attack' : 'defense'
-      steps.push({ phase, actor, card, result, damage, heal, drain, recoil, snapshot: this.snapshot() })
+      steps.push({
+        phase,
+        actor,
+        card,
+        result,
+        damage,
+        heal,
+        drain,
+        recoil,
+        ...(slam ? { slam } : null),
+        snapshot: this.snapshot(),
+      })
     }
 
     // 기력 소비를 한 곳으로 모은다 — 유물의 누적 기력 트리거(`energyTriggers`)가
@@ -540,18 +553,24 @@ export class CardBattle {
 
     // 넉백/끌어당김: 공격자가 바라보는 방향(pull은 반대)으로 상대를 옮긴다.
     // 벽에서만 멈추고 겹침은 허용.
-    const applyShove = (attacker: number, n: number, toward: boolean) => {
+    //
+    // 판 끝에 막혀 더 못 밀려나면 **밀려나던 방향**을 돌려준다(0 = 안 막힘).
+    // 이미 벽에 붙어 있어 한 칸도 못 간 경우도 격돌이다 — 등이 암벽에 찍히는
+    // 그림은 같다. 값은 `Step.slam`으로 UI에만 전달되고 판 상태는 안 바뀐다.
+    const applyShove = (attacker: number, n: number, toward: boolean): -1 | 1 | 0 => {
       const d = 1 - attacker
       const f = this.facing(attacker) * (toward ? -1 : 1)
       for (let k = 0; k < n; k++) {
         const next: Cell = { col: s.pos[d].col + f, row: s.pos[d].row }
-        if (next.col < 0 || next.col >= GRID_COLS) break
+        if (next.col < 0 || next.col >= GRID_COLS) return f > 0 ? 1 : -1
         s.pos[d] = next
       }
+      return 0
     }
 
-    // apply a measured attack's HP / board consequences
-    const applyOutcome = (r: ReturnType<typeof computeAttack>) => {
+    // apply a measured attack's HP / board consequences.
+    // 돌려주는 값은 "넉백이 벽에 막혔는가"(연출용) — 판 상태와는 무관하다.
+    const applyOutcome = (r: ReturnType<typeof computeAttack>): -1 | 1 | 0 => {
       const d = 1 - r.p
       s.hp[d] = Math.max(0, s.hp[d] - r.dmg)
       // thorns(유물): 피해를 실제로 입은 방어자가 공격자에게 N 반사
@@ -559,8 +578,9 @@ export class CardBattle {
       if (r.dmg > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
       if (r.recoil) s.hp[r.p] = Math.max(0, s.hp[r.p] - r.recoil)
       if (r.heal) s.hp[r.p] = Math.min(this.maxHp[r.p], s.hp[r.p] + r.heal)
-      if (r.push) applyShove(r.p, r.push, false)
-      if (r.pull) applyShove(r.p, r.pull, true)
+      let slam: -1 | 1 | 0 = 0
+      if (r.push) slam = applyShove(r.p, r.push, false)
+      if (r.pull) slam = applyShove(r.p, r.pull, true) || slam
       // 이 턴 시작에 감소 판정이 이미 끝났으므로, 여기서 더한 값은 다음 턴부터 소모된다.
       if (r.stun) s.stunned[d] += r.stun
       // 상태이상 부여도 여기서 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤
@@ -568,6 +588,7 @@ export class CardBattle {
       if (r.poison) applyStatus(d, 'poison', r.poison, STATUS_TURNS.poison)
       if (r.burn) applyStatus(d, 'burn', r.burn, STATUS_TURNS.burn)
       if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze)
+      return slam
     }
 
     // 부활(영원의 불씨 등): KO 직후, 아직 안 썼다면 한 번 되살아난다.
@@ -685,15 +706,15 @@ export class CardBattle {
         for (const i of order) {
           const e = banked[i]
           if (!mutual && s.hp[e.p] <= 0) continue
-          applyOutcome(e)
-          emit(e.p, e.card, e.result, e.dmg, e.heal, e.drain, e.recoil)
+          const slam = applyOutcome(e)
+          emit(e.p, e.card, e.result, e.dmg, e.heal, e.drain, e.recoil, slam)
         }
       } else {
         for (const e of here) {
           if (e.card.kind === 'attack') {
             const r = computeAttack(e.p, e.card)
-            applyOutcome(r)
-            emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil)
+            const slam = applyOutcome(r)
+            emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil, slam)
           } else {
             resolvePrep(e.p, e.card)
           }

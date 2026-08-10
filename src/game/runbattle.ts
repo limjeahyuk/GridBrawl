@@ -15,9 +15,8 @@ import type { BattleOpts, CardBattle } from '../battle/engine'
 import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
-import { RUN_CARDS } from './runcards'
 import { bossCinematic, bossPlan, bossTelegraph, isScriptedBoss, type BossCinematic } from './bosses'
-import { currentEnemy, type RunState } from './run'
+import { currentEnemy, runCard, type RunState } from './run'
 
 export interface RunFightProps {
   p0CharId: string
@@ -38,9 +37,10 @@ export function runFightProps(run: RunState): RunFightProps {
   const pChar = getChar(run.charId)
   const eChar = monsterChar(enemy)
   // 런 덱은 공용 + 직업 기본기 + 그 캐릭터 고유 + **런 전용 카드**에서 해석한다(PvP 덱빌더는 불변).
-  const all: CardDef[] = [...COMMON_CARDS, ...pChar.basics, ...pChar.cards, ...RUN_CARDS]
+  // ⚠ 해석은 `runCard`를 거친다 — **카드 강화가 여기서 얹힌다**(2026-08-08). 원본
+  //   상수를 그대로 쓰면 강화가 화면에만 보이고 전투에선 안 먹는다.
   const deck = run.deck
-    .map((id) => all.find((c) => c.id === id))
+    .map((id) => runCard(run, id))
     .filter((c): c is CardDef => !!c)
   // 랜덤 배치(2026-08-05) — 몬스터를 매 전투 다른 줄에 세워 개전을 바꾼다. 보스는
   // 연출·스크립트가 자리를 전제하므로 가운데 줄 고정(baseArtId 무관).

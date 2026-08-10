@@ -21,7 +21,9 @@ import {
 } from './relics'
 import { getMonster, monstersOfTier, type MonsterDef } from './monsters'
 import { bossScene } from './bosses'
-import { RUN_CARDS } from './runcards'
+import { RUN_CARDS, resolveRunCard } from './runcards'
+import { isUpgradable, upgradedCard, MAX_UPGRADE } from './upgrades'
+import type { CardDef } from '../battle/types'
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
 export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop'
@@ -128,6 +130,15 @@ export interface RunState {
   charId: string
   relicIds: string[]
   deck: string[]
+  /**
+   * 카드 강화 단계(2026-08-08) — 카드 id → 단계(없으면 0, 상한 `MAX_UPGRADE`).
+   *
+   * **덱과 따로 두는 이유**: 덱은 id 목록이고 쿨타임·"같은 공격은 한 턴에 한 번"이
+   * 전부 id로 판정된다 — 즉 같은 id를 두 장 넣어도 두 번째는 아무 일도 안 한다.
+   * 그래서 중복 획득을 장수가 아니라 **단계**로 받는다(`grantCard`). 덱은 여전히
+   * id 목록 그대로라 `deckCap`·교체·제거 로직이 하나도 안 바뀐다.
+   */
+  upgrades: Record<string, number>
   hp: number
   maxHp: number
   gold: number
@@ -443,6 +454,7 @@ export function startRun(charId: string): RunState {
     charId,
     relicIds,
     deck: startingDeck(charId),
+    upgrades: {},
     hp: maxHp,
     maxHp,
     gold: 0,
@@ -513,12 +525,58 @@ export function grantRandomRelic(run: RunState): { run: RunState; relicId?: stri
   if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
   return { run: grantRelic(run, relicId), relicId }
 }
-/** 카드 획득. 덱이 꽉 찼는데 removeId가 없으면 needsReplace로 UI에 교체를 넘긴다. */
+// --- 카드 강화 (2026-08-08) -------------------------------------------------
+/** 그 카드의 현재 강화 단계(없으면 0). */
+export function cardLevel(run: RunState, cardId: string): number {
+  return run.upgrades[cardId] ?? 0
+}
+/**
+ * 덱에 실제로 들어가는 카드 정의 — **강화가 반영된 사본**. 전투·보상·상점·이벤트가
+ * 전부 이걸 쓴다. 강화가 없으면 원본을 그대로 돌려주므로 객체가 늘지 않는다.
+ */
+export function runCard(run: RunState, cardId: string): CardDef | undefined {
+  const base = resolveRunCard(run.charId, cardId)
+  return base && upgradedCard(base, cardLevel(run, cardId))
+}
+/**
+ * 이 카드를 (한 번 더) 강화할 수 있는가. **덱에 있든 없든** 카드 자체의 성질만 본다 —
+ * 보상 풀 필터와 강화 이벤트가 같은 기준을 써야 "고를 수 있게 보이는데 안 되는" 칸이
+ * 안 생긴다. 쿨타임 없는 기본 이동처럼 올릴 게 없는 카드는 여기서 false가 된다.
+ */
+export function canUpgradeCard(run: RunState, cardId: string): boolean {
+  const base = resolveRunCard(run.charId, cardId)
+  return !!base && isUpgradable(base, cardLevel(run, cardId))
+}
+/** 덱에서 강화할 수 있는 카드들(강화 이벤트가 고르게 하는 목록). */
+export function upgradableDeckCards(run: RunState): string[] {
+  return run.deck.filter((id) => canUpgradeCard(run, id))
+}
+/** 카드 한 장을 한 단계 강화한다. 올릴 게 없으면 그대로. */
+export function upgradeCard(run: RunState, cardId: string): RunState {
+  if (!canUpgradeCard(run, cardId)) return run
+  return {
+    ...run,
+    upgrades: { ...run.upgrades, [cardId]: Math.min(MAX_UPGRADE, cardLevel(run, cardId) + 1) },
+  }
+}
+
+/**
+ * 카드 획득. 덱이 꽉 찼는데 removeId가 없으면 needsReplace로 UI에 교체를 넘긴다.
+ *
+ * **이미 가진 카드면 장수가 아니라 강화로 받는다**(2026-08-08). 같은 id를 두 장
+ * 넣어 봐야 쿨타임·"같은 공격은 한 턴에 한 번"이 id로 걸려 두 번째는 아무 일도
+ * 안 하기 때문이다 — 덱 칸만 먹는 순수 손해였다. 강화는 덱 크기를 안 바꾸므로
+ * **덱 상한 검사도, 교체 카드도 필요 없다**(꽉 찬 덱에서도 그냥 받는다).
+ */
 export function grantCard(
   run: RunState,
   cardId: string,
   removeId?: string,
-): { run: RunState; needsReplace?: boolean } {
+): { run: RunState; needsReplace?: boolean; upgraded?: boolean } {
+  if (run.deck.includes(cardId)) {
+    if (!canUpgradeCard(run, cardId)) return { run } // 더 올릴 게 없다 — 풀에서 이미 걸러진다
+    return { run: upgradeCard(run, cardId), upgraded: true }
+  }
   if (run.deck.length >= deckCap(run) && !removeId) return { run, needsReplace: true }
   let deck = run.deck
   if (removeId) {
@@ -527,10 +585,16 @@ export function grantCard(
   }
   return { run: { ...run, deck: [...deck, cardId] } }
 }
+/**
+ * 덱에서 카드를 빼낸다. **강화 단계도 같이 지운다** — 안 그러면 나중에 같은 카드를
+ * 다시 주웠을 때 이미 강화된 채로 들어와, 카드 제거가 조용한 이득이 된다.
+ */
 export function removeCard(run: RunState, cardId: string): RunState {
   const i = run.deck.indexOf(cardId)
   if (i < 0) return run
-  return { ...run, deck: [...run.deck.slice(0, i), ...run.deck.slice(i + 1)] }
+  const upgrades = { ...run.upgrades }
+  delete upgrades[cardId]
+  return { ...run, deck: [...run.deck.slice(0, i), ...run.deck.slice(i + 1)], upgrades }
 }
 /** 회복 — 유물의 `healBonusPct`(치유 향유 등)가 여기 전부에 적용된다. */
 export function healHp(run: RunState, amount: number): RunState {
@@ -552,11 +616,21 @@ function missingClassCards(run: RunState): string[] {
     .cards.map((c) => c.id)
     .filter((id) => !run.deck.includes(id))
 }
-/** 보상·상점에 나올 수 있는 카드 전체 풀(공용 확장 + 직업 + 런 전용). */
+/**
+ * 보상·상점에 나올 수 있는 카드 전체 풀(공용 확장 + 직업 + 런 전용).
+ *
+ * ⚠ **아무것도 못 해 주는 칸은 빼고 준다**(2026-08-08, 사용자 요청). 카드 강화가
+ * 생기면서 "이미 가진 카드"는 더 이상 죽은 칸이 아니라 **강화 기회**가 됐지만,
+ * ① 이미 최대 강화(`MAX_UPGRADE`)에 도달했거나 ② 애초에 올릴 게 없는 카드
+ * (쿨타임 0짜리 기본·대각 이동)는 골라 봐야 정말로 아무 일도 안 일어난다.
+ * 그 둘만 풀에서 뺀다 — 판정은 `canUpgradeCard` 하나로 모아 두었으므로 강화
+ * 규칙을 늘리면 이 필터도 저절로 따라온다.
+ */
 function cardRewardPool(run: RunState): string[] {
   const commonPool = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
   const classCards = getChar(run.charId).cards.map((c) => c.id)
-  return [...commonPool, ...classCards, ...RUN_CARDS.map((c) => c.id)]
+  const all = [...commonPool, ...classCards, ...RUN_CARDS.map((c) => c.id)]
+  return all.filter((id) => !run.deck.includes(id) || canUpgradeCard(run, id))
 }
 /**
  * 승리 보상 후보 — **5장 중 1택**(유물 `rewardOptions`로 칸이 늘 수 있다). 기본은
@@ -598,6 +672,11 @@ export type EventEffect =
   | { type: 'removeCardGainRelic' } // 카드 버리고 유물(카드 선택 필요)
   | { type: 'loseHpGainGold'; hp: number; gold: number }
   | { type: 'payGoldHeal'; gold: number; heal: number }
+  // 강화 이벤트(2026-08-08) — 중복 획득 말고 **원할 때 고르는** 강화 경로.
+  // 셋 다 카드 선택이 필요하다(`needsCardPick`)는 점만 빼면 대가 구조는 기존과 같다.
+  | { type: 'upgradeCard' } // 대가 없이 1장(그 대신 이벤트 자체가 드물다)
+  | { type: 'loseHpUpgradeCard'; hp: number } // 피를 내고 1장
+  | { type: 'payGoldUpgradeCard'; gold: number } // 골드를 내고 1장
   | { type: 'nothing' }
 
 export interface EventOption {
@@ -655,6 +734,36 @@ export const EVENTS: RunEvent[] = [
     desc: '벽에 새겨진 서약. 생명을 담보로 재물을 준다.',
     options: [{ label: '서약한다 (HP -20 → 골드 +80)', effect: { type: 'loseHpGainGold', hp: 20, gold: 80 } }, skip],
   },
+  // --- 강화 이벤트(2026-08-08) ---------------------------------------------
+  // 중복 획득은 "운 좋게 또 나왔다"라 원할 때 못 쓴다. 이 셋이 **고르는 강화**다.
+  // 대가를 셋으로 갈라 둔 건 런 상황마다 낼 수 있는 게 다르기 때문이다 — 체력이
+  // 없으면 골드로, 골드가 없으면 카드를 태워서, 아무것도 없으면 손이 무뎌진 채로.
+  {
+    id: 'whetstone', name: '늙은 대장장이', icon: '⚒',
+    desc: '화로 앞의 노인이 손을 내민다. “한 자루만 내놔 봐. 제대로 벼려 주지.”',
+    options: [
+      { label: '무기를 맡긴다 (카드 1장 강화)', effect: { type: 'upgradeCard' } },
+      skip,
+    ],
+  },
+  {
+    id: 'bloodforge', name: '피의 담금질', icon: '🔥',
+    desc: '시뻘건 화로가 물 대신 피를 원한다. 담금질한 날은 더 깊이 파고든다.',
+    options: [
+      { label: '피로 담금질한다 (HP -18 → 카드 1장 강화)', effect: { type: 'loseHpUpgradeCard', hp: 18 } },
+      { label: '그냥 벼린다 (골드 -45 → 카드 1장 강화)', effect: { type: 'payGoldUpgradeCard', gold: 45 } },
+      skip,
+    ],
+  },
+  {
+    id: 'runesmith', name: '떠도는 각인사', icon: '🔮',
+    desc: '“무기에 새길 자리는 한 번뿐이야. 값은 선불이고.”',
+    options: [
+      { label: '각인을 새긴다 (골드 -60 → 카드 1장 강화)', effect: { type: 'payGoldUpgradeCard', gold: 60 } },
+      { label: '카드를 태워 값을 치른다 (카드 1장 제거 → 유물)', effect: { type: 'removeCardGainRelic' } },
+      skip,
+    ],
+  },
 ]
 
 /** 현재 층의 이벤트(id 고정 없이 랜덤). */
@@ -663,14 +772,16 @@ export function rollEvent(): RunEvent {
 }
 
 /**
- * 이벤트 선택지 적용. removeCardGainRelic는 removeCardId가 없으면 needsCardPick.
- * 반환의 gainedRelicId로 UI가 "무엇을 얻었는지" 안내한다.
+ * 이벤트 선택지 적용. removeCardGainRelic·강화 3종은 카드 선택이 필요해서,
+ * `cardId`가 없으면 `needsCardPick`으로 UI에 넘긴다(⚠ 강화형은 **강화 가능한**
+ * 카드가 하나도 없으면 아무 일도 안 일어난다 — UI가 그때 버튼을 잠근다).
+ * 반환의 gainedRelicId·upgradedCardId로 UI가 "무엇이 됐는지" 안내한다.
  */
 export function resolveEventEffect(
   run: RunState,
   effect: EventEffect,
   removeCardId?: string,
-): { run: RunState; needsCardPick?: boolean; gainedRelicId?: string } {
+): { run: RunState; needsCardPick?: boolean; gainedRelicId?: string; upgradedCardId?: string } {
   switch (effect.type) {
     case 'heal':
       return { run: healHp(run, effect.amount) }
@@ -692,6 +803,24 @@ export function resolveEventEffect(
     case 'payGoldHeal':
       if (run.gold < effect.gold) return { run } // 골드 부족 — 변화 없음
       return { run: { ...healHp(run, effect.heal), gold: run.gold - effect.gold } }
+    case 'upgradeCard': {
+      if (!upgradableDeckCards(run).length) return { run }
+      if (!removeCardId) return { run, needsCardPick: true }
+      return { run: upgradeCard(run, removeCardId), upgradedCardId: removeCardId }
+    }
+    case 'loseHpUpgradeCard': {
+      if (!upgradableDeckCards(run).length) return { run }
+      if (!removeCardId) return { run, needsCardPick: true }
+      // ⚠ 대가는 **강화가 실제로 걸릴 때만** 치른다 — 순서를 뒤집으면 못 고르는
+      //   카드를 골랐을 때 체력만 잃는다.
+      return { run: upgradeCard(loseHp(run, effect.hp), removeCardId), upgradedCardId: removeCardId }
+    }
+    case 'payGoldUpgradeCard': {
+      if (run.gold < effect.gold || !upgradableDeckCards(run).length) return { run }
+      if (!removeCardId) return { run, needsCardPick: true }
+      const paid = { ...run, gold: run.gold - effect.gold }
+      return { run: upgradeCard(paid, removeCardId), upgradedCardId: removeCardId }
+    }
     case 'nothing':
     default:
       return { run }

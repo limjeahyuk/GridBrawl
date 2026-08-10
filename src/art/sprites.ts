@@ -169,6 +169,10 @@ export const SHEETS: Record<string, SheetDef> = {
       death: { frames: 4, frameMs: 110, loop: false },
     },
   }),
+  // ⚠ **지금 이 시트를 쓰는 몬스터는 없다**(2026-08-08). 도끼병·고블린이 빌려 쓰던
+  //   자리였고 둘 다 제 그림을 받아 갔다. 쥐 몬스터를 넣게 되면 바로 쓸 수 있게
+  //   남겨 둔다 — 원본 팩(Monsters Creatures Fantasy 2)이 `assets-raw`에 없어서
+  //   지우면 다시 굽지 못한다.
   rat: sheet('rat', {
     frameW: 59, frameH: 22, footY: 22, anchorX: 32, scale: 3, facesRight: true,
     clips: {
@@ -177,6 +181,40 @@ export const SHEETS: Record<string, SheetDef> = {
       attack1: { frames: 12, frameMs: 55, loop: false, impactFrame: 6 },
       hurt: { frames: 3, frameMs: 90, loop: false },
       death: { frames: 6, frameMs: 100, loop: false },
+    },
+  }),
+  // 고블린 — 2026-08-08까지 도끼병과 함께 **쥐 시트를 빌려 쓰고 있었다**.
+  // 원본이 세 버전에 흩어져 있다(패커 주석 참고).
+  // ⚠ attack2가 **구르며 파고드는 찌르기**다. 고블린이 든 카드(`c-jab`·`c-strike`)가
+  //   둘 다 `fx: 'punch'`라 실제로 제일 자주 보이는 게 이 클립인데, "재빠른 잡졸"이라는
+  //   설명과 맞아떨어져 그대로 뒀다. attack3(폭탄 투척)은 지금 덱으로는 안 나온다 —
+  //   엔진이 투사체를 그리지 않으므로 폭탄을 쓰는 카드를 물릴 땐 연출을 먼저 봐야 한다.
+  goblin: sheet('goblin', {
+    frameW: 112, frameH: 46, footY: 46, anchorX: 43, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 4, frameMs: 140, loop: true },
+      run: { frames: 8, frameMs: 75, loop: true },
+      attack1: { frames: 8, frameMs: 65, loop: false, impactFrame: 6 },
+      attack2: { frames: 8, frameMs: 60, loop: false, impactFrame: 6 },
+      attack3: { frames: 12, frameMs: 60, loop: false, impactFrame: 10 },
+      hurt: { frames: 4, frameMs: 90, loop: false },
+      death: { frames: 4, frameMs: 110, loop: false },
+    },
+  }),
+  // 철퇴병(id `grunt`) — 옛 '도끼병'. 팩에 도끼가 없어(레이피어·대검·창·철퇴)
+  // 이름을 그림에 맞췄다. 세 공격 모두 0·1 준비 → **2에서 친다** → 3 마무리다.
+  // ⚠ `frameH`(74)가 몸 높이(41)의 두 배 가까운 건 attack2의 철퇴 궤적이 머리 위로
+  //   크게 뻗기 때문이다. 공통 bbox라 다른 클립도 같이 늘어난 것이고 `footY`는 그대로다.
+  'medieval-warrior': sheet('medieval-warrior', {
+    frameW: 116, frameH: 74, footY: 74, anchorX: 43, scale: 2, facesRight: true,
+    clips: {
+      idle: { frames: 8, frameMs: 120, loop: true },
+      run: { frames: 8, frameMs: 75, loop: true },
+      attack1: { frames: 4, frameMs: 80, loop: false, impactFrame: 2 },
+      attack2: { frames: 4, frameMs: 80, loop: false, impactFrame: 2 },
+      attack3: { frames: 4, frameMs: 80, loop: false, impactFrame: 2 },
+      hurt: { frames: 4, frameMs: 90, loop: false },
+      death: { frames: 6, frameMs: 105, loop: false },
     },
   }),
   mimic: sheet('mimic', {

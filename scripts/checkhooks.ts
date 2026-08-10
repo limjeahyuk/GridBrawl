@@ -13,20 +13,30 @@ import { faceToward } from '../src/ui/screens/BattleScreen'
 import { getChar, ROSTER, type CharacterDef, type Passive } from '../src/data/roster'
 import { mergeRelics, mergeRunMods } from '../src/game/relics'
 import {
+  EVENTS,
   LADDER_FLOORS,
   advanceFloor,
+  canUpgradeCard,
+  cardLevel,
   chooseBranch,
   currentNode,
   currentOptionIndices,
   currentOptions,
   deckCap,
+  grantCard,
   grantRelic,
   healHp,
+  removeCard,
+  resolveEventEffect,
   rollRewards,
   rollShop,
+  runCard,
   startRun,
+  upgradableDeckCards,
 } from '../src/game/run'
-import { RUN_CARDS, RUN_CARD_BY_ID } from '../src/game/runcards'
+import { runFightProps } from '../src/game/runbattle'
+import { MAX_UPGRADE, isUpgradable, upgradedCard } from '../src/game/upgrades'
+import { RUN_CARDS, RUN_CARD_BY_ID, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster } from '../src/game/monsters'
@@ -394,6 +404,54 @@ console.log('\n버프 카드(atkUp / defUp / freeCast) · 이동공격(dashForwa
   check('dashForward — 벽에서 멈춘다(판 밖으로 안 나감)', b.state.pos[0].col, 0)
 }
 
+// --- 벽 격돌 (2026-08-08) ----------------------------------------------------
+// `Step.slam`은 **연출 전용 주석**이다 — 넉백이 판 끝에 막혔다는 사실만 UI에
+// 알린다. 여기서 못 박는 건 두 가지다: ① 막혔을 때만·맞는 방향으로 붙는다,
+// ② 붙어도 판 상태(피해·좌표)는 하나도 안 바뀐다(그래서 밸런스 재측정이 없다).
+console.log('\n벽 격돌(Step.slam) — 연출 주석이지 룰이 아니다')
+{
+  const shove: CardDef = {
+    id: 'test-shove', name: '테스트 넉백', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 10, energyCost: 0, push: 2, cooldown: 0,
+  }
+  const slamOf = (steps: ReturnType<CardBattle['resolveTurn']>) =>
+    steps.find((s) => s.card.id === 'test-shove')?.slam ?? 0
+
+  // ① 벽까지 여유가 있으면 격돌이 아니다(2칸 다 밀려남)
+  const far = new CardBattle('warrior', 'warrior')
+  far.state.pos = [{ col: 0, row: 1 }, { col: 1, row: 1 }]
+  const farHp = far.state.hp[1]
+  const farSteps = far.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+  check('여유가 있으면 slam 없음', slamOf(farSteps), 0)
+  check('2칸 다 밀려났다', far.state.pos[1].col, 3)
+
+  // ② 밀리다 벽에 막히면 격돌 — 방향은 밀려나던 쪽(+1 = col 5 쪽 벽)
+  const wall = new CardBattle('warrior', 'warrior')
+  wall.state.pos = [{ col: 3, row: 1 }, { col: 4, row: 1 }]
+  const wallHp = wall.state.hp[1]
+  const wallSteps = wall.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)
+  check('벽에 막히면 slam = +1', slamOf(wallSteps), 1)
+  check('격돌해도 판 밖으로는 안 나간다', wall.state.pos[1].col, 5)
+  check('격돌해도 피해는 그대로(추가 피해 없음)', wallHp - wall.state.hp[1], farHp - far.state.hp[1])
+  check('격돌해도 기절하지 않는다', wall.state.stunned[1], 0)
+
+  // ③ 이미 벽에 붙어 있어 한 칸도 못 가도 격돌이다(등이 돌에 찍히는 그림은 같다)
+  const flush = new CardBattle('warrior', 'warrior')
+  flush.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }]
+  check(
+    '이미 벽이면 안 움직여도 격돌',
+    slamOf(flush.resolveTurn([shove, card('c-energy'), card('c-energy')], HOLD)),
+    1,
+  )
+
+  // ④ 반대편 벽은 부호가 반대다 — 부딪히는 쪽은 언제나 방어자(1 - actor)
+  const back = new CardBattle('warrior', 'warrior')
+  back.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
+  const backSteps = back.resolveTurn(HOLD, [shove, card('c-energy'), card('c-energy')])
+  check('반대편 벽이면 slam = −1', slamOf(backSteps), -1)
+  check('격돌한 쪽은 방어자다', back.state.pos[0].col, 0)
+}
+
 // --- 파이터 방향 (2026-08-03) ------------------------------------------------
 console.log('\n파이터 방향 — 자리가 아니라 상대 위치를 따라간다')
 {
@@ -671,6 +729,134 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
   // 마지막 층을 넘기면 승리.
   const last = { ...run, floor: LADDER_FLOORS }
   check('마지막 층 다음은 승리', advanceFloor(last).status, 'won')
+}
+
+// --- 카드 강화(2026-08-08) ---------------------------------------------------
+console.log('\n카드 강화 — 같은 카드를 또 얻으면 강해진다')
+{
+  const base = startRun('warrior')
+  const dupe = 'war-cleave' // 파쇄 베기 — 앞뒤 1칸 26피해, 능력 없음 → 사거리가 늘어야 한다
+  const got = grantCard(base, dupe)
+  check('처음 얻는 카드는 덱에 들어간다', [got.run.deck.length, got.upgraded ?? false], [base.deck.length + 1, false])
+
+  const again = grantCard(got.run, dupe)
+  check('같은 카드를 또 얻으면 장수가 아니라 단계가 오른다', again.upgraded, true)
+  check('덱 크기는 그대로', again.run.deck.length, got.run.deck.length)
+  check('강화 단계 1', cardLevel(again.run, dupe), 1)
+
+  // 최대 강화에 도달하면 더는 못 올린다 = 보상 풀에서도 빠진다(사용자 요청).
+  check('최대 강화(MAX_UPGRADE)에 도달', MAX_UPGRADE, 1)
+  check('최대 강화 카드는 더 못 올린다', canUpgradeCard(again.run, dupe), false)
+  const third = grantCard(again.run, dupe)
+  check('최대 강화 카드를 또 얻어도 아무 일도 없다', [third.upgraded ?? false, third.run.deck.length], [false, again.run.deck.length])
+
+  // 실제 수치가 올랐는가 — 강화는 화면 표시가 아니라 전투에 들어가는 값이어야 한다.
+  const plain = resolveRunCard('warrior', dupe)!
+  const up = runCard(again.run, dupe)!
+  check('피해가 올랐다(26 → +20%)', [plain.damage, up.damage], [26, 26 + 5])
+  check('능력이 없는 순수 타격은 사거리가 한 칸 늘어난다', [plain.range!.length, up.range!.length], [2, 4])
+  check('이름에 강화 표식이 붙는다', up.name, `${plain.name}+`)
+  check('강화 내역이 남는다', typeof up.upgradeNote === 'string' && up.upgradeNote.length > 0, true)
+  check('원본은 그대로다(PvP 카드 풀 불변)', [plain.damage, plain.range!.length], [26, 2])
+
+  // 전투 덱까지 실제로 배선됐는가 — 여기가 끊기면 강화가 화면에만 보인다.
+  const fightCard = runFightProps(again.run).deck.find((c) => c.name.startsWith('파쇄 베기'))
+  check('전투 덱에 강화된 카드가 들어간다', fightCard?.damage, 31)
+}
+{
+  // 성격별 강화 — "먼저 걸리는 규칙 하나"만 붙는지. 규칙 순서가 뒤집히면 여기서 걸린다.
+  const up = (id: string): CardDef => upgradedCard(card(id), 1)
+  check('독 카드는 독이 오른다(역병 화살 7 → 10)', up('r-plaguebolt').poison, 10)
+  check('독 카드는 사거리가 안 늘어난다(규칙 하나만)', up('r-plaguebolt').range!.length, card('r-plaguebolt').range!.length)
+  check('빙결 카드는 지속이 한 턴 길어진다', up('r-frostnova').freeze, 2)
+  check('기절 카드는 지속이 한 턴 길어진다', up('r-stunrod').stun, 2)
+  check('흡혈 카드는 흡혈이 오른다(16 → 22)', up('r-lifedrain').leech, 22)
+  check('넉백 카드는 한 칸 더 민다', up('r-maul').push, 2)
+  check('반동 카드는 반동이 줄어든다(16 → 10)', up('r-frenzy').recoil, 10)
+  check('가드는 방어량이 오른다(95 → 119)', up('r-bastion').block, 119)
+  check('회복은 회복량이 오른다(45 → 56)', up('r-medkit').healHp, 56)
+  check('기력은 회복량이 오른다(60 → 75)', up('r-cell').gain, 75)
+  check('위력 있는 버프는 위력이 오른다(10 → 13)', up('r-whet').buffPower, 13)
+  check('위력 없는 버프(freeCast)는 지속이 길어진다', up('r-freerein').buffTurns, 3)
+  check('쿨타임 있는 이동은 쿨이 준다(2 → 1)', up('r-blink').cooldown, 1)
+  // 판 끝까지 닿는 카드는 늘릴 사거리가 없다 → 기력이 준다(마지막 규칙).
+  check('장거리 카드는 사거리 대신 기력이 준다(38 → 32)', up('r-railgun').energyCost, 32)
+  check('장거리 카드의 사거리는 안 늘어난다', up('r-railgun').range!.length, card('r-railgun').range!.length)
+}
+{
+  // ⚠ 핵심 회귀. "강화할 게 없는 카드"는 이미 가졌으면 보상·상점에 **안 나와야** 한다
+  //   (사용자 요청). 쿨 0짜리 대각 이동이 그런 카드다 — 걸음을 늘리면 다른 카드가 된다.
+  check('쿨타임 0짜리 이동은 강화 대상이 아니다', isUpgradable(card('m-ur'), 0), false)
+  let run = startRun('archer')
+  run = grantCard(run, 'm-ur').run
+  check('강화 불가 카드는 덱에 들어간다', run.deck.includes('m-ur'), true)
+  check('강화 불가 카드는 강화 목록에 안 뜬다', upgradableDeckCards(run).includes('m-ur'), false)
+
+  // 여러 번 굴려 보상·상점 어디에도 안 나오는지 본다(한 번으로는 못 잡는다).
+  let leaked = 0
+  for (let i = 0; i < 400; i++) {
+    if (rollRewards(run).some((r) => r.kind === 'card' && r.cardId === 'm-ur')) leaked++
+    if (rollShop(run).some((it) => it.kind === 'card' && it.cardId === 'm-ur')) leaked++
+  }
+  check('강화 불가 + 보유 카드는 보상·상점에 안 나온다', leaked, 0)
+
+  // 반대로 **강화 가능한** 보유 카드는 계속 나와야 한다(그게 강화 경로다).
+  run = grantCard(run, 'arc-shot').run
+  let seen = 0
+  for (let i = 0; i < 400; i++)
+    if (rollRewards(run).some((r) => r.kind === 'card' && r.cardId === 'arc-shot')) seen++
+  check('강화 가능한 보유 카드는 보상에 나온다', seen > 0, true)
+}
+{
+  // 카드를 덱에서 빼면 강화 단계도 같이 사라진다 — 안 그러면 다시 주웠을 때
+  // 이미 강화된 채로 들어와 "제거"가 조용한 이득이 된다.
+  let run = startRun('mage')
+  run = grantCard(run, 'mag-spark').run
+  run = grantCard(run, 'mag-spark').run
+  check('강화된 상태', cardLevel(run, 'mag-spark'), 1)
+  const removed = removeCard(run, 'mag-spark')
+  check('덱에서 빠지면 강화 단계도 지워진다', cardLevel(removed, 'mag-spark'), 0)
+  check('다시 주우면 강화 없이 들어온다', cardLevel(grantCard(removed, 'mag-spark').run, 'mag-spark'), 0)
+}
+{
+  // 강화 이벤트 — 대가는 강화가 실제로 걸릴 때만 치른다.
+  let run = startRun('warrior')
+  run = grantCard(run, 'war-cleave').run
+  const hp0 = run.hp - 40 // 대가를 낼 만큼은 깎아 둔다(만피면 loseHp가 안 보인다)
+  run = { ...run, hp: hp0, gold: 100 }
+
+  const ask = resolveEventEffect(run, { type: 'loseHpUpgradeCard', hp: 18 })
+  check('강화형은 카드 선택을 요구한다', ask.needsCardPick, true)
+  check('고르기 전에는 체력이 안 깎인다', ask.run.hp, hp0)
+
+  const done = resolveEventEffect(run, { type: 'loseHpUpgradeCard', hp: 18 }, 'war-cleave')
+  check('고르면 강화되고 대가를 치른다', [cardLevel(done.run, 'war-cleave'), done.run.hp], [1, hp0 - 18])
+  check('무엇이 강화됐는지 알려준다', done.upgradedCardId, 'war-cleave')
+
+  const poor = resolveEventEffect({ ...run, gold: 10 }, { type: 'payGoldUpgradeCard', gold: 60 })
+  check('골드가 모자라면 아무 일도 없다', [poor.needsCardPick ?? false, poor.run.gold], [false, 10])
+
+  // 강화할 카드가 하나도 없으면(시작 덱은 전부 기본기·기본 이동) 카드 선택도 안 뜬다.
+  const fresh = startRun('warrior')
+  const none = { ...fresh, deck: ['m-up', 'm-down', 'm-left', 'm-right'], upgrades: {} }
+  check('강화할 카드가 없으면 요구하지 않는다', resolveEventEffect(none, { type: 'upgradeCard' }).needsCardPick ?? false, false)
+}
+{
+  // 강화 이벤트가 실제로 이벤트 풀에 들어 있는가(추가만 하고 등록을 빠뜨리는 사고 방지).
+  const ids = EVENTS.map((e) => e.id)
+  check('강화 이벤트 3종이 풀에 있다', ['whetstone', 'bloodforge', 'runesmith'].filter((id) => ids.includes(id)).length, 3)
+  const upOpts = EVENTS.flatMap((e) => e.options).filter(
+    (o) => o.effect.type === 'upgradeCard' || o.effect.type === 'loseHpUpgradeCard' || o.effect.type === 'payGoldUpgradeCard',
+  )
+  check('강화 선택지가 하나 이상 있다', upOpts.length > 0, true)
+}
+{
+  // ⚠ 강화는 **런 전용**이다. PvP 덱 빌더가 보는 풀에 강화 카드가 새어 나가면 안 된다.
+  const leaked = ROSTER.flatMap((c) => deckFor(c)).filter((c) => c.upgraded !== undefined)
+  check('PvP 카드 풀에 강화 카드가 없다', leaked.map((c) => c.id), [])
+  const runLeaked = [...COMMON_CARDS, ...RUN_CARDS, ...ROSTER.flatMap((c) => [...c.basics, ...c.cards])]
+    .filter((c) => c.upgraded !== undefined)
+  check('원본 상수가 오염되지 않았다', runLeaked.map((c) => c.id), [])
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------
