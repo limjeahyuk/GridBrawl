@@ -1461,5 +1461,98 @@ console.log('\n지형 — 바위')
   }
 }
 
+// --- AI 예측 · 카드 대응(2026-08-10) -----------------------------------------
+// 신고: "컴퓨터는 유저가 처음 그 자리에서 안 움직일 것을 예상하고 거기까지 와서
+// 공격한다 — 유저도 다가가므로 초반에 무조건 안 맞는다." `decideAI`가 세 슬롯을
+// 통째로 **라운드 시작 시점의 상대 자리** 하나로 계획하던 것이 원인이었다.
+// ⚠ `decideAI`는 Math.random을 쓰므로 단정은 **여러 번 굴려** 한다.
+console.log('\nAI 예측 · 카드 대응')
+{
+  const TRIES = 400
+  const W = getChar('warrior')
+  /** 사거리 1칸 공격 + 이동만 있는 최소 덱 — 조준이 맞았는지가 그대로 드러난다. */
+  const MELEE = COMMON_CARDS.filter((c) => c.kind === 'move').concat(W.basics[0])
+  const hit = W.basics[0]
+
+  /** p1(AI)을 `aiCol`에, p0(상대)을 `oppCol`에 세운 판. */
+  const board = (aiCol: number, oppCol: number) => {
+    const b = new CardBattle('warrior', 'warrior', { chars: [W, W] })
+    b.state.pos = [{ col: oppCol, row: 1 }, { col: aiCol, row: 1 }]
+    b.state.energy = [99, 99]
+    return b
+  }
+  const slot0Attacks = (
+    make: () => ReturnType<typeof board>,
+    diff: 'easy' | 'normal' | 'hard',
+    plan?: CardDef[],
+    pool: CardDef[] = MELEE,
+  ) => {
+    let n = 0
+    for (let i = 0; i < TRIES; i++) {
+      const p = decideAI(make().state, 1, W, diff, pool, undefined, plan)
+      if (p[0]?.id === hit.id) n++
+    }
+    return n / TRIES
+  }
+
+  // ① **상대가 떠날 것을 안다.** AI(col 3)와 상대(col 4)가 붙어 있고, 상대 계획은
+  //    "오른쪽으로 한 칸"이다. 계획을 읽으면 슬롯 0에 이미 상대가 col 5로 빠져 있어
+  //    사거리 1칸 공격이 헛친다는 걸 안다 — 읽지 못하면 그대로 휘두른다.
+  const leaves = [card('m-right'), card('c-energy'), card('c-energy')]
+  const blind = slot0Attacks(() => board(3, 4), 'hard')
+  const seeing = slot0Attacks(() => board(3, 4), 'hard', leaves)
+  check('계획을 못 읽으면 떠난 자리를 그대로 친다', blind > 0.8, true)
+  check('계획을 읽으면 빠져나갈 상대를 안 친다', seeing, 0)
+
+  // ② **상대가 다가올 것을 안다.** AI(col 3) · 상대(col 5)로 사거리 밖인데, 상대
+  //    계획은 "왼쪽으로 한 칸"(→ col 4 = 사거리 안). 읽으면 슬롯 0부터 조준한다.
+  const closes = [card('m-left'), card('c-energy'), card('c-energy')]
+  check('계획을 읽으면 걸어들어올 칸을 미리 조준한다', slot0Attacks(() => board(3, 5), 'hard', closes) > 0.8, true)
+
+  // ③ **초급도 첫 자리만 보지 않는다**(사용자 요청). 같은 판(AI col 3 · 상대 col 5)
+  //    에서 계획은 못 읽지만 "상대가 다가온다"는 것만은 안다 — `CLOSE_IN.easy`가
+  //    [0,1,1]이라 슬롯 0엔 아직 못 잡고 슬롯 1부터 col 4를 조준한다. 이동 카드를
+  //    빼서 AI가 제자리에 있게 하면 조준점 말고는 변수가 없다.
+  const still = [hit]
+  let easyAims = 0
+  for (let i = 0; i < TRIES; i++) {
+    const p = decideAI(board(3, 5).state, 1, W, 'easy', still, undefined)
+    if (p.some((c) => c?.id === hit.id)) easyAims++
+  }
+  check('easy도 다가올 자리를 조준한다(첫 자리 고정 아님)', easyAims > 0, true)
+
+  // ④ **아무것도 안 들어오는 라운드엔 가드를 들지 않는다.** 상대 계획이 전부 기력
+  //    회복이면 읽는 AI는 슬롯을 통째로 공격·이동에 쓴다(예전엔 확률로 그냥 들었다).
+  const GUARDY = MELEE.concat(card('c-guard'))
+  const quiet = [card('c-energy'), card('c-energy'), card('c-energy')]
+  let guardsWhenQuiet = 0
+  let guardsWhenHit = 0
+  // 아플 만한 한 방 — 상대(col 4)가 AI(col 3)를 확실히 때리는 계획.
+  const big = W.cards.filter((c) => c.kind === 'attack').sort((a, b) => (b.damage ?? 0) - (a.damage ?? 0))[0]
+  const scary = [card('c-energy'), big, card('c-energy')]
+  for (let i = 0; i < TRIES; i++) {
+    if (decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, quiet).some((c) => c?.kind === 'guard'))
+      guardsWhenQuiet++
+    if (decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, scary).some((c) => c?.kind === 'guard'))
+      guardsWhenHit++
+  }
+  check('공격이 안 오는 라운드엔 가드를 안 든다', guardsWhenQuiet, 0)
+  check('아픈 한 방에는 막거나 피한다', guardsWhenHit > 0, true)
+
+  // ⑤ **대응은 라운드에 한 번뿐**이다 — 세 장을 다 막으면 플레이어가 큰 카드를 영영
+  //    못 꽂아 반대 방향으로 뻔해진다. 가드는 라운드 끝까지 남으므로 한 장이면 족하다.
+  let multi = 0
+  const barrage = [big, big, big]
+  for (let i = 0; i < TRIES; i++) {
+    if (decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, barrage).filter((c) => c?.kind === 'guard').length > 1)
+      multi++
+  }
+  check('가드는 한 라운드에 한 장까지', multi, 0)
+
+  // ⑥ **카드 대응은 hard만** — 난이도의 정의가 "상대를 얼마나 읽는가"다. normal에게
+  //    같은 계획을 줘도 ①의 답이 달라지면 안 된다.
+  check('normal은 계획을 줘도 안 읽는다', slot0Attacks(() => board(3, 4), 'normal', leaves) > 0.6, true)
+}
+
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)
 process.exit(failed === 0 ? 0 : 1)

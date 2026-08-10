@@ -83,6 +83,53 @@ const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
 const PANIC_HP = 45
 
 /**
+ * **상대 예측**(2026-08-10) — 신고: *"컴퓨터는 유저가 처음 그 자리에서 움직이지 않을
+ * 것을 예상해서 그냥 거기까지 와서 공격을 한다. 그런데 유저 또한 몬스터한테 다가가기
+ * 위해 움직이므로 초반에 무조건 안 맞는다."*
+ *
+ * 원인은 `decideAI`가 세 슬롯을 통째로 **라운드 시작 시점의 상대 자리** 하나로 계획한
+ * 것이다. 자기 이동은 슬롯마다 `pos`에 반영하면서 상대는 상수로 뒀으니, 서로 마주
+ * 걸어오는 개전 라운드에서는 **반드시** 빗나가는 구조였다.
+ *
+ * 이제 슬롯마다 "그때 상대가 서 있을 자리"를 다시 잡는다. 얼마나 잘 잡는가가 곧
+ * **난이도**다:
+ *   easy   0,1,1 — 상대가 다가온다는 것만 어렴풋이 안다(첫 자리만 보진 않는다)
+ *   normal 1,1,2
+ *   hard   1,2,3 — 계획을 못 읽을 때의 상한. 읽으면 아래 `oppPlan`이 이긴다.
+ * 숫자는 **그 슬롯까지 상대가 나에게 좁혀 올 칸 수**이고, 실제 거리−1로 잘린다
+ * (상대 자리를 지나치거나 겹치는 예측은 하지 않는다 — 근접 판정은 지금도 잘 맞아서
+ * 굳이 흔들 이유가 없다).
+ */
+const CLOSE_IN: Record<Difficulty, readonly [number, number, number]> = {
+  easy: [0, 1, 1],
+  normal: [1, 1, 2],
+  hard: [1, 2, 3],
+}
+
+/**
+ * **카드 대응**(2026-08-10, hard 전용) — 사용자 결정: *"유저는 3장의 카드로 진행하는데
+ * 봇은 사실 유저의 행동을 보고 행동할 수 있다. 그런 식으로 난이도를 올려도 될 듯하다."*
+ *
+ * `BattleScreen`은 플레이어가 3장을 확정한 **뒤에** `getOpponentPlan(localPlan, …)`을
+ * 부르므로, 봇은 원리상 상대 계획을 다 볼 수 있다. `aiLevel: 'hard'`인 몬스터에게만
+ * 그 정보를 준다(`oppPlan`). 주면 세 가지가 달라진다:
+ *   ⓐ 자리를 **정확히** 안다 — 예측이 아니라 상대 이동 카드를 그대로 굴린다
+ *   ⓑ 아픈 게 들어오는 슬롯에 **피하거나 막는다**(이동은 prio 0이라 같은 슬롯 공격보다
+ *      먼저 해소된다 — 그 슬롯에서 피하는 것이 실제로 성립한다)
+ *   ⓒ **아무것도 안 들어오면 가드를 들지 않는다** — 슬롯을 통째로 공격에 쓴다
+ *
+ * ⚠ 이건 규칙이 아니라 **AI의 판단**이다. `resolveRound` 출력에 닿지 않으므로
+ *   `RULES_VERSION`과 무관하고, 온라인 멀티는 계획이 네트워크로 오므로 영향이 없다.
+ */
+/** 이 피해 이상이면 "막거나 피할 값어치가 있다"고 본다(÷2 스케일 — 기본기 5~7·강한 스킬 ~30). */
+const THREAT_DAMAGE = 10
+/** 막을 수도 피할 수도 있을 때 피하는 쪽을 고를 확률. 늘 같은 답이면 다시 뻔해진다. */
+const EVADE_CHANCE = 0.5
+
+const chebyshev = (a: Cell, b: Cell): number =>
+  Math.max(Math.abs(a.col - b.col), Math.abs(a.row - b.row))
+
+/**
  * Does `card` from `self` (at `pos`, given `facing`) cover the opponent cell?
  * `rocks`가 있으면 **사격선이 끊기는지**까지 본다 — 엔진 `connectsNow`와 같은 규칙이라
  * AI가 "닿는다"고 판단한 공격이 엔진에서 헛치는 일이 없다. 관통은 바위를 무시한다.
@@ -118,6 +165,7 @@ export function decideAI(
   difficulty: Difficulty,
   availableCards?: CardDef[],
   profile?: AIProfile,
+  oppPlan?: readonly (CardDef | undefined)[],
 ): CardDef[] {
   // 난이도 cfg에 성격·기분을 얹은 **실효 cfg**. profile이 없으면(봇전·튜토리얼)
   // balanced + 기분 0이라 기존 동작과 동일하다.
@@ -132,16 +180,20 @@ export function decideAI(
   }
   const keepGap = a.keepGap
   const gait = a.gait
-  const opp = state.pos[1 - self]
+  /** 라운드 **시작 시점의** 상대 자리. 예측의 출발점일 뿐 조준점이 아니다. */
+  const oppStart = state.pos[1 - self]
+  // 카드 대응은 hard에게만 준다 — 난이도의 정의가 "상대를 얼마나 읽는가"다.
+  const read: readonly (CardDef | undefined)[] | undefined =
+    difficulty === 'hard' && oppPlan ? oppPlan : undefined
   // 지형 — 런에서만 채워진다. 빈 배열이면 아래 판정이 전부 예전 그대로다.
   const rocks = state.obstacles
   /** 이 공격이 바위를 무시하는가 — 엔진 `piercesRock`과 같은 규칙. */
   const pierces = (c: CardDef) => !!c.pierce || !!char.passive.alwaysPierce
   // ⚠ 방향은 **지금 서 있는 자리**에서 상대를 보고 정한다(2026-08-05, 엔진과 같은
   //   규칙). 좌석 고정이던 시절엔 AI가 상대를 지나친 뒤에도 반대쪽을 겨눠서,
-  //   "닿는다"고 판단한 공격이 엔진에서 헛쳤다. `pos`는 슬롯마다 갱신되므로
+  //   "닿는다"고 판단한 공격이 엔진에서 헛쳤다. `pos`·`foe`는 슬롯마다 갱신되므로
   //   상수가 아니라 함수여야 한다.
-  const facingAt = (from: Cell) => facingBetween(from, opp, self)
+  const facingAt = (from: Cell, foe: Cell) => facingBetween(from, foe, self)
 
   // local, mutable view of self for planning across the 3 slots
   const pos: Cell = { col: state.pos[self].col, row: state.pos[self].row }
@@ -204,6 +256,92 @@ export function decideAI(
     pos.row = cur.row
   }
 
+  // --- 상대 예측 -------------------------------------------------------------
+  /**
+   * 상대 진행 커서. `read`면 상대 계획을 슬롯마다 한 장씩 실제로 굴리고, 아니면
+   * `CLOSE_IN`으로 어림한다. 어느 쪽이든 **슬롯마다 다시 잡는다** — 라운드 시작
+   * 자리를 세 슬롯 내내 조준하던 것이 이 개편 전의 모습이다.
+   */
+  const foeCur: Cell = { col: oppStart.col, row: oppStart.row }
+
+  /** `from`에서 `to` 쪽으로 최대 `steps`칸(대각 허용). 벽·바위에 막히면 거기까지. */
+  function stepToward(from: Cell, to: Cell, steps: number): Cell {
+    const cur: Cell = { col: from.col, row: from.row }
+    for (let k = 0; k < steps; k++) {
+      if (cur.col === to.col && cur.row === to.row) break
+      const next: Cell = {
+        col: cur.col + Math.sign(to.col - cur.col),
+        row: cur.row + Math.sign(to.row - cur.row),
+      }
+      if (!canStand(rocks, next)) break
+      cur.col = next.col
+      cur.row = next.row
+    }
+    return cur
+  }
+
+  /**
+   * 이 슬롯에 상대가 서 있을 자리. **슬롯 시작마다 정확히 한 번** 부른다(커서를 밀기
+   * 때문에 두 번 부르면 두 슬롯을 진행한다).
+   *
+   * ⚠ `read`에서 이동공격(`dashForward`)은 그 슬롯에 **먼저** 반영한다. 엔진은 같은
+   *   슬롯 공격을 p0부터 계산하므로 AI가 side 1일 때(= 게임에서 늘 그렇다) 정확하고,
+   *   side 0이면 한 슬롯 이른 근사가 된다 — 시뮬·PvP 봇전 쪽 이야기라 그대로 둔다.
+   */
+  function advanceFoe(slot: number): Cell {
+    if (read) {
+      const c = read[slot]
+      if (c?.kind === 'move') {
+        const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
+        for (let k = 0; k < (c.steps ?? 1); k++) {
+          const next: Cell = { col: foeCur.col + dc, row: foeCur.row + dr }
+          if (!canStand(rocks, next)) break
+          foeCur.col = next.col
+          foeCur.row = next.row
+        }
+      } else if (c?.kind === 'attack' && c.dashForward) {
+        const step = facingBetween(foeCur, pos, 1 - self) * Math.sign(c.dashForward)
+        for (let k = 0; k < Math.abs(c.dashForward); k++) {
+          const next: Cell = { col: foeCur.col + step, row: foeCur.row }
+          if (!canStand(rocks, next)) break
+          foeCur.col = next.col
+        }
+      }
+      return { col: foeCur.col, row: foeCur.row }
+    }
+    // 못 읽을 때 — "나에게 다가온다"고만 본다. 실제 거리−1로 잘라 **겹치거나 지나치는
+    // 예측은 하지 않는다**(근접 판정은 지금도 맞으니 흔들 이유가 없다).
+    const steps = Math.min(CLOSE_IN[difficulty][slot], chebyshev(oppStart, pos) - 1)
+    return steps > 0 ? stepToward(oppStart, pos, steps) : { col: oppStart.col, row: oppStart.row }
+  }
+
+  /** 이 슬롯에 나를 때릴 상대 카드(읽을 수 있을 때만). 없으면 undefined. */
+  function incomingAt(slot: number, foe: Cell, at: Cell): CardDef | undefined {
+    const c = read?.[slot]
+    if (!c || c.kind !== 'attack') return undefined
+    return hits(foe, facingBetween(foe, at, 1 - self), c, at, rocks, !!c.pierce) ? c : undefined
+  }
+
+  /** 이 슬롯 이후로 상대 계획에 공격이 남아 있는가 — 가드를 들 이유가 있는지의 기준. */
+  const attacksAhead = (slot: number): boolean =>
+    !read || read.slice(slot).some((c) => c?.kind === 'attack')
+
+  /**
+   * `inc`의 사거리 밖으로 나가는 이동 — 상대와 **가까운 순서**로. 이동은 prio 0이라
+   * 같은 슬롯의 공격보다 먼저 해소되므로 이 슬롯 안에서 실제로 피해진다.
+   * 무너질 칸으로 피하지는 않는다(피하려다 붕괴에 맞으면 손해다).
+   */
+  function evadeCards(foe: Cell, inc: CardDef): CardDef[] {
+    return pool
+      .filter((c) => {
+        if (c.kind !== 'move' || !goesSomewhere(c)) return false
+        const land = landingOf(c)
+        if (isCollapsedCell(land, state.round)) return false
+        return !hits(foe, facingBetween(foe, land, 1 - self), inc, land, rocks, !!inc.pierce)
+      })
+      .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))
+  }
+
   /**
    * 접근 이동 — 상대에게 붙거나 줄을 맞추려는 희망 목록(앞에 있는 것부터 시도).
    *
@@ -220,7 +358,7 @@ export function decideAI(
    *      교란형은 줄부터 옮기고, 거북이는 줄을 안 쫓는다. 걸어오는 모양이 달라야
    *      "다른 몬스터와 싸운다"가 읽힌다.
    */
-  function approachCards(): CardDef[] {
+  function approachCards(opp: Cell): CardDef[] {
     const dcol = opp.col - pos.col
     const drow = opp.row - pos.row
     const wishes: (CardDef | undefined)[] = []
@@ -231,7 +369,7 @@ export function decideAI(
     // 겹친 상태: 밀착으로 때릴 카드가 하나도 없을 때만 한 칸 빠져 공격 위치를
     // 회복한다. 대부분의 카드는 겹친 상대를 그대로 때리므로 굳이 자리를 뜨지 않는다.
     if (dcol === 0 && drow === 0 && !canPointBlank) {
-      const back: MoveDir = facingAt(pos) > 0 ? 'left' : 'right'
+      const back: MoveDir = facingAt(pos, opp) > 0 ? 'left' : 'right'
       wishes.push(moveCard(back, 1), moveCard('up', 1), moveCard('down', 1))
     }
     if (gait === 'lane') {
@@ -273,7 +411,7 @@ export function decideAI(
   // 카이팅(kiter) 전용 이동 — 붙이는 대신 거리를 유지한다. 같은 줄로 정렬해
   // 원거리 공격이 닿게 하되(줄 맞춤 우선), 가로 간격이 keepGap보다 좁아지면 물러난다.
   // 공격은 슬롯 2에서 이미 처리되므로, 여기 오는 건 "이번 슬롯엔 때릴 게 없다"일 때다.
-  function kiteCards(): CardDef[] {
+  function kiteCards(opp: Cell): CardDef[] {
     const dcol = opp.col - pos.col
     const drow = opp.row - pos.row
     const vdir: MoveDir = drow >= 0 ? 'down' : 'up'
@@ -283,21 +421,77 @@ export function decideAI(
     if (Math.abs(dcol) < keepGap) wishes.push(moveCard(away, 2), moveCard(away, 1))
     // 벽에 몰려 더 못 물러나면 approachCards로 떨어져 최소한 줄이라도 맞춘다.
     const out = wishes.filter((w): w is CardDef => !!w && goesSomewhere(w))
-    return out.length ? out : approachCards()
+    return out.length ? out : approachCards(opp)
+  }
+
+  /** 이 라운드에 이미 보호막을 세웠는가 — 세웠으면 또 들 이유가 없다(라운드 끝까지 남는다). */
+  let guarded = false
+
+  /**
+   * 대응할 슬롯 — **라운드에 하나뿐**이다(상대 계획에서 제일 아픈 한 장).
+   *
+   * ⚠ 세 장을 다 막아 내면 플레이어가 큰 카드를 영영 못 꽂아, 이번엔 반대 방향으로
+   *   뻔해진다("뭘 내도 막힌다"). 하나만 막으면 **미끼가 성립한다** — 싼 공격을
+   *   앞에 두고 진짜를 뒤에 두는 식의 수읽기가 플레이어 쪽에 생긴다.
+   */
+  let reactSlot = -1
+  if (read) {
+    let worst = -1
+    for (let k = 0; k < 3; k++) {
+      const c = read[k]
+      if (c?.kind !== 'attack') continue
+      const d = c.damage ?? 0
+      if (d > worst) {
+        worst = d
+        reactSlot = k
+      }
+    }
   }
 
   for (let slot = 0; slot < 3; slot++) {
-    // 0) 위기 회피 — 체력이 위험하면 첫 슬롯에 가드를 우선 (가드는 턴 전체 지속)
+    // 이 슬롯의 조준점. ⚠ 슬롯당 딱 한 번 — 커서를 밀기 때문이다.
+    const foe = advanceFoe(slot)
+    // 이 슬롯에 나에게 들어올 공격(hard가 계획을 읽었을 때만).
+    const inc = incomingAt(slot, foe, pos)
+
+    // 0) 위기 회피 — 체력이 위험하면 첫 슬롯에 가드를 우선 (가드는 턴 전체 지속).
+    //    ⚠ 계획을 읽는 AI는 **공격이 남아 있을 때만** 든다 — 아무것도 안 오는 라운드에
+    //    가드를 드는 건 슬롯 하나를 그냥 버리는 것이고, 그게 "뻔하다"의 절반이었다.
     if (
       slot === 0 &&
       state.hp[self] <= PANIC_HP &&
+      attacksAhead(slot) &&
       Math.random() < cfg.panicGuard &&
       GUARD &&
       usable(GUARD) &&
       energy >= (GUARD.guardCost ?? 0)
     ) {
       take(GUARD)
+      guarded = true
       continue
+    }
+
+    // 0-bis) **카드 대응**(hard 전용) — 이 슬롯에 아픈 게 들어오면 피하거나 막는다.
+    //   잔공격(THREAT_DAMAGE 미만)에는 반응하지 않는다. 봉인기(기절·빙결·속박)는
+    //   피해와 무관하게 라운드를 통째로 날리므로 값과 상관없이 반응한다.
+    if (inc && slot === reactSlot && !guarded) {
+      const worth =
+        (inc.damage ?? 0) >= THREAT_DAMAGE || !!inc.stun || !!inc.freeze || !!inc.bind
+      if (worth) {
+        const evade = evadeCards(foe, inc).find(usable)
+        const canBlock = GUARD && usable(GUARD) && energy >= (GUARD.guardCost ?? 0)
+        // 둘 다 되면 반반 — 늘 같은 답이면 대응 자체가 다시 뻔한 패턴이 된다.
+        const prefersEvade = evade && (!canBlock || Math.random() < EVADE_CHANCE)
+        if (prefersEvade) {
+          take(evade)
+          continue
+        }
+        if (canBlock) {
+          take(GUARD)
+          guarded = true
+          continue
+        }
+      }
     }
 
     // 1) 붕괴 이탈 — 지금 또는 다음 턴에 발밑이 무너지면 공격보다 탈출이 먼저
@@ -331,7 +525,7 @@ export function decideAI(
         (a) =>
           usable(a) &&
           energy >= (a.energyCost ?? 0) &&
-          hits(pos, facingAt(pos), a, opp, rocks, pierces(a)),
+          hits(pos, facingAt(pos, foe), a, foe, rocks, pierces(a)),
       )
       .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
     if (ready.length > 0 && Math.random() < cfg.aggression) {
@@ -366,15 +560,23 @@ export function decideAI(
     }
 
     // 4) close in / line up with the opponent (카이터는 거리를 유지·회복한다)
-    const wish = (keepGap > 0 ? kiteCards() : approachCards()).find(usable)
+    // ⚠ **접근은 예측이 아니라 실제 자리를 쫓는다**(계획을 못 읽을 때). 예측으로
+    //   걸으면 "어차피 나에게 온다"며 다가가길 멈추는데, 그 예측이 틀리면 슬롯을
+    //   통째로 버린다 — 사거리 1칸인 전사가 이 손해를 제일 크게 본다. 조준은 빗나가야
+    //   한 슬롯이지만 접근을 안 하면 라운드 전체가 날아간다. 읽었을 때(`read`)는
+    //   `foe`가 어림이 아니라 정확한 값이므로 그대로 쫓는다.
+    const chase = read ? foe : oppStart
+    const wish = (keepGap > 0 ? kiteCards(chase) : approachCards(chase)).find(usable)
     if (wish) {
       take(wish)
       continue
     }
 
-    // 5) occasional guard
+    // 5) occasional guard — 계획을 읽었다면 남은 공격이 있을 때만(위 0번과 같은 이유).
     if (
       GUARD &&
+      !guarded &&
+      attacksAhead(slot) &&
       Math.random() < cfg.guardChance &&
       energy >= (GUARD.guardCost ?? 0) &&
       usable(GUARD)

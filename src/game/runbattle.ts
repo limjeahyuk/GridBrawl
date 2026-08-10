@@ -72,14 +72,20 @@ export function runFightProps(run: RunState): RunFightProps {
     p1CharId: enemy.baseArtId, // 아트 재활용
     deck,
     battleOpts,
-    getOpponentPlan: (_local, b) => {
+    // ⚠ `localPlan`은 플레이어가 3장을 **확정한 뒤에** 들어온다 — 봇은 원리상 상대
+    //   계획을 다 볼 수 있다. 그 정보를 `decideAI`에 그대로 넘기고, 쓸지 말지는
+    //   난이도가 정한다(`aiLevel: 'hard'`만 읽는다 — ai.ts의 "카드 대응"). 봇전(PvP
+    //   연습)은 App.tsx에서 안 넘기므로 예전 그대로다.
+    getOpponentPlan: (localPlan, b) => {
       // 보스는 스크립트 패턴으로, 그 외엔 일반 AI로.
       if (scripted) {
         const ctx = { turn: b.state.round, hpFrac: b.state.hp[1] / b.maxHp[1] }
         const plan = bossPlan(enemy.id, ctx)
         if (plan) return Promise.resolve(plan)
       }
-      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards, profile))
+      return Promise.resolve(
+        decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards, profile, localPlan),
+      )
     },
     enemyName: enemy.name,
     telegraph: scripted ? (turn, frac) => bossTelegraph(enemy.id, { turn, hpFrac: frac }) : undefined,
