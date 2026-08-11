@@ -35,8 +35,10 @@ import {
   chooseBranch,
   currentNode,
   sceneFor,
+  type RunDifficulty,
   type RunState,
 } from './game/run'
+import { markCleared } from './game/progress'
 import { runFightProps } from './game/runbattle'
 
 /**
@@ -55,6 +57,15 @@ import { runFightProps } from './game/runbattle'
 const AdminScreen = import.meta.env.DEV
   ? lazy(() => import('./ui/screens/AdminScreen').then((m) => ({ default: m.AdminScreen })))
   : null
+
+/**
+ * 어드민은 **화면 버튼이 없다** — 타이틀에 노출하면 아무나 누른다. 대신 주소 끝에
+ * `/admin`을 붙여 연 사람만 들어온다(개발 빌드에서만. 배포 번들엔 `AdminScreen`이
+ * 통째로 없어서 이 경로도 자동으로 죽는다). SPA라 `/admin`은 그대로 index.html을
+ * 받고, 아래 판정이 첫 페이즈를 `admin`으로 잡는다.
+ */
+const wantsAdmin = () =>
+  !!AdminScreen && /\/admin\/?$/.test(typeof location !== 'undefined' ? location.pathname : '')
 
 const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
 /** 온라인 대전 턴 제한(초). 0이 되면 자동 제출 — 상대를 무한정 기다리지 않게. */
@@ -91,17 +102,11 @@ interface BotMatch {
 export default function App() {
   const stageFit = useStageScale()
   const { user, loading: authLoading } = useAuth()
-  const [phase, setPhase] = useState<Phase>('title')
+  const [phase, setPhase] = useState<Phase>(() => (wantsAdmin() ? 'admin' : 'title'))
   // 선택한 덱(전투용) + 편집 중인 덱(빌더) + 봇 상대
   const [deck, setDeck] = useState<Deck | null>(null)
   const [editingDeck, setEditingDeck] = useState<Deck | undefined>(undefined)
   const [botMatch, setBotMatch] = useState<BotMatch | null>(null)
-  /**
-   * 어드민에서 고쳐 둔 항목 수(개발 빌드 전용). 초안이 localStorage에 남아 새로고침
-   * 뒤에도 계속 반영되므로, **타이틀에서 늘 보이게** 해 둔다 — 이게 없으면 자기가
-   * 고쳐 놓은 수치를 게임 버그로 오해하게 된다.
-   */
-  const [adminDirty, setAdminDirty] = useState(0)
   const [outcome, setOutcome] = useState<Outcome>('win')
   // --- online multiplayer ---
   const [mpMatch, setMpMatch] = useState<MatchReady | null>(null)
@@ -109,21 +114,27 @@ export default function App() {
   // --- 로그라이크 런 ---
   const [run, setRun] = useState<RunState | null>(null)
   const [runWon, setRunWon] = useState(false)
+  /** 이번 클리어로 새로 열린 난이도(결과 화면의 해금 배너). 없으면 null. */
+  const [runUnlocked, setRunUnlocked] = useState<RunDifficulty | null>(null)
 
   const toTitle = useCallback(() => setPhase('title'), [])
 
-  // 첫 접속(이 기기에서 튜토리얼 미완료)이면 로그인 직후 튜토리얼로 진입
+  // 첫 접속(이 기기에서 튜토리얼 미완료)이면 로그인 직후 튜토리얼로 진입.
+  // 단 `/admin`으로 들어온 경우는 어드민을 튜토리얼이 덮지 않게 둔다.
   useEffect(() => {
+    if (wantsAdmin()) return
     if (user && !localStorage.getItem(TUTORIAL_DONE_KEY)) setPhase('tutorial')
   }, [user])
 
-  // 어드민 초안을 부팅 때 얹고(모듈이 로드되는 순간 스스로 적용한다) 고친 항목 수를
-  // 읽어 온다. 타이틀로 돌아올 때마다 다시 세므로 어드민에서 되돌린 것도 바로 반영된다.
+  // 어드민 초안(`gb-admin-draft`)을 부팅 때 얹는다 — `game/admin` 모듈이 로드되는
+  // 순간 스스로 소스 객체에 적용하므로, 여기서는 불러오기만 하면 된다. 어드민 화면을
+  // 직접 열지 않아도(예: `/admin` 없이 들어와도) 지난번에 고쳐 둔 값이 그대로 살아
+  // 있어야 측정 밸런스와 화면 밸런스가 갈리지 않는다.
   // ⚠ 배포 빌드에서는 조건이 `false`로 박혀 `import()`째 사라진다.
   useEffect(() => {
-    if (!import.meta.env.DEV || phase !== 'title') return
-    void import('./game/admin').then((m) => setAdminDirty(m.dirtyCount()))
-  }, [phase])
+    if (!import.meta.env.DEV) return
+    void import('./game/admin')
+  }, [])
 
   const tutorialDone = useCallback(() => {
     localStorage.setItem(TUTORIAL_DONE_KEY, '1')
@@ -189,8 +200,9 @@ export default function App() {
   }, [])
 
   // --- 로그라이크 런 흐름 -----------------------------------------------------
-  const beginRun = useCallback((charId: string) => {
-    setRun(startRun(charId))
+  const beginRun = useCallback((charId: string, difficulty: RunDifficulty) => {
+    setRun(startRun(charId, difficulty))
+    setRunUnlocked(null)
     setPhase('run-map')
   }, [])
   // 지도에서 갈래를 골라 그 칸으로 진입 — 타입에 따라 전투/이벤트/상점으로.
@@ -214,6 +226,8 @@ export default function App() {
       const next = afterWin(r, hpLeft)
       if (next.status === 'won') {
         setRunWon(true)
+        // 보스를 넘겼다 = 이 난이도 클리어. 다음 단계를 연다(이미 깼으면 null).
+        setRunUnlocked(markCleared(r.difficulty))
         setPhase('run-end')
       } else {
         setPhase('run-reward')
@@ -247,7 +261,6 @@ export default function App() {
         onStart={() => setPhase('run-start')}
         onPvp={() => setPhase('deck-select')}
         onCodex={() => setPhase('codex')}
-        admin={AdminScreen ? { open: () => setPhase('admin'), dirty: adminDirty } : undefined}
       />
     )
   } else if (phase === 'admin' && AdminScreen) {
@@ -356,6 +369,7 @@ export default function App() {
       <RunEndScreen
         run={run}
         won={runWon}
+        unlocked={runUnlocked}
         onRetry={() => setPhase('run-start')}
         onMenu={toTitle}
       />

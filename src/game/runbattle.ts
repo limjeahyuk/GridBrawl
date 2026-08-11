@@ -16,7 +16,14 @@ import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
 import { bossCinematic, bossPlan, bossTelegraph, isScriptedBoss, type BossCinematic } from './bosses'
-import { currentEnemy, runCard, terrainFor, type RunState } from './run'
+import {
+  shiftedAiLevel,
+  currentEnemy,
+  difficultyDef,
+  runCard,
+  terrainFor,
+  type RunState,
+} from './run'
 
 export interface RunFightProps {
   p0CharId: string
@@ -67,15 +74,19 @@ export function runFightProps(run: RunState): RunFightProps {
   }
   // 몬스터가 실제로 낼 수 있는 카드 = 공용 이동 + 그 몬스터 고유 덱(공격·가드).
   const enemyCards: CardDef[] = [...COMMON_MOVES, ...eChar.cards]
+  // 런 난이도 — 봇의 눈을 어디까지 열지 정한다. 몬스터 고유 등급을 **한 칸 옮기므로**
+  // 사다리 전체가 단계마다 달라지고, 몬스터 간 서열(슬라임 < 가디언)은 그대로 남는다.
+  const diff = difficultyDef(run.difficulty)
+  const aiLevel = shiftedAiLevel(enemy.aiLevel, diff.aiShift)
   return {
     p0CharId: run.charId,
     p1CharId: enemy.baseArtId, // 아트 재활용
     deck,
     battleOpts,
     // ⚠ `localPlan`은 플레이어가 3장을 **확정한 뒤에** 들어온다 — 봇은 원리상 상대
-    //   계획을 다 볼 수 있다. 그 정보를 `decideAI`에 그대로 넘기고, 쓸지 말지는
-    //   난이도가 정한다(`aiLevel: 'hard'`만 읽는다 — ai.ts의 "카드 대응"). 봇전(PvP
-    //   연습)은 App.tsx에서 안 넘기므로 예전 그대로다.
+    //   계획을 다 볼 수 있다. 그걸 실제로 넘길지, 그리고 봇의 눈을 어디까지 열지는
+    //   **런 난이도**가 정한다(2026-08-11) — 고급은 조준에만, 최고급은 대응까지.
+    //   ⚠ 봇전(PvP 연습)은 App.tsx에서 계획을 안 넘기므로 예전 그대로다.
     getOpponentPlan: (localPlan, b) => {
       // 보스는 스크립트 패턴으로, 그 외엔 일반 AI로.
       if (scripted) {
@@ -84,7 +95,18 @@ export function runFightProps(run: RunState): RunFightProps {
         if (plan) return Promise.resolve(plan)
       }
       return Promise.resolve(
-        decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards, profile, localPlan),
+        decideAI(
+          b.state,
+          1,
+          eChar,
+          aiLevel,
+          enemyCards,
+          profile,
+          diff.readSlots > 0
+            ? // 앞에서 보이는 만큼만 넘긴다 — 뒤는 봇도 어림으로 이어 간다.
+              { plan: localPlan.slice(0, diff.readSlots), react: diff.reacts }
+            : undefined,
+        ),
       )
     },
     enemyName: enemy.name,

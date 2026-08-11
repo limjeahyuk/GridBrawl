@@ -42,9 +42,11 @@ import {
   rollRewards,
   rollShop,
   skipRewardForHeal,
+  RUN_DIFFICULTIES,
   startRun,
   templateOptionIndex,
   type EventEffect,
+  type RunDifficulty,
   type Reward,
   type RunState,
   type ShopItem,
@@ -82,6 +84,17 @@ const PATH = flagStr('path', 'random') as 'template' | 'random' | 'greedy' | 'sa
  * 조합 자체의 상한을 확인한다.
  */
 const GIVEN_RELICS = flagStr('relics', '').split(',').filter(Boolean)
+/**
+ * **런 난이도 4단계**(2026-08-11) — `--diff=novice|adept|expert|master`.
+ * 봇이 나를 얼마나 읽는지만 달라진다(몬스터·판·층 스케일은 전부 같다). 기본은
+ * `master`(= 지금 밸런스 기준선). ⚠ 단계를 바꾸면 **직업 밴드를 단계마다 따로
+ * 재야 한다** — 하나로 맞춰 두면 나머지가 자동으로 맞는 게 아니다.
+ */
+const DIFF = flagStr('diff', 'master') as RunDifficulty
+if (!RUN_DIFFICULTIES.some((d) => d.id === DIFF)) {
+  console.error(`알 수 없는 --diff=${DIFF} (가능: ${RUN_DIFFICULTIES.map((d) => d.id).join('|')})`)
+  process.exit(1)
+}
 const MAX_TURNS = 40 // 전투 안전 상한(독안개가 있어 실제로는 거의 안 닿는다)
 
 // --- 시드 RNG(재현용) -------------------------------------------------------
@@ -309,7 +322,7 @@ function pickBranch(run: RunState): number {
 
 // --- 런 1회 ----------------------------------------------------------------
 async function playRun(charId: string): Promise<void> {
-  let run = startRun(charId)
+  let run = startRun(charId, DIFF)
   for (const id of GIVEN_RELICS) run = grantRelic(run, id)
   const stat = (perChar[charId] ??= { runs: 0, clears: 0, floors: 0 })
   stat.runs++
@@ -396,7 +409,7 @@ async function playRun(charId: string): Promise<void> {
  */
 async function runSweep() {
   console.log(
-    `\n=== 캐릭터 밸런스 스윕 (캐릭터당 ${RUNS}런 · 봇 ${SKILL} · 정책 ${POLICY} · seed ${SEED}) ===\n`,
+    `\n=== 캐릭터 밸런스 스윕 (캐릭터당 ${RUNS}런 · 난이도 ${DIFF} · 봇 ${SKILL} · 정책 ${POLICY} · seed ${SEED}) ===\n`,
   )
   const rows: { ch: string; clear: number; floor: number }[] = []
   for (const ch of ROSTER) {

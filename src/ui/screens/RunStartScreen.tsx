@@ -8,20 +8,43 @@ import { PortraitSvg } from '../PortraitSvg'
 import { COMMON_CARDS } from '../../battle/cards'
 import { ROSTER, getChar } from '../../data/roster'
 import { getRelic, signatureRelicId } from '../../game/relics'
-import { startingDeck } from '../../game/run'
+import {
+  DEFAULT_DIFFICULTY,
+  RUN_DIFFICULTIES,
+  isDifficultyUnlocked,
+  startingDeck,
+  type RunDifficulty,
+} from '../../game/run'
+import { clearedDifficulties } from '../../game/progress'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import type { CardDef } from '../../battle/types'
+
+/** 잠긴 단계의 안내에 쓸 "바로 앞 단계" 이름. */
+const prevName = (id: RunDifficulty): string => {
+  const i = RUN_DIFFICULTIES.findIndex((d) => d.id === id)
+  return i > 0 ? RUN_DIFFICULTIES[i - 1].name : ''
+}
 
 export function RunStartScreen({
   onStart,
   onBack,
 }: {
-  onStart: (charId: string) => void
+  onStart: (charId: string, difficulty: RunDifficulty) => void
   onBack: () => void
 }) {
   const [charId, setCharId] = useState<string>(ROSTER[0].id)
   const char = getChar(charId)
+  /**
+   * 해금 상태는 화면이 뜰 때 한 번만 읽는다 — 런 도중에 바뀌지 않고, 클리어 직후엔
+   * 이 화면이 새로 마운트되므로(결과 → 새 런) 자동으로 갱신된다.
+   */
+  const cleared = useMemo(() => clearedDifficulties(), [])
+  /** 열린 것 중 **가장 높은 단계**를 기본값으로 — 고급을 깬 사람에게 초급을 다시 들이밀지 않는다. */
+  const [difficulty, setDifficulty] = useState<RunDifficulty>(() => {
+    const open = RUN_DIFFICULTIES.filter((d) => isDifficultyUnlocked(d.id, cleared))
+    return open.length ? open[open.length - 1].id : DEFAULT_DIFFICULTY
+  })
   // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
   const zoom = useCardZoom(char.accent)
   const sigRelic = getRelic(signatureRelicId(charId))
@@ -66,6 +89,35 @@ export function RunStartScreen({
         ))}
       </div>
 
+      {/* 난이도 — 축은 하나다: 봇이 내 다음 수를 얼마나 읽는가(run.ts의 RUN_DIFFICULTIES).
+          ⚠ 잠긴 단계에 `disabled`를 걸지 않는다 — 눌러도 안 열리는 대신 **왜 잠겼는지**를
+          읽을 수 있어야 한다(카드 UI와 같은 이유). 선택은 아래 onClick이 막는다. */}
+      <div className="runstart__diffs" role="radiogroup" aria-label="난이도">
+        {RUN_DIFFICULTIES.map((d) => {
+          const open = isDifficultyUnlocked(d.id, cleared)
+          const active = d.id === difficulty
+          return (
+            <button
+              key={d.id}
+              className={`diffcard ${active ? 'is-active' : ''} ${open ? '' : 'is-locked'}`}
+              role="radio"
+              aria-checked={active}
+              aria-disabled={!open}
+              onClick={() => open && setDifficulty(d.id)}
+            >
+              <div className="diffcard__name">
+                {open ? '' : '🔒 '}
+                {d.name}
+              </div>
+              <div className="diffcard__desc">
+                {/* 네 이름 모두 받침으로 끝나므로(…급) 조사는 늘 '을'이다 — 을(를) 표기 불필요. */}
+                {open ? d.desc : `${prevName(d.id)}을 클리어하면 열립니다.`}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
       <div className="runstart__pick">
         <div className="runstart__sig">
           <div className="runstart__sig-label">시그니처 유물</div>
@@ -97,7 +149,7 @@ export function RunStartScreen({
       </div>
 
       <div className="runstart__foot">
-        <button className="btn" onClick={() => onStart(charId)}>
+        <button className="btn" onClick={() => onStart(charId, difficulty)}>
           그리드로 출발 ▶
         </button>
       </div>

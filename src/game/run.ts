@@ -23,7 +23,126 @@ import { getMonster, monstersOfTier, type MonsterDef, type TerrainId } from './m
 import { bossScene } from './bosses'
 import { RUN_CARDS, resolveRunCard } from './runcards'
 import { isUpgradable, upgradedCard, MAX_UPGRADE } from './upgrades'
-import { ROCK_HP, type CardDef, type Obstacle } from '../battle/types'
+import { ROCK_HP, type CardDef, type Difficulty, type Obstacle } from '../battle/types'
+
+// --- 런 난이도 4단계 (2026-08-11) -------------------------------------------
+/**
+ * **축은 하나뿐이다 — 봇이 나를 얼마나 읽는가.**
+ *
+ * 층 스케일(`HP_SCALE_PER_FLOOR`·`atkScaleAt`)이나 몬스터 스탯을 단계마다 따로
+ * 두는 길도 있었지만 그러면 **밸런스 면이 네 개**가 되어(직업 밴드 × 4) 손볼 때마다
+ * 스윕을 네 번 돌려야 한다. 2026-08-10 개편에서 "조준의 정확도가 곧 난이도"라는 걸
+ * 실측으로 확인했으니(⑦-0-bis), 그 손잡이 하나만 돌린다 — 몬스터도 판도 그대로이고
+ * **상대가 내 다음 수를 얼마나 아는가**만 달라진다.
+ *
+ *   초급   등급 −1 · 카드 0장       — 다가온다는 것만 어렴풋이 안다
+ *   중급   고유 등급 · **첫 1장**    — 첫 수는 정확히 읽고 나머지는 어림한다
+ *   고급   등급 +1 · **3장 전부**    — 자리를 통째로 정확히 짚는다(막지는 않는다)
+ *   최고급 등급 +1 · 3장 + **대응**  — 거기에 더해 제일 아픈 한 장을 막거나 피한다
+ *
+ * ⚠ **계단은 `plan` 쪽에 있다.** easy/normal/hard의 cfg 차이(공격성·가드 성향·
+ *   `CLOSE_IN`)만으로는 클리어율이 40.3 / 38.7 / 37.5%로 거의 안 갈렸다 — 실측이다.
+ *   판을 가르는 건 **조준이 맞느냐**와 **대응하느냐** 둘뿐이라, 난이도를 그 둘로 놨다.
+ *   `aiShift`는 그 위에 얹는 잔맛이다.
+ *
+ * ⚠ **상한(cap)이 아니라 상대 이동이다.** 처음엔 "이 등급을 넘지 못하게 누른다"로
+ *   짰는데 그러면 **단계가 단조롭지 않았다** — 고급에서 실제로 등급이 바뀌는 몬스터가
+ *   몇 안 돼(대부분 이미 고유값이 상한 아래) 중급 37.1% vs 고급 38.7%로 뒤집혔다.
+ *   상대 이동이면 모든 몬스터가 단계마다 한 칸씩 올라가므로 **사다리 전체가** 달라지고,
+ *   동시에 `MonsterDef.aiLevel`이 정한 몬스터 간 서열도 그대로 남는다(슬라임은 어느
+ *   단계에서도 가디언보다 둔하다).
+ */
+export type RunDifficulty = 'novice' | 'adept' | 'expert' | 'master'
+
+export interface RunDifficultyDef {
+  id: RunDifficulty
+  name: string
+  /** 선택 화면 한 줄 설명 — "무엇이 달라지는가"를 그대로 적는다. */
+  desc: string
+  /** 몬스터 고유 `aiLevel`을 몇 칸 올리는가(−1·0·+1). 양 끝에서 잘린다. */
+  aiShift: number
+  /**
+   * 내가 확정한 3장 중 **앞에서 몇 장이 보이는가**(0~3). 0이면 계획을 아예 안 넘긴다
+   * (`CLOSE_IN` 어림으로만 조준). 안 보이는 슬롯부터는 봇도 어림으로 이어 간다.
+   */
+  readSlots: number
+  /**
+   * 읽은 계획으로 **막거나 피하는가**. false면 조준에만 쓴다 — 들어오는 걸 알고도
+   * 안 피하고, 가드도 예전처럼 확률로 든다(그래서 헛가드로 슬롯을 버린다).
+   */
+  reacts: boolean
+}
+
+/** ⚠ **순서가 곧 해금 순서다** — `nextDifficulty`·`isDifficultyUnlocked`가 이 배열을 본다. */
+export const RUN_DIFFICULTIES: readonly RunDifficultyDef[] = [
+  {
+    id: 'novice',
+    name: '초급',
+    desc: '적이 내 움직임을 거의 못 읽는다. 규칙과 카드를 익히는 단계.',
+    aiShift: -1,
+    readSlots: 0,
+    reacts: false,
+  },
+  {
+    id: 'adept',
+    name: '중급',
+    desc: '적이 내 첫 카드를 읽는다. 라운드 초반의 헛손질이 사라진다.',
+    aiShift: 0,
+    readSlots: 1,
+    reacts: false,
+  },
+  {
+    id: 'expert',
+    name: '고급',
+    desc: '적이 내 3장을 전부 보고 자리를 짚는다. 헛치는 일이 거의 없어진다.',
+    aiShift: +1,
+    readSlots: 3,
+    reacts: false,
+  },
+  {
+    id: 'master',
+    name: '최고급',
+    desc: '고급에 더해, 제일 아픈 한 장을 막거나 피한다. 미끼를 던져야 통한다.',
+    aiShift: +1,
+    readSlots: 3,
+    reacts: true,
+  },
+] as const
+
+export const DEFAULT_DIFFICULTY: RunDifficulty = 'novice'
+
+export const difficultyDef = (id: RunDifficulty): RunDifficultyDef =>
+  RUN_DIFFICULTIES.find((d) => d.id === id) ?? RUN_DIFFICULTIES[0]
+
+/** 이 단계를 깨면 열리는 다음 단계. 마지막이면 null. */
+export const nextDifficulty = (id: RunDifficulty): RunDifficulty | null => {
+  const i = RUN_DIFFICULTIES.findIndex((d) => d.id === id)
+  return i >= 0 && i + 1 < RUN_DIFFICULTIES.length ? RUN_DIFFICULTIES[i + 1].id : null
+}
+
+/**
+ * 이 단계를 지금 고를 수 있는가 — **첫 단계는 늘 열려 있고**, 그 뒤로는 바로 앞
+ * 단계를 클리어해야 열린다. `cleared`는 클리어한 단계 id 묶음.
+ *
+ * ⚠ 앞 단계 하나만 본다(전부가 아니라) — 최고급을 깬 사람이 초급 기록을 지웠다고
+ *   최고급이 잠기면 안 되고, 반대로 건너뛰기도 안 된다.
+ */
+export function isDifficultyUnlocked(id: RunDifficulty, cleared: ReadonlySet<RunDifficulty>): boolean {
+  const i = RUN_DIFFICULTIES.findIndex((d) => d.id === id)
+  if (i <= 0) return true
+  return cleared.has(RUN_DIFFICULTIES[i - 1].id)
+}
+
+/**
+ * 몬스터 고유 등급을 난이도만큼 옮긴다. 양 끝에서 잘리므로 초급의 슬라임(이미 `easy`)은
+ * 그대로고, 고급의 가디언(이미 `hard`)도 그대로다 — 올릴 여지가 없는 쪽은 그 자리에
+ * 머물고, **서열은 어느 단계에서나 보존된다**.
+ */
+const AI_ORDER: Difficulty[] = ['easy', 'normal', 'hard']
+export function shiftedAiLevel(level: Difficulty, shift: number): Difficulty {
+  const i = AI_ORDER.indexOf(level)
+  return AI_ORDER[clamp(i + shift, 0, AI_ORDER.length - 1)]
+}
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
 export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop'
@@ -157,6 +276,8 @@ export type RunStatus = 'choosing' | 'fighting' | 'reward' | 'event' | 'shop' | 
 
 export interface RunState {
   charId: string
+  /** 이 런의 난이도(2026-08-11). 전투마다 `runbattle.ts`가 읽어 봇의 눈을 조인다. */
+  difficulty: RunDifficulty
   relicIds: string[]
   deck: string[]
   /**
@@ -538,11 +659,12 @@ function statusForNode(node: RunNode): RunStatus {
 }
 
 // --- 런 시작 ----------------------------------------------------------------
-export function startRun(charId: string): RunState {
+export function startRun(charId: string, difficulty: RunDifficulty = DEFAULT_DIFFICULTY): RunState {
   const relicIds = [signatureRelicId(charId)].filter(Boolean)
   const maxHp = computeMaxHp(charId, relicIds)
   return {
     charId,
+    difficulty,
     relicIds,
     deck: startingDeck(charId),
     upgrades: {},

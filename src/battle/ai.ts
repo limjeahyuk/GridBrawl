@@ -111,18 +111,46 @@ const CLOSE_IN: Record<Difficulty, readonly [number, number, number]> = {
  * 봇은 사실 유저의 행동을 보고 행동할 수 있다. 그런 식으로 난이도를 올려도 될 듯하다."*
  *
  * `BattleScreen`은 플레이어가 3장을 확정한 **뒤에** `getOpponentPlan(localPlan, …)`을
- * 부르므로, 봇은 원리상 상대 계획을 다 볼 수 있다. `aiLevel: 'hard'`인 몬스터에게만
- * 그 정보를 준다(`oppPlan`). 주면 세 가지가 달라진다:
+ * 부르므로, 봇은 원리상 상대 계획을 다 볼 수 있다. 그 정보를 줄지는 **호출부가**
+ * 정한다(`AIForesight`) — 런 난이도가 고급 이상일 때만 `runbattle.ts`가 넘긴다.
+ * 주면 세 가지가 달라진다:
  *   ⓐ 자리를 **정확히** 안다 — 예측이 아니라 상대 이동 카드를 그대로 굴린다
  *   ⓑ 아픈 게 들어오는 슬롯에 **피하거나 막는다**(이동은 prio 0이라 같은 슬롯 공격보다
  *      먼저 해소된다 — 그 슬롯에서 피하는 것이 실제로 성립한다)
  *   ⓒ **아무것도 안 들어오면 가드를 들지 않는다** — 슬롯을 통째로 공격에 쓴다
  *
+ * ⓐ는 `react: false`로도 켜지고(고급 = **조준만**), ⓑⓒ는 `react: true`가 있어야
+ * 켜진다(최고급). 둘을 나눈 이유는 실측이다 — easy/normal/hard의 cfg 차이(공격성·
+ * 가드 성향·`CLOSE_IN`)만으로는 클리어율이 40.3 / 38.7 / 37.5%로 거의 안 갈렸다.
+ * **판을 가르는 건 조준의 정확도와 대응 두 가지뿐**이라, 난이도의 계단을 그 둘로 놨다.
+ *
  * ⚠ 이건 규칙이 아니라 **AI의 판단**이다. `resolveRound` 출력에 닿지 않으므로
  *   `RULES_VERSION`과 무관하고, 온라인 멀티는 계획이 네트워크로 오므로 영향이 없다.
  */
-/** 이 피해 이상이면 "막거나 피할 값어치가 있다"고 본다(÷2 스케일 — 기본기 5~7·강한 스킬 ~30). */
-const THREAT_DAMAGE = 10
+export interface AIForesight {
+  /**
+   * 상대가 이번 라운드에 낼 3장(확정된 계획). **앞에서부터 `undefined`가 아닌
+   * 만큼만** 보인다 — 호출부가 뒤를 잘라 넘기면 "첫 장만 읽는" 부분 정보가 된다
+   * (중급). 안 보이는 슬롯부터는 "계속 다가온다"는 어림으로 이어 간다.
+   */
+  plan: readonly (CardDef | undefined)[]
+  /**
+   * 계획을 보고 **막거나 피하는가**. false면 조준에만 쓴다(고급) — 자리는 정확히
+   * 알지만 들어오는 걸 알고도 안 피하고, 가드도 예전처럼 확률로 든다.
+   */
+  react: boolean
+}
+/**
+ * 이 피해 이상이면 "막거나 피할 값어치가 있다"고 본다(÷2 스케일 — 기본기 5~7·강한
+ * 스킬 ~30). 즉 **진짜 한 방에만** 반응하고 잔공격은 그냥 맞아 준다.
+ *
+ * ⚠ **최고급 난이도의 유일한 조절 손잡이다.** `reacts`가 있는 단계에서만 쓰이므로
+ *   이 값을 움직여도 초급·중급·고급은 1%p도 안 흔들린다 — 그래서 최고급만 따로
+ *   맞출 수 있다(실측: 10 → 클리어율 7.2% · 16 → 8.1% · **24 → 15.9%**).
+ *   16 아래로 내리면 중급 카드까지 전부 막혀 "뭘 내도 안 통한다"가 되고, 실제로
+ *   클리어율이 8% 밑으로 주저앉는다.
+ */
+const THREAT_DAMAGE = 24
 /** 막을 수도 피할 수도 있을 때 피하는 쪽을 고를 확률. 늘 같은 답이면 다시 뻔해진다. */
 const EVADE_CHANCE = 0.5
 
@@ -165,7 +193,7 @@ export function decideAI(
   difficulty: Difficulty,
   availableCards?: CardDef[],
   profile?: AIProfile,
-  oppPlan?: readonly (CardDef | undefined)[],
+  foresight?: AIForesight,
 ): CardDef[] {
   // 난이도 cfg에 성격·기분을 얹은 **실효 cfg**. profile이 없으면(봇전·튜토리얼)
   // balanced + 기분 0이라 기존 동작과 동일하다.
@@ -182,9 +210,12 @@ export function decideAI(
   const gait = a.gait
   /** 라운드 **시작 시점의** 상대 자리. 예측의 출발점일 뿐 조준점이 아니다. */
   const oppStart = state.pos[1 - self]
-  // 카드 대응은 hard에게만 준다 — 난이도의 정의가 "상대를 얼마나 읽는가"다.
-  const read: readonly (CardDef | undefined)[] | undefined =
-    difficulty === 'hard' && oppPlan ? oppPlan : undefined
+  // 계획을 읽는가 — **호출부가 정한다**(런 난이도). 예전엔 여기서 `difficulty === 'hard'`로
+  // 걸렀는데, 난이도 4단계가 생기면서 "누가 읽는가"는 몬스터 등급이 아니라 단계의
+  // 문제가 됐다. 안 넘기면 아래 `CLOSE_IN` 어림으로 떨어진다(= 예전 그대로).
+  const read = foresight?.plan
+  /** 읽은 계획으로 **막거나 피하는가**(최고급). false면 조준에만 쓴다(고급). */
+  const reacts = !!foresight?.react
   // 지형 — 런에서만 채워진다. 빈 배열이면 아래 판정이 전부 예전 그대로다.
   const rocks = state.obstacles
   /** 이 공격이 바위를 무시하는가 — 엔진 `piercesRock`과 같은 규칙. */
@@ -291,7 +322,17 @@ export function decideAI(
   function advanceFoe(slot: number): Cell {
     if (read) {
       const c = read[slot]
-      if (c?.kind === 'move') {
+      // 계획이 끊긴 지점(부분 정보) — 여기서부터는 "한 칸씩 계속 다가온다"고 본다.
+      // 가만히 서 있다고 보면 어림보다도 나쁜 조준이 된다.
+      if (!c) {
+        if (chebyshev(foeCur, pos) > 1) {
+          const t = stepToward(foeCur, pos, 1)
+          foeCur.col = t.col
+          foeCur.row = t.row
+        }
+        return { col: foeCur.col, row: foeCur.row }
+      }
+      if (c.kind === 'move') {
         const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
         for (let k = 0; k < (c.steps ?? 1); k++) {
           const next: Cell = { col: foeCur.col + dc, row: foeCur.row + dr }
@@ -299,7 +340,7 @@ export function decideAI(
           foeCur.col = next.col
           foeCur.row = next.row
         }
-      } else if (c?.kind === 'attack' && c.dashForward) {
+      } else if (c.kind === 'attack' && c.dashForward) {
         const step = facingBetween(foeCur, pos, 1 - self) * Math.sign(c.dashForward)
         for (let k = 0; k < Math.abs(c.dashForward); k++) {
           const next: Cell = { col: foeCur.col + step, row: foeCur.row }
@@ -324,7 +365,7 @@ export function decideAI(
 
   /** 이 슬롯 이후로 상대 계획에 공격이 남아 있는가 — 가드를 들 이유가 있는지의 기준. */
   const attacksAhead = (slot: number): boolean =>
-    !read || read.slice(slot).some((c) => c?.kind === 'attack')
+    !read || !reacts || read.slice(slot).some((c) => c?.kind === 'attack')
 
   /**
    * `inc`의 사거리 밖으로 나가는 이동 — 상대와 **가까운 순서**로. 이동은 prio 0이라
@@ -435,7 +476,7 @@ export function decideAI(
    *   앞에 두고 진짜를 뒤에 두는 식의 수읽기가 플레이어 쪽에 생긴다.
    */
   let reactSlot = -1
-  if (read) {
+  if (read && reacts) {
     let worst = -1
     for (let k = 0; k < 3; k++) {
       const c = read[k]
@@ -474,7 +515,7 @@ export function decideAI(
     // 0-bis) **카드 대응**(hard 전용) — 이 슬롯에 아픈 게 들어오면 피하거나 막는다.
     //   잔공격(THREAT_DAMAGE 미만)에는 반응하지 않는다. 봉인기(기절·빙결·속박)는
     //   피해와 무관하게 라운드를 통째로 날리므로 값과 상관없이 반응한다.
-    if (inc && slot === reactSlot && !guarded) {
+    if (reacts && inc && slot === reactSlot && !guarded) {
       const worth =
         (inc.damage ?? 0) >= THREAT_DAMAGE || !!inc.stun || !!inc.freeze || !!inc.bind
       if (worth) {

@@ -3418,7 +3418,23 @@
 .runstart { display: flex; flex-direction: column; padding: 18px 30px; gap: 14px; }
 .runstart__head { display: flex; align-items: center; justify-content: space-between; }
 .runstart__head h2 { color: var(--neon-cyan); letter-spacing: 0.2em; font-size: 22px; }
-.runstart__chars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; height: 190px; }
+.runstart__chars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; height: 168px; }
+/* 난이도 4단계 — 축은 "봇이 나를 얼마나 읽는가" 하나다(run.ts의 RUN_DIFFICULTIES).
+   ⚠ 잠긴 칸도 **읽을 수는 있어야** 하므로 흐리게만 하고 `disabled`는 걸지 않는다. */
+.runstart__diffs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.diffcard {
+  text-align: left; padding: 8px 12px; border-radius: 10px; cursor: pointer;
+  background: var(--bg-1); border: 1px solid var(--panel-edge);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.diffcard__name {
+  font-family: var(--font-display); font-size: 15px; letter-spacing: 0.08em;
+  color: var(--text); margin-bottom: 3px;
+}
+.diffcard__desc { font-size: 11.5px; line-height: 1.35; color: var(--text-dim); }
+.diffcard.is-active { border-color: var(--neon-yellow); background: rgba(226, 178, 74, 0.12); }
+.diffcard.is-active .diffcard__name { color: var(--neon-yellow); }
+.diffcard.is-locked { opacity: 0.42; cursor: not-allowed; }
 .runstart__pick {
   flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px;
   border-top: 1px solid var(--panel-edge); padding-top: 10px;
@@ -3739,6 +3755,11 @@
 .runend__banner--win { color: var(--neon-cyan); text-shadow: 0 0 40px color-mix(in srgb, var(--neon-cyan) 50%, transparent); }
 .runend__banner--loss { color: var(--neon-red); text-shadow: 0 0 40px rgba(255, 77, 94, 0.5); }
 .runend__stat { color: var(--text-dim); font-size: 16px; }
+.runend__unlock {
+  padding: 8px 16px; border-radius: 999px; font-size: 14px; text-align: center; max-width: 720px;
+  color: var(--neon-yellow); background: rgba(226, 178, 74, 0.12);
+  border: 1px solid rgba(226, 178, 74, 0.5);
+}
 .runend__relics { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 700px; }
 .runend__buttons { display: flex; gap: 14px; margin-top: 10px; }
 

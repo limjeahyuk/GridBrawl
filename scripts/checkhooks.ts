@@ -16,6 +16,10 @@ import {
   EVENTS,
   LADDER_FLOORS,
   LOCKED_CARD_IDS,
+  RUN_DIFFICULTIES,
+  isDifficultyUnlocked,
+  nextDifficulty,
+  shiftedAiLevel,
   advanceFloor,
   canUpgradeCard,
   cardLevel,
@@ -38,6 +42,7 @@ import {
   upgradableDeckCards,
   TERRAIN,
   type NodeType,
+  type RunDifficulty,
   type RunState,
 } from '../src/game/run'
 import { runFightProps } from '../src/game/runbattle'
@@ -1689,10 +1694,11 @@ console.log('\nAI 예측 · 카드 대응')
     diff: 'easy' | 'normal' | 'hard',
     plan?: CardDef[],
     pool: CardDef[] = MELEE,
+    react = true,
   ) => {
     let n = 0
     for (let i = 0; i < TRIES; i++) {
-      const p = decideAI(make().state, 1, W, diff, pool, undefined, plan)
+      const p = decideAI(make().state, 1, W, diff, pool, undefined, plan && { plan, react })
       if (p[0]?.id === hit.id) n++
     }
     return n / TRIES
@@ -1724,7 +1730,7 @@ console.log('\nAI 예측 · 카드 대응')
   }
   check('easy도 다가올 자리를 조준한다(첫 자리 고정 아님)', easyAims > 0, true)
 
-  // ④ **아무것도 안 들어오는 라운드엔 가드를 들지 않는다.** 상대 계획이 전부 기력
+  // ④ **아무것도 안 들어오는 라운드엔 가드를 들지 않는다**(대응 단계 = 최고급). 상대 계획이 전부 기력
   //    회복이면 읽는 AI는 슬롯을 통째로 공격·이동에 쓴다(예전엔 확률로 그냥 들었다).
   const GUARDY = MELEE.concat(card('c-guard'))
   const quiet = [card('c-energy'), card('c-energy'), card('c-energy')]
@@ -1734,9 +1740,18 @@ console.log('\nAI 예측 · 카드 대응')
   const big = W.cards.filter((c) => c.kind === 'attack').sort((a, b) => (b.damage ?? 0) - (a.damage ?? 0))[0]
   const scary = [card('c-energy'), big, card('c-energy')]
   for (let i = 0; i < TRIES; i++) {
-    if (decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, quiet).some((c) => c?.kind === 'guard'))
+    const react = true
+    if (
+      decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, { plan: quiet, react }).some(
+        (c) => c?.kind === 'guard',
+      )
+    )
       guardsWhenQuiet++
-    if (decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, scary).some((c) => c?.kind === 'guard'))
+    if (
+      decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, { plan: scary, react }).some(
+        (c) => c?.kind === 'guard',
+      )
+    )
       guardsWhenHit++
   }
   check('공격이 안 오는 라운드엔 가드를 안 든다', guardsWhenQuiet, 0)
@@ -1747,14 +1762,101 @@ console.log('\nAI 예측 · 카드 대응')
   let multi = 0
   const barrage = [big, big, big]
   for (let i = 0; i < TRIES; i++) {
-    if (decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, barrage).filter((c) => c?.kind === 'guard').length > 1)
+    if (
+      decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, {
+        plan: barrage,
+        react: true,
+      }).filter((c) => c?.kind === 'guard').length > 1
+    )
       multi++
   }
   check('가드는 한 라운드에 한 장까지', multi, 0)
 
-  // ⑥ **카드 대응은 hard만** — 난이도의 정의가 "상대를 얼마나 읽는가"다. normal에게
-  //    같은 계획을 줘도 ①의 답이 달라지면 안 된다.
-  check('normal은 계획을 줘도 안 읽는다', slot0Attacks(() => board(3, 4), 'normal', leaves) > 0.6, true)
+  // ⑥ **조준(aim)과 대응(react)은 따로 켜진다**(2026-08-11 난이도 4단계). 고급은
+  //    자리를 정확히 알지만 들어오는 걸 알고도 안 막는다 — 그래야 고급/최고급이
+  //    실제로 다른 단계가 된다(실측 22.3% vs 16.1%).
+  // 조용한 라운드에도 **조준만 하는 단계는 헛가드를 든다** — ④에서 대응 단계는
+  // 0이었다. 이 차이가 고급/최고급의 실질 화력을 가른다.
+  let aimOnlyGuards = 0
+  for (let i = 0; i < TRIES; i++) {
+    if (
+      decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, {
+        plan: quiet,
+        react: false,
+      }).some((c) => c?.kind === 'guard')
+    )
+      aimOnlyGuards++
+  }
+  check('조준만 하는 단계는 헛가드를 든다', aimOnlyGuards > 0, true)
+  // 조준만 하는 단계도 **자리는 정확히** 안다 — ①과 같은 답이어야 한다.
+  check(
+    '조준만 해도 떠날 자리는 안 친다',
+    slot0Attacks(() => board(3, 4), 'hard', leaves, MELEE, false),
+    0,
+  )
+  // ⑦ **부분 정보**(중급 — 첫 1장만 보인다). 보이는 슬롯은 정확하고, 안 보이는
+  //    슬롯부터는 "계속 다가온다"는 어림으로 이어 간다 — 가만히 서 있다고 보면
+  //    어림보다도 나쁜 조준이 된다.
+  check(
+    '첫 장만 읽어도 그 슬롯은 정확하다',
+    slot0Attacks(() => board(3, 4), 'hard', leaves.slice(0, 1), MELEE, false),
+    0,
+  )
+}
+
+// --- 런 난이도 4단계(2026-08-11) ---------------------------------------------
+console.log('\n런 난이도 4단계')
+{
+  // ① 사다리는 **단조**여야 한다 — 뒤 단계가 앞 단계보다 쉬워지는 구간이 있으면
+  //    "깨서 연다"는 구조 자체가 무너진다. 처음엔 상한(cap) 방식이라 중급 37.1% vs
+  //    고급 38.7%로 실제로 뒤집혀 있었다.
+  const shifts = RUN_DIFFICULTIES.map((d) => d.aiShift)
+  const slots = RUN_DIFFICULTIES.map((d) => d.readSlots)
+  const reacts = RUN_DIFFICULTIES.map((d) => (d.reacts ? 1 : 0))
+  const nondecreasing = (a: number[]) => a.every((v, i) => i === 0 || v >= a[i - 1])
+  check('난이도 4단계', RUN_DIFFICULTIES.length, 4)
+  check('AI 등급 이동이 단조 증가', nondecreasing(shifts), true)
+  check('읽는 카드 수가 단조 증가', nondecreasing(slots), true)
+  check('대응 여부가 단조 증가', nondecreasing(reacts), true)
+  check('초급만 계획을 아예 안 읽는다', slots[0], 0)
+  check('최고급만 대응한다', reacts, [0, 0, 0, 1])
+
+  // ② 해금 — 첫 단계는 늘 열려 있고, 그 뒤는 **바로 앞 단계**를 깨야 열린다.
+  const none = new Set<RunDifficulty>()
+  check('초급은 아무것도 안 깨도 열려 있다', isDifficultyUnlocked('novice', none), true)
+  check('중급은 처음엔 잠겨 있다', isDifficultyUnlocked('adept', none), false)
+  check(
+    '초급을 깨면 중급이 열린다',
+    isDifficultyUnlocked('adept', new Set<RunDifficulty>(['novice'])),
+    true,
+  )
+  check(
+    '초급만 깨서는 고급이 안 열린다',
+    isDifficultyUnlocked('expert', new Set<RunDifficulty>(['novice'])),
+    false,
+  )
+  check(
+    '중급을 깨면 고급이 열린다',
+    isDifficultyUnlocked('expert', new Set<RunDifficulty>(['novice', 'adept'])),
+    true,
+  )
+  check('초급 다음은 중급', nextDifficulty('novice'), 'adept')
+  check('최고급 다음은 없다', nextDifficulty('master'), null)
+
+  // ③ 등급 이동은 **양 끝에서 잘린다** — 서열이 어느 단계에서나 보존된다.
+  check('초급에서 슬라임은 그대로 easy', shiftedAiLevel('easy', -1), 'easy')
+  check('초급에서 가디언은 normal로 내려온다', shiftedAiLevel('hard', -1), 'normal')
+  check('고급에서 슬라임은 normal로 올라간다', shiftedAiLevel('easy', +1), 'normal')
+  check('고급에서 가디언은 그대로 hard', shiftedAiLevel('hard', +1), 'hard')
+
+  // ④ **난이도는 전투에만 닿는다** — 지도·보상·상점은 단계와 무관해야 한다(밸런스
+  //    면이 네 개가 되는 걸 막는 불변식). 같은 시드에서 사다리가 똑같이 나온다.
+  const ladderOf = (d: RunDifficulty) => {
+    const r = startRun('warrior', d)
+    return JSON.stringify({ hp: r.maxHp, deck: r.deck, floors: r.map.length })
+  }
+  check('난이도가 시작 체력·덱을 바꾸지 않는다', ladderOf('master'), ladderOf('novice'))
+  check('시작 난이도 기본값은 초급', startRun('warrior').difficulty, 'novice')
 }
 
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)
