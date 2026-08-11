@@ -22,7 +22,7 @@
 // 엔진에 들어간다. PvP·봇전의 카드 풀(`cards.ts`·`roster.ts`)은 원본 그대로라
 // 락스텝·`RULES_VERSION`과 무관하다.
 // ---------------------------------------------------------------------------
-import { GRID_COLS, type CardDef, type Offset } from '../battle/types'
+import { GRID_COLS, STATUS_MAX_ROUNDS, type CardDef, type Offset } from '../battle/types'
 
 /** 강화 상한. 1 = 같은 카드를 한 장 더 얻으면 그걸로 끝(사용자 결정). */
 export const MAX_UPGRADE = 1
@@ -57,7 +57,13 @@ function extendRange(range: Offset[] | undefined): Offset[] | null {
   return out.length > range.length ? out : null
 }
 
-/** 비율 증가(최소·최대 폭 고정). 작은 카드가 손해 보지 않고 큰 카드가 폭주하지 않게. */
+/**
+ * 비율 증가(최소·최대 폭 고정). 작은 카드가 손해 보지 않고 큰 카드가 폭주하지 않게.
+ * ⚠ **min/max는 magnitude라 전투 수치 리스케일을 같이 타야 한다.** 이 파일은
+ * 2026-08-05 ÷2 리스케일 뒤에 생겼다가 머지되면서 옛 폭(4~12 등)을 그대로 갖고
+ * 있었고, 그 상태에서는 강화가 카드 값 대비 **두 배로 셌다**. 값을 다시 스케일할
+ * 땐 여기 숫자들도 함께 본다(%·칸 수·라운드 수는 스케일 무관).
+ */
 const bump = (n: number, pct: number, min: number, max: number): number =>
   n + Math.min(max, Math.max(min, Math.round(n * pct)))
 
@@ -66,29 +72,36 @@ const bump = (n: number, pct: number, min: number, max: number): number =>
  * 반환값이 없으면 그 규칙은 이 카드에 해당하지 않는다는 뜻(다음 규칙으로).
  */
 const IDENTITY: ((up: CardDef, base: CardDef) => string[] | null)[] = [
-  // ① 지속피해 — 궁수의 독, 마법사의 화상. 한 장에 둘 다 있으면 둘 다 오른다
+  // ① 지속피해 — 궁수의 중독, 마법사의 화상. 한 장에 둘 다 있으면 둘 다 오른다
   //    (`mag-doom`·`r-blightwave`처럼 "묻히는 게 정체성"인 카드라 갈라 놓으면 반쪽이 된다).
+  //
+  // ⚠ **값은 피해가 아니라 지속 라운드다**(2026-08-07 상태이상 재정의). 한 겹의
+  //   위력은 `POISON_TICK_DAMAGE`·`BURN_HIT_DAMAGE` 상수로 고정이고 카드가 정하는
+  //   건 "몇 라운드 버티는 겹인가"뿐이다. 그래서 강화는 **+1 라운드**다.
+  //   ⚠ 이미 `STATUS_MAX_ROUNDS`면 늘려 봐야 엔진이 잘라내므로 **이 규칙은 해당
+  //   없음**으로 떨어뜨린다 — 그래야 아래 규칙이 대신 걸려 강화가 헛돌지 않는다.
   (up, base) => {
-    if (!base.poison && !base.burn) return null
     const n: string[] = []
-    if (base.poison) { up.poison = base.poison + 3; n.push('독 +3') }
-    if (base.burn) { up.burn = base.burn + 3; n.push('화상 +3') }
-    return n
+    if (base.poison && base.poison < STATUS_MAX_ROUNDS) {
+      up.poison = base.poison + 1
+      n.push('중독 +1라운드')
+    }
+    if (base.burn && base.burn < STATUS_MAX_ROUNDS) {
+      up.burn = base.burn + 1
+      n.push('화상 +1라운드')
+    }
+    return n.length ? n : null
   },
-  // ② 통제 — **지속이 한 턴 길어진다.** 지속피해와 달리 빙결·기절은 턴 수가 카드에
-  //    적혀 있어서(`STATUS_TURNS`는 독·화상 전용) 여기서만 늘릴 수 있다.
-  (up, base) => {
-    if (!base.freeze && !base.stun) return null
-    const n: string[] = []
-    if (base.freeze) { up.freeze = base.freeze + 1; n.push('빙결 +1턴') }
-    if (base.stun) { up.stun = base.stun + 1; n.push('기절 +1턴') }
-    return n
-  },
+  // ② 통제(빙결·기절·속박)는 **강화할 자리가 없다**(2026-08-07 재정의).
+  //    셋 다 "그 라운드 한정"이 되면서 카드의 값이 지속이 아니라 **걸리는가(>0)**만
+  //    뜻하게 됐다 — 숫자를 올려도 엔진이 안 본다. 예전 규칙(`+1턴`)은 화면에만
+  //    "빙결 +1턴"이라 적히고 실제로는 아무 일도 없었으므로 통째로 뺐다.
+  //    이 카드들은 아래 규칙(흡수·위치·사거리·기력)으로 떨어진다.
   // ③ 흡수 — 흡혈·기력흡수. 지속력을 파는 카드는 지속력이 늘어야 강화답다.
   (up, base) => {
     const n: string[] = []
-    if (base.leech) { up.leech = bump(base.leech, 0.4, 3, 12); n.push(`흡혈 +${up.leech! - base.leech}`) }
-    if (base.drain) { up.drain = bump(base.drain, 0.4, 3, 12); n.push(`기력흡수 +${up.drain! - base.drain}`) }
+    if (base.leech) { up.leech = bump(base.leech, 0.4, 2, 6); n.push(`흡혈 +${up.leech! - base.leech}`) }
+    if (base.drain) { up.drain = bump(base.drain, 0.4, 2, 6); n.push(`기력흡수 +${up.drain! - base.drain}`) }
     return n.length ? n : null
   },
   // ④ 위치 통제 — 넉백·끌기는 칸 단위라 비율이 의미 없다. 딱 한 칸 더.
@@ -101,14 +114,14 @@ const IDENTITY: ((up: CardDef, base: CardDef) => string[] | null)[] = [
   // ⑤ 자기 강화 — 각성(누적)·사용 시 보호막.
   (up, base) => {
     const n: string[] = []
-    if (base.empower) { up.empower = bump(base.empower, 0.4, 3, 10); n.push(`각성 +${up.empower! - base.empower}`) }
-    if (base.selfShield) { up.selfShield = bump(base.selfShield, 0.4, 5, 20); n.push(`방벽 +${up.selfShield! - base.selfShield}`) }
+    if (base.empower) { up.empower = bump(base.empower, 0.4, 2, 5); n.push(`각성 +${up.empower! - base.empower}`) }
+    if (base.selfShield) { up.selfShield = bump(base.selfShield, 0.4, 3, 10); n.push(`방벽 +${up.selfShield! - base.selfShield}`) }
     return n.length ? n : null
   },
   // ⑥ 반동 — 유일하게 **깎는** 강화. 자해가 정체성인 카드(`r-frenzy`)의 대가를 줄인다.
   (up, base) => {
     if (!base.recoil) return null
-    const cut = Math.min(10, Math.max(3, Math.round(base.recoil * 0.4)))
+    const cut = Math.min(5, Math.max(2, Math.round(base.recoil * 0.4)))
     up.recoil = Math.max(0, base.recoil - cut)
     return [`반동 -${base.recoil - up.recoil}`]
   },
@@ -125,7 +138,7 @@ const IDENTITY: ((up: CardDef, base: CardDef) => string[] | null)[] = [
   (up, base) => {
     const cost = base.energyCost ?? 0
     if (cost <= 2) return null
-    const cut = Math.min(8, Math.max(2, Math.round(cost * 0.15)))
+    const cut = Math.min(4, Math.max(1, Math.round(cost * 0.15)))
     up.energyCost = cost - cut
     return [`기력 -${cut}`]
   },
@@ -143,7 +156,7 @@ function applyOnce(base: CardDef): { card: CardDef; notes: string[] } | null {
   if (base.kind === 'attack') {
     const d = base.damage ?? 0
     if (d > 0) {
-      up.damage = bump(d, 0.2, 4, 12)
+      up.damage = bump(d, 0.2, 2, 6)
       notes.push(`피해 +${up.damage! - d}`)
     }
     for (const rule of IDENTITY) {
@@ -152,23 +165,23 @@ function applyOnce(base: CardDef): { card: CardDef; notes: string[] } | null {
     }
   } else if (base.kind === 'guard') {
     const b = base.block ?? 0
-    up.block = bump(b, 0.25, 6, 24)
+    up.block = bump(b, 0.25, 3, 12)
     notes.push(`방어 +${up.block! - b}`)
   } else if (base.kind === 'energy') {
     const g = base.gain ?? 0
-    up.gain = bump(g, 0.25, 6, 20)
+    up.gain = bump(g, 0.25, 3, 10)
     notes.push(`기력 +${up.gain! - g}`)
   } else if (base.kind === 'heal') {
     const h = base.healHp ?? 0
-    up.healHp = bump(h, 0.25, 5, 20)
+    up.healHp = bump(h, 0.25, 3, 10)
     notes.push(`회복 +${up.healHp! - h}`)
   } else if (base.kind === 'buff') {
     // 위력이 있는 버프는 위력을, 위력이라는 게 없는 버프(`freeCast`)는 지속을 올린다.
     if (base.buffPower) {
-      up.buffPower = bump(base.buffPower, 0.25, 2, 8)
+      up.buffPower = bump(base.buffPower, 0.25, 1, 4)
       notes.push(`효과 +${up.buffPower! - base.buffPower}`)
     } else {
-      up.buffTurns = (base.buffTurns ?? 1) + 1
+      up.buffRounds = (base.buffRounds ?? 1) + 1
       notes.push('지속 +1턴')
     }
   } else if (base.kind === 'move') {

@@ -1,4 +1,5 @@
-// 상점 — 골드로 카드·유물·회복·카드 제거를 구매. 카드 제거/획득은 카드 선택이 필요.
+// 상점 — 골드로 카드·유물·회복을 구매. 덱이 꽉 찬 상태의 카드 구매만 카드 선택
+// (버릴 카드)이 필요하다. ⚠ 유료 "카드 1장 제거"는 뺐다(run.ts "덱 룰" 참고).
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
@@ -8,6 +9,8 @@ import {
   advanceFloor, buyShopItem, cardLevel, rollShop, runCard, type RunState, type ShopItem,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
+import { useCardZoom } from '../CardDetail'
+import { DeckPicker } from '../DeckPicker'
 import { RunBar } from '../RunBar'
 
 
@@ -17,6 +20,8 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
   const [bought, setBought] = useState<Set<string>>(new Set())
   const [pending, setPending] = useState<ShopItem | null>(null) // 카드 선택 대기(제거/획득)
   const char = getChar(cur.charId)
+  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+  const zoom = useCardZoom(char.accent)
 
   const buy = (item: ShopItem) => {
     if (bought.has(item.id)) return
@@ -39,30 +44,23 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
   }
 
   if (pending) {
-    const removing = pending.kind === 'removeCard'
     return (
       <div className="screen shop">
         <div className="grid-bg" />
-        <h2 className="shop__title">{removing ? '제거할 카드를 고르세요' : '버릴 카드를 고르세요'}</h2>
-        <div className="reward__deck">
-          {cur.deck.map((id, i) => {
-            const c = runCard(cur, id)
-            if (!c) return null
-            return (
-              <button
-                key={`${id}-${i}`}
-                className="reward__card"
-                style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                onClick={() => pickCard(id)}
-              >
-                <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
-              </button>
-            )
-          })}
-        </div>
+        <h2 className="shop__title">
+          덱이 가득 찼습니다 — 버릴 카드를 고르세요
+        </h2>
+        <DeckPicker
+          charId={cur.charId}
+          deck={cur.deck}
+          zoom={zoom}
+          onPick={pickCard}
+          cardOf={(id) => runCard(cur, id)}
+        />
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>
+        {zoom.sheet}
       </div>
     )
   }
@@ -88,7 +86,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
             : base
           return (
             <div key={item.id} className={`shop__item ${owned ? 'is-owned' : ''}`}>
-              <div className="shop__item-body">
+              <div className="shop__item-body" {...(card ? zoom.bind(card) : {})}>
                 {isUp && <span className="reward__uptag">강화</span>}
                 {card && <CardFace card={card} accent={cardAccent(card, char.accent)} compact />}
                 {relic && (
@@ -102,12 +100,6 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
                   <div className="shop__service">
                     <div className="shop__service-icon">❤</div>
                     <div className="shop__service-name">체력 +{item.amount}</div>
-                  </div>
-                )}
-                {item.kind === 'removeCard' && (
-                  <div className="shop__service">
-                    <div className="shop__service-icon">🗑</div>
-                    <div className="shop__service-name">카드 1장 제거</div>
                   </div>
                 )}
               </div>
@@ -125,6 +117,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
       <button className="btn shop__leave" onClick={() => onDone(advanceFloor(cur))}>
         상점을 떠난다 ▶
       </button>
+      {zoom.sheet}
     </div>
   )
 }

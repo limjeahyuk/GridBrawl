@@ -33,8 +33,26 @@ export interface MonsterDef {
   /** 몬스터 고유 상시 능력(인라인 패시브). 유물 시스템과 같은 훅을 쓴다. */
   passive: Omit<Passive, 'desc'>
   deckCardIds: string[] // AI가 낼 수 있는 카드
+  /**
+   * **이 몬스터가 데려오는 바위**(`run.ts`의 `TERRAIN`이 실제 배치를 갖는다).
+   * 2026-08-07 전까지는 지형이 **무대**에 붙어 있어서 1층 묘지부터 바위가 서 있었는데,
+   * 사용자 결정으로 "처음부터 나오는 건 별로 — 중간 보스나 골렘 같은 몇몇에게만"으로
+   * 바꿨다. 그래서 지형은 이제 **누구와 싸우느냐**가 정한다:
+   *   ⓐ 여기 값이 있으면 그 배치(골렘처럼 몸이 곧 돌인 것들)
+   *   ⓑ 없고 **엘리트 칸**이면 무너진 무대(`ELITE_TERRAIN`)
+   *   ⓒ 그 외 일반 전투는 **빈 판**
+   * ⚠ 비워 두는 것이 기본이다. 전부 지형이 있으면 지형이 배경이 된다.
+   */
+  terrain?: TerrainId
   note: string // 정체성 한 줄(보상/조우 안내용)
 }
+
+/**
+ * 바위 배치의 이름. 실제 좌표는 `run.ts`의 `TERRAIN`에 있다 — 판 기하는 배치
+ * 원칙(끝열 금지·열을 통째로 막지 않기)과 같은 곳에 두는 게 맞고, `monsters.ts`가
+ * `run.ts`를 import하면 순환이 된다.
+ */
+export type TerrainId = 'rubble' | 'pillars' | 'lavaslab'
 
 // 모든 카드(공용 + 전 캐릭터 고유 + 보스 전용)를 id로 조회 — 몬스터 덱 해석용.
 // ⚠ 보스 전용 카드(`bosscards.ts`)는 **여기서만** 풀에 들어간다. 플레이어 쪽
@@ -57,10 +75,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'archer',
     spriteId: 'slime',
     tier: 1,
-    maxHp: 48,
-    startEnergy: 40,
+    maxHp: 24,
+    startEnergy: 20,
     aiLevel: 'easy',
-    passive: { revive: 25 }, // 분열: 쓰러지면 작은 몸으로 한 번 되살아난다
+    passive: { revive: 13 }, // 분열: 쓰러지면 작은 몸으로 한 번 되살아난다
     deckCardIds: ['c-strike', 'c-shot', 'war-cleave'],
     note: '분열: 쓰러지면 작은 몸으로 한 번 되살아난다.',
   },
@@ -74,8 +92,8 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'medieval-warrior',
     tier: 1,
-    maxHp: 60,
-    startEnergy: 50,
+    maxHp: 30,
+    startEnergy: 25,
     aiLevel: 'easy',
     passive: {},
     // 2026-07-31: 시작 덱이 공용 기본 9장으로 줄면서 해머 핸드(29)를 든 1층 잡졸이
@@ -92,13 +110,13 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'flying-eye',
     tier: 2,
-    maxHp: 80,
-    startEnergy: 60,
+    maxHp: 40,
+    startEnergy: 30,
     aiLevel: 'normal',
     // 2026-07-30 밸런스: 노바 블래스트(40, 같은 줄 끝까지)를 뺐다. tier2가 매 턴
     // 광역 주포를 쏘니 4~7층에서 가장 많이 죽이는 몬스터가 됐다(시뮬 승률 68%,
     // 2.8턴 결판). 관통 랜스로 견제하는 원래 정체성에 맞추고 체력을 올려 오래 버틴다.
-    passive: { turnEnergy: 8 },
+    passive: { turnEnergy: 4 },
     deckCardIds: ['arc-shot', 'c-shot', 'c-guard'],
     note: '원거리 견제 + 가끔 방어. 접근을 강요당한다.',
   },
@@ -109,10 +127,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'ogre',
     tier: 2,
-    maxHp: 112,
-    startEnergy: 50,
+    maxHp: 56,
+    startEnergy: 25,
     aiLevel: 'normal',
-    passive: { damageReduction: 6 },
+    passive: { damageReduction: 3 },
     deckCardIds: ['war-cleave', 'war-quake', 'war-bash', 'c-energy'],
     note: '느리지만 한 방이 무겁고, 넉백으로 떼어낸다.',
   },
@@ -123,10 +141,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'martial-hero',
     tier: 2,
-    maxHp: 60,
-    startEnergy: 50,
+    maxHp: 30,
+    startEnergy: 25,
     aiLevel: 'hard',
-    passive: { attackBonus: 6 },
+    passive: { attackBonus: 3 },
     deckCardIds: ['arc-pin', 'war-cleave', 'c-strike'],
     note: '저체력 유리대포. 빨리 죽이지 않으면 이쪽이 터진다.',
   },
@@ -137,14 +155,14 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'archer',
     spriteId: 'mimic',
     tier: 3,
-    maxHp: 115,
-    startEnergy: 60,
+    maxHp: 58,
+    startEnergy: 30,
     aiLevel: 'hard',
     // 2026-07-30 밸런스: tier3 후반 몬스터인데 체력 95 + 저댐 덱이라 시뮬 승률 99%,
     // 플레이어가 오히려 체력을 15 벌어가는 샌드백이었다. 흡혈 정체성을 세게 굴린다.
     // attackBonus는 **한 방의 크기**를 키운다 — 후반 플레이어는 보호막·피해감소를
     // 겹쳐 쌓아서, 잔챙이 타격 여러 번보다 큰 한 방이 아니면 뚫리지 않는다(시뮬).
-    passive: { lifesteal: 12, attackBonus: 6 },
+    passive: { lifesteal: 6, attackBonus: 3 },
     deckCardIds: ['mag-frost', 'mag-spark', 'arc-rain', 'c-brace'],
     note: '흡혈 지속 — 오래 끌수록 불리하다.',
   },
@@ -155,11 +173,13 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'angel',
     tier: 3,
-    maxHp: 120,
-    startEnergy: 60,
+    maxHp: 60,
+    startEnergy: 30,
     aiLevel: 'normal',
-    passive: { turnShield: 15, damageReduction: 6 },
+    passive: { turnShield: 8, damageReduction: 3 },
     deckCardIds: ['war-wall', 'war-bash', 'war-oath', 'c-energy'],
+    // 무너진 기둥 사이에 선다 — 거북이 성격과 짝이라 "돌아 들어가야 하는" 판이 된다.
+    terrain: 'pillars',
     note: '방벽을 세우고 한 방을 노린다. 뚫기 전엔 안 죽는다.',
   },
   {
@@ -169,12 +189,12 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'bat',
     tier: 3,
-    maxHp: 100,
-    startEnergy: 60,
+    maxHp: 50,
+    startEnergy: 30,
     aiLevel: 'hard',
     // 2026-07-30 밸런스: 십자·대각 교란은 좋았지만 화력이 없어 그냥 지나가는 층이었다
     // (시뮬 승률 100%). 약한 견제기(10)를 아픈 카드(30)로 바꿔 실제로 위협이 되게.
-    passive: { turnEnergy: 10, regen: 6, attackBonus: 6 },
+    passive: { turnEnergy: 5, regen: 3, attackBonus: 3 },
     deckCardIds: ['mag-spark', 'arc-venom', 'arc-pin'],
     note: '십자·대각으로 교란하며 조금씩 아문다.',
   },
@@ -185,10 +205,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'demon',
     tier: 4,
-    maxHp: 200,
-    startEnergy: 70,
+    maxHp: 100,
+    startEnergy: 35,
     aiLevel: 'hard',
-    passive: { turnEnergy: 15, turnShield: 10, damageReduction: 6, revive: 60 },
+    passive: { turnEnergy: 8, turnShield: 5, damageReduction: 3, revive: 30 },
     // 전용 카드(2026-08-05) — 실제 행동은 `bosses.ts` 스크립트가 정하고, 이 목록은
     // 도감 표시 + 스크립트가 비었을 때의 AI 폴백이다. 둘이 어긋나면 안 되므로 같은
     // 카드로 채운다.
@@ -203,10 +223,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'bat',
     tier: 1,
-    maxHp: 45,
-    startEnergy: 50,
+    maxHp: 23,
+    startEnergy: 25,
     aiLevel: 'easy',
-    passive: { turnEnergy: 6 },
+    passive: { turnEnergy: 3 },
     deckCardIds: ['c-shot', 'arc-venom', 'c-jab'],
     note: '흩어져 쏘는 약한 무리. 물량으로 갉는다.',
   },
@@ -217,8 +237,8 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'goblin',
     tier: 1,
-    maxHp: 48,
-    startEnergy: 45,
+    maxHp: 24,
+    startEnergy: 23,
     aiLevel: 'easy',
     passive: {},
     deckCardIds: ['c-jab', 'c-strike', 'war-cleave'],
@@ -231,8 +251,8 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'martial-hero',
     tier: 2,
-    maxHp: 70,
-    startEnergy: 55,
+    maxHp: 35,
+    startEnergy: 28,
     aiLevel: 'normal',
     passive: {},
     deckCardIds: ['arc-shot', 'c-shot', 'c-brace'],
@@ -245,10 +265,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'archer',
     spriteId: 'church-wizard',
     tier: 2,
-    maxHp: 85,
-    startEnergy: 55,
+    maxHp: 43,
+    startEnergy: 28,
     aiLevel: 'normal',
-    passive: { regen: 6 },
+    passive: { regen: 3 },
     deckCardIds: ['mag-frost', 'c-brace', 'c-repair'],
     note: '스스로 아물며 흡혈로 버틴다. 화력을 몰아쳐야 한다.',
   },
@@ -259,10 +279,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'martial-hero',
     tier: 2,
-    maxHp: 90,
-    startEnergy: 55,
+    maxHp: 45,
+    startEnergy: 28,
     aiLevel: 'normal',
-    passive: { turnShield: 10 },
+    passive: { turnShield: 5 },
     deckCardIds: ['war-cleave', 'war-bash', 'c-guard'],
     note: '방패를 두른 정석 근접. 빈틈이 적다.',
   },
@@ -273,11 +293,13 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'golem',
     tier: 3,
-    maxHp: 160,
-    startEnergy: 50,
+    maxHp: 80,
+    startEnergy: 25,
     aiLevel: 'normal',
-    passive: { damageReduction: 10, turnShield: 10 },
+    passive: { damageReduction: 5, turnShield: 5 },
     deckCardIds: ['war-quake', 'war-wall', 'war-bash'],
+    // 몸이 곧 돌인 유일한 몬스터 — 일반 전투로 만나도 판에 바위를 데려온다.
+    terrain: 'rubble',
     note: '거대한 바위 몸. 딜을 뚫기 전엔 꿈쩍도 안 한다.',
   },
   {
@@ -287,10 +309,10 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'archer',
     spriteId: 'martial-hero',
     tier: 3,
-    maxHp: 95, // 75 → 95 (2026-07-30): 급소를 노리기 전에 먼저 죽었다(시뮬 3턴 만에 격파)
-    startEnergy: 70,
+    maxHp: 48, // 75 → 95 (2026-07-30): 급소를 노리기 전에 먼저 죽었다(시뮬 3턴 만에 격파)
+    startEnergy: 35,
     aiLevel: 'hard',
-    passive: { attackBonus: 10 },
+    passive: { attackBonus: 5 },
     deckCardIds: ['mag-spark', 'arc-pin', 'c-strike'],
     note: '순식간에 파고들어 급소를 노린다.',
   },
@@ -301,12 +323,12 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'evil-wizard',
     tier: 3,
-    maxHp: 100,
-    startEnergy: 45,
+    maxHp: 50,
+    startEnergy: 23,
     aiLevel: 'hard',
     // 기력을 조인다(2026-07-30 밸런스): 예전엔 매 턴 노바 블래스트(40)를 쏴서
     // 3턴 만에 런이 끝났다. 이제 한 방 쏘면 모아야 해서 반격·회피 창이 생긴다.
-    passive: { turnEnergy: 8 },
+    passive: { turnEnergy: 4 },
     deckCardIds: ['arc-pin', 'arc-shot', 'c-guard'],
     note: '화면 끝에서 광역 폭발을 퍼붓는다. 쏜 직후가 빈틈이다.',
   },
@@ -317,12 +339,12 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'archer',
     spriteId: 'slime',
     tier: 3,
-    maxHp: 100,
-    startEnergy: 60,
+    maxHp: 50,
+    startEnergy: 30,
     aiLevel: 'hard',
     // 2026-07-30 밸런스: "두 번 죽여야 한다"는 정체성인데 두 몸 다 아프지 않아
     // 시간만 끌었다(시뮬 승률 100%). 되살아난 뒤가 더 무섭게.
-    passive: { revive: 60 },
+    passive: { revive: 30 },
     deckCardIds: ['mag-spark', 'war-cleave', 'mag-frost'],
     note: '쓰러뜨려도 두 번은 죽여야 하는 끈질긴 개체.',
   },
@@ -333,13 +355,13 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'warrior',
     spriteId: 'terrible-knight',
     tier: 4,
-    maxHp: 155,
-    startEnergy: 65,
+    maxHp: 78,
+    startEnergy: 33,
     aiLevel: 'hard',
     // 방벽을 낮춘다(2026-07-30 밸런스): 매 턴 보호막 20 + 피해감소 8이면 플레이어
     // 화력이 통째로 먹혀 15턴 독안개 소모전이 됐다. 뚫리는 벽으로 조정.
-    passive: { turnShield: 12, damageReduction: 8, turnEnergy: 8 },
-    deckCardIds: ['b-ward-bulwark', 'b-ward-riposte', 'b-ward-lance', 'b-ward-verdict'],
+    passive: { turnShield: 6, damageReduction: 4, turnEnergy: 4 },
+    deckCardIds: ['b-ward-menhir', 'b-ward-bulwark', 'b-ward-riposte', 'b-ward-lance', 'b-ward-verdict'],
     note: '엘리트 — 방벽을 올렸다 열며 보호막째 부순다.',
   },
   {
@@ -349,11 +371,13 @@ export const MONSTERS: MonsterDef[] = [
     baseArtId: 'mage',
     spriteId: 'dragon',
     tier: 4,
-    maxHp: 180,
-    startEnergy: 65,
+    maxHp: 90,
+    startEnergy: 33,
     aiLevel: 'hard',
-    passive: { attackBonus: 8, revive: 50, turnEnergy: 10 },
+    passive: { attackBonus: 4, revive: 25, turnEnergy: 5 },
     deckCardIds: ['b-pyre-inferno', 'b-pyre-pillar', 'b-pyre-lash', 'b-pyre-ember'],
+    // 굳은 용암 한 덩이. 가운데를 막아 직선 접근을 꺾는다.
+    terrain: 'lavaslab',
     note: '엘리트 — 불씨를 모을수록 무거워진다. 길게 끌면 인페르노가 터진다.',
   },
 ]

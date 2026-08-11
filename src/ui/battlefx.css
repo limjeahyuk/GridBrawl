@@ -834,59 +834,95 @@
   max-width: 100%;
   min-width: 0;
 }
-.cards__moves {
-  /* 세로 2줄로 채우고 필요한 만큼 열이 늘어난다 — 이동 카드는 4~10장으로
-     덱마다 달라서, 열 수를 고정하면 어떤 덱에선 너무 높아진다. */
+/* ---- 얼어붙음 알림 -------------------------------------------------------
+   이동 칩(화살표 격자)은 2026-08-05에 통째로 뺐다 — 이동은 판의 칸을 눌러서
+   하므로 같은 일을 두 번 하는 자리였고, 좁은 손패 폭만 잡아먹었다. 다만
+   **얼었을 때 이유를 놓을 자리**는 남겨야 한다("왜 칸이 안 밝지"). */
+.cards__note {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, auto);
-  gap: 4px;
+  gap: 2px;
+  align-content: center;
   flex: none;
-  padding-right: 12px;
-  border-right: 1px solid var(--panel-edge);
-}
-.movechip {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  position: relative;
-  padding: 0;
-  border: 1px solid var(--panel-edge);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--neon-yellow) 8%, var(--bg-2));
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
-}
-.movechip:not(:disabled):hover {
-  border-color: var(--neon-yellow);
-  background: color-mix(in srgb, var(--neon-yellow) 22%, var(--bg-2));
-  color: var(--text);
-}
-.movechip:not(:disabled):active {
-  transform: translateY(1px);
-}
-.movechip.is-dim {
-  opacity: 0.32;
-  cursor: not-allowed;
-}
-.movechip__arrow {
-  font-size: 13px;
-  line-height: 1;
-  letter-spacing: -1px;
-}
-.movechip__cd {
-  position: absolute;
-  right: -3px;
-  top: -4px;
-  min-width: 14px;
-  padding: 0 3px;
-  border-radius: 7px;
-  background: var(--bg-0);
-  border: 1px solid var(--panel-edge);
+  padding: 6px 10px;
+  margin-right: 10px;
+  border: 1px solid color-mix(in srgb, var(--neon-cyan) 45%, var(--panel-edge));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--neon-cyan) 12%, var(--bg-2));
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
-  color: var(--neon-yellow);
+  letter-spacing: 0.04em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.cards__note em {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* --- 지형: 바위 --------------------------------------------------------------
+   판을 막고 선 돌덩이. **픽셀 스프라이트다**(`public/terrain/rocks.png` — 굽는 건
+   `npm run rocks`). 예전엔 그라디언트로 그렸는데, 판 배경이 어두운 자주/갈색이라
+   같은 계열의 갈색 덩어리가 **바닥에 눌어붙은 진흙처럼** 읽혔다(사용자 신고).
+   실루엣과 하이라이트가 있는 회색 돌이라야 "저건 막힌 칸이다"가 한눈에 잡힌다.
+
+   ⚠ **배율은 정수 4배 고정**(32px 원본 → 128px). 캐릭터가 정수 배율이라 바위만
+      소수 배율이면 픽셀 크기가 어긋난다 — `image-rendering: pixelated`와 짝이다.
+   ⚠ `--v`는 스트립의 **프레임 번호**다(0~3 회색 · 4~5 이끼 · 6~7 흑요석).
+      `scripts/packrocks.mjs`의 `PICKS` 순서와 짝이라 한쪽만 바꾸면 어긋난다.
+   ⚠ **클릭을 먹으면 안 된다.** 이동은 칸을 눌러서 하는데, 바위는 칸을 통째로
+      덮으므로 `pointer-events`가 살아 있으면 그 자리로 가는 것도, 그 뒤 칸을
+      누르는 것도 막힌다(`.fighter`가 같은 이유로 이미 뚫려 있다).
+   ⚠ 파이터(`z-index: 2`)보다 **아래**에 둔다 — 바위 칸엔 아무도 설 수 없지만
+      스프라이트는 발밑 기준이라 윗줄 바위와 겹쳐 그려진다. 사람이 가려지면 안 된다. */
+.rock {
+  position: absolute;
+  width: 128px;
+  height: 128px;
+  transform: translate(-50%, -60%);
+  z-index: 1;
+  pointer-events: none;
+  animation: rock-rise 260ms cubic-bezier(0.2, 1.3, 0.5, 1);
+  /* 스트립 8프레임 × 32px를 4배로 — 폭 1024px. `--v`번째 프레임만 보인다. */
+  background-image: url('/terrain/rocks.png');
+  background-repeat: no-repeat;
+  background-size: 1024px 128px;
+  background-position: calc(var(--v, 0) * -128px) 0;
+  image-rendering: pixelated;
+  /* 판 위에 얹혀 있다는 접지감. 그림자를 실루엣에서 직접 뽑으므로 돌 종류가
+     바뀌어도 따로 손볼 데가 없다(예전 `::after` 타원은 모양이 안 맞았다). */
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.8));
+}
+/* 남은 체력 = 금이 간 정도. 숫자를 안 읽어도 "한 대 더면 깨진다"가 보여야 한다.
+   ⚠ 금은 **돌 위에만** 그려야 한다 — 스프라이트 자체를 마스크로 써서 네모난
+      상자에 금이 그어지는 걸 막는다(clip-path로는 돌마다 모양이 달라 못 맞춘다). */
+.rock__hp {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: calc(1 - var(--frac, 1));
+  background:
+    linear-gradient(126deg, transparent 46%, rgba(12, 7, 6, 0.9) 47% 50%, transparent 51%),
+    linear-gradient(72deg, transparent 58%, rgba(12, 7, 6, 0.75) 59% 62%, transparent 63%);
+  mask-image: url('/terrain/rocks.png');
+  mask-repeat: no-repeat;
+  mask-size: 1024px 128px;
+  mask-position: calc(var(--v, 0) * -128px) 0;
+  -webkit-mask-image: url('/terrain/rocks.png');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 1024px 128px;
+  -webkit-mask-position: calc(var(--v, 0) * -128px) 0;
+}
+/* 마지막 단계는 붉게 달아오른다 — 다음 한 대에 깨진다는 신호. 실루엣에서 뽑은
+   빛이라 돌 모양을 그대로 따라간다. */
+.rock--wear2 {
+  filter:
+    drop-shadow(0 3px 2px rgba(0, 0, 0, 0.8))
+    drop-shadow(0 0 6px rgba(198, 78, 40, 0.75));
+}
+@keyframes rock-rise {
+  from { transform: translate(-50%, -26%) scaleY(0.2); opacity: 0; }
+  to { transform: translate(-50%, -60%) scaleY(1); opacity: 1; }
 }

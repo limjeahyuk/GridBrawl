@@ -10,6 +10,8 @@ import {
   upgradableDeckCards, type EventEffect, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
+import { useCardZoom } from '../CardDetail'
+import { DeckPicker } from '../DeckPicker'
 import { RunBar } from '../RunBar'
 
 /** 강화형 선택지인가 — 카드 목록을 "강화 가능한 것만"으로 좁히는 기준. */
@@ -31,6 +33,8 @@ function blockedReason(run: RunState, e: EventEffect): string | null {
 export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
   const ev = useMemo(() => rollEvent(), [run])
   const char = getChar(run.charId)
+  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+  const zoom = useCardZoom(char.accent)
   const [pending, setPending] = useState<EventEffect | null>(null) // 카드 선택 대기
   const [result, setResult] = useState<{
     run: RunState
@@ -97,27 +101,27 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
       <div className="screen event">
         <div className="grid-bg" />
         <h2 className="event__title">{upgrading ? '벼릴 카드를 고르세요' : '녹일 카드를 고르세요'}</h2>
-        <div className="reward__deck">
-          {list.map((id, i) => {
+        {/* 강화형이면 고르기 **전에** 강화 후 모습을 보여 준다 — 무엇이 오르는지
+            모르고 대가를 치르게 하면 안 된다. 툴팁엔 오른 항목을 글로도 적는다. */}
+        <DeckPicker
+          charId={run.charId}
+          deck={list}
+          zoom={zoom}
+          onPick={pickCard}
+          cardOf={(id) => {
             const base = resolveRunCard(run.charId, id)
-            if (!base) return null
-            // 강화형이면 고르기 전에 **강화 후 모습**을 보여 준다.
-            const c = upgrading && canUpgradeCard(run, id)
+            if (!base) return undefined
+            return upgrading && canUpgradeCard(run, id)
               ? upgradedCard(base, cardLevel(run, id) + 1)
               : (runCard(run, id) ?? base)
-            return (
-              <button
-                key={`${id}-${i}`}
-                className="reward__card"
-                style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                onClick={() => pickCard(id)}
-                title={upgrading ? upgradePreview(base, cardLevel(run, id)) : undefined}
-              >
-                <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
-              </button>
-            )
-          })}
-        </div>
+          }}
+          titleOf={(id) => {
+            if (!upgrading) return undefined
+            const base = resolveRunCard(run.charId, id)
+            return base ? upgradePreview(base, cardLevel(run, id)) : undefined
+          }}
+        />
+        {zoom.sheet}
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>

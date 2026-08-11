@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AuthUser } from '../../net/auth'
 
 const HOW_TO: { step: string; label: string }[] = [
-  { step: '1', label: '매 턴 카드 3장을 골라 슬롯에 순서대로 배치한다.' },
+  { step: '1', label: '매 라운드 카드 3장을 골라 슬롯에 순서대로 배치한다(3장 = 3턴).' },
   { step: '2', label: '같은 슬롯에선 이동·가드·원기(빠른 카드)가 공격보다 먼저 실행된다.' },
   { step: '3', label: '6×3 격자를 상하좌우로 움직여 상대의 사정거리를 피하라.' },
   { step: '4', label: '공격 카드는 기력(⚡)을 소모한다. 원기 카드로 회복.' },

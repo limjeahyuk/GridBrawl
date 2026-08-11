@@ -35,6 +35,7 @@ import {
   currentOptions,
   grantCard,
   grantRelic,
+  isLockedCard,
   upgradableDeckCards,
   resolveEventEffect,
   rollEvent,
@@ -129,10 +130,13 @@ function cardScore(id: string, deck: string[], run?: RunState): number {
   if (up === c) return 0
   return Math.max(0, rawScore(up) - rawScore(c)) * 1.5
 }
-/** 덱에서 가장 값이 낮은 카드(교체·제거용). 이동 4방향은 남겨 둔다. */
+/**
+ * 덱에서 가장 값이 낮은 카드(교체용). 이동 4방향은 남겨 둔다 — 여기 목록을 손으로
+ * 적어 두고 있었는데 이제 **엔진이 실제로 잠그는** 카드다(`run.ts`의 덱 룰). 목록이
+ * 한 곳에서 오므로 잠금 규칙을 바꾸면 시뮬 정책도 같이 따라간다.
+ */
 function worstCard(deck: string[]): string {
-  const keep = new Set(['m-up', 'm-down', 'm-left', 'm-right'])
-  const pool = deck.filter((id) => !keep.has(id))
+  const pool = deck.filter((id) => !isLockedCard(id))
   const target = pool.length ? pool : deck
   return target.reduce((lo, id) => (cardScore(id, []) < cardScore(lo, []) ? id : lo), target[0])
 }
@@ -169,16 +173,16 @@ async function playFight(run: RunState): Promise<FightResult> {
   const fp = runFightProps(run)
   const battle = new CardBattle(fp.p0CharId, fp.p1CharId, fp.battleOpts)
   const pChar = fp.battleOpts.chars![0]
-  while (!battle.state.over && battle.state.turn <= MAX_TURNS) {
+  while (!battle.state.over && battle.state.round <= MAX_TURNS) {
     const p0 = decideAI(battle.state, 0, pChar, SKILL, fp.deck)
     const p1 = (await fp.getOpponentPlan(p0, battle)) ?? []
-    battle.resolveTurn(p0, p1)
+    battle.resolveRound(p0, p1)
   }
   // 무승부·타임아웃은 화면(BattleScreen)과 같게 플레이어 패배로 본다.
   return {
     won: battle.state.over && battle.state.winner === 0,
     hpLeft: battle.state.hp[0],
-    turns: battle.state.turn,
+    turns: battle.state.round,
   }
 }
 

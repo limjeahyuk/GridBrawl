@@ -16,23 +16,29 @@ import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine
 import type { BattleScene } from '../../game/run'
 import type { BossCinematic } from '../../game/bosses'
 import { deckFor } from '../../battle/cards'
-import { CardFace, cardAccent, moveIcon } from '../CardFace'
+import { CardFace, cardAccent } from '../CardFace'
+import { CardDetail, useLongPress } from '../CardDetail'
 import { PortraitSvg } from '../PortraitSvg'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
-  COLLAPSE_START_TURN,
+  COLLAPSE_START_ROUND,
   collapseDamageAt,
   collapseEscalatesNext,
   GRID_COLS,
   GRID_ROWS,
   MOVE_DELTA,
+  canStand,
+  facingBetween,
   inBounds,
   isCollapsedCell,
   MIRROR_DIR,
+  rockAt,
+  shadowRock,
   type ActionResult,
   type Cell,
   type CardDef,
   type MoveDir,
+  type Obstacle,
   type Step,
   type StatusEffect,
 } from '../../battle/types'
@@ -53,6 +59,8 @@ interface View {
   hp: [number, number]
   energy: [number, number]
   shield: [number, number]
+  /** 이 시점의 지형(바위). 스텝마다 바뀌므로 뷰에 싣는다 — 부서지는 순간이 보여야 한다. */
+  obstacles: Obstacle[]
   acting: [boolean, boolean] // attack lunge
   /** 지금 내는 공격 카드의 fx 종류. 준비 동작~타격 내내 유지돼야 한다 —
    *  중간에 바뀌면 CSS animation-name이 갈려 모션이 처음부터 다시 뛴다. */
@@ -77,12 +85,27 @@ const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
 const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-/** Board cells an attack covers, from the attacker's cell and facing (+1 / -1). */
-function attackCells(from: Cell, card: CardDef, facing: number, foe?: Cell): Cell[] {
+/**
+ * Board cells an attack covers, from the attacker's cell and facing (+1 / -1).
+ *
+ * ⚠ **바위에 가려진 칸은 빼고 그린다**(2026-08-05). 붉은 칸은 "여기를 때린다"는
+ * 약속이라, 사격선이 끊긴 칸까지 칠하면 화면이 거짓말을 한다 — 바위 뒤를 노리고
+ * 카드를 냈는데 헛치는 게 버그로 읽힌다. 바위 **자체가 선 칸**은 남긴다(그 바위를
+ * 때려서 깨는 게 실제로 일어나는 일이다). 관통 공격은 아무것도 안 걸러낸다.
+ */
+function attackCells(
+  from: Cell,
+  card: CardDef,
+  facing: number,
+  foe?: Cell,
+  rocks: readonly Obstacle[] = [],
+  pierces = false,
+): Cell[] {
   if (card.kind !== 'attack') return []
   const cells = (card.range ?? [])
     .map((o) => ({ col: from.col + facing * o.df, row: from.row - o.du }))
     .filter(inBounds)
+    .filter((c) => pierces || !rocks.length || !!rockAt(rocks, c) || !shadowRock(rocks, from, c))
   // 밀착: 상대가 내 셀에 겹쳐 서 있으면 이 카드로 때릴 수 있는지(pointBlank)에 따라
   // 내 셀도 타격 범위로 보여 준다 — 엔진 판정과 같은 규칙.
   if (foe && foe.col === from.col && foe.row === from.row && card.pointBlank !== false)
@@ -109,15 +132,31 @@ export function faceToward(myCol: number, foeCol: number, fallback: 'left' | 'ri
 /** Where a move card lands, mirroring the engine's rule: walls stop you, the
  *  opponent's cell can be passed through or landed on (겹침 허용). Used to
  *  preview an attack's reach *after* earlier move cards in the plan resolve. */
-function applyMovePreview(from: Cell, card: CardDef): Cell {
+function applyMovePreview(from: Cell, card: CardDef, rocks: readonly Obstacle[] = []): Cell {
   const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
   let cur = { ...from }
   for (let k = 0; k < (card.steps ?? 1); k++) {
     const next = { col: cur.col + dc, row: cur.row + dr }
-    if (!inBounds(next)) break
+    if (!canStand(rocks, next)) break // 벽·바위에서 멈춤 — 엔진 applyMove와 같은 규칙
     cur = next
   }
   return cur
+}
+
+/**
+ * 그 칸에 설 바위의 **스트립 프레임 번호**(`public/terrain/rocks.png`의 `--v`).
+ * 재질은 무대가 정하고(묘지=이끼 · 용암=흑요석 · 나머지=회색), 그 안에서 어느
+ * 덩이인지는 **칸 좌표로** 고른다 — 판에 두세 덩이가 동시에 서므로 다 같은 모양이면
+ * 도장을 찍은 것처럼 읽힌다. 좌표를 쓰는 이유는 재현성이다: 렌더마다 굴리면 바위가
+ * 맞을 때마다 다른 돌로 바뀌고, 랜덤을 쓰면 두 피어의 화면이 달라진다.
+ * ⚠ 프레임 구간은 `scripts/packrocks.mjs`의 `PICKS` 순서와 짝이다.
+ */
+function rockVariant(cell: Cell, scene: BattleScene): number {
+  const [base, count] = scene === 'lava' ? [6, 2] : scene === 'cemetery' ? [4, 2] : [0, 4]
+  // ⚠ 계수는 `5·2`여야 한다. 재질이 둘뿐일 때(`count = 2`) 이 식은 **열의 홀짝**으로
+  //   떨어지는데, 계수를 둘 다 홀수로 잡으면 `(열+행)`의 홀짝이 되어 묘지 배치의
+  //   두 바위 (2,0)·(3,3)가 **같은 그림**을 받는다(실제로 그렇게 나왔다).
+  return base + ((cell.col * 5 + cell.row * 2) % count)
 }
 
 const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
@@ -134,6 +173,7 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   status: '피해!',
   buff: '강화!',
   frozen: '얼어붙음',
+  rock: '',
 }
 const PHASE_TEXT: Record<Step['phase'], string> = {
   move: '이동',
@@ -144,15 +184,35 @@ const PHASE_TEXT: Record<Step['phase'], string> = {
   stun: '기절',
   trigger: '유물',
   status: '상태이상',
+  rock: '지형',
 }
 /** 파이터 발밑 상태 칩 — 지금 뭐가 걸려 있는지 숫자를 안 읽어도 보이게. */
 const STATUS_CHIP: Record<string, string> = {
   poison: '☠',
   burn: '🔥',
   frozen: '❄',
+  stunned: '💫',
+  bind: '🕸',
   atkUp: '🔺',
   defUp: '🔷',
   freeCast: '🌀',
+}
+
+/**
+ * 상태이상 목록을 **종류별로 묶는다**. 중독·화상은 겹마다 따로 살아 있어서
+ * (남은 라운드가 겹마다 다르다) 그대로 그리면 같은 아이콘이 세 개씩 늘어선다.
+ * 위력은 합(한 번에 들어오는 총 피해), 남은 라운드는 최대(그때까지는 남아 있다).
+ */
+function statusChips(list: readonly StatusEffect[]): { kind: string; power: number; rounds: number }[] {
+  const out: { kind: string; power: number; rounds: number }[] = []
+  for (const e of list) {
+    const cur = out.find((c) => c.kind === e.kind)
+    if (cur) {
+      cur.power += e.power
+      cur.rounds = Math.max(cur.rounds, e.rounds)
+    } else out.push({ kind: e.kind, power: e.power, rounds: e.rounds })
+  }
+  return out
 }
 
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
@@ -161,6 +221,7 @@ const STEP_MS: Record<Step['phase'], number> = {
   stun: 900, // 기절은 한 턴을 통째로 날리므로 충분히 보여준다
   trigger: 700,
   status: 620, // 독·화상 틱 — 여러 개가 잇달아 뜰 수 있어 짧게
+  rock: 560, // 바위가 솟거나 부서지는 순간 — 판의 모양이 바뀌므로 눈에 담을 틈은 준다
 }
 /** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
 const CUTIN_MS = 1750
@@ -204,6 +265,7 @@ function baseView(b: CardBattle): View {
     hp: [s.hp[0], s.hp[1]],
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
+    obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
     acting: [false, false],
     actFx: [null, null],
     damage: [0, 0],
@@ -249,6 +311,7 @@ function stepToView(step: Step, seq: number): View {
     hp: [s.hp[0], s.hp[1]],
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
+    obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
     acting,
     actFx,
     status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
@@ -410,6 +473,20 @@ export function BattleScreen({
   const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
   // 필살기 컷인(시그니처 카드 발동 순간 화면을 덮는 연출)
   const [cutIn, setCutIn] = useState<{ seq: number; actor: 0 | 1; card: CardDef } | null>(null)
+  /**
+   * 꾹 눌러 여는 **카드 상세**(2026-08-05). 압축 카드에서 뺀 설명·능력의 뜻이
+   * 여기로 갔다. 누른 카드는 ref로 기억한다 — 훅은 화면에 하나뿐이라 손패 카드마다
+   * 따로 걸 수 없다.
+   */
+  const [zoomCard, setZoomCard] = useState<CardDef | null>(null)
+  const pressedCard = useRef<CardDef | null>(null)
+  const longPress = useLongPress(() => {
+    if (!pressedCard.current) return
+    setZoomCard(pressedCard.current)
+    setHoveredCard(null)
+    setHoverSlot(null)
+    playSfx('ui')
+  })
   // 보스 컷인 — 등장(전투 시작)과 격노(페이즈 전환) 두 번뿐이다. 필살기 컷인과
   // **별개의 레이어**다: 저쪽은 카드 한 장을 못 박고 이쪽은 상대가 누구인지를 못 박는다.
   const [bossCut, setBossCut] = useState<{ seq: number; kind: 'entrance' | 'enrage' } | null>(null)
@@ -469,6 +546,20 @@ export function BattleScreen({
   // 모든 공격 카드(같은 공격 반복 금지 — 3공격은 서로 다른 카드로만 가능).
   const placedNoRepeat = (c: CardDef) =>
     ((c.cooldown ?? 0) >= 1 || c.kind === 'attack') && slots.some((s) => s?.id === c.id)
+  /**
+   * **봉인이 라운드를 넘어온 경우**만 손패에 이유를 세운다(2026-08-07).
+   *
+   * 기절·빙결·속박은 기본적으로 걸린 라운드 안에서만 살기 때문에, 카드를 고르는 이
+   * 시점에는 보통 아무것도 안 걸려 있다(예전 "넉백 당하고 이동이 안 된다" 함정은
+   * 그래서 규칙째로 사라졌다). 예외는 **런 전용 전설 유물**(`stunRoundBonus` 계열)로
+   * 지속이 2라운드가 된 봉인뿐이다 — 그때는 고른 카드가 통째로 무효가 되므로
+   * **왜인지 말해 주지 않으면 "실행했는데 아무 일도 안 일어난다"가 된다**.
+   *
+   * ⚠ 카드를 **못 고르게 막지는 않는다**. 봉인은 엔진이 슬롯마다 다시 판정하고
+   *   (같은 라운드 안에서 풀릴 수도 있다 — 빙결은 맞으면 깨진다), 여기서 잠그면
+   *   그 경우에 낼 수 있었던 카드를 화면이 먼저 빼앗는 셈이 된다.
+   */
+  const roundLock = battle.lockedThisRound(localSide) ?? battle.statusOf(localSide, 'bind')
   const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c)
 
   const addCard = (c: CardDef) => {
@@ -536,19 +627,27 @@ export function BattleScreen({
   // 놓아도 예시가 유지되고, 슬롯이 모두 비어야 사라진다.
   // ⚠ 카드를 고르는 동안에만 그린다 — 실행을 누르면 슬롯은 그대로지만(해소가
   //   끝나야 비운다) 예시는 즉시 사라져야 실제 진행과 겹치지 않는다.
+  // 지금 판에 선 바위. 이동 가능 칸·사거리 미리보기가 전부 이걸 본다(엔진과 같은 규칙).
+  const rocks = battle.state.obstacles
+  /** 이 카드가 바위를 무시하는가 — 엔진 `piercesRock`(카드 pierce + 유물 alwaysPierce). */
+  const piercesRock = (c: CardDef) => !!c.pierce || !!battle.passive[localSide].alwaysPierce
+
   const planPreview = useMemo(() => {
     const cur = view.pos[localSide]
     const none = { ghost: null as Cell | null, cells: [] as Cell[] }
     if (phase !== 'select') return none
-    const facing = battle.facing(localSide)
+    const foe = view.pos[1 - localSide]
     let at = { ...cur }
     // 공격 범위는 **누적하지 않는다** — 여러 장을 고르면 빨간 칸이 뒤섞여 헷갈리므로
     // 가장 마지막에 고른 공격의 범위만 남긴다(위치는 앞선 이동까지 반영된 값).
     let cells: Cell[] = []
     for (const c of slots) {
       if (!c) continue
-      if (c.kind === 'move') at = applyMovePreview(at, c)
-      else if (c.kind === 'attack') cells = attackCells(at, c, facing, view.pos[1 - localSide])
+      if (c.kind === 'move') at = applyMovePreview(at, c, rocks)
+      // ⚠ 방향은 **그 카드가 나갈 자리에서** 다시 잰다(2026-08-05) — 앞선 이동으로
+      //   상대를 지나쳤으면 사거리도 같이 뒤집힌다. 엔진과 같은 규칙.
+      else if (c.kind === 'attack')
+        cells = attackCells(at, c, facingBetween(at, foe, localSide), foe, rocks, piercesRock(c))
     }
     const moved = at.col !== cur.col || at.row !== cur.row
     return { ghost: moved ? at : null, cells }
@@ -570,10 +669,10 @@ export function BattleScreen({
     let from = { ...cur }
     for (let j = 0; j < upto; j++) {
       const c = slots[j]
-      if (c?.kind === 'move') from = applyMovePreview(from, c)
+      if (c?.kind === 'move') from = applyMovePreview(from, c, rocks)
     }
     let ghost: Cell | null =
-      hoveredCard.kind === 'move' ? applyMovePreview(from, hoveredCard) : from
+      hoveredCard.kind === 'move' ? applyMovePreview(from, hoveredCard, rocks) : from
     if (ghost && ghost.col === cur.col && ghost.row === cur.row) ghost = null
     return { from, ghost }
   }, [hoveredCard, hoverSlot, slots, view, localSide, planPreview])
@@ -594,8 +693,8 @@ export function BattleScreen({
     const from = planPreview.ghost ?? view.pos[localSide]
     for (const c of hand) {
       if (c.kind !== 'move' || !selectable(c) || !canAfford(c)) continue
-      const to = applyMovePreview(from, c)
-      if (to.col === from.col && to.row === from.row) continue // 벽에 막혀 제자리
+      const to = applyMovePreview(from, c, rocks)
+      if (to.col === from.col && to.row === from.row) continue // 벽·바위에 막혀 제자리
       const key = `${to.col},${to.row}`
       const prev = out.get(key)
       if (!prev || (c.steps ?? 1) < (prev.steps ?? 1)) out.set(key, c)
@@ -608,7 +707,14 @@ export function BattleScreen({
   const targetCells = useMemo(
     () =>
       hoveredCard?.kind === 'attack'
-        ? attackCells(preview.from, hoveredCard, battle.facing(localSide), view.pos[1 - localSide])
+        ? attackCells(
+            preview.from,
+            hoveredCard,
+            facingBetween(preview.from, view.pos[1 - localSide], localSide),
+            view.pos[1 - localSide],
+            rocks,
+            piercesRock(hoveredCard),
+          )
         : planPreview.cells,
     [hoveredCard, preview, battle, localSide, planPreview],
   )
@@ -652,10 +758,10 @@ export function BattleScreen({
     // host is side 0, guest side 1 — feed plans in canonical order
     const planA = localSide === 0 ? localPlan : oppPlan
     const planB = localSide === 0 ? oppPlan : localPlan
-    // ⚠ resolveTurn은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
+    // ⚠ resolveRound은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
     //   준비 동작에 쓸 턴 시작 화면은 그 전에 떠 둬야 한다.
     const turnStart = baseView(battle)
-    const steps = battle.resolveTurn(planA, planB)
+    const steps = battle.resolveRound(planA, planB)
 
     /** 이 스텝의 피해로 정말 쓰러졌는가 — 뒤에 부활 스텝이 오면 KO가 아니다. */
     const koAt = (si: number, target: 0 | 1) =>
@@ -739,8 +845,14 @@ export function BattleScreen({
           cells: attackCells(
             step.snapshot.pos[actor],
             step.card,
-            battle.facing(actor),
+            // ⚠ **이 스텝의 스냅샷**으로 방향을 잰다 — `battle.facing()`은 이미 턴이
+            //   끝난 뒤의 위치를 보므로, 재생 중에 사거리가 엉뚱한 쪽에 그려진다.
+            facingBetween(step.snapshot.pos[actor], step.snapshot.pos[foe], actor),
             step.snapshot.pos[foe],
+            // 지형도 **그 스텝의 스냅샷**으로 본다 — 바위가 부서지는 건 뒤따르는
+            // 별도 스텝이라, 이 시점엔 아직 서 있고 그게 실제로 막은 상태다.
+            step.snapshot.obstacles,
+            !!step.card.pierce || !!battle.passive[actor].alwaysPierce,
           ),
           actor,
         })
@@ -914,7 +1026,7 @@ export function BattleScreen({
         maxHp={battle.maxHp}
         localSide={localSide}
         view={view}
-        turn={battle.state.turn}
+        turn={battle.state.round}
         remain={remain}
         boss={boss}
         onQuit={onQuit}
@@ -938,7 +1050,7 @@ export function BattleScreen({
             //   예전엔 이동 강조가 붕괴 표시를 통째로 덮어써서, 갈 수 있는 칸은 전부
             //   멀쩡해 보였고 "이동하면 안개에 안 들어간다"로 읽혔다.
             const cell = { col: ccol, row }
-            const turn = battle.state.turn
+            const turn = battle.state.round
             const hazard = isCollapsedCell(cell, turn)
               ? ' cell--fog'
               : isCollapsedCell(cell, turn + 1)
@@ -965,6 +1077,28 @@ export function BattleScreen({
               )
             }
             return <span className={`cell${cls}`} key={i} />
+          })}
+          {/* 지형 — 판 위에 얹는 바위. ⚠ `pointer-events: none`이 필수다(칸을 눌러
+              이동하므로 바위가 클릭을 먹으면 그 줄이 통째로 안 눌린다). 금이 간
+              정도는 남은 체력으로 3단계 — 몇 대 더 때리면 깨지는지가 보여야 한다. */}
+          {view.obstacles.map((r) => {
+            const frac = r.hp / Math.max(1, r.maxHp)
+            const wear = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2
+            const v = rockVariant(r.cell, scene)
+            return (
+              <div
+                key={`rock-${r.cell.col},${r.cell.row}`}
+                className={`rock rock--wear${wear}`}
+                style={{
+                  left: `${cellX(dcol(r.cell.col))}%`,
+                  top: `${cellY(r.cell.row)}%`,
+                  ['--v' as string]: v,
+                }}
+                aria-hidden
+              >
+                <span className="rock__hp" style={{ ['--frac' as string]: frac, ['--v' as string]: v }} />
+              </div>
+            )
           })}
           {preview.ghost && (
             // 잔상도 본체와 **같은 몸**이어야 한다 — 스프라이트 캐릭터인데 잔상만
@@ -1072,7 +1206,7 @@ export function BattleScreen({
           telegraph &&
           (() => {
             const opp = (1 - localSide) as 0 | 1
-            const msg = telegraph(battle.state.turn, battle.state.hp[opp] / battle.maxHp[opp])
+            const msg = telegraph(battle.state.round, battle.state.hp[opp] / battle.maxHp[opp])
             return msg ? (
               <div className={`board__telegraph ${boss ? 'board__telegraph--boss' : ''}`}>{msg}</div>
             ) : null
@@ -1086,22 +1220,37 @@ export function BattleScreen({
               <button
                 key={i}
                 className={`slot ${c ? 'slot--filled' : ''}`}
-                onClick={() => clearSlot(i)}
+                onClick={() => {
+                  // 슬롯도 꾹 누르면 읽힌다 — 담아 놓고 "이게 뭐였지" 할 때가 있다.
+                  if (longPress.consumedClick()) return
+                  clearSlot(i)
+                }}
                 onPointerEnter={(e) => {
                   if (e.pointerType !== 'mouse') return
                   setHoveredCard(c && (c.kind === 'attack' || c.kind === 'move') ? c : null)
                   setHoverSlot(i)
                 }}
                 onPointerDown={(e) => {
+                  pressedCard.current = c
+                  if (c) longPress.handlers.onPointerDown(e)
                   if (e.pointerType === 'mouse') return
                   setHoveredCard(c && (c.kind === 'attack' || c.kind === 'move') ? c : null)
                   setHoverSlot(i)
                 }}
-                onPointerLeave={() => setHoveredCard(null)}
+                onPointerMove={longPress.handlers.onPointerMove}
+                onContextMenu={longPress.handlers.onContextMenu}
+                onPointerLeave={() => {
+                  longPress.handlers.onPointerLeave()
+                  setHoveredCard(null)
+                }}
                 onPointerUp={(e) => {
+                  longPress.handlers.onPointerUp()
                   if (e.pointerType !== 'mouse') setHoveredCard(null)
                 }}
-                onPointerCancel={() => setHoveredCard(null)}
+                onPointerCancel={() => {
+                  longPress.handlers.onPointerCancel()
+                  setHoveredCard(null)
+                }}
                 style={c ? { ['--accent' as string]: cardAccent(c, local.accent) } : undefined}
               >
                 <span className="slot__no">{i + 1}</span>
@@ -1130,31 +1279,25 @@ export function BattleScreen({
             </div>
           </div>
 
-          {/* 탭 없음 — 이동은 판을 눌러서 한다(`moveTargets`). 손패에는 공격·수비만
-              남으므로 탭을 오갈 이유가 사라졌다. */}
+          {/* ⚠ **이동 카드는 선택창에 없다**(2026-08-05 사용자 요청). 이동은 판의
+              칸을 눌러서 하므로(`moveTargets`) 화살표 칩은 같은 일을 두 번 하는
+              자리였고, 좁은 손패 폭만 잡아먹었다. 쿨타임·기력으로 못 쓰는 이동은
+              **칸이 아예 안 밝혀지는** 것으로 이미 드러난다. */}
           <div className="cards__row">
-            {/* 이동 칩 — 판을 눌러도 되지만, **쿨타임과 남은 이동 수단이 한눈에**
-                보여야 계획을 세울 수 있다. 화살표만 남긴 최소 형태. */}
-            <div className="cards__moves">
-              {hand.filter((c) => c.kind === 'move').map((c) => {
-                const cd = cdLeft(c.id)
-                const usable = selectable(c) && canAfford(c)
-                const f = faceCard(c)
-                return (
-                  <button
-                    key={c.id}
-                    className={`movechip ${usable ? '' : 'is-dim'}`}
-                    onClick={() => addCard(c)}
-                    disabled={!usable}
-                    title={f.name}
-                    aria-label={f.name}
-                  >
-                    <span className="movechip__arrow">{moveIcon(f.dir, f.steps ?? 1)}</span>
-                    {cd > 0 && <span className="movechip__cd">{cd}</span>}
-                  </button>
-                )
-              })}
-            </div>
+            {/* 봉인이 라운드를 넘어왔을 때만 뜬다(전설 유물 상대). 이 자리가 없으면
+                "카드를 냈는데 아무 일도 안 일어난다"가 되고, 그건 버그로 읽힌다. */}
+            {roundLock && (
+              <span className="cards__note">
+                {roundLock.kind === 'frozen' ? '❄ 얼어붙음' : roundLock.kind === 'bind' ? '🕸 속박' : '💫 기절'}
+                <em>
+                  {roundLock.kind === 'bind'
+                    ? '이번 라운드 이동 불가'
+                    : roundLock.kind === 'frozen'
+                      ? '맞으면 풀린다'
+                      : '이번 라운드 행동 불가'}
+                </em>
+              </span>
+            )}
             <div className="cards__hand">
             {hand.filter((c) => c.kind !== 'move').map((c) => {
               const onCd = cdLeft(c.id) > 0
@@ -1166,10 +1309,13 @@ export function BattleScreen({
               return (
                 <button
                   key={c.id}
-                  className={`handcard handcard--${c.kind} ${unusable ? 'is-dim' : ''} ${
-                    unusable ? 'is-locked' : ''
-                  }`}
-                  onClick={() => addCard(c)}
+                  className={`handcard handcard--${c.kind} ${unusable ? 'is-dim is-locked' : ''}`}
+                  onClick={() => {
+                    // 꾹 눌러 상세를 연 손짓이면 이번 클릭은 삼킨다 — 읽으려고
+                    // 눌렀을 뿐인데 카드가 슬롯에 담기면 안 된다.
+                    if (longPress.consumedClick()) return
+                    addCard(c)
+                  }}
                   onPointerEnter={(e) => {
                     // 마우스: 올려두면 미리보기(hover). 못 쓰는 카드는 예측 없음.
                     if (unusable || e.pointerType !== 'mouse') return
@@ -1177,17 +1323,32 @@ export function BattleScreen({
                     setHoverSlot(null)
                   }}
                   onPointerDown={(e) => {
+                    pressedCard.current = c
+                    longPress.handlers.onPointerDown(e)
                     // 터치/펜: 누르는 동안만 미리보기(떼면 배치되며 지워짐).
                     if (unusable || e.pointerType === 'mouse') return
                     setHoveredCard(c)
                     setHoverSlot(null)
                   }}
-                  onPointerLeave={() => setHoveredCard(null)}
+                  onPointerMove={longPress.handlers.onPointerMove}
+                  onContextMenu={longPress.handlers.onContextMenu}
+                  onPointerLeave={() => {
+                    longPress.handlers.onPointerLeave()
+                    setHoveredCard(null)
+                  }}
                   onPointerUp={(e) => {
+                    longPress.handlers.onPointerUp()
                     if (e.pointerType !== 'mouse') setHoveredCard(null)
                   }}
-                  onPointerCancel={() => setHoveredCard(null)}
-                  disabled={unusable}
+                  onPointerCancel={() => {
+                    longPress.handlers.onPointerCancel()
+                    setHoveredCard(null)
+                  }}
+                  // ⚠ `disabled`를 걸지 않는다 — 못 쓰는 버튼은 포인터 이벤트를 아예
+                  //   안 받아서 **꾹 눌러 읽을 수조차 없어진다**. 정작 설명이 가장
+                  //   궁금한 건 "왜 못 쓰지" 싶은 그 카드다. 선택은 `addCard`가 막는다.
+                  aria-disabled={unusable}
+                  title="꾹 누르면 자세히"
                   style={{ ['--accent' as string]: cardAccent(c, local.accent) }}
                 >
                   <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} compact />
@@ -1214,6 +1375,15 @@ export function BattleScreen({
                   .join('     ') || ' '}
           </div>
         </div>
+      )}
+
+      {/* 꾹 눌러 편 카드 상세 — 판 위 어디든 덮는다(읽는 동안 전투는 멈춰 있다). */}
+      {zoomCard && (
+        <CardDetail
+          card={faceCard(zoomCard)}
+          accent={local.accent}
+          onClose={() => setZoomCard(null)}
+        />
       )}
 
       {cutIn && (
@@ -1398,11 +1568,14 @@ function FighterSprite({
       )}
       {v.status[idx].length > 0 && (
         <div className="fighter__status">
-          {v.status[idx].map((e) => (
-            <span key={e.kind} className={`stchip stchip--${e.kind}`}>
-              {STATUS_CHIP[e.kind]}
-              {e.power > 0 ? e.power : ''}
-              <b>{e.turns}</b>
+          {/* 중독·화상은 겹마다 한 칸씩 들어 있다 — 칩은 **종류별로 묶어** 보여준다
+              (겹 수만큼 아이콘이 늘어서면 발밑이 금세 넘친다). 앞의 수치는 한 번에
+              들어오는 총 피해, 굵은 수치는 가장 오래 남는 겹의 남은 라운드다. */}
+          {statusChips(v.status[idx]).map((c) => (
+            <span key={c.kind} className={`stchip stchip--${c.kind}`}>
+              {STATUS_CHIP[c.kind]}
+              {c.power > 0 ? c.power : ''}
+              <b>{c.rounds}</b>
             </span>
           ))}
         </div>
@@ -1495,7 +1668,7 @@ function BattleHud({
         isLocal
       />
       <div className="bhud__turn">
-        <div className="bhud__turnno">TURN {turn}</div>
+        <div className="bhud__turnno">ROUND {turn}</div>
         {remain !== null && (
           <div className={`bhud__timer ${remain <= 5 ? 'bhud__timer--urgent' : ''}`}>
             ⏱ {remain}s
@@ -1503,11 +1676,11 @@ function BattleHud({
         )}
         {collapseEscalatesNext(turn) && (
           <div className="bhud__fog bhud__fog--warn">
-            {turn < COLLAPSE_START_TURN ? '⚠ 다음 턴부터 전장이 무너진다!' : '⚠ 다음 턴 붕괴 확대!'}
+            {turn < COLLAPSE_START_ROUND ? '⚠ 다음 라운드부터 전장이 무너진다!' : '⚠ 다음 라운드 붕괴 확대!'}
           </div>
         )}
-        {turn >= COLLAPSE_START_TURN && (
-          <div className="bhud__fog">🪨 무너진 칸 턴당 -{collapseDamageAt(turn)}</div>
+        {turn >= COLLAPSE_START_ROUND && (
+          <div className="bhud__fog">🪨 무너진 칸 라운드당 -{collapseDamageAt(turn)}</div>
         )}
         <div className="bhud__buttons">
           <SfxToggle />
@@ -1656,11 +1829,13 @@ function BhudSide({
           HUD 높이를 늘리면 `.board`가 그만큼 줄어 배경 잘림 위치가 전부
           어긋난다(battlefx.css의 장면별 `background-position` 주석 참고). */}
       <div className="bhud__status">
-        {status.map((e) => (
-          <span key={e.kind} className={`stchip stchip--hud stchip--${e.kind}`}>
-            {STATUS_CHIP[e.kind]}
-            {e.power > 0 ? e.power : ''}
-            <b>{e.turns}</b>
+        {/* ⚠ 발밑 칩과 **같은 `statusChips()`를 쓴다** — 중독·화상은 겹마다 따로
+            살아 있어서, 여기서만 따로 묶으면 두 자리가 다른 숫자를 말하게 된다. */}
+        {statusChips(status).map((c) => (
+          <span key={c.kind} className={`stchip stchip--hud stchip--${c.kind}`}>
+            {STATUS_CHIP[c.kind]}
+            {c.power > 0 ? c.power : ''}
+            <b>{c.rounds}</b>
           </span>
         ))}
       </div>

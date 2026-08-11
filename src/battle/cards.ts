@@ -1,16 +1,16 @@
 import type { CardDef } from './types'
 import type { CharacterDef } from '../data/roster'
 
-export const GUARD_BLOCK = 50 // damage absorbed by one guard for the whole turn
-export const GUARD_COST = 10 // energy spent to raise the guard
-export const ENERGY_GAIN = 35 // energy restored by the recovery card
-export const ENERGY_REGEN = 20 // passive energy regained at the start of each turn
+export const GUARD_BLOCK = 25 // damage absorbed by one guard for the whole turn
+export const GUARD_COST = 5 // energy spent to raise the guard
+export const ENERGY_GAIN = 18 // energy restored by the recovery card
+export const ENERGY_REGEN = 10 // passive energy regained at the start of each turn
 
 // Shared cards every fighter can play. Movement is free but cools down; the
 // common attack/guard cards are deliberately WEAK — every fighter has them as a
 // baseline, and the exciting versions are each character's unique cards (and,
 // later, cards obtained from draws/purchases). All non-attacks resolve before
-// attacks within a slot (see engine `resolveTurn`).
+// attacks within a slot (see engine `resolveRound`).
 export const COMMON_CARDS: CardDef[] = [
   { id: 'm-right', name: '오른쪽', kind: 'move', dir: 'right', steps: 1, cooldown: 0, desc: '오른쪽으로 한 칸 이동. (>)' },
   { id: 'm-left', name: '왼쪽', kind: 'move', dir: 'left', steps: 1, cooldown: 0, desc: '왼쪽으로 한 칸 이동. (<)' },
@@ -31,8 +31,8 @@ export const COMMON_CARDS: CardDef[] = [
       { df: 1, du: 0 },
       { df: -1, du: 0 },
     ],
-    damage: 10,
-    energyCost: 10,
+    damage: 5,
+    energyCost: 5,
     cooldown: 0,
     fx: 'punch',
     desc: '앞뒤 한 칸 기본 타격. 약하지만 누구나 언제든 쓸 수 있다.',
@@ -45,8 +45,8 @@ export const COMMON_CARDS: CardDef[] = [
       { df: 2, du: 0 },
       { df: -2, du: 0 },
     ],
-    damage: 10,
-    energyCost: 10,
+    damage: 5,
+    energyCost: 5,
     cooldown: 0,
     fx: 'bolt',
     pointBlank: false, // 두 칸째 전용 — 밀착도 사각
@@ -58,8 +58,8 @@ export const COMMON_CARDS: CardDef[] = [
     kind: 'attack',
     // 앞뒤 대칭(2026-08-03) — 지나쳐도 안 놓치게. 대신 기력 8→10.
     range: [{ df: 1, du: 0 }, { df: -1, du: 0 }],
-    damage: 12,
-    energyCost: 10,
+    damage: 6,
+    energyCost: 5,
     cooldown: 0,
     fx: 'punch',
     desc: '앞뒤 한 칸을 노리는 값싼 기본 공격. 로그라이크 시작 공용기.',
@@ -77,10 +77,10 @@ export const COMMON_CARDS: CardDef[] = [
     id: 'c-brace',
     name: '버티기',
     kind: 'guard',
-    block: 30,
-    guardCost: 10,
+    block: 15,
+    guardCost: 5,
     cooldown: 0,
-    desc: '기력 10 소모. 이번 턴 받는 피해를 최대 30 막는다. 쿨타임이 없다.',
+    desc: '기력 5 소모. 이번 턴 받는 피해를 최대 30 막는다. 쿨타임이 없다.',
   },
   {
     id: 'c-energy',
@@ -95,10 +95,10 @@ export const COMMON_CARDS: CardDef[] = [
     id: 'c-repair',
     name: '상처 봉합',
     kind: 'heal',
-    healHp: 20,
-    healCost: 20,
+    healHp: 10,
+    healCost: 10,
     cooldown: 1,
-    desc: '기력 20 소모. 체력을 20 회복한다. 쿨타임 1턴.',
+    desc: '기력 10 소모. 체력을 10 회복한다. 쿨타임 1턴.',
   },
 ]
 

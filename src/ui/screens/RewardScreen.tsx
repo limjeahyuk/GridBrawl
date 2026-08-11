@@ -14,6 +14,8 @@ import {
   SKIP_HEAL, type Reward, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
+import { useCardZoom } from '../CardDetail'
+import { DeckPicker } from '../DeckPicker'
 
 
 export function RewardScreen({
@@ -25,6 +27,8 @@ export function RewardScreen({
 }) {
   const rewards = useMemo(() => rollRewards(run), [run])
   const char = getChar(run.charId)
+  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+  const zoom = useCardZoom(char.accent)
   // 덱이 꽉 차 교체가 필요할 때 추가하려는 카드 id
   const [replaceCard, setReplaceCard] = useState<string | null>(null)
 
@@ -47,25 +51,18 @@ export function RewardScreen({
       <div className="screen reward">
         <div className="grid-bg" />
         <h2 className="reward__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
-        <div className="reward__deck">
-          {run.deck.map((id, i) => {
-            const c = runCard(run, id)
-            if (!c) return null
-            return (
-              <button
-                key={`${id}-${i}`}
-                className="reward__card"
-                style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-                onClick={() => confirmReplace(id)}
-              >
-                <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
-              </button>
-            )
-          })}
-        </div>
+        {/* 강화가 얹힌 사본을 넘긴다 — 안 넘기면 목록만 원본 수치를 보여 준다 */}
+        <DeckPicker
+          charId={run.charId}
+          deck={run.deck}
+          zoom={zoom}
+          onPick={confirmReplace}
+          cardOf={(id) => runCard(run, id)}
+        />
         <button className="btn btn--ghost" onClick={() => setReplaceCard(null)}>
           취소
         </button>
+        {zoom.sheet}
       </div>
     )
   }
@@ -74,6 +71,9 @@ export function RewardScreen({
     <div className="screen reward">
       <div className="grid-bg" />
       <h2 className="reward__title">승리 보상 — 하나를 고르세요</h2>
+      {/* 압축 카드에는 설명이 없다 — 어디서 읽는지 한 번은 말해 줘야 한다.
+          모바일엔 툴팁이 없어서 `title` 속성만으로는 영영 안 보인다. */}
+      <p className="reward__hint">카드를 꾹 누르면 설명과 능력을 자세히 볼 수 있습니다.</p>
       <div className="reward__options">
         {rewards.map((r, i) => {
           if (r.kind === 'relic') {
@@ -98,7 +98,11 @@ export function RewardScreen({
               key={i}
               className={`reward__opt reward__card ${owned ? 'reward__card--upgrade' : ''}`}
               style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
-              onClick={() => take(r)}
+              {...zoom.bind(c)}
+              onClick={() => {
+                if (zoom.consumedClick()) return
+                take(r)
+              }}
             >
               {owned && <span className="reward__uptag">강화</span>}
               <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
@@ -109,6 +113,7 @@ export function RewardScreen({
       <button className="btn btn--ghost reward__skip" onClick={() => onDone(skipRewardForHeal(run))}>
         건너뛰고 회복 (+{SKIP_HEAL} HP)
       </button>
+      {zoom.sheet}
     </div>
   )
 }

@@ -22,17 +22,17 @@ interface GameResult {
 
 function playGame(a: string, b: string): GameResult {
   const battle = new CardBattle(a, b)
-  let lastSteps: ReturnType<CardBattle['resolveTurn']> = []
-  while (!battle.state.over && battle.state.turn <= MAX_TURNS) {
+  let lastSteps: ReturnType<CardBattle['resolveRound']> = []
+  while (!battle.state.over && battle.state.round <= MAX_TURNS) {
     const p0 = decideAI(battle.state, 0, battle.chars[0], 'hard')
     const p1 = decideAI(battle.state, 1, battle.chars[1], 'hard')
-    lastSteps = battle.resolveTurn(p0, p1)
+    lastSteps = battle.resolveRound(p0, p1)
   }
   const w = battle.state.winner
   const isDraw = battle.state.over && w === null
   return {
     winner: battle.state.over && w !== null ? (w === 0 ? a : b) : null,
-    turns: battle.state.turn,
+    turns: battle.state.round,
     timeout: !battle.state.over,
     drawCause: isDraw ? (lastSteps.some((s) => s.phase === 'collapse') ? 'collapse' : 'trade') : null,
   }

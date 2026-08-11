@@ -16,7 +16,7 @@ import type { CardDef } from '../battle/types'
 import { mergeRelics } from './relics'
 import { monsterChar } from './monsters'
 import { bossCinematic, bossPlan, bossTelegraph, isScriptedBoss, type BossCinematic } from './bosses'
-import { currentEnemy, runCard, type RunState } from './run'
+import { currentEnemy, runCard, terrainFor, type RunState } from './run'
 
 export interface RunFightProps {
   p0CharId: string
@@ -42,17 +42,22 @@ export function runFightProps(run: RunState): RunFightProps {
   const deck = run.deck
     .map((id) => runCard(run, id))
     .filter((c): c is CardDef => !!c)
-  // 랜덤 배치(2026-08-05) — 몬스터를 매 전투 다른 줄에 세워 개전을 바꾼다. 보스는
-  // 연출·스크립트가 자리를 전제하므로 가운데 줄 고정(baseArtId 무관).
+  // 랜덤 배치(2026-08-05) — 4행 격자에서 **양쪽 다** 자기 끝열의 네 칸 중 무작위로
+  // 선다. 세로로 어긋난 채 개전해 "회피하며 접근"이 판마다 다른 그림이 된다. 보스는
+  // 연출·스크립트가 자리를 전제하므로 둘 다 가운데 줄(row 1) 고정. ⚠ 랜덤은 런
+  // 전용이다 — PvP는 `startCells`를 안 넘겨 고정 START_CELLS를 쓰므로 락스텝 안전.
   const scripted = isScriptedBoss(enemy.id)
-  const monRow = scripted ? 1 : Math.floor(Math.random() * GRID_ROWS)
-  const monCell: Cell = { col: GRID_COLS - 1, row: monRow }
+  const rndRow = () => Math.floor(Math.random() * GRID_ROWS)
+  const pCell: Cell = { col: 0, row: scripted ? 1 : rndRow() }
+  const monCell: Cell = { col: GRID_COLS - 1, row: scripted ? 1 : rndRow() }
   const battleOpts: BattleOpts = {
     chars: [pChar, eChar],
     passives: [mergeRelics(run.relicIds), eChar.passive],
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
-    startCells: [undefined, monCell],
+    startCells: [pCell, monCell],
+    // 지형 — 무대마다 다른 바위 배치(`terrainFor`). 런 전용이라 PvP·봇전은 빈 판.
+    obstacles: terrainFor(run),
   }
   // 전투별 기분(2026-08-05) — 같은 몬스터라도 판마다 공격성이 살짝 다르게. 성격
   // (archetype)과 함께 매 턴 decideAI로 넘긴다. 전투 시작 때 한 번만 굴린다.
@@ -67,14 +72,20 @@ export function runFightProps(run: RunState): RunFightProps {
     p1CharId: enemy.baseArtId, // 아트 재활용
     deck,
     battleOpts,
-    getOpponentPlan: (_local, b) => {
+    // ⚠ `localPlan`은 플레이어가 3장을 **확정한 뒤에** 들어온다 — 봇은 원리상 상대
+    //   계획을 다 볼 수 있다. 그 정보를 `decideAI`에 그대로 넘기고, 쓸지 말지는
+    //   난이도가 정한다(`aiLevel: 'hard'`만 읽는다 — ai.ts의 "카드 대응"). 봇전(PvP
+    //   연습)은 App.tsx에서 안 넘기므로 예전 그대로다.
+    getOpponentPlan: (localPlan, b) => {
       // 보스는 스크립트 패턴으로, 그 외엔 일반 AI로.
       if (scripted) {
-        const ctx = { turn: b.state.turn, hpFrac: b.state.hp[1] / b.maxHp[1] }
+        const ctx = { turn: b.state.round, hpFrac: b.state.hp[1] / b.maxHp[1] }
         const plan = bossPlan(enemy.id, ctx)
         if (plan) return Promise.resolve(plan)
       }
-      return Promise.resolve(decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards, profile))
+      return Promise.resolve(
+        decideAI(b.state, 1, eChar, enemy.aiLevel, enemyCards, profile, localPlan),
+      )
     },
     enemyName: enemy.name,
     telegraph: scripted ? (turn, frac) => bossTelegraph(enemy.id, { turn, hpFrac: frac }) : undefined,

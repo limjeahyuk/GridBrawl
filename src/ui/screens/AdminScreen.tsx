@@ -784,7 +784,7 @@ function renderCard(
                   <Num v={c.buffPower} on={(n) => set('buffPower', n)} optional />
                 </Field>
                 <Field label="지속 턴">
-                  <Num v={c.buffTurns} on={(n) => set('buffTurns', n)} optional />
+                  <Num v={c.buffRounds} on={(n) => set('buffRounds', n)} optional />
                 </Field>
                 <Field label="기력 소모">
                   <Num v={c.buffCost} on={(n) => set('buffCost', n)} optional />
