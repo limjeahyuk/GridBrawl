@@ -53,6 +53,7 @@ import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster, MONSTERS } from '../src/game/monsters'
 import {
   BURN_HIT_DAMAGE,
+  COLLAPSE_START_ROUND,
   FOG_DAMAGE,
   FREEZE_SHATTER_BONUS,
   GRID_COLS,
@@ -1857,6 +1858,129 @@ console.log('\n런 난이도 4단계')
   }
   check('난이도가 시작 체력·덱을 바꾸지 않는다', ladderOf('master'), ladderOf('novice'))
   check('시작 난이도 기본값은 초급', startRun('warrior').difficulty, 'novice')
+}
+
+// --- 피해 내역·슬롯 번호 (2026-08-12 · 연출 전용 메타데이터) -------------------
+// `Step.bits`/`Step.slot`은 판을 안 바꾸지만(그래서 `RULES_VERSION` 불변) **화면이
+// 이걸 믿고 그린다**. 합이 실제로 깎인 체력과 어긋나면 그게 곧 원래 신고
+// ("무슨 데미지가 들어갔는지 모르겠다")로 되돌아간다.
+console.log('\n피해 내역(Step.bits) · 슬롯 번호(Step.slot)')
+{
+  /**
+   * 모든 스텝에서 **내역의 합 == 그 스텝에서 줄어든 체력**인가.
+   * ⚠ 회복이 낀 스텝은 건너뛴다 — `Step.heal`은 최대 체력에서 잘리기 전 값이라
+   *   (`applyOutcome`이 `Math.min(maxHp, …)`로 넣는다) 체력 증감과 원래 안 맞는다.
+   *   그건 이 검사가 지키려는 것과 다른 문제다.
+   */
+  const bitsMatchHp = (b: CardBattle, steps: ReturnType<CardBattle['resolveRound']>, from: [number, number]) => {
+    let prev = from
+    for (const st of steps) {
+      const cur: [number, number] = [st.snapshot.hp[0], st.snapshot.hp[1]]
+      if (st.heal === 0) {
+        for (const side of [0, 1] as const) {
+          const drop = prev[side] - cur[side]
+          const bits = (st.bits ?? []).filter((x) => x.on === side).reduce((a, x) => a + x.n, 0)
+          if (drop !== bits) return `${st.card.name}/${st.result} side${side}: 체력 -${drop} vs 내역 -${bits}`
+        }
+      }
+      prev = cur
+    }
+    return 'ok'
+  }
+
+  // ① 평범한 트레이드 — 서로 때리는 3슬롯.
+  {
+    const b = battleWith({})
+    const from: [number, number] = [b.state.hp[0], b.state.hp[1]]
+    const steps = b.resolveRound(
+      [card('c-strike'), card('c-guard'), card('c-strike')],
+      [card('c-strike'), card('c-strike'), card('c-guard')],
+    )
+    check('평범한 트레이드 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from), 'ok')
+  }
+  // ② 화상 — `damage`에 합쳐져 들어오던 몫이 따로 잡히는가.
+  {
+    const b = battleWith({ burnOnHit: 2 }, {})
+    const from: [number, number] = [b.state.hp[0], b.state.hp[1]]
+    const steps = b.resolveRound([card('c-strike'), card('c-jab'), card('c-shot')], HOLD)
+    check('화상 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from), 'ok')
+    const burned = steps.flatMap((s) => s.bits ?? []).filter((x) => x.src === 'burn')
+    check('화상 몫이 타격과 따로 잡힌다', burned.length > 0 && burned.every((x) => x.n === BURN_HIT_DAMAGE), true)
+  }
+  // ③ 처박기 — **예전엔 화면에 아예 안 뜨던 피해**다(`damage`에도 `recoil`에도 없다).
+  {
+    const b = battleWith({})
+    b.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }] // 상대가 판 끝 벽에 붙어 있다
+    const from: [number, number] = [b.state.hp[0], b.state.hp[1]]
+    // 전사 「어깨 밀치기」 — 밀착 1칸·넉백 1. 벽에 붙은 상대에게 쓰면 처박힌다.
+    const push = deckFor(getChar('warrior')).find((c) => c.id === 'war-shove')
+    if (!push) throw new Error('넉백 카드를 못 찾았다')
+    const steps = b.resolveRound([push, card('c-energy'), card('c-energy')], HOLD)
+    check('처박기 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from), 'ok')
+    check(
+      '처박기 피해가 내역에 잡힌다(예전엔 숫자 없이 체력만 줄었다)',
+      steps.flatMap((s) => s.bits ?? []).some((x) => x.src === 'slam' && x.n === KNOCKBACK_BLOCK_DAMAGE),
+      true,
+    )
+  }
+  // ④ 중독 — 라운드 종료가 아니라 **움직일 때** 들어오는 피해도 꼬리표가 붙는가.
+  {
+    const b = battleWith({ poisonOnHit: 2 }, {})
+    const from: [number, number] = [b.state.hp[0], b.state.hp[1]]
+    b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+    const from2: [number, number] = [b.state.hp[0], b.state.hp[1]]
+    const steps = b.resolveRound(HOLD, [card('m-left'), card('m-right'), card('c-strike')])
+    check('중독 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from2), 'ok')
+    check(
+      '중독 피해에 꼬리표가 붙는다',
+      steps.flatMap((s) => s.bits ?? []).some((x) => x.src === 'poison'),
+      true,
+    )
+    void from
+  }
+  // ⑤ 가시 반사 — 때린 쪽이 받는 피해. 역시 `damage`·`recoil` 어디에도 없었다.
+  {
+    const b = battleWith({}, { thorns: 4 })
+    const from: [number, number] = [b.state.hp[0], b.state.hp[1]]
+    const steps = b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+    check('가시 반사 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from), 'ok')
+    check(
+      '반사 피해가 때린 쪽 몫으로 잡힌다',
+      steps.flatMap((s) => s.bits ?? []).some((x) => x.src === 'thorns' && x.on === 0 && x.n === 4),
+      true,
+    )
+  }
+  // ⑥ 슬롯 번호 — 카드에서 나온 스텝은 전부 슬롯이 있고 **오름차순**이다.
+  {
+    const b = battleWith({})
+    const steps = b.resolveRound(
+      [card('c-strike'), card('c-guard'), card('c-shot')],
+      [card('m-up'), card('c-strike'), card('c-energy')],
+    )
+    const slots = steps.map((s) => s.slot)
+    check('카드 스텝에는 슬롯 번호가 붙는다', slots.every((n) => n !== undefined), true)
+    check(
+      '슬롯 번호는 되돌아가지 않는다',
+      slots.every((n, i) => i === 0 || (slots[i - 1] as number) <= (n as number)),
+      true,
+    )
+    check('세 슬롯이 모두 재생된다', new Set(slots).size, 3)
+  }
+  // ⑦ 라운드 종료 정산(붕괴)은 어느 카드의 결과도 아니다 → 슬롯 없음.
+  {
+    const b = battleWith({})
+    b.state.round = COLLAPSE_START_ROUND
+    b.state.pos = [{ col: 0, row: 1 }, { col: 5, row: 1 }] // 둘 다 무너진 열
+    const steps = b.resolveRound(HOLD, HOLD)
+    const col = steps.filter((s) => s.phase === 'collapse')
+    check('붕괴 스텝이 나온다', col.length, 2)
+    check('붕괴 스텝에는 슬롯 번호가 없다', col.every((s) => s.slot === undefined), true)
+    check(
+      '붕괴 피해에도 꼬리표가 붙는다',
+      col.every((s) => (s.bits ?? []).some((x) => x.src === 'collapse')),
+      true,
+    )
+  }
 }
 
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)

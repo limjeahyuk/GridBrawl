@@ -29,6 +29,7 @@ import {
   type BattleSnapshot,
   type Cell,
   type CardDef,
+  type DamageBit,
   type FogTile,
   type Obstacle,
   type RockPlan,
@@ -387,6 +388,8 @@ export class CardBattle {
       recoil = 0,
       /** 넉백이 벽·바위에 막혔으면 밀려나던 방향(연출용 — `Step.slam` 참고). */
       slam: -1 | 1 | 0 = 0,
+      /** 피해 내역(연출용 — `Step.bits` 참고). 비어 있으면 싣지 않는다. */
+      bits: DamageBit[] = [],
     ) => {
       const phase: Step['phase'] =
         card.kind === 'move' ? 'move' : card.kind === 'attack' ? 'attack' : 'defense'
@@ -400,6 +403,7 @@ export class CardBattle {
         drain,
         recoil,
         ...(slam ? { slam } : null),
+        ...(bits.length ? { bits } : null),
         snapshot: this.snapshot(),
       })
     }
@@ -458,6 +462,9 @@ export class CardBattle {
               heal,
               drain: 0,
               recoil: 0,
+              ...(damage > 0
+                ? { bits: [{ src: 'relic' as const, on: d as 0 | 1, n: damage }] }
+                : null),
               snapshot: this.snapshot(),
             })
           }
@@ -546,6 +553,7 @@ export class CardBattle {
         heal: 0,
         drain: 0,
         recoil: dealt, // 자기 몸에 뜨는 피해 — UI가 본인에게 -N을 띄운다
+        bits: [{ src: 'poison', on: p as 0 | 1, n: dealt }],
         snapshot: this.snapshot(),
       })
     }
@@ -760,6 +768,10 @@ export class CardBattle {
          * "가드로 막힌 타격으론 안 걸린다"는 기존 규칙을 지켜야 하므로 이 값을 본다.
          */
         core: 0,
+        /** `dmg` 안에서 **화상**이 얹은 몫(연출용 내역 — `Step.bits`). */
+        burnAdd: 0,
+        /** `dmg` 안에서 **빙결 파쇄**가 얹은 몫(연출용 내역 — `Step.bits`). */
+        shatterAdd: 0,
         heal: 0,
         drain: 0,
         recoil: 0,
@@ -901,6 +913,8 @@ export class CardBattle {
         result,
         dmg,
         core,
+        burnAdd: burnBonus,
+        shatterAdd: thaw ? FREEZE_SHATTER_BONUS : 0,
         heal,
         drain,
         recoil,
@@ -964,10 +978,19 @@ export class CardBattle {
     // apply a measured attack's HP / board consequences
     const applyOutcome = (r: ReturnType<typeof computeAttack>) => {
       const d = 1 - r.p
+      // ⚠ 아래 `*Dealt`는 전부 **실제로 깎인 몫**이다(체력이 모자라면 거기서 멈춘다).
+      //   연출 전용 값이라 판에는 영향이 없지만, 화면의 숫자 합이 줄어든 체력과
+      //   어긋나면 그게 곧 원래 신고("무슨 데미지가 들어갔는지 모르겠다")가 된다.
+      const dmgDealt = Math.min(s.hp[d], r.dmg)
       s.hp[d] = Math.max(0, s.hp[d] - r.dmg)
       // thorns(유물): 피해를 실제로 입은 방어자가 공격자에게 N 반사
       const thorns = this.passive[d].thorns ?? 0
-      if (r.core > 0 && thorns) s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
+      let thornsDealt = 0
+      if (r.core > 0 && thorns) {
+        thornsDealt = Math.min(s.hp[r.p], thorns)
+        s.hp[r.p] = Math.max(0, s.hp[r.p] - thorns)
+      }
+      const recoilDealt = r.recoil ? Math.min(s.hp[r.p], r.recoil) : 0
       if (r.recoil) s.hp[r.p] = Math.max(0, s.hp[r.p] - r.recoil)
       if (r.heal) s.hp[r.p] = Math.min(this.maxHp[r.p], s.hp[r.p] + r.heal)
       // 강제 이동 — 막히면 못 간 칸만큼 벽에 부딪힌다(피해 + 기절).
@@ -993,6 +1016,10 @@ export class CardBattle {
       }
       // **한 칸이라도 막히면 기절**한다(사용자 예시: 3칸 중 2칸만 밀려도 기절).
       const slammed = blocked > 0
+      // 처박기 피해도 실제로 깎인 몫을 기억해 둔다 — `Step.damage`에는 안 실리는
+      // 값이라(넉백은 `computeAttack`이 잰 `dmg` 밖에서 일어난다) 이게 없으면
+      // 화면의 숫자보다 체력이 더 줄어든다.
+      const slamDealt = blocked > 0 ? Math.min(s.hp[d], blocked * KNOCKBACK_BLOCK_DAMAGE) : 0
       if (blocked > 0) s.hp[d] = Math.max(0, s.hp[d] - blocked * KNOCKBACK_BLOCK_DAMAGE)
       // 라운드 한정 봉인. 지금 슬롯 이후의 카드를 막고, 라운드가 끝나면 지워진다.
       // 처박기 기절은 **연장 유물을 안 탄다** — 넉백 자체가 이미 피해+봉인 둘을 주는
@@ -1009,7 +1036,7 @@ export class CardBattle {
       if (r.poison) applyStatus(d, 'poison', r.poisonPow, r.poison, Math.max(STATUS_MAX_ROUNDS, r.poison))
       if (r.burn) applyStatus(d, 'burn', r.burnPow, r.burn, Math.max(STATUS_MAX_ROUNDS, r.burn))
       if (r.fog) layFog(s.pos[d], r.fog)
-      return { moved, slam: slamDir }
+      return { moved, slam: slamDir, dmgDealt, slamDealt, thornsDealt, recoilDealt }
     }
 
     /**
@@ -1018,8 +1045,32 @@ export class CardBattle {
      * 부딪힌 바위는 상대에게 빗나갔어도 깎인다(지형 ③ — 대개 그 바위가 막은 것이다).
      */
     const settleAttack = (r: ReturnType<typeof computeAttack>) => {
-      const { moved: shoved, slam } = applyOutcome(r)
-      emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil, slam)
+      const { moved: shoved, slam, dmgDealt, slamDealt, thornsDealt, recoilDealt } =
+        applyOutcome(r)
+      // 피해 내역 — 화면이 "왜 이만큼 깎였는지"를 한 줄씩 적을 수 있게(연출 전용).
+      // ⚠ 여기 적는 합은 이 스텝에서 **실제로 깎인 체력과 같아야** 한다.
+      const d = (1 - r.p) as 0 | 1
+      const p = r.p as 0 | 1
+      const bits: DamageBit[] = []
+      const bit = (src: DamageBit['src'], on: 0 | 1, n: number) => {
+        if (n > 0) bits.push({ src, on, n })
+      }
+      // 타격 본체 = 최종 피해에서 화상·파쇄 몫을 뺀 것(= 보호막·경감을 뚫은 core).
+      // ⚠ 쓰러지면서 잘린 경우(`dmgDealt < r.dmg`)에는 **앞에서부터 채운다** —
+      //   비율로 나누면 정수가 안 떨어져 합이 어긋난다.
+      let left = dmgDealt
+      const take = (n: number) => {
+        const x = Math.max(0, Math.min(left, n))
+        left -= x
+        return x
+      }
+      bit('attack', d, take(r.dmg - r.burnAdd - r.shatterAdd))
+      bit('burn', d, take(r.burnAdd))
+      bit('shatter', d, take(r.shatterAdd))
+      bit('slam', d, slamDealt)
+      bit('thorns', p, thornsDealt)
+      bit('recoil', p, recoilDealt)
+      emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil, slam, bits)
       // 넉백으로 옮겨진 칸도 중독이 문다 — 공격 스텝 **뒤에** 실어야
       // "밀려났다 → 독이 퍼졌다"로 순서대로 읽힌다.
       tickPoison(1 - r.p, shoved)
@@ -1122,6 +1173,7 @@ export class CardBattle {
           heal: 0,
           drain: 0,
           recoil: dealt, // 자기 몸에 뜨는 피해 — UI가 본인에게 -N을 띄운다
+          bits: [{ src: 'fog', on: p as 0 | 1, n: dealt }],
           snapshot: this.snapshot(),
         })
       }
@@ -1131,6 +1183,10 @@ export class CardBattle {
     const prio = (c: CardDef) => (c.kind === 'move' ? 0 : c.kind === 'attack' ? 2 : 1)
 
     for (let slot = 0; slot < 3; slot++) {
+      // 이 슬롯에서 나온 스텝의 시작점 — 아래에서 `Step.slot`을 통째로 찍는다.
+      // 스텝을 쌓는 곳이 열 군데가 넘어서 하나하나 적으면 새 스텝을 더할 때마다
+      // 빠뜨리게 된다(연출 전용 값이라 빠져도 조용히 틀린다).
+      const slotFrom = steps.length
       // cards present this slot, ordered move < defense < attack (p0 first on a tie)
       // ⚠ **빙결·기절은 여기서 걸러 낸다** — 이번 라운드에 봉인된 쪽은 남은 슬롯의
       //   카드를 통째로 못 낸다(카드는 소모되지 않고 쿨다운도 안 돈다: 애초에 낸
@@ -1216,7 +1272,12 @@ export class CardBattle {
             // ⚠ **바위 피해는 그대로 남긴다** — 빗나간 건 상대가 자리를 뜬 탓이고,
             //   공격이 덮은 칸(따라서 부딪힌 바위)은 공격자 자리 기준이라 그대로다.
             const miss = { ...e, result: 'whiff' as Step['result'] }
-            for (const k of ['dmg', 'heal', 'push', 'pull', 'stun', 'poison', 'burn', 'freeze'] as const)
+            // ⚠ `burnAdd`·`shatterAdd`는 **`dmg`의 내역**이라 같이 0으로 내린다
+            //   (연출용 값 — 안 내리면 화면이 안 들어간 피해를 적는다).
+            for (const k of [
+              'dmg', 'heal', 'push', 'pull', 'stun', 'poison', 'burn', 'freeze',
+              'burnAdd', 'shatterAdd',
+            ] as const)
               miss[k] = 0
             settleAttack(miss)
             continue
@@ -1237,6 +1298,10 @@ export class CardBattle {
       // 누적 기력 유물(기력 N마다 기절·회복 등)은 슬롯이 끝날 때 정산한다 — 공격
       // 트레이드 계산 중간에 끼어들지 않게.
       fireEnergyTriggers()
+
+      // ⚠ `break`보다 **먼저** 찍는다 — 마지막 슬롯이 KO로 끊겨도 그 스텝들은
+      //   화면에서 재생되므로 슬롯 번호가 있어야 한다.
+      for (let i = slotFrom; i < steps.length; i++) steps[i].slot = slot as 0 | 1 | 2
 
       if (settleKo()) break
     }
@@ -1264,6 +1329,7 @@ export class CardBattle {
         if (!isCollapsedCell(s.pos[p], s.round)) continue
         const dmg = Math.max(0, base - (this.passive[p].collapseResist ?? 0))
         if (dmg <= 0) continue
+        const dealt = Math.min(s.hp[p], dmg)
         s.hp[p] = Math.max(0, s.hp[p] - dmg)
         steps.push({
           phase: 'collapse',
@@ -1274,6 +1340,7 @@ export class CardBattle {
           heal: 0,
           drain: 0,
           recoil: dmg,
+          bits: [{ src: 'collapse', on: p as 0 | 1, n: dealt }],
           snapshot: this.snapshot(),
         })
       }

@@ -13,6 +13,13 @@ import {
   type SheetDef,
 } from '../../art/sprites'
 import { CardBattle, planAffordable, type BattleOpts } from '../../battle/engine'
+import {
+  loadBattlePace,
+  saveBattlePace,
+  PACE_CFG,
+  PACE_META,
+  type BattlePace,
+} from '../../game/settings'
 import type { BattleScene } from '../../game/run'
 import type { BossCinematic } from '../../game/bosses'
 import { deckFor } from '../../battle/cards'
@@ -37,6 +44,8 @@ import {
   type ActionResult,
   type Cell,
   type CardDef,
+  type DamageBit,
+  type DamageSrc,
   type MoveDir,
   type Obstacle,
   type Step,
@@ -66,6 +75,12 @@ interface View {
    *  중간에 바뀌면 CSS animation-name이 갈려 모션이 처음부터 다시 뛴다. */
   actFx: [string | null, string | null]
   damage: [number, number]
+  /**
+   * 그 피해가 **어디서 왔는지**(공격·화상·중독·처박기…). 두 갈래 이상이면 숫자를
+   * 한 줄씩 쌓아 보여 준다 — 예전엔 전부 `-19` 하나로 합쳐져서, 중독·화상이 섞이는
+   * 순간 "뭐에 맞았는지" 알 길이 없었다(2026-08-12 신고).
+   */
+  dmgBits: [{ src: DamageSrc; n: number }[], { src: DamageSrc; n: number }[]]
   heal: [number, number]
   stunned: [boolean, boolean] // 이 턴을 통째로 버리는 기절
   /**
@@ -197,6 +212,64 @@ const STATUS_CHIP: Record<string, string> = {
   defUp: '🔷',
   freeCast: '🌀',
 }
+/**
+ * HUD 칩에 붙는 **이름**. 발밑 칩은 자리가 없어 아이콘뿐이지만, 여기서는
+ * 글자로 못 박는다 — 아이콘만으로 ☠와 🕸을 구분하라는 건 무리고, 실제로
+ * "상태이상이 정말로 안 보인다"는 신고의 절반이 이거였다.
+ */
+const STATUS_NAME: Record<string, string> = {
+  poison: '중독',
+  burn: '화상',
+  frozen: '빙결',
+  stunned: '기절',
+  bind: '속박',
+  atkUp: '강화',
+  defUp: '방벽',
+  freeCast: '무아',
+}
+/** 몸에 두르는 기운의 색 — 상태이상 하나가 통째로 몸빛을 바꾼다. */
+const STATUS_AURA: Record<string, string> = {
+  poison: '#7bd88f',
+  burn: '#ff9a3d',
+  frozen: '#9fd8ff',
+  stunned: '#ffe14d',
+  bind: '#c4a3ff',
+}
+/**
+ * 몸빛·HP바 색을 정할 때 **어느 상태이상이 이기는가**. 여러 개가 걸리면 앞선
+ * 것을 쓴다 — 지금 가장 아픈 것(움직일 때마다 무는 중독 → 맞을 때마다 타는 화상 →
+ * 행동을 통째로 막는 봉인) 순서다.
+ */
+const AURA_PRIORITY = ['poison', 'burn', 'frozen', 'stunned', 'bind'] as const
+
+/** 피해 꼬리표 — 화면에 "왜 깎였는지"를 아이콘+한 단어로 붙인다. */
+const DMG_SRC: Record<DamageSrc, { icon: string; label: string }> = {
+  attack: { icon: '⚔', label: '타격' },
+  burn: { icon: '🔥', label: '화상' },
+  shatter: { icon: '❄', label: '파쇄' },
+  slam: { icon: '💥', label: '격돌' },
+  thorns: { icon: '🌵', label: '반사' },
+  recoil: { icon: '💢', label: '반동' },
+  poison: { icon: '☠', label: '중독' },
+  fog: { icon: '🌫', label: '독안개' },
+  collapse: { icon: '🪨', label: '붕괴' },
+  relic: { icon: '✦', label: '유물' },
+}
+
+/** 이 스텝에서 **그 진영이 실제로 깎인 몫**. 내역이 있으면 그걸 합치고, 없으면
+ *  옛 필드(`damage`/`recoil`)로 떨어진다. */
+function damageOn(step: Step, side: 0 | 1): number {
+  if (step.bits) return step.bits.filter((b) => b.on === side).reduce((a, b) => a + b.n, 0)
+  return side === 1 - step.actor ? step.damage : step.recoil
+}
+/** 그 진영이 받은 피해의 내역(없으면 옛 필드로 한 줄 만들어 준다). */
+function bitsOn(step: Step, side: 0 | 1): { src: DamageSrc; n: number }[] {
+  if (step.bits) return step.bits.filter((b) => b.on === side).map((b) => ({ src: b.src, n: b.n }))
+  const n = damageOn(step, side)
+  if (n <= 0) return []
+  // 내역이 없는 옛 경로 — 자기 몸에 뜨는 피해는 반동, 상대 몸이면 타격으로 본다.
+  return [{ src: side === step.actor ? 'recoil' : 'attack', n }]
+}
 
 /**
  * 상태이상 목록을 **종류별로 묶는다**. 중독·화상은 겹마다 따로 살아 있어서
@@ -213,6 +286,25 @@ function statusChips(list: readonly StatusEffect[]): { kind: string; power: numb
     } else out.push({ kind: e.kind, power: e.power, rounds: e.rounds })
   }
   return out
+}
+
+/**
+ * 전투 기록 한 줄 — "누가 · 몇 번째로 · 무슨 카드를 냈고 · 그래서 누가 얼마나 깎였나".
+ * 숫자가 떠올랐다 사라지는 것만으로는 놓친다는 신고에 대한 답이라, 이 목록은
+ * 라운드가 끝날 때까지 화면에 **남아 있는다**.
+ */
+interface LogRow {
+  id: number
+  /** 몇 번째 카드였나(0·1·2). 라운드 종료 정산은 undefined. */
+  slot?: number
+  who: string
+  /** 이 행동을 한 쪽이 나인가 — 색과 정렬이 갈린다. */
+  mine: boolean
+  card: string
+  result: ActionResult
+  /** 이 스텝에서 깎인 몫. `onMe`는 **내가** 맞았는지(누가 때렸는지가 아니다). */
+  hits: { src: DamageSrc; n: number; onMe: boolean }[]
+  heal: number
 }
 
 const isAtk = (r: ActionResult) => r === 'hit' || r === 'blocked' || r === 'whiff'
@@ -269,6 +361,7 @@ function baseView(b: CardBattle): View {
     acting: [false, false],
     actFx: [null, null],
     damage: [0, 0],
+    dmgBits: [[], []],
     heal: [0, 0],
     stunned: [false, false],
     slam: [0, 0],
@@ -287,10 +380,11 @@ function stepToView(step: Step, seq: number): View {
   acting[a] = isAtk(step.result)
   const actFx: [string | null, string | null] = [null, null]
   if (acting[a]) actFx[a] = step.card.fx ?? 'punch'
-  const damage: [number, number] = [0, 0]
   // 상대에게 준 피해 — 공격뿐 아니라 유물 트리거(뇌운의 고리 등)도 -N을 띄운다.
-  if (step.damage > 0) damage[d] = step.damage
-  if (step.recoil > 0) damage[a] = step.recoil // 반동·독안개: 자기 자신에게 -N 표시
+  // ⚠ **내역(`Step.bits`)이 있으면 그쪽이 이긴다** — 처박기·가시 반사는 `damage`·
+  //   `recoil` 어디에도 안 실려서, 예전엔 뜨는 숫자보다 체력이 더 줄었다.
+  const damage: [number, number] = [damageOn(step, 0), damageOn(step, 1)]
+  const dmgBits: View['dmgBits'] = [bitsOn(step, 0), bitsOn(step, 1)]
   const heal: [number, number] = [0, 0]
   if (step.heal > 0) heal[a] = step.heal
   const stunned: [boolean, boolean] = [false, false]
@@ -316,6 +410,7 @@ function stepToView(step: Step, seq: number): View {
     actFx,
     status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
     damage,
+    dmgBits,
     heal,
     stunned,
     slam,
@@ -453,10 +548,34 @@ export function BattleScreen({
   // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
 
   const [view, setView] = useState<View>(() => baseView(battle))
+  /**
+   * 연출 속도 — **차근차근 / 빠르게** 둘뿐이다(`game/settings.ts`).
+   * ⚠ 해소 루프는 async라 state를 잡아 두면 **시작 시점의 옛 값**을 계속 본다.
+   *   루프 안에서는 반드시 `paceRef`를 읽는다(격노 컷인의 `enragedRef`와 같은 이유).
+   */
+  const [pace, setPaceState] = useState<BattlePace>(loadBattlePace)
+  const paceRef = useRef(pace)
+  paceRef.current = pace
+  const setPace = (p: BattlePace) => {
+    setPaceState(p)
+    saveBattlePace(p)
+  }
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null])
   const [phase, setPhase] = useState<'select' | 'resolving' | 'over'>('select')
   const [waitingRemote, setWaitingRemote] = useState(false)
   const [phaseTag, setPhaseTag] = useState<string>('')
+  /**
+   * 이번 라운드에 **양쪽이 낸 3장**(정규 좌표 — [side0, side1]). 해소하는 동안
+   * 화면 아래에 그대로 펼쳐 둔다: 예전엔 실행을 누르는 순간 카드가 사라져서
+   * "내가 뭘 냈더라 / 쟤는 뭘 냈지"를 확인할 방법이 아예 없었다.
+   */
+  const [roundPlans, setRoundPlans] = useState<[CardDef[], CardDef[]] | null>(null)
+  /** 지금 재생 중인 슬롯(0·1·2). 라운드 종료 정산 구간에서는 null. */
+  const [activeSlot, setActiveSlot] = useState<number | null>(null)
+  /** 슬롯이 바뀔 때 양쪽 카드를 크게 펼치는 공개 연출(차근차근 모드 전용). */
+  const [slotReveal, setSlotReveal] = useState<{ seq: number; slot: number } | null>(null)
+  /** 이번 라운드에 실제로 일어난 일 — 무엇이 몇 대미지였는지 글로 남는다. */
+  const [log, setLog] = useState<LogRow[]>([])
   const [banner, setBanner] = useState<string | null>(null)
   /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
   const [remain, setRemain] = useState<number | null>(null)
@@ -758,6 +877,14 @@ export function BattleScreen({
     // host is side 0, guest side 1 — feed plans in canonical order
     const planA = localSide === 0 ? localPlan : oppPlan
     const planB = localSide === 0 ? oppPlan : localPlan
+    // 이번 라운드의 연출 길이는 **시작할 때 한 번** 정한다 — 재생 도중에 토글을
+    // 눌러 템포가 중간에 바뀌면 그게 더 헷갈린다(다음 라운드부터 적용된다).
+    const cfg = PACE_CFG[paceRef.current]
+    /** 스텝 꼬리 대기에만 붙는 배수 — 타격까지의 선행 시간은 손대지 않는다. */
+    const paced = (ms: number) => Math.round(ms * cfg.step)
+    setRoundPlans([planA, planB])
+    setLog([])
+    setActiveSlot(null)
     // ⚠ resolveRound은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
     //   준비 동작에 쓸 턴 시작 화면은 그 전에 떠 둬야 한다.
     const turnStart = baseView(battle)
@@ -821,9 +948,29 @@ export function BattleScreen({
     // 이전 스텝까지 화면에 남아 있는 상태. 공격의 **준비 동작** 구간에 그대로
     // 쓴다 — 몸이 파고드는 동안엔 아직 피해도 HP 감소도 보이면 안 된다.
     let shown: View = turnStart
+    /** 직전 스텝이 몇 번째 슬롯이었나 — 여기가 바뀌는 순간이 카드 공개 시점이다. */
+    let seenSlot: number | null = null
 
     for (const [si, step] of steps.entries()) {
       if (cancelled.current) return
+
+      // ── 슬롯이 넘어갔다: "이번엔 양쪽이 이 카드를 낸다"를 먼저 못 박는다.
+      //    차근차근 모드에서만 화면을 덮고, 빠르게 모드에서는 표시만 갱신한다.
+      if (step.slot !== undefined && step.slot !== seenSlot) {
+        seenSlot = step.slot
+        setActiveSlot(step.slot)
+        if (cfg.reveal) {
+          setSlotReveal({ seq: si + 1, slot: step.slot })
+          playSfx('ui')
+          await wait(cfg.revealMs)
+          setSlotReveal(null)
+          if (cancelled.current) return
+        }
+      } else if (step.slot === undefined && seenSlot !== null) {
+        // 라운드 종료 정산(독안개·붕괴) — 더 이상 어느 카드의 결과도 아니다.
+        seenSlot = null
+        setActiveSlot(null)
+      }
 
       // 필살기: 타격을 보여주기 전에 컷인으로 "이게 필살기다"를 못 박는다.
       // 기력 부족으로 불발된 카드는 연출하지 않는다.
@@ -877,12 +1024,15 @@ export function BattleScreen({
         // ② 타격 — 여기서 비로소 피해·HP·불꽃이 한꺼번에 터진다
         setView(full)
         let held = 0
+        // ⚠ 불꽃·흔들림의 세기는 **실제로 깎인 몫**(`damageOn`)으로 잰다 —
+        //   `step.damage`에는 처박기 피해가 안 들어 있어 벽에 처박은 큰 한 방이
+        //   작은 타격처럼 보였다.
         if (step.result === 'whiff') playSfx('whiff')
-        else held = await impact(step, foe, step.damage, koAt(si, foe), {
+        else held = await impact(step, foe, damageOn(step, foe), koAt(si, foe), {
           blocked: step.result === 'blocked',
         })
         if (cancelled.current) return
-        await wait(Math.max(150, STEP_MS.attack - lead - held))
+        await wait(Math.max(150, paced(STEP_MS.attack) - lead - held))
       } else {
         setResolveHit(null)
         setView(full)
@@ -890,16 +1040,44 @@ export function BattleScreen({
         // 공격이 아닌데 피해가 났다 — 유물 트리거(상대에게) 또는 붕괴·반동(자신에게).
         // 붕괴는 stepSfx가 이미 굉음을 내므로 타격음은 겹쳐 울리지 않는다.
         let held = 0
-        if (step.damage > 0) held = await impact(step, foe, step.damage, koAt(si, foe))
-        else if (step.recoil > 0)
-          held = await impact(step, actor, step.recoil, koAt(si, actor), {
+        if (damageOn(step, foe) > 0)
+          held = await impact(step, foe, damageOn(step, foe), koAt(si, foe))
+        else if (damageOn(step, actor) > 0)
+          held = await impact(step, actor, damageOn(step, actor), koAt(si, actor), {
             sound: step.phase !== 'collapse',
           })
         if (cancelled.current) return
-        await wait(Math.max(160, STEP_MS[step.phase] - held))
+        await wait(Math.max(160, paced(STEP_MS[step.phase]) - held))
       }
       if (cancelled.current) return
       shown = full
+
+      // ── 이 스텝을 기록에 남긴다. 떠올랐다 사라지는 숫자와 달리 라운드가 끝날
+      //    때까지 남으므로, 놓쳤어도 "무엇이 얼마였는지" 되짚을 수 있다.
+      const hits = ([0, 1] as const).flatMap((side) =>
+        bitsOn(step, side).map((b) => ({ ...b, onMe: side === localSide })),
+      )
+      if (hits.length || step.heal > 0 || step.result !== 'move')
+        setLog((rows) => [
+          ...rows,
+          {
+            id: si + 1,
+            slot: step.slot,
+            who: battle.chars[actor].name,
+            mine: actor === localSide,
+            card: step.card.name,
+            result: step.result,
+            hits,
+            heal: step.heal,
+          },
+        ])
+
+      // 피해가 났으면 숫자를 읽을 틈을 준다(차근차근 모드에서만 — `hold`가 0이면
+      // 아무 일도 일어나지 않는다).
+      if (cfg.hold && (damageOn(step, 0) > 0 || damageOn(step, 1) > 0)) {
+        await wait(cfg.hold)
+        if (cancelled.current) return
+      }
 
       // 격노 컷인 — 보스 체력이 문턱을 지나는 순간 스텝 사이를 끊고 들어간다.
       // ⚠ 판정은 `battle.state`가 아니라 **이 스텝의 스냅샷**(`full.hp`)으로 한다:
@@ -925,6 +1103,8 @@ export function BattleScreen({
     setSparks(null)
     setWallSlam(null)
     setPhaseTag('')
+    setSlotReveal(null)
+    setActiveSlot(null)
 
     if (battle.state.over) {
       const localWon = battle.state.winner === localSide
@@ -938,6 +1118,7 @@ export function BattleScreen({
     }
 
     setSlots([null, null, null])
+    setRoundPlans(null)
     setTick((t) => t + 1) // refresh cooldown display
     submittingRef.current = false
     setPhase('select')
@@ -1029,6 +1210,8 @@ export function BattleScreen({
         turn={battle.state.round}
         remain={remain}
         boss={boss}
+        pace={pace}
+        onPace={setPace}
         onQuit={onQuit}
       />
 
@@ -1202,6 +1385,27 @@ export function BattleScreen({
         )}
         {banner && <div className="board__banner">{banner}</div>}
         {phaseTag && !banner && <div className="board__turnflash">{phaseTag}</div>}
+        {/* 진행 순서 — 지금 세 장 중 몇 번째를 재생 중인가. 없을 때는 "무슨 카드가
+            언제 나가는지"가 판 위에 전혀 안 드러나서, 여러 스텝이 스치듯 지나가면
+            어디까지 왔는지 알 수 없었다(2026-08-12 신고). */}
+        {phase === 'resolving' && !waitingRemote && (
+          <div className="board__order">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className={`board__pip ${
+                  activeSlot === i
+                    ? 'board__pip--now'
+                    : activeSlot !== null && i < activeSlot
+                      ? 'board__pip--done'
+                      : ''
+                }`}
+              >
+                {i + 1}
+              </span>
+            ))}
+          </div>
+        )}
         {phase === 'select' &&
           telegraph &&
           (() => {
@@ -1374,6 +1578,54 @@ export function BattleScreen({
                   .filter(Boolean)
                   .join('     ') || ' '}
           </div>
+          {/* 차근차근 모드: 양쪽이 낸 3장을 그대로 펼쳐 두고, 지금 몇 번째가
+              나가는지 표시한다. 곁에 전투 기록이 쌓여 "무엇이 몇 대미지였는지"가
+              라운드가 끝날 때까지 남는다. */}
+          {PACE_CFG[pace].board && roundPlans && !waitingRemote && (
+            <div className="rplay">
+              <div className="rplay__plans">
+                {([localSide, 1 - localSide] as const).map((sideIdx) => {
+                  const side = sideIdx as 0 | 1
+                  const mine = side === localSide
+                  return (
+                    <div key={side} className={`rplay__row ${mine ? 'is-me' : ''}`}>
+                      <span className="rplay__who">{mine ? '나' : battle.chars[side].name}</span>
+                      {[0, 1, 2].map((i) => {
+                        const c = roundPlans[side][i]
+                        return (
+                          <span
+                            key={i}
+                            className={`rplay__card ${
+                              activeSlot === i
+                                ? 'rplay__card--now'
+                                : activeSlot !== null && i < activeSlot
+                                  ? 'rplay__card--done'
+                                  : ''
+                            }`}
+                            style={
+                              c ? { ['--accent' as string]: cardAccent(c, battle.chars[side].accent) } : undefined
+                            }
+                          >
+                            <b className="rplay__no">{i + 1}</b>
+                            {c ? (
+                              <CardFace
+                                card={mine ? faceCard(c) : c}
+                                accent={cardAccent(c, battle.chars[side].accent)}
+                                compact
+                              />
+                            ) : (
+                              <span className="rplay__none">—</span>
+                            )}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+              <BattleLog rows={log} />
+            </div>
+          )}
         </div>
       )}
 
@@ -1384,6 +1636,36 @@ export function BattleScreen({
           accent={local.accent}
           onClose={() => setZoomCard(null)}
         />
+      )}
+
+      {/* 카드 공개 — 슬롯이 바뀔 때마다 "이번엔 이 두 장"을 크게 보여준다.
+          ⚠ **입력을 삼키지 않는다**(pointer-events: none) — 이 구간엔 누를 게
+            없고, 삼키면 그 시간만큼 종료 버튼도 안 눌린다. */}
+      {slotReveal && roundPlans && (
+        <div key={`reveal-${slotReveal.seq}`} className="reveal">
+          <div className="reveal__no">{slotReveal.slot + 1}번째 카드</div>
+          <div className="reveal__pair">
+            {([localSide, 1 - localSide] as const).map((sideIdx) => {
+              const side = sideIdx as 0 | 1
+              const mine = side === localSide
+              const c = roundPlans[side][slotReveal.slot]
+              return (
+                <div key={side} className={`reveal__one ${mine ? 'reveal__one--me' : ''}`}>
+                  <div className="reveal__who">{mine ? '나' : battle.chars[side].name}</div>
+                  {c ? (
+                    <CardFace
+                      card={mine ? faceCard(c) : c}
+                      accent={cardAccent(c, battle.chars[side].accent)}
+                    />
+                  ) : (
+                    // 봉인돼 카드를 못 내는 라운드 — 빈칸으로 두면 "왜 안 나오지"가 된다
+                    <div className="reveal__none">행동 불가</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {cutIn && (
@@ -1445,11 +1727,44 @@ export function BattleScreen({
 
 // ---------------------------------------------------------------------------
 
+/**
+ * 이번 라운드 전투 기록. **마지막 다섯 줄만** 남긴다 — 한 라운드에 스텝이 열 개를
+ * 넘길 수 있는데(중독 틱·바위·붕괴가 각자 한 줄이다) 전부 쌓으면 자리가 넘치고,
+ * 정작 방금 일어난 일이 위로 밀려 올라간다.
+ */
+function BattleLog({ rows }: { rows: LogRow[] }) {
+  const tail = rows.slice(-5)
+  return (
+    <div className="rlog">
+      <div className="rlog__head">이번 라운드에 일어난 일</div>
+      {tail.length === 0 && <div className="rlog__empty">…</div>}
+      {tail.map((r) => (
+        <div key={r.id} className={`rlog__row ${r.mine ? 'is-me' : 'is-foe'}`}>
+          {r.slot !== undefined && <b className="rlog__slot">{r.slot + 1}</b>}
+          <span className="rlog__who">{r.mine ? '나' : r.who}</span>
+          <span className="rlog__card">{r.card}</span>
+          {RESULT_TEXT[r.result] && <span className="rlog__res">{RESULT_TEXT[r.result]}</span>}
+          {r.heal > 0 && <span className="rlog__heal">+{r.heal}</span>}
+          {r.hits.map((h, i) => (
+            <span key={i} className={`rlog__hit ${h.onMe ? 'is-onme' : ''}`}>
+              {DMG_SRC[h.src].icon} {DMG_SRC[h.src].label} <b>-{h.n}</b>
+              <em>{h.onMe ? '나' : '상대'}</em>
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** 지금 이 파이터가 재생해야 할 스프라이트 클립. 우선순위는 "가장 극적인 것"順. */
 function clipOf(v: View, idx: number, moving: boolean): ClipName {
   if (v.hp[idx] <= 0) return 'death'
-  if (v.damage[idx] > 0) return 'hurt'
+  // ⚠ **때리는 중이면 때리는 그림이 이긴다.** 공격자도 피해를 받을 수 있어서
+  //   (반동·가시 반사) 예전 순서로는 그런 카드가 자기 공격 모션을 통째로 못 냈다.
+  //   맞는 쪽은 `acting`이 false라 그대로 `hurt`로 떨어진다.
   if (v.acting[idx]) return attackClipFor(v.actFx[idx] ?? 'punch')
+  if (v.damage[idx] > 0) return 'hurt'
   if (v.shield[idx] > 0) return 'block'
   if (moving) return 'run'
   return 'idle'
@@ -1506,6 +1821,12 @@ function FighterSprite({
   const place = sheet ? placeSprite(sheet, face) : null
   // 벽 격돌 방향 — 엔진은 정규 좌표로 주므로 화면 좌표로 되돌린다(멀티 미러링).
   const slamDir = (flip ? -v.slam[idx] : v.slam[idx]) || 0
+  /**
+   * 몸에 두르는 기운 — **상태이상이 걸린 몸은 몸빛이 달라야 한다**(2026-08-12 신고:
+   * "상태이상이 정말로 안 보임"). 발밑 칩은 스프라이트·불꽃에 계속 가려지지만
+   * 몸빛은 가려질 수가 없다. 여러 개가 걸리면 `AURA_PRIORITY`가 하나를 고른다.
+   */
+  const aura = AURA_PRIORITY.find((k) => v.status[idx].some((e) => e.kind === k))
   const cls = [
     'fighter',
     `fighter--${face}`,
@@ -1521,6 +1842,7 @@ function FighterSprite({
     // 벽 격돌 — 피격 흔들림(`is-hit`)을 **덮어쓴다**(battlefx.css가 뒤에 온다).
     // 사방으로 떠는 것과 한 방향으로 처박히는 건 다른 그림이라 겹치면 안 된다.
     slamDir ? 'is-slam' : '',
+    aura ? `is-st is-st-${aura}` : '',
   ].join(' ')
   return (
     <div
@@ -1531,6 +1853,7 @@ function FighterSprite({
         ['--accent' as string]: accent,
         // 격돌 키프레임이 "어느 쪽 벽으로 처박히는가"를 이 값으로 읽는다(±1)
         ...(slamDir ? { ['--slam' as string]: slamDir } : null),
+        ...(aura ? { ['--aura' as string]: STATUS_AURA[aura] } : null),
         // 캐릭터를 프레임 한가운데가 아니라 **몸통 기준점**으로 세운다
         // (프레임 폭은 공격 검기까지 담느라 한쪽으로 늘어나 있다).
         // `--artflip`은 시트 원본이 보는 방향을 바로잡는 값이다(진영 반전
@@ -1552,6 +1875,22 @@ function FighterSprite({
           style={{ fontSize: `${Math.round(Math.min(66, 28 + v.damage[idx] * 0.9))}px` }}
         >
           -{v.damage[idx]}
+          {/* 어디서 온 피해인지 — 한 갈래뿐이고 그게 평범한 타격이면 굳이 안 적는다
+              (숫자만 큼직하게 뜨는 지금 그림이 제일 읽기 좋다). 중독·화상·처박기가
+              섞이는 순간부터 줄이 생긴다. */}
+          {(() => {
+            const bits = v.dmgBits[idx]
+            if (bits.length === 0 || (bits.length === 1 && bits[0].src === 'attack')) return null
+            return (
+              <span className="fighter__dmgsrc">
+                {bits.map((b, i) => (
+                  <span key={i} className={`dsrc dsrc--${b.src}`}>
+                    {DMG_SRC[b.src].icon} {DMG_SRC[b.src].label} {b.n}
+                  </span>
+                ))}
+              </span>
+            )
+          })()}
         </div>
       )}
       {v.heal[idx] > 0 && (
@@ -1580,6 +1919,7 @@ function FighterSprite({
           ))}
         </div>
       )}
+      {aura && <div className="fighter__aura" />}
       {v.shield[idx] > 0 && <div className="fighter__shield" />}
       {fx && <div className={`fx fx--${fx.kind} fx--${fx.result}`} />}
       {isLocal && <div className="fighter__me">나</div>}
@@ -1638,6 +1978,8 @@ function BattleHud({
   turn,
   remain,
   boss,
+  pace,
+  onPace,
   onQuit,
 }: {
   c0: ReturnType<typeof getChar>
@@ -1650,6 +1992,8 @@ function BattleHud({
   remain: number | null
   /** 상대가 스크립트 보스면 그 연출 데이터 — 칭호와 페이즈 문턱 눈금을 붙인다. */
   boss?: BossCinematic
+  pace: BattlePace
+  onPace: (p: BattlePace) => void
   onQuit: () => void
 }) {
   // mirror the HUD to match the board: this client's fighter on the left
@@ -1683,6 +2027,18 @@ function BattleHud({
           <div className="bhud__fog">🪨 무너진 칸 라운드당 -{collapseDamageAt(turn)}</div>
         )}
         <div className="bhud__buttons">
+          {/* 연출 속도 — 배우는 중이면 🐢, 익숙해지면 ⚡. 바뀐 값은 **다음
+              라운드부터** 적용된다(재생 중에 템포가 갈리면 더 헷갈린다). */}
+          <button
+            className="btn btn--ghost bhud__pace"
+            title={`${PACE_META[pace].name} — ${PACE_META[pace].hint} (눌러서 전환)`}
+            onClick={() => {
+              onPace(pace === 'showcase' ? 'swift' : 'showcase')
+              playSfx('ui')
+            }}
+          >
+            {PACE_META[pace].icon} {PACE_META[pace].name}
+          </button>
           <SfxToggle />
           <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
             ESC · 종료
@@ -1748,6 +2104,12 @@ function BhudSide({
   const hpPct = Math.max(0, (hp / maxHp) * 100)
   const ePct = Math.max(0, (energy / char.maxEnergy) * 100)
   const hpLow = hpPct <= 30
+  /**
+   * 체력 바에 얹히는 상태이상 색 — 사용자 요청("중독일 때는 hp 색상도 좀 변하거나").
+   * ⚠ **채움 색을 갈아치우지 않는다.** 저체력 빨강은 그것대로 살아 있어야 하므로
+   *   위에 사선 줄무늬 한 겹(`.bhud__hphaze`)만 덮는다.
+   */
+  const hpAura = AURA_PRIORITY.find((k) => status.some((e) => e.kind === k))
 
   // 잔상 바(lag bar) — 방금 깎인 만큼이 흰 띠로 남았다가 뒤늦게 따라온다.
   // 격투 게임 체력바의 기본기: "얼마나 맞았는지"가 한눈에 보인다.
@@ -1790,7 +2152,10 @@ function BhudSide({
       {boss && <div className="bhud__bosstitle">{boss.title}</div>}
       {/* ⚠ 채움 막대만 클립한다. 숫자를 overflow:hidden 안에 두면 기울어진(skewX)
           모서리에 글자가 잘린다 — 예전에 그래서 "HP 205 / 205"의 위아래가 깎였다. */}
-      <div className="bhud__hp">
+      <div
+        className={`bhud__hp ${hpAura ? 'bhud__hp--st' : ''}`}
+        style={hpAura ? { ['--st' as string]: STATUS_AURA[hpAura] } : undefined}
+      >
         <div className="bhud__barclip">
           <div
             className={`bhud__hplag bhud__hpfill--${side}`}
@@ -1801,6 +2166,8 @@ function BhudSide({
             style={{ width: `${hpPct}%` }}
           />
           <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
+          {/* 상태이상 줄무늬 — 채움 색은 그대로 두고 그 위에 색 결을 얹는다 */}
+          {hpAura && <div className="bhud__hphaze" />}
           {/* 페이즈 전환 눈금 — 여기를 지나면 보스가 격노한다. 예고 배너와 달리
               **항상 보이는** 정보라, 플레이어가 "언제 몰아칠지"를 계획할 수 있다.
               ⚠ 바가 바깥에서 안쪽으로 줄어들므로 오른쪽 진영은 눈금도 뒤집는다. */}
@@ -1831,11 +2198,18 @@ function BhudSide({
       <div className="bhud__status">
         {/* ⚠ 발밑 칩과 **같은 `statusChips()`를 쓴다** — 중독·화상은 겹마다 따로
             살아 있어서, 여기서만 따로 묶으면 두 자리가 다른 숫자를 말하게 된다. */}
+        {/* ⚠ 여기는 **이름까지** 적는다(발밑 칩은 자리가 없어 아이콘뿐이다).
+            숫자 둘의 뜻도 갈라 준다 — 앞은 한 번에 들어오는 위력, `R`은 남은 라운드. */}
         {statusChips(status).map((c) => (
-          <span key={c.kind} className={`stchip stchip--hud stchip--${c.kind}`}>
+          <span
+            key={c.kind}
+            className={`stchip stchip--hud stchip--${c.kind}`}
+            title={`${STATUS_NAME[c.kind] ?? c.kind} · ${c.rounds}라운드 남음`}
+          >
             {STATUS_CHIP[c.kind]}
+            <i>{STATUS_NAME[c.kind] ?? c.kind}</i>
             {c.power > 0 ? c.power : ''}
-            <b>{c.rounds}</b>
+            <b>{c.rounds}R</b>
           </span>
         ))}
       </div>

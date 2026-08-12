@@ -691,15 +691,88 @@
 .bhud__side--right .bhud__status {
   justify-content: flex-end;
 }
-/* 발밑 칩보다 한 치수 크게 — 여기가 "읽는" 자리고 발밑은 "어느 몸에 걸렸나"다 */
+/* 발밑 칩보다 한 치수 크게 — 여기가 "읽는" 자리고 발밑은 "어느 몸에 걸렸나"다.
+   2026-08-12: 아이콘만으로는 ☠·🕸이 안 갈린다는 신고에 **이름을 넣고** 한 치수 더
+   키웠다. 색은 종류색(currentColor)이 테두리와 글자를 함께 잡는다. */
 .stchip--hud {
-  padding: 1px 7px;
-  font-size: 11px;
+  padding: 2px 9px;
+  font-size: 13px;
+  color: #fff;
   background: rgba(8, 12, 20, 0.94);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.55);
+  border-width: 2px;
+  border-color: currentColor;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  animation: stchip-breathe 1.6s ease-in-out infinite;
 }
+/* 이름은 종류색으로 — 칩 전체를 색칠하면 숫자가 안 읽힌다 */
+.stchip--hud i {
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.stchip--poison.stchip--hud i { color: #7bd88f; }
+.stchip--burn.stchip--hud i { color: #ff9a3d; }
+.stchip--frozen.stchip--hud i { color: #9fd8ff; }
+.stchip--stunned.stchip--hud i { color: #ffe14d; }
+.stchip--bind.stchip--hud i { color: #c4a3ff; }
+.stchip--atkUp.stchip--hud i { color: #ffb84d; }
+.stchip--defUp.stchip--hud i { color: #9fc2ff; }
+.stchip--freeCast.stchip--hud i { color: #e07ad0; }
 .stchip--hud b {
-  font-size: 10px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+/* 숨쉬듯 밝아졌다 어두워진다 — 정지한 칩은 배경 무늬로 읽혀서 눈이 그냥 지나친다 */
+@keyframes stchip-breathe {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 0, 0, 0.6); }
+  50% { box-shadow: 0 0 16px currentColor, 0 0 10px rgba(0, 0, 0, 0.6); }
+}
+
+/* ---- 상태이상 = 몸빛 (2026-08-12) ------------------------------------------
+   신고: *"상태이상이 정말로 안 보임 — 좀 더 키우고, 캐릭터 위에 표시가 나타나거나."*
+
+   칩을 키우는 것만으로는 부족하다(발밑은 스프라이트·불꽃·피해 숫자가 계속 덮는다).
+   ⚠ **머리 위로 올리지 않았다** — 판이 302px뿐이라 윗줄(row 0)에 선 파이터의
+     머리 위는 이미 화면 밖이다(`.board`가 `overflow: hidden`). 그래서 대신
+     **몸빛 자체**를 바꾼다: 가려질 수가 없고, 멀리서도 "쟤 중독됐다"가 읽힌다. */
+.fighter.is-st .fighter__art {
+  filter: drop-shadow(0 0 7px var(--aura)) drop-shadow(0 0 14px var(--aura));
+  animation: aura-breathe 1.4s ease-in-out infinite;
+}
+/* ⚠ 공격·피격 모션이 도는 동안엔 이 애니메이션을 걸지 않는다 — `.fighter__art`의
+   `animation` 자리를 두고 싸우면 타격 모션이 통째로 죽는다(`filter`만 남긴다). */
+.fighter.is-st.is-attacking .fighter__art,
+.fighter.is-st.is-hit .fighter__art,
+.fighter.is-st.is-stunned .fighter__art {
+  animation-name: none;
+}
+@keyframes aura-breathe {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--aura)); }
+  50% { filter: drop-shadow(0 0 11px var(--aura)) drop-shadow(0 0 20px var(--aura)); }
+}
+/* 발밑에 도는 색 고리 — 그림자 위에 얹혀 "서 있는 자리"까지 물들인다.
+   ⚠ **실제 DOM 노드다**(`fighter__aura`). `.fighter`의 `::before`는 접지 그림자,
+     `::after`는 "나" 표식이 이미 쓰고 있어서 의사요소가 남아 있지 않다 —
+     여기에 얹으면 둘 중 하나가 조용히 사라진다. */
+.fighter__aura {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  width: 78px;
+  height: 20px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--aura), transparent 70%);
+  animation: aura-ring 1.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.fighter--sprite .fighter__aura {
+  left: calc(var(--anchorpx, 0) * 1px);
+}
+@keyframes aura-ring {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(0.9); }
+  50% { opacity: 0.8; transform: translateX(-50%) scale(1.12); }
 }
 
 /* ---- 접근성 --------------------------------------------------------------- */
@@ -746,30 +819,35 @@
 .fighter--sprite .fighter__status {
   left: calc(var(--anchorpx, 0) * 1px);
 }
+/* 2026-08-12: 한 치수 키웠다(10 → 13px). 판이 좁아 아이콘+숫자뿐이지만,
+   전에는 스프라이트 옆에서 먼지처럼 보여 있는지조차 몰랐다. */
 .stchip {
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  padding: 1px 5px;
-  border-radius: 8px;
+  padding: 2px 7px;
+  border-radius: 9px;
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.35;
   color: #fff;
-  background: rgba(8, 12, 20, 0.88);
-  border: 1px solid currentColor;
+  background: rgba(8, 12, 20, 0.92);
+  border: 2px solid currentColor;
+  box-shadow: 0 0 9px color-mix(in srgb, currentColor 55%, transparent);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 /* 남은 턴 수는 항상 마지막에, 흐리게 — 위력과 헷갈리지 않게 */
 .stchip b {
   margin-left: 2px;
-  opacity: 0.65;
-  font-size: 9px;
+  opacity: 0.7;
+  font-size: 11px;
 }
 .stchip--poison { color: #7bd88f; }
 .stchip--burn { color: #ff9a3d; }
 .stchip--frozen { color: #9fd8ff; }
+.stchip--stunned { color: #ffe14d; }
+.stchip--bind { color: #c4a3ff; }
 .stchip--atkUp { color: #ffb84d; }
 .stchip--defUp { color: #9fc2ff; }
 .stchip--freeCast { color: #e07ad0; }
