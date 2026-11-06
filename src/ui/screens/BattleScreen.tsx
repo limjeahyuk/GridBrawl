@@ -3,8 +3,6 @@ import { getChar } from '../../data/roster'
 import { buildFighterSvg } from '../../art/art'
 import {
   attackClipFor,
-  clipOrFallback,
-  clipUrl,
   impactDelayOf,
   placeSprite,
   preloadSheet,
@@ -18,10 +16,25 @@ import type { BossCinematic } from '../../game/bosses'
 import { deckFor } from '../../battle/cards'
 import { CardFace, cardAccent } from '../CardFace'
 import { CardDetail, useLongPress } from '../CardDetail'
+import { KIND_LABEL } from '../cardAbility'
 import { PortraitSvg } from '../PortraitSvg'
+import { RELIC_ATLAS } from '../../art/relicAtlas'
+import { markFoeAbilitySeen, seenFoeAbilities } from '../../game/progress'
+import { getRelic } from '../../game/relics'
+import { FoeIcon, RARITY_LABEL, RelicIcon } from '../RelicIcon'
+import {
+  battleRelics,
+  foeReveals,
+  isBigProc,
+  relicProcs,
+  type FoeAbility,
+} from '../relicFx'
+import { SceneLayers } from '../SceneLayers'
+import { SpriteClip } from '../SpriteClip'
 import { isMuted, playSfx, setMuted, unlockAudio } from '../sfx'
 import {
   COLLAPSE_START_ROUND,
+  LOW_HP_FRAC,
   collapseDamageAt,
   collapseEscalatesNext,
   GRID_COLS,
@@ -37,6 +50,7 @@ import {
   type ActionResult,
   type Cell,
   type CardDef,
+  type FogTile,
   type MoveDir,
   type Obstacle,
   type Step,
@@ -61,6 +75,8 @@ interface View {
   shield: [number, number]
   /** 이 시점의 지형(바위). 스텝마다 바뀌므로 뷰에 싣는다 — 부서지는 순간이 보여야 한다. */
   obstacles: Obstacle[]
+  /** 이 시점의 독안개 칸. */
+  fog: FogTile[]
   acting: [boolean, boolean] // attack lunge
   /** 지금 내는 공격 카드의 fx 종류. 준비 동작~타격 내내 유지돼야 한다 —
    *  중간에 바뀌면 CSS animation-name이 갈려 모션이 처음부터 다시 뛴다. */
@@ -83,7 +99,24 @@ interface View {
 
 const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100
 const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+/**
+ * 스텝 사이의 대기. 턴 재생은 이 `await wait()` 사슬 하나로 굴러간다.
+ *
+ * ⚠ 모바일 웹뷰는 백그라운드에서 타이머를 안 깨우는 경우가 있어, 이 대기가 안 풀리면
+ *   `hitstop`이 켜진 채 판이 굳는다(2026-08-12 신고). 그래서 안 보이면 안 기다리고,
+ *   `visibilitychange`가 오면 어느 방향이든 대기를 끝낸다. 상세는 CLAUDE.md "전투 연출".
+ */
+const wait = (ms: number): Promise<void> =>
+  new Promise<void>((resolve) => {
+    if (document.hidden) return resolve()
+    const finish = () => {
+      clearTimeout(id)
+      document.removeEventListener('visibilitychange', finish)
+      resolve()
+    }
+    const id = setTimeout(finish, ms)
+    document.addEventListener('visibilitychange', finish)
+  })
 
 /**
  * Board cells an attack covers, from the attacker's cell and facing (+1 / -1).
@@ -143,22 +176,6 @@ function applyMovePreview(from: Cell, card: CardDef, rocks: readonly Obstacle[] 
   return cur
 }
 
-/**
- * 그 칸에 설 바위의 **스트립 프레임 번호**(`public/terrain/rocks.png`의 `--v`).
- * 재질은 무대가 정하고(묘지=이끼 · 용암=흑요석 · 나머지=회색), 그 안에서 어느
- * 덩이인지는 **칸 좌표로** 고른다 — 판에 두세 덩이가 동시에 서므로 다 같은 모양이면
- * 도장을 찍은 것처럼 읽힌다. 좌표를 쓰는 이유는 재현성이다: 렌더마다 굴리면 바위가
- * 맞을 때마다 다른 돌로 바뀌고, 랜덤을 쓰면 두 피어의 화면이 달라진다.
- * ⚠ 프레임 구간은 `scripts/packrocks.mjs`의 `PICKS` 순서와 짝이다.
- */
-function rockVariant(cell: Cell, scene: BattleScene): number {
-  const [base, count] = scene === 'lava' ? [6, 2] : scene === 'cemetery' ? [4, 2] : [0, 4]
-  // ⚠ 계수는 `5·2`여야 한다. 재질이 둘뿐일 때(`count = 2`) 이 식은 **열의 홀짝**으로
-  //   떨어지는데, 계수를 둘 다 홀수로 잡으면 `(열+행)`의 홀짝이 되어 묘지 배치의
-  //   두 바위 (2,0)·(3,3)가 **같은 그림**을 받는다(실제로 그렇게 나왔다).
-  return base + ((cell.col * 5 + cell.row * 2) % count)
-}
-
 const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   hit: '명중!',
   blocked: '가드됨',
@@ -175,27 +192,22 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   frozen: '얼어붙음',
   rock: '',
 }
-const PHASE_TEXT: Record<Step['phase'], string> = {
-  move: '이동',
-  defense: '수비',
-  attack: '공격',
-  collapse: '붕괴',
-  revive: '부활',
-  stun: '기절',
-  trigger: '유물',
-  status: '상태이상',
-  rock: '지형',
-}
 /** 파이터 발밑 상태 칩 — 지금 뭐가 걸려 있는지 숫자를 안 읽어도 보이게. */
 const STATUS_CHIP: Record<string, string> = {
-  poison: '☠',
-  burn: '🔥',
   frozen: '❄',
   stunned: '💫',
-  bind: '🕸',
   atkUp: '🔺',
   defUp: '🔷',
   freeCast: '🌀',
+}
+/** 픽셀 아이콘이 있는 상태이상(`public/redesign/ui/status/`). 나머지는 위 글리프. */
+const STATUS_ICON = new Set(['poison', 'burn', 'bind'])
+function StatusGlyph({ kind }: { kind: string }) {
+  return STATUS_ICON.has(kind) ? (
+    <i className="stchip__ico" style={{ backgroundImage: `url(/redesign/ui/status/${kind}.png)` }} />
+  ) : (
+    <>{STATUS_CHIP[kind]}</>
+  )
 }
 
 /**
@@ -266,6 +278,7 @@ function baseView(b: CardBattle): View {
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
     obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
+    fog: s.fog.map((f) => ({ ...f })),
     acting: [false, false],
     actFx: [null, null],
     damage: [0, 0],
@@ -312,6 +325,7 @@ function stepToView(step: Step, seq: number): View {
     energy: [s.energy[0], s.energy[1]],
     shield: [s.shield[0], s.shield[1]],
     obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
+    fog: s.fog.map((f) => ({ ...f })),
     acting,
     actFx,
     status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
@@ -354,7 +368,10 @@ export function BattleScreen({
   battleOpts,
   telegraph,
   boss,
-  scene = 'hall',
+  scene = 'grassland',
+  relics = [],
+  place,
+  foeInfo,
   getOpponentPlan,
   turnSeconds,
   onEnd,
@@ -380,8 +397,14 @@ export function BattleScreen({
    * ⚠ **상대(side 1)가 보스라는 전제**다 — 런은 항상 `localSide === 0`이다.
    */
   boss?: BossCinematic
-  /** 전장 배경. 로그라이크는 층마다 바뀌고(`sceneFor`), 봇전·멀티는 기본 고성. */
+  /** 전장 배경. 로그라이크는 지역을 따르고(`sceneFor`), 봇전·멀티는 기본 초원. */
   scene?: BattleScene
+  /** 내 유물 — 체력·기력 아래 줄에 놓인다. 단판에는 없다. */
+  relics?: string[]
+  /** HUD 가운데 부제(예: "초원 · 5층"). */
+  place?: string
+  /** 상대 정보 — 등급 표기 · 처음엔 ?로 가려지는 능력들. */
+  foeInfo?: { tag?: string; abilities: FoeAbility[] }
   getOpponentPlan: OpponentPlanner
   /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
    *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
@@ -456,7 +479,6 @@ export function BattleScreen({
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null])
   const [phase, setPhase] = useState<'select' | 'resolving' | 'over'>('select')
   const [waitingRemote, setWaitingRemote] = useState(false)
-  const [phaseTag, setPhaseTag] = useState<string>('')
   const [banner, setBanner] = useState<string | null>(null)
   /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
   const [remain, setRemain] = useState<number | null>(null)
@@ -473,6 +495,23 @@ export function BattleScreen({
   const [resolveHit, setResolveHit] = useState<{ cells: Cell[]; actor: 0 | 1 } | null>(null)
   // 필살기 컷인(시그니처 카드 발동 순간 화면을 덮는 연출)
   const [cutIn, setCutIn] = useState<{ seq: number; actor: 0 | 1; card: CardDef } | null>(null)
+  // 실행 중 위쪽에 뜨는 "CARD n/3" 안내.
+  const [callout, setCallout] = useState<{ no: number; name: string; note: string } | null>(null)
+  // 유물 발동 연출 — 재생을 기다리지 않는다(`key`로 다시 뛰는 CSS 애니메이션뿐이다).
+  const [fired, setFired] = useState<{ seq: number; ids: string[] } | null>(null)
+  const [ribbon, setRibbon] = useState<{
+    seq: number
+    kind: 'relic' | 'foe'
+    atlasId: string
+    title: string
+    note: string
+  } | null>(null)
+  const seenFoe = useMemo(() => seenFoeAbilities(), [])
+  /** 이미 드러난 적 능력. 한 번 본 건 도감에 남아 처음부터 보인다. */
+  const [revealed, setRevealed] = useState<Set<string>>(
+    () => new Set(foeInfo?.abilities.filter((a) => seenFoe.has(a.key)).map((a) => a.key)),
+  )
+  const revealedRef = useRef(revealed)
   /**
    * 꾹 눌러 여는 **카드 상세**(2026-08-05). 압축 카드에서 뺀 설명·능력의 뜻이
    * 여기로 갔다. 누른 카드는 ref로 기억한다 — 훅은 화면에 하나뿐이라 손패 카드마다
@@ -733,10 +772,8 @@ export function BattleScreen({
     slots.map((s, i) => (s?.id === id ? i + 1 : null)).filter((n): n is number => n !== null)
 
   // ---- resolve a turn ----------------------------------------------------
-  const submitPlan = async (localPlan: CardDef[]) => {
-    // 수동 제출과 타이머 자동 제출이 겹쳐 두 번 보내지 않도록 ref로 잠근다
-    if (phase !== 'select' || submittingRef.current) return
-    submittingRef.current = true
+  /** 한 턴을 굴리고 끝까지 재생한다. 이중 제출 잠금·실패 복구는 아래 `submitPlan`이 감싼다. */
+  const playTurn = async (localPlan: CardDef[]) => {
     setPhase('resolving')
     setHoveredCard(null)
 
@@ -835,10 +872,49 @@ export function BattleScreen({
         if (cancelled.current) return
       }
 
-      setPhaseTag(PHASE_TEXT[step.phase])
       const full = stepToView(step, si + 1)
       const actor = step.actor as 0 | 1
       const foe = (1 - actor) as 0 | 1
+
+      // 실행 중인 카드 안내 — 슬롯 번호는 그 쪽 계획에서의 자리다.
+      const plan = actor === 0 ? planA : planB
+      const slotNo = plan.findIndex((c) => c.id === step.card.id) + 1
+      setCallout(
+        slotNo > 0
+          ? {
+              no: slotNo,
+              name: step.card.name,
+              note: step.card.kind === 'attack' ? `피해 ${step.card.damage ?? 0}` : KIND_LABEL[step.card.kind],
+            }
+          : null,
+      )
+
+      // 유물 발동 · 적 능력 공개 — 연출뿐이라 재생 사슬을 멈추지 않는다.
+      const procs = relicProcs(step, localSide, relics)
+      if (procs.length) {
+        setFired({ seq: si + 1, ids: procs })
+        const r = getRelic(procs[0])
+        if (r && isBigProc(step))
+          setRibbon({ seq: si + 1, kind: 'relic', atlasId: r.id, title: r.name, note: r.desc })
+      }
+      if (foeInfo) {
+        const fresh = foeReveals(step, (1 - localSide) as 0 | 1, foeInfo.abilities).filter(
+          (a) => !revealedRef.current.has(a.key),
+        )
+        if (fresh.length) {
+          revealedRef.current = new Set([...revealedRef.current, ...fresh.map((a) => a.key)])
+          setRevealed(revealedRef.current)
+          markFoeAbilitySeen(fresh.map((a) => a.key))
+          if (boss)
+            setRibbon({
+              seq: si + 1,
+              kind: 'foe',
+              atlasId: fresh[0].atlasId,
+              title: fresh[0].name,
+              note: `${fresh[0].desc} 지금 막 처음 발동했다`,
+            })
+        }
+      }
 
       if (step.card.kind === 'attack' && step.result !== 'nofuel') {
         setResolveHit({
@@ -919,21 +995,28 @@ export function BattleScreen({
       }
     }
     setCutIn(null)
-
-    setView(baseView(battle))
-    setResolveHit(null)
-    setSparks(null)
-    setWallSlam(null)
-    setPhaseTag('')
+    setCallout(null)
 
     if (battle.state.over) {
       const localWon = battle.state.winner === localSide
       setBanner(battle.state.winner === null ? 'DRAW' : localWon ? 'K.O.' : 'DEFEAT')
       if (battle.state.winner !== null) playSfx(localWon ? 'win' : 'lose')
+    }
+    await settle(1300)
+  }
+
+  /** 연출 레이어를 접고 다음 선택(또는 종료)으로 넘긴다. `playTurn` 끝과 실패 복구가 같이 쓴다. */
+  const settle = async (overWait: number) => {
+    setView(baseView(battle))
+    setResolveHit(null)
+    setSparks(null)
+    setWallSlam(null)
+
+    if (battle.state.over) {
       setPhase('over')
-      await wait(1300)
+      await wait(overWait)
       if (cancelled.current) return
-      onEnd(localWon, battle.state.hp[localSide]) // 남은 체력 인계(로그라이크 HP 캐리)
+      onEnd(battle.state.winner === localSide, battle.state.hp[localSide]) // 남은 체력 인계(로그라이크 HP 캐리)
       return
     }
 
@@ -941,6 +1024,34 @@ export function BattleScreen({
     setTick((t) => t + 1) // refresh cooldown display
     submittingRef.current = false
     setPhase('select')
+  }
+
+  /**
+   * 턴 제출 — 이중 제출을 막고, **재생이 도중에 죽어도 판을 되살린다**.
+   *
+   * ⚠ 재생 사슬은 `await` 하나만 안 풀려도 `phase: 'resolving'` · `submittingRef: true` ·
+   *   `hitstop: true`가 그대로 굳어 **판이 통째로 벽돌이 된다**(위 `wait` 주석의 신고).
+   *   `wait`이 화면 복귀에 반응하도록 고쳤지만, 그건 타이머 경로 하나를 막은 것뿐이다.
+   *   예외가 어디서 터지든 최소한 **카드를 다시 낼 수 있는 상태**로는 돌아와야 한다.
+   * ⚠ 예외를 삼키지 않는다 — 여기 걸리는 건 전부 버그이므로 콘솔에 남긴다.
+   */
+  const submitPlan = async (localPlan: CardDef[]) => {
+    // 수동 제출과 타이머 자동 제출이 겹쳐 두 번 보내지 않도록 ref로 잠근다
+    if (phase !== 'select' || submittingRef.current) return
+    submittingRef.current = true
+    try {
+      await playTurn(localPlan)
+    } catch (err) {
+      console.error('[battle] 턴 재생이 중단됐다 — 화면을 복구한다', err)
+      if (cancelled.current) return
+      // 판 상태는 엔진이 이미 확정해 뒀다(resolveRound은 동기다). 연출 레이어만 접는다.
+      setHitstop(false)
+      setCutIn(null)
+      setCallout(null)
+      setBossCut(null)
+      setWaitingRemote(false)
+      await settle(0)
+    }
   }
 
   const confirm = () => {
@@ -1007,9 +1118,25 @@ export function BattleScreen({
     bossIntroRef.current = true
     setBossCut({ seq: 1, kind: 'entrance' })
     playSfx('bossHorn')
-    const id = setTimeout(() => setBossCut(null), BOSSCUT_MS)
-    return () => clearTimeout(id)
+    // ⚠ 생 setTimeout이 아니라 `wait`을 쓴다 — 컷인이 떠 있는 동안 앱을 내려놓으면
+    //   타이머가 안 깨어나 **전면 오버레이가 그대로 남고 판이 안 보인다**(재생 사슬이
+    //   굳는 것과 같은 원인). `wait`은 화면 복귀에도 풀린다.
+    let alive = true
+    void wait(BOSSCUT_MS).then(() => {
+      if (alive) setBossCut(null)
+    })
+    return () => {
+      alive = false
+    }
   }, [boss])
+
+  // 판 바닥 — 초원은 풀, 초원 엘리트 무대는 흙길, 던전은 판석.
+  const tile =
+    scene === 'grassland' || scene === 'sanctum'
+      ? foeInfo?.tag === '엘리트' || scene === 'sanctum'
+        ? 'dirt'
+        : 'grass'
+      : 'dungeon'
 
   return (
     <div
@@ -1018,7 +1145,7 @@ export function BattleScreen({
       // 읽으므로 보스를 추가할 때 색은 `bosses.ts`의 `accent` 한 곳만 정하면 된다.
       style={boss ? { ['--boss' as string]: boss.accent } : undefined}
     >
-      <div className="grid-bg" />
+      <SceneLayers scene={scene} />
 
       <BattleHud
         c0={c0}
@@ -1029,15 +1156,32 @@ export function BattleScreen({
         turn={battle.state.round}
         remain={remain}
         boss={boss}
+        place={place}
+        phase={phase === 'select' ? '카드 선택' : '실행 중'}
+        foeTag={foeInfo?.tag}
+        enraged={enraged}
         onQuit={onQuit}
       />
 
+      {relics.length > 0 && (
+        <BattleRelics
+          ids={battleRelics(relics)}
+          battle={battle}
+          side={localSide}
+          view={view}
+          fired={fired}
+          owner={local.name}
+        />
+      )}
+      {foeInfo && foeInfo.abilities.length > 0 && (
+        <FoeRow abilities={foeInfo.abilities} revealed={revealed} boss={!!boss} />
+      )}
+
       <div className="board">
-        <div className={`boardfloor boardfloor--${scene}`} />
         {/* 보스 기운 — 무대 위에 얹히는 보스 색 맥동. 판 위 레이어라 반드시
             `pointer-events: none`이어야 한다(칸을 눌러 이동하므로). */}
         {boss && <div className={`bossaura ${enraged ? 'bossaura--enraged' : ''}`} />}
-        <div className="gridboard" ref={gridRef}>
+        <div className={`gridboard gridboard--${tile}`} ref={gridRef}>
           {Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
             const row = Math.floor(i / GRID_COLS)
             // visual column -> canonical column (mirrored when we hold side 1)
@@ -1084,22 +1228,31 @@ export function BattleScreen({
           {view.obstacles.map((r) => {
             const frac = r.hp / Math.max(1, r.maxHp)
             const wear = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2
-            const v = rockVariant(r.cell, scene)
             return (
               <div
                 key={`rock-${r.cell.col},${r.cell.row}`}
-                className={`rock rock--wear${wear}`}
+                className="rock"
                 style={{
                   left: `${cellX(dcol(r.cell.col))}%`,
                   top: `${cellY(r.cell.row)}%`,
-                  ['--v' as string]: v,
+                  ['--wear' as string]: wear,
                 }}
                 aria-hidden
-              >
-                <span className="rock__hp" style={{ ['--frac' as string]: frac, ['--v' as string]: v }} />
-              </div>
+              />
             )
           })}
+          {/* 독안개 — 파이터 **위**에 반투명으로 덮는다(서 있으면 안개 속에 잠긴다).
+              판 위 레이어라 `pointer-events: none`은 CSS가 건다. */}
+          {view.fog
+            .filter((f) => f.rounds > 0)
+            .map((f) => (
+              <div
+                key={`fog-${f.cell.col},${f.cell.row}`}
+                className="fogtile"
+                style={{ left: `${cellX(dcol(f.cell.col))}%`, top: `${cellY(f.cell.row)}%` }}
+                aria-hidden
+              />
+            ))}
           {preview.ghost && (
             // 잔상도 본체와 **같은 몸**이어야 한다 — 스프라이트 캐릭터인데 잔상만
             // SVG로 그리면 딴 사람이 서 있고 바닥선까지 어긋난다.
@@ -1201,7 +1354,13 @@ export function BattleScreen({
           />
         )}
         {banner && <div className="board__banner">{banner}</div>}
-        {phaseTag && !banner && <div className="board__turnflash">{phaseTag}</div>}
+        {callout && !banner && (
+          <div className="board__callout">
+            <em>CARD {callout.no}/3</em>
+            <b>{callout.name}</b>
+            <span>{callout.note}</span>
+          </div>
+        )}
         {phase === 'select' &&
           telegraph &&
           (() => {
@@ -1212,6 +1371,21 @@ export function BattleScreen({
             ) : null
           })()}
       </div>
+
+      {ribbon && (
+        <div key={`rb-${ribbon.seq}`} className={`procribbon procribbon--${ribbon.kind}`}>
+          {ribbon.kind === 'relic' ? (
+            <RelicIcon id={ribbon.atlasId} size={52} />
+          ) : (
+            <FoeIcon id={ribbon.atlasId} size={78} />
+          )}
+          <div>
+            {ribbon.kind === 'foe' && <em>BOSS RELIC REVEALED</em>}
+            <b>{ribbon.title}</b>
+            <span>{ribbon.note}</span>
+          </div>
+        </div>
+      )}
 
       {phase === 'select' ? (
         <div className="cards">
@@ -1257,26 +1431,10 @@ export function BattleScreen({
                 {c ? (
                   <CardFace card={faceCard(c)} accent={cardAccent(c, local.accent)} compact />
                 ) : (
-                  <span className="slot__empty">{i + 1}번째</span>
+                  <span className="slot__empty">비어 있음</span>
                 )}
               </button>
             ))}
-            <div className="cards__actions">
-              <button
-                className="btn btn--ghost cards__reset"
-                onClick={reset}
-                disabled={slots.every((s) => !s)}
-              >
-                초기화
-              </button>
-              <button
-                className={`btn cards__confirm ${affordable ? '' : 'is-disabled'}`}
-                onClick={confirm}
-                disabled={!affordable}
-              >
-                {filled && !affordable ? '기력 부족' : '실행 ▶'}
-              </button>
-            </div>
           </div>
 
           {/* ⚠ **이동 카드는 선택창에 없다**(2026-08-05 사용자 요청). 이동은 판의
@@ -1360,6 +1518,22 @@ export function BattleScreen({
               )
             })}
             </div>
+          </div>
+          <div className="cards__actions">
+            <button
+              className="btn btn--ghost cards__reset"
+              onClick={reset}
+              disabled={slots.every((s) => !s)}
+            >
+              초기화
+            </button>
+            <button
+              className={`btn cards__confirm ${affordable ? '' : 'is-disabled'}`}
+              onClick={confirm}
+              disabled={!affordable}
+            >
+              {filled && !affordable ? '기력 부족' : '확정 ▶'}
+            </button>
           </div>
         </div>
       ) : (
@@ -1446,13 +1620,12 @@ export function BattleScreen({
 // ---------------------------------------------------------------------------
 
 /** 지금 이 파이터가 재생해야 할 스프라이트 클립. 우선순위는 "가장 극적인 것"順. */
-function clipOf(v: View, idx: number, moving: boolean): ClipName {
+function clipOf(v: View, idx: number, moving: 'run' | 'back' | null): ClipName {
   if (v.hp[idx] <= 0) return 'death'
   if (v.damage[idx] > 0) return 'hurt'
   if (v.acting[idx]) return attackClipFor(v.actFx[idx] ?? 'punch')
   if (v.shield[idx] > 0) return 'block'
-  if (moving) return 'run'
-  return 'idle'
+  return moving ?? 'idle'
 }
 
 function FighterSprite({
@@ -1481,14 +1654,16 @@ function FighterSprite({
   const fx = v.fx[idx]
   // 셀이 바뀌는 동안엔 달리는 클립을 재생한다(위치 전환은 CSS transition이 맡는다)
   const prevCell = useRef(v.pos[idx])
-  const [moving, setMoving] = useState(false)
+  const [moving, setMoving] = useState<'run' | 'back' | null>(null)
   useEffect(() => {
     const p = prevCell.current
     const now = v.pos[idx]
     prevCell.current = now
     if (p.col === now.col && p.row === now.row) return
-    setMoving(true)
-    const id = setTimeout(() => setMoving(false), 500) // .fighter의 이동 transition과 같은 길이
+    // 상대에게서 멀어지는 쪽으로 가면 뒷걸음이다(열이 그대로면 앞으로 걷는 동작).
+    const away = Math.abs(now.col - v.pos[1 - idx].col) > Math.abs(p.col - v.pos[1 - idx].col)
+    setMoving(away ? 'back' : 'run')
+    const id = setTimeout(() => setMoving(null), 500) // .fighter의 이동 transition과 같은 길이
     return () => clearTimeout(id)
   }, [v.pos, idx])
 
@@ -1573,7 +1748,7 @@ function FighterSprite({
               들어오는 총 피해, 굵은 수치는 가장 오래 남는 겹의 남은 라운드다. */}
           {statusChips(v.status[idx]).map((c) => (
             <span key={c.kind} className={`stchip stchip--${c.kind}`}>
-              {STATUS_CHIP[c.kind]}
+              <StatusGlyph kind={c.kind} />
               {c.power > 0 ? c.power : ''}
               <b>{c.rounds}</b>
             </span>
@@ -1594,41 +1769,6 @@ function FighterSprite({
   )
 }
 
-/**
- * 스프라이트 한 클립을 재생한다. 재생은 전부 CSS `steps()`가 맡고 JS는 프레임을
- * 세지 않는다 — 덕분에 히트스톱(`animation-play-state: paused`)이 스프라이트
- * 프레임까지 그대로 얼린다.
- *
- * `key`로 remount해 클립을 처음부터 다시 돌린다. animation-name이 계속
- * `sprite-play`라 클래스만 바꿔서는 재시작되지 않기 때문(이미지는 캐시돼 있어
- * remount 비용은 사실상 0).
- */
-function SpriteClip({ sheet, clip, seq }: { sheet: SheetDef; clip: ClipName; seq: number }) {
-  // 없는 동작은 대기로 떨어진다 — 팩마다 들어 있는 클립이 다르다
-  const [actual, def] = clipOrFallback(sheet, clip)
-  const w = sheet.frameW * sheet.scale
-  const h = sheet.frameH * sheet.scale
-  return (
-    <div
-      key={`${actual}-${seq}`}
-      className="sprite"
-      style={{
-        width: `${w}px`,
-        height: `${h}px`,
-        backgroundImage: `url(${clipUrl(sheet, actual)})`,
-        backgroundSize: `${w * def.frames}px ${h}px`,
-        // 애니메이션이 끝나면 이 base 값이 드러난다 = 마지막 프레임에서 정지.
-        // (fill:forwards는 프레임 범위를 한 칸 넘어가 빈 칸을 보여 준다.)
-        backgroundPositionX: def.loop ? '0px' : `${-(def.frames - 1) * w}px`,
-        animationTimingFunction: `steps(${def.frames})`,
-        animationDuration: `${def.frames * def.frameMs}ms`,
-        animationIterationCount: def.loop ? 'infinite' : 1,
-        ['--strip' as string]: `${-def.frames * w}px`,
-      }}
-    />
-  )
-}
-
 function BattleHud({
   c0,
   c1,
@@ -1638,6 +1778,10 @@ function BattleHud({
   turn,
   remain,
   boss,
+  place,
+  phase,
+  foeTag,
+  enraged,
   onQuit,
 }: {
   c0: ReturnType<typeof getChar>
@@ -1650,6 +1794,10 @@ function BattleHud({
   remain: number | null
   /** 상대가 스크립트 보스면 그 연출 데이터 — 칭호와 페이즈 문턱 눈금을 붙인다. */
   boss?: BossCinematic
+  place?: string
+  phase: string
+  foeTag?: string
+  enraged: boolean
   onQuit: () => void
 }) {
   // mirror the HUD to match the board: this client's fighter on the left
@@ -1663,41 +1811,45 @@ function BattleHud({
         maxHp={maxHp[li]}
         hp={view.hp[li]}
         energy={view.energy[li]}
+        shield={view.shield[li]}
         status={view.status[li]}
         side="left"
-        isLocal
       />
       <div className="bhud__turn">
         <div className="bhud__turnno">ROUND {turn}</div>
+        <div className="bhud__place">{[place, boss ? boss.title : phase].filter(Boolean).join(' · ')}</div>
         {remain !== null && (
           <div className={`bhud__timer ${remain <= 5 ? 'bhud__timer--urgent' : ''}`}>
             ⏱ {remain}s
           </div>
         )}
-        {collapseEscalatesNext(turn) && (
-          <div className="bhud__fog bhud__fog--warn">
-            {turn < COLLAPSE_START_ROUND ? '⚠ 다음 라운드부터 전장이 무너진다!' : '⚠ 다음 라운드 붕괴 확대!'}
-          </div>
-        )}
-        {turn >= COLLAPSE_START_ROUND && (
-          <div className="bhud__fog">🪨 무너진 칸 라운드당 -{collapseDamageAt(turn)}</div>
-        )}
-        <div className="bhud__buttons">
-          <SfxToggle />
-          <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
-            ESC · 종료
-          </button>
-        </div>
       </div>
       <BhudSide
         char={chars[oi]}
         maxHp={maxHp[oi]}
         hp={view.hp[oi]}
         energy={view.energy[oi]}
+        shield={view.shield[oi]}
         status={view.status[oi]}
         side="right"
         boss={boss}
+        sub={boss ? (enraged ? '2페이즈' : '1페이즈') : foeTag}
       />
+      {/* 라운드 판 아래 보조 줄 — 붕괴 경고와 소리·종료 버튼. */}
+      <div className="bhud__tools">
+        {collapseEscalatesNext(turn) && (
+          <div className="bhud__fog bhud__fog--warn">
+            {turn < COLLAPSE_START_ROUND ? '⚠ 다음 라운드부터 전장이 무너진다!' : '⚠ 다음 라운드 붕괴 확대!'}
+          </div>
+        )}
+        {turn >= COLLAPSE_START_ROUND && (
+          <div className="bhud__fog">무너진 칸 라운드당 -{collapseDamageAt(turn)}</div>
+        )}
+        <SfxToggle />
+        <button className="btn btn--ghost bhud__quit" onClick={onQuit}>
+          종료
+        </button>
+      </div>
     </div>
   )
 }
@@ -1729,22 +1881,26 @@ function BhudSide({
   maxHp,
   hp,
   energy,
+  shield,
   status,
   side,
-  isLocal,
   boss,
+  sub,
 }: {
   char: ReturnType<typeof getChar>
   maxHp: number
   hp: number
   energy: number
+  shield: number
   /** 지금 걸려 있는 지속효과 — 기력 바 **아래**에 늘어놓는다(아래 주석 참고). */
   status: StatusEffect[]
   side: 'left' | 'right'
-  isLocal?: boolean
-  /** 이 쪽이 스크립트 보스일 때만. 칭호 한 줄 + 페이즈 전환 눈금을 그린다. */
+  /** 이 쪽이 스크립트 보스일 때만. 페이즈 전환 눈금을 그린다. */
   boss?: BossCinematic
+  /** 이름 옆 작은 글씨(엘리트·페이즈). 보호막이 있으면 그쪽이 우선이다. */
+  sub?: string
 }) {
+  const sheet = sheetFor(char.spriteId ?? char.id)
   const hpPct = Math.max(0, (hp / maxHp) * 100)
   const ePct = Math.max(0, (energy / char.maxEnergy) * 100)
   const hpLow = hpPct <= 30
@@ -1782,63 +1938,244 @@ function BhudSide({
       className={`bhud__side bhud__side--${side} ${shock ? 'is-shock' : ''} ${boss ? 'bhud__side--boss' : ''}`}
       style={{ ['--accent' as string]: boss ? boss.accent : char.accent }}
     >
-      <div className="bhud__name">
-        {char.name}
-        {isLocal && <span className="bhud__you">나</span>}
-        {boss && <span className="bhud__bosstag">BOSS</span>}
-      </div>
-      {boss && <div className="bhud__bosstitle">{boss.title}</div>}
-      {/* ⚠ 채움 막대만 클립한다. 숫자를 overflow:hidden 안에 두면 기울어진(skewX)
-          모서리에 글자가 잘린다 — 예전에 그래서 "HP 205 / 205"의 위아래가 깎였다. */}
-      <div className="bhud__hp">
-        <div className="bhud__barclip">
-          <div
-            className={`bhud__hplag bhud__hpfill--${side}`}
-            style={{ width: `${lagPct}%` }}
-          />
-          <div
-            className={`bhud__hpfill bhud__hpfill--${side} ${hpLow ? 'bhud__hpfill--low' : ''}`}
-            style={{ width: `${hpPct}%` }}
-          />
-          <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
-          {/* 페이즈 전환 눈금 — 여기를 지나면 보스가 격노한다. 예고 배너와 달리
-              **항상 보이는** 정보라, 플레이어가 "언제 몰아칠지"를 계획할 수 있다.
-              ⚠ 바가 바깥에서 안쪽으로 줄어들므로 오른쪽 진영은 눈금도 뒤집는다. */}
-          {boss && (
-            <div
-              className="bhud__phasemark"
-              style={{ [(side === 'left' ? 'left' : 'right') as string]: `${boss.enrageAt * 100}%` }}
-            />
-          )}
-        </div>
-        <span className="bhud__hpnum">
-          HP {Math.ceil(hp)} / {maxHp}
-        </span>
-      </div>
-      <div className="bhud__energy">
-        <div className="bhud__barclip">
-          <div className={`bhud__energyfill bhud__energyfill--${side}`} style={{ width: `${ePct}%` }} />
-        </div>
-        <span className="bhud__energynum">
-          ⚡ {Math.floor(energy)} / {char.maxEnergy}
-        </span>
-      </div>
-      {/* 상태이상 — 파이터 발밑 칩은 스프라이트·이펙트에 가려 잘 안 보였다.
-          체력·기력과 **같은 자리**에 두면 "지금 내 상태"를 한 번에 읽는다.
-          ⚠ 이 줄은 `.bhud`(높이 96px 고정) 밖으로 흘러넘쳐 판 위에 얹힌다 —
-          HUD 높이를 늘리면 `.board`가 그만큼 줄어 배경 잘림 위치가 전부
-          어긋난다(battlefx.css의 장면별 `background-position` 주석 참고). */}
-      <div className="bhud__status">
-        {/* ⚠ 발밑 칩과 **같은 `statusChips()`를 쓴다** — 중독·화상은 겹마다 따로
-            살아 있어서, 여기서만 따로 묶으면 두 자리가 다른 숫자를 말하게 된다. */}
-        {statusChips(status).map((c) => (
-          <span key={c.kind} className={`stchip stchip--hud stchip--${c.kind}`}>
-            {STATUS_CHIP[c.kind]}
-            {c.power > 0 ? c.power : ''}
-            <b>{c.rounds}</b>
+      <HudPortrait sheet={sheet} side={side} />
+      <div className="bhud__info">
+        <div className="bhud__head">
+          <span className="bhud__name">
+            {boss && <span className="bhud__bosstag">BOSS</span>}
+            {char.name}
           </span>
-        ))}
+          {/* 상태이상 — 체력·기력과 **같은 자리**에 둬야 "지금 내 상태"를 한 번에 읽는다.
+              ⚠ 발밑 칩과 **같은 `statusChips()`를 쓴다** — 중독·화상은 겹마다 따로
+              살아 있어서, 여기서만 따로 묶으면 두 자리가 다른 숫자를 말하게 된다. */}
+          <span className="bhud__status">
+            {statusChips(status).map((c) => (
+              <span key={c.kind} className={`stchip stchip--hud stchip--${c.kind}`}>
+                <StatusGlyph kind={c.kind} />
+                {c.power > 0 ? c.power : ''}
+                <b>{c.rounds}</b>
+              </span>
+            ))}
+          </span>
+          <span className="bhud__sub">{shield > 0 ? `보호막 ${shield}` : sub}</span>
+        </div>
+        <div className="bhud__row bhud__row--hp">
+          <span className="bhud__tag">HP</span>
+          {/* ⚠ 채움 막대만 클립한다 — 페이즈 눈금은 막대 밖으로 튀어나온다. */}
+          <div className="bhud__hp">
+            <div className="bhud__barclip">
+              <div
+                className={`bhud__hplag bhud__hpfill--${side}`}
+                style={{ width: `${lagPct}%` }}
+              />
+              <div
+                className={`bhud__hpfill bhud__hpfill--${side} ${hpLow ? 'bhud__hpfill--low' : ''}`}
+                style={{ width: `${hpPct}%` }}
+              />
+              <div className={`bhud__hpshock ${shock ? 'is-on' : ''}`} />
+            </div>
+            {/* 페이즈 전환 눈금 — 여기를 지나면 보스가 격노한다. 예고 배너와 달리
+                **항상 보이는** 정보라, 플레이어가 "언제 몰아칠지"를 계획할 수 있다.
+                ⚠ 바가 바깥에서 안쪽으로 줄어들므로 오른쪽 진영은 눈금도 뒤집는다. */}
+            {boss && (
+              <div
+                className="bhud__phasemark"
+                style={{ [(side === 'left' ? 'left' : 'right') as string]: `${boss.enrageAt * 100}%` }}
+              />
+            )}
+          </div>
+          <span className="bhud__num">
+            {Math.ceil(hp)}/{maxHp}
+          </span>
+        </div>
+        <div className="bhud__row">
+          <span className="bhud__tag bhud__tag--en">EN</span>
+          <div className="bhud__energy">
+            <div className="bhud__barclip">
+              <div className={`bhud__energyfill bhud__energyfill--${side}`} style={{ width: `${ePct}%` }} />
+            </div>
+          </div>
+          <span className="bhud__num">{Math.floor(energy)}</span>
+        </div>
       </div>
+    </div>
+  )
+}
+
+/** HUD 초상 칸. 스프라이트를 ×2로 키워 머리·몸통만 58px 칸에 담는다(큰 보스는 ×1). */
+function HudPortrait({ sheet, side }: { sheet?: SheetDef; side: 'left' | 'right' }) {
+  if (!sheet) return <div className="bhud__portrait" />
+  const sc = sheet.frameH > 100 ? 1 : 2
+  const anchor = side === 'left' ? sheet.anchorX : sheet.frameW - sheet.anchorX
+  return (
+    <div className="bhud__portrait" aria-hidden="true">
+      <div
+        style={{
+          position: 'absolute',
+          left: 27 - anchor * sc,
+          top: 58 - sheet.footY * sc * 0.75,
+          ['--artflip' as string]: side === 'left' ? 1 : -1,
+        }}
+      >
+        <SpriteClip sheet={sheet} clip="idle" scale={sc} />
+      </div>
+    </div>
+  )
+}
+
+/** 한 줄에 놓는 유물 수 — 넘치면 `+N`으로 접고 눌러서 편다. */
+const RELIC_ROW_MAX = 9
+
+/**
+ * 내 유물 줄 — 체력·기력 아래. 발동 방식마다 표시가 다르다(디자인의 "유물 — 상태바 아래 줄"):
+ * 누적은 테두리 게이지, 횟수는 칸, 조건은 꺼지면 흐리게, 첫 라운드는 그 라운드에만 테두리.
+ * 누르면 말풍선으로 설명이 뜬다.
+ */
+function BattleRelics({
+  ids,
+  battle,
+  side,
+  view,
+  fired,
+  owner,
+}: {
+  ids: string[]
+  battle: CardBattle
+  side: 0 | 1
+  view: View
+  fired: { seq: number; ids: string[] } | null
+  owner: string
+}) {
+  const [open, setOpen] = useState<string | null>(null)
+  const [wide, setWide] = useState(false)
+  const st = battle.state
+  const foe = (1 - side) as 0 | 1
+  const shown = wide ? ids : ids.slice(0, RELIC_ROW_MAX)
+
+  const facts = (id: string) => {
+    const e = getRelic(id)?.effect
+    const kind = RELIC_ATLAS[id]?.[2]
+    const per = e?.energyTriggers?.[0]?.per
+    const uses = e?.stunOnHit
+      ? { all: e.stunCap ?? 1, used: st.stunsUsed[side] }
+      : e?.freezeOnHit
+        ? { all: e.freezeCap ?? 1, used: st.freezesUsed[side] }
+        : e?.revive
+          ? { all: 1, used: st.revived[side] ? 1 : 0 }
+          : null
+    const off =
+      kind === 'k' &&
+      ((!!e?.lowHpBonusPct && view.hp[side] / battle.maxHp[side] > LOW_HP_FRAC) ||
+        (!!e?.executeBonusPct && view.hp[foe] / battle.maxHp[foe] > LOW_HP_FRAC) ||
+        (!!e?.bonusVsAfflicted && view.status[foe].length === 0))
+    return { kind, per, uses, off, spent: per ? st.energySpent[side] % per : 0 }
+  }
+
+  const tip = open ? getRelic(open) : null
+  const tipFacts = open ? facts(open) : null
+  return (
+    <div className="brelics" aria-label={`${owner}의 유물`}>
+      {shown.map((id) => {
+        const f = facts(id)
+        const hot = fired?.ids.includes(id)
+        return (
+          <button
+            key={id}
+            className={`brelic ${f.off ? 'is-off' : ''} ${f.off === false && f.kind === 'k' ? 'is-glow' : ''} ${
+              f.kind === 'o' && st.round === 1 ? 'is-open' : ''
+            }`}
+            aria-label={getRelic(id)?.name ?? id}
+            onClick={() => setOpen(open === id ? null : id)}
+          >
+            {f.per ? (
+              <span
+                className="brelic__ring"
+                style={{ ['--pct' as string]: `${(f.spent / f.per) * 100}%` }}
+              >
+                <RelicIcon id={id} />
+              </span>
+            ) : (
+              <span key={hot ? fired?.seq : 0} className={hot ? 'brelic__pop' : ''}>
+                <RelicIcon id={id} />
+                {hot && <i className={`brelic__burst brelic__burst--${getRelic(id)?.rarity ?? 'common'}`} />}
+              </span>
+            )}
+            {f.per && <span className="brelic__count">{f.spent}/{f.per}</span>}
+            {f.uses && (
+              <span className="brelic__pips">
+                {Array.from({ length: f.uses.all }, (_, i) => (
+                  <i key={i} className={i < f.uses!.all - f.uses!.used ? 'is-left' : ''} />
+                ))}
+              </span>
+            )}
+          </button>
+        )
+      })}
+      {ids.length > RELIC_ROW_MAX && (
+        <button className="brelic__more" onClick={() => setWide((w) => !w)}>
+          {wide ? '−' : `+${ids.length - RELIC_ROW_MAX}`}
+        </button>
+      )}
+      {tip && open && (
+        <div className="relictip">
+          <RelicIcon id={open} size={78} />
+          <div>
+            <div className="relictip__name">
+              <b>{tip.name}</b>
+              <span className={`relictip__rarity is-${tip.rarity}`}>{RARITY_LABEL[tip.rarity]}</span>
+            </div>
+            <p>{tip.desc}</p>
+            {tipFacts?.per && (
+              <em>
+                누적 {tipFacts.spent} / {tipFacts.per} — 다음 발동까지 기력 {tipFacts.per - tipFacts.spent}
+              </em>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 적 능력 줄 — 처음엔 개수만큼 ?, 처음 작동하는 순간 뒤집힌다. */
+function FoeRow({
+  abilities,
+  revealed,
+  boss,
+}: {
+  abilities: FoeAbility[]
+  revealed: Set<string>
+  boss: boolean
+}) {
+  const [open, setOpen] = useState<string | null>(null)
+  const tip = abilities.find((a) => a.key === open)
+  return (
+    <div className={`foerow ${boss ? 'foerow--boss' : ''}`}>
+      <span className="foerow__label">{boss ? '보스 유물' : '능력'}</span>
+      {abilities.map((a) => {
+        const on = revealed.has(a.key)
+        return (
+          <button
+            key={a.key}
+            className={`foerow__item ${on ? 'is-on' : ''}`}
+            aria-label={on ? a.name : '아직 드러나지 않은 능력'}
+            onClick={() => setOpen(open === a.key ? null : a.key)}
+          >
+            <FoeIcon id={on ? a.atlasId : boss ? 'unknown' : 'unknown-foe'} />
+          </button>
+        )
+      })}
+      {tip && (
+        <div className="relictip relictip--foe">
+          <FoeIcon id={revealed.has(tip.key) ? tip.atlasId : 'unknown'} size={78} />
+          <div>
+            <div className="relictip__name">
+              <b>{revealed.has(tip.key) ? tip.name : '???'}</b>
+            </div>
+            <p>{revealed.has(tip.key) ? tip.desc : '아직 드러나지 않은 능력이다.'}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

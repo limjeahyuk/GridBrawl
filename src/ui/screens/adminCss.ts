@@ -29,6 +29,67 @@ export const ADMIN_CSS = `
   font-size: 11px; font-weight: 700; text-align: center;
 }
 
+/* --- 스프레드시트(엑셀) 뷰 ------------------------------------------------- */
+.admin__sheetwrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.admin__toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 14px; border-bottom: 1px solid var(--panel-edge);
+  background: var(--bg-1); flex: 0 0 auto;
+}
+.admin__count { color: var(--text-faint); font-size: 12px; margin-left: auto; }
+
+.xl__scroll { flex: 1; min-height: 0; overflow: auto; background: var(--bg-0); }
+.xl { border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; }
+.xl__th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--bg-1); color: var(--text-dim); font-weight: 700;
+  padding: 5px 7px; text-align: left; font-size: 11px; letter-spacing: 0.02em;
+  border-right: 1px solid var(--frame); border-bottom: 2px solid var(--panel-edge);
+}
+.xl__th--name, .xl__name { position: sticky; left: 0; z-index: 3; }
+.xl__th--name { z-index: 4; }
+.xl__name {
+  background: var(--bg-1); border-right: 2px solid var(--panel-edge);
+  border-bottom: 1px solid var(--frame); padding: 0 7px; text-align: left; font-weight: 400;
+  min-width: 168px; max-width: 220px;
+}
+.xl tbody tr:nth-child(even) .xl__td { background: rgba(184,150,90,0.03); }
+.xl tbody tr:hover .xl__td { background: rgba(184,150,90,0.07); }
+.xl tbody tr.is-dirty .xl__name { box-shadow: inset 3px 0 0 var(--accent); }
+.xl__td {
+  padding: 0; border-right: 1px solid var(--frame); border-bottom: 1px solid var(--frame);
+  background: var(--bg-0); text-align: center; vertical-align: middle;
+}
+.xl__td.is-dirty { background: rgba(184,150,90,0.16); box-shadow: inset 0 0 0 1px var(--accent); }
+.xl__td--ro { padding: 0 8px; color: var(--text-faint); font-family: ui-monospace, monospace; font-size: 11px; }
+.xl__na { background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(97,89,74,0.14) 4px, rgba(97,89,74,0.14) 5px); }
+.xl__na-t { color: var(--text-faint); }
+.xl__in {
+  box-sizing: border-box; width: 100%; padding: 5px 6px; font: inherit; font-size: 12px;
+  background: transparent; color: var(--text); border: 0; border-radius: 0; text-align: center;
+}
+.xl__in:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--bg-2); }
+.xl__in--num { text-align: right; -moz-appearance: textfield; }
+.xl__in--num::-webkit-outer-spin-button, .xl__in--num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.xl__in--text { text-align: left; }
+.xl__name .xl__in--name { text-align: left; padding: 5px 0; font-weight: 600; }
+.xl__name small { display: block; font-family: ui-monospace, monospace; font-size: 9px; color: var(--text-faint); padding-bottom: 4px; }
+.xl__pvp {
+  display: inline-block; margin-right: 5px; padding: 0 4px; border-radius: 3px;
+  background: var(--accent); color: var(--ink); font-family: inherit; font-weight: 700; font-size: 9px;
+}
+.xl__td input[type="checkbox"] { margin: 6px auto; display: block; }
+.xl__mini { padding: 3px 8px; font-size: 11px; }
+
+.xl__overlay {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.55); padding: 20px;
+}
+.xl__modal {
+  background: var(--bg-1); border: 1px solid var(--panel-edge); border-radius: 8px;
+  padding: 16px 18px; max-width: 720px; width: 100%; max-height: 88vh; overflow: auto;
+}
+
 .admin__body { display: flex; flex: 1; min-height: 0; }
 .admin__list {
   width: 250px; flex: 0 0 auto; overflow-y: auto;
@@ -36,7 +97,7 @@ export const ADMIN_CSS = `
 }
 .admin__filters { padding: 8px; border-bottom: 1px solid var(--panel-edge); position: sticky; top: 0; background: var(--bg-1); z-index: 1; }
 .admin__search {
-  width: 100%; box-sizing: border-box; padding: 5px 8px; margin-bottom: 6px;
+  box-sizing: border-box; padding: 5px 8px; width: 220px;
   background: var(--bg-0); color: var(--text);
   border: 1px solid var(--panel-edge); border-radius: 5px; font: inherit; font-size: 13px;
 }

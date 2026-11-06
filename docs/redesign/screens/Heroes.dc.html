@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>영웅 스프라이트 시트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n3{animation-name:f3;animation-timing-function:steps(3)}
+.n4{animation-name:f4;animation-timing-function:steps(4)}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n7{animation-name:f7;animation-timing-function:steps(7)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f3{to{background-position:150% 0}}
+@keyframes f4{to{background-position:133.3333% 0}}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f7{to{background-position:116.6667% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.cairn-run{background-image:url(/redesign/sprites/cairn/run.png)}
+.cairn-back{background-image:url(/redesign/sprites/cairn/back.png)}
+.cairn-attack1{background-image:url(/redesign/sprites/cairn/attack1.png)}
+.cairn-attack2{background-image:url(/redesign/sprites/cairn/attack2.png)}
+.cairn-attack3{background-image:url(/redesign/sprites/cairn/attack3.png)}
+.cairn-block{background-image:url(/redesign/sprites/cairn/block.png)}
+.cairn-hurt{background-image:url(/redesign/sprites/cairn/hurt.png)}
+.cairn-death{background-image:url(/redesign/sprites/cairn/death.png)}
+.sable-idle{background-image:url(/redesign/sprites/sable/idle.png)}
+.sable-run{background-image:url(/redesign/sprites/sable/run.png)}
+.sable-back{background-image:url(/redesign/sprites/sable/back.png)}
+.sable-attack1{background-image:url(/redesign/sprites/sable/attack1.png)}
+.sable-attack2{background-image:url(/redesign/sprites/sable/attack2.png)}
+.sable-attack3{background-image:url(/redesign/sprites/sable/attack3.png)}
+.sable-hurt{background-image:url(/redesign/sprites/sable/hurt.png)}
+.sable-death{background-image:url(/redesign/sprites/sable/death.png)}
+.dirge-idle{background-image:url(/redesign/sprites/dirge/idle.png)}
+.dirge-run{background-image:url(/redesign/sprites/dirge/run.png)}
+.dirge-back{background-image:url(/redesign/sprites/dirge/back.png)}
+.dirge-attack1{background-image:url(/redesign/sprites/dirge/attack1.png)}
+.dirge-attack2{background-image:url(/redesign/sprites/dirge/attack2.png)}
+.dirge-attack3{background-image:url(/redesign/sprites/dirge/attack3.png)}
+.dirge-hurt{background-image:url(/redesign/sprites/dirge/hurt.png)}
+.dirge-death{background-image:url(/redesign/sprites/dirge/death.png)}
+.fx-arrow{background-image:url(/redesign/sprites/fx/arrow.png);background-size:64px 20px}
+.fx-ember{background-image:url(/redesign/sprites/fx/ember-arrow.png);background-size:384px 36px}
+.cellbg{background:linear-gradient(180deg,#1d1828 0%,#1d1828 82%,#2a2438 82%,#2a2438 100%)}
+</style>
+</helmet>
+<div style="width: 1400px; height: 1340px; box-sizing: border-box; padding: 40px 60px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 36px">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end">
+    <div>
+      <p style="margin: 0 0 6px; font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #f4d470">HERO SPRITES · 96×64 FRAME · ×2 PREVIEW</p>
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">영웅 3명 — 전 동작</h1>
+    </div>
+    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #b9b1c9; text-align: right">모두 오른쪽을 본다 · 발바닥 y=62 · 게임 배율 ×3<br>back = 새 클립(뒤로 물러나는 걸음)</p>
+  </div>
+  <sc-for list="{{heroes}}" as="h" hint-placeholder-count="3">
+    <section style="display: flex; gap: 24px">
+      <div style="width: 236px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 18px; box-sizing: border-box; background: #1a1626; border: 2px solid {{h.edge}}">
+        <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">{{h.name}}</h2>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: {{h.accent}}">{{h.role}}</span>
+        <span style="font-size: 12px; color: #b9b1c9">{{h.title}}</span>
+        <p style="margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: #efe9f5">{{h.look}}</p>
+        <div style="display: flex; gap: 4px; margin-top: auto">
+          <sc-for list="{{h.pal}}" as="p" hint-placeholder-count="6"><div style="width: 28px; height: 28px; background: {{p}}; border: 2px solid #0a0810"></div></sc-for>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(5, 192px); gap: 14px 14px">
+        <sc-for list="{{h.clips}}" as="c" hint-placeholder-count="9">
+          <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px">
+            <div class="cellbg" style="width: 192px; height: 128px; border: 2px solid #2a2438; box-sizing: content-box">
+              <div class="spr {{c.cls}} {{c.n}}" role="img" aria-label="{{c.aria}}" style="width: 192px; height: 128px; background-size: {{c.bw}}px 128px; animation-duration: {{c.d}}ms"></div>
+            </div>
+            <figcaption style="display: flex; justify-content: space-between; align-items: baseline">
+              <span style="font-family: 'Do Hyeon', sans-serif; font-size: 17px">{{c.label}}</span>
+              <span style="font-family: 'Silkscreen', monospace; font-size: 10px; color: #b9b1c9">{{c.meta}}</span>
+            </figcaption>
+          </figure>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+  <div style="display: flex; gap: 28px; align-items: center; padding: 14px 18px; background: #1a1626; border: 2px solid #3a3150; align-self: flex-start">
+    <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px">투사체 (별도 시트)</span>
+    <div class="spr fx-arrow" role="img" aria-label="화살" style="width: 64px; height: 20px"></div>
+    <span style="font-size: 12px; color: #b9b1c9">arrow 16×5</span>
+    <div class="spr n4 fx-ember" role="img" aria-label="불씨 화살" style="width: 96px; height: 36px; animation-duration: 320ms"></div>
+    <span style="font-size: 12px; color: #b9b1c9">ember-arrow 24×9 · 4f</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":1340}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mk = (id, rows) => rows.map(([clip, label, n, ms, imp]) => ({
+      cls: id + '-' + clip, n: 'n' + n, bw: n * 192, d: n * ms, label,
+      aria: id + ' ' + clip,
+      meta: clip + ' ' + n + 'F ' + ms + 'MS' + (imp != null ? ' HIT' + imp : ''),
+    }));
+    const heroes = [
+      { name: 'CAIRN', role: '전사', title: 'Oathbound Warden', accent: '#7fd6c8', edge: '#3c9c98',
+        look: '붉은 깃 장식 대투구와 청록 서코트. 연 방패를 앞세우고 그 뒤에서 대검을 휘두른다. 망토가 달릴 때 펄럭인다.',
+        pal: ['#38435a', '#a8bacb', '#1d6670', '#3c9c98', '#cf9a34', '#a82c3a'],
+        clips: mk('cairn', [['idle', '대기', 6, 120], ['run', '전진', 8, 75], ['back', '후퇴', 6, 95], ['attack1', '베기', 6, 62, 2], ['attack2', '방패 밀치기', 6, 64, 2],
+          ['attack3', '도약 내려찍기', 8, 66, 4], ['block', '방어', 4, 80], ['hurt', '피격', 3, 95], ['death', '사망', 8, 100]]) },
+      { name: 'SABLE', role: '궁수', title: 'Ashen Fletcher', accent: '#ffa24a', edge: '#c4501c',
+        look: '잿빛 후드와 휘날리는 불씨색 스카프. 리커브 장궁, 등에 화살통. 시위를 당길 때 실제로 줄이 휜다.',
+        pal: ['#24232c', '#6d6c7a', '#5c3f2c', '#c4501c', '#ffa24a', '#e3aa86'],
+        clips: mk('sable', [['idle', '대기', 6, 125], ['run', '전진', 8, 72], ['back', '후퇴', 6, 95], ['attack1', '속사', 7, 60, 3], ['attack2', '차지 샷', 8, 70, 4],
+          ['attack3', '곡사 일제', 7, 66, 3], ['hurt', '피격', 3, 95], ['death', '사망', 8, 100]]) },
+      { name: 'DIRGE', role: '마법사', title: 'Hollow Oracle', accent: '#c9a6ff', edge: '#8d6fd0',
+        look: '얼굴 없는 깊은 후드 속 두 눈만 빛나는 예언자. 금빛 영대와 등불 지팡이. 죽으면 로브만 남고 혼이 흩어진다.',
+        pal: ['#1d1230', '#3a2560', '#5f42a0', '#c9952f', '#d6b4ff', '#efe0ff'],
+        clips: mk('dirge', [['idle', '대기', 8, 120], ['run', '전진', 8, 78], ['back', '후퇴', 6, 100], ['attack1', '혼불 탄', 6, 70, 2], ['attack2', '기둥 소환', 8, 75, 3],
+          ['attack3', '만가의 물결', 7, 70, 3], ['hurt', '피격', 3, 95], ['death', '사망', 8, 105]]) },
+    ];
+    return { heroes };
+  }
+}
+</script>
+</body>
+</html>

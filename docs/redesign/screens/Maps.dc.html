@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>배경 레이어와 바닥 타일</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.pix{image-rendering:pixelated;background-repeat:no-repeat}
+.th{width:104px;height:59px;background-size:104px 59px;background-color:#2a2438;border:2px solid #3a3150;image-rendering:pixelated}
+.g-prev{background-image:url(/redesign/bg/grassland/preview.png);background-size:576px 324px}
+.d-prev{background-image:url(/redesign/bg/dungeon/preview.png);background-size:576px 324px}
+.g-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.g-clouds{background-image:url(/redesign/bg/grassland/clouds.png)}
+.g-mount{background-image:url(/redesign/bg/grassland/mountains.png)}
+.g-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.g-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.d-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.d-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}
+.d-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.d-fg{background-image:url(/redesign/bg/dungeon/foreground.png)}
+.d-torch{background-image:url(/redesign/bg/dungeon/torch.png);background-size:192px 84px;animation:f4 480ms steps(4) infinite}
+@keyframes f4{to{background-position:133.3333% 0}}
+.t-grass{background-image:url(/redesign/terrain/grass-tile.png);background-size:48px 48px;background-repeat:repeat}
+.t-dirt{background-image:url(/redesign/terrain/dirt-tile.png);background-size:48px 48px;background-repeat:repeat}
+.t-dun{background-image:url(/redesign/terrain/dungeon-tile.png);background-size:48px 48px;background-repeat:repeat}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; box-sizing: border-box; padding: 32px 48px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; justify-content: space-between; align-items: baseline">
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">지역 배경 — 가로 반복 레이어</h1>
+    <span style="font-size: 13px; color: #b9b1c9">원본 320×180 · 화면 ×4 (1280×720) · 레이어마다 repeat-x</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px">
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; gap: 10px; align-items: baseline"><h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #b6ea6a">초원</h2><span style="font-size: 13px; color: #b9b1c9">1–7층 · 밝은 낮 · 슬라임 / 고블린 / 오우거 / 수호기사</span></div>
+      <div class="pix g-prev" role="img" aria-label="초원 합성 미리보기" style="width: 576px; height: 324px; border: 3px solid #0a0810"></div>
+      <div style="display: flex; gap: 8px">
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th g-sky"></div><figcaption style="font-size: 11px; color: #c9c2d6">sky · 고정</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th g-clouds"></div><figcaption style="font-size: 11px; color: #c9c2d6">clouds · 흐름</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th g-mount"></div><figcaption style="font-size: 11px; color: #c9c2d6">mountains</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th g-hills"></div><figcaption style="font-size: 11px; color: #c9c2d6">hills · 나무</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th g-meadow"></div><figcaption style="font-size: 11px; color: #c9c2d6">meadow · 꽃</figcaption></figure>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center">
+        <div class="pix t-grass" role="img" aria-label="풀 타일" style="width: 96px; height: 96px; border: 2px solid #3a3150"></div>
+        <div class="pix t-dirt" role="img" aria-label="흙길 타일" style="width: 96px; height: 96px; border: 2px solid #3a3150"></div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #c9c2d6">판 칸 타일 32×32 (이음매 없음)<br>풀 = 기본 칸 · 흙길 = 엘리트 무대 칸</p>
+      </div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; gap: 10px; align-items: baseline"><h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #c9c4ee">던전</h2><span style="font-size: 13px; color: #b9b1c9">8–14층 · 횃불 · 박쥐 / 골렘 / 마녀 / 화염군주 / 오버로드</span></div>
+      <div class="pix d-prev" role="img" aria-label="던전 합성 미리보기" style="width: 576px; height: 324px; border: 3px solid #0a0810"></div>
+      <div style="display: flex; gap: 8px">
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th d-wall"></div><figcaption style="font-size: 11px; color: #c9c2d6">wall · 아치/깃발</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th d-light"></div><figcaption style="font-size: 11px; color: #c9c2d6">torchlight</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th d-floor"></div><figcaption style="font-size: 11px; color: #c9c2d6">floor</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="th d-fg"></div><figcaption style="font-size: 11px; color: #c9c2d6">foreground</figcaption></figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px"><div class="pix d-torch" style="width: 48px; height: 84px; background-color: #2a2438; border: 2px solid #3a3150"></div><figcaption style="font-size: 11px; color: #c9c2d6">torch ×4f</figcaption></figure>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center">
+        <div class="pix t-dun" role="img" aria-label="던전 바닥 타일" style="width: 96px; height: 96px; border: 2px solid #3a3150"></div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #c9c2d6">판석 타일 32×32<br>횃불 스트립 16×28 · 4프레임 120ms</p>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

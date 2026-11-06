@@ -481,10 +481,9 @@ function buildMap(): RunNode[][] {
  * 전투 배경 장면. CSS `.boardfloor--<id>`와 **이름이 짝**이다(`battlefx.css`).
  * 규칙이 아니라 연출이라 엔진·시뮬은 이 값을 모른다 — 밸런스에 영향 없음.
  */
-export type BattleScene = 'hall' | 'corridor' | 'cemetery' | 'lava' | 'abyss' | 'sanctum'
+export type BattleScene = 'grassland' | 'dungeon' | 'lava' | 'abyss' | 'sanctum'
 /**
- * 층에 맞는 배경. **바깥 → 성 안 → 지하** 순으로 내려간다: 사다리를 오르는 게
- * 아니라 파고드는 느낌이라야 15층이 길게 느껴지지 않는다.
+ * 층에 맞는 배경. 2026-11 리디자인으로 지역이 둘이 됐다 — **초원(1~7층) → 던전(8층~)**.
  *
  * ⚠ **스크립트 보스는 층 규칙을 이긴다**(2026-08-05). 셋이 다 용암을 쓰던 걸
  * 보스마다 전용 무대로 갈랐다 — 오버로드=심연(`abyss`) · 수호기사=성소(`sanctum`) ·
@@ -492,15 +491,17 @@ export type BattleScene = 'hall' | 'corridor' | 'cemetery' | 'lava' | 'abyss' | 
  * 수호기사·화염군주는 `boss` 칸이 아니라 **엘리트 칸**으로 나오므로 종류로 판정하면
  * 둘은 영영 자기 무대를 못 본다. 배경이 곧 "지금 보스다"라는 신호가 되게 한다.
  */
+export const GRASSLAND_LAST_FLOOR = 7
+export const regionOf = (floor: number): 'grassland' | 'dungeon' =>
+  floor <= GRASSLAND_LAST_FLOOR ? 'grassland' : 'dungeon'
+
 export function sceneFor(run: RunState): BattleScene {
   const node = currentNode(run)
   if (node.monsterId) {
     const boss = bossScene(node.monsterId)
     if (boss) return boss
   }
-  if (run.floor <= 5) return 'cemetery'
-  if (run.floor <= 10) return 'hall'
-  return 'corridor'
+  return regionOf(run.floor)
 }
 
 // --- 지형(바위) -------------------------------------------------------------

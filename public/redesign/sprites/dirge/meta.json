@@ -1,0 +1,57 @@
+{
+ "id": "dirge",
+ "frameW": 96,
+ "frameH": 64,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 8,
+   "frameMs": 120,
+   "loop": true
+  },
+  "run": {
+   "frames": 8,
+   "frameMs": 78,
+   "loop": true
+  },
+  "back": {
+   "frames": 6,
+   "frameMs": 100,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 70,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "attack2": {
+   "frames": 8,
+   "frameMs": 75,
+   "loop": false,
+   "impactFrame": 3
+  },
+  "attack3": {
+   "frames": 7,
+   "frameMs": 70,
+   "loop": false,
+   "impactFrame": 3
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 95,
+   "loop": false
+  },
+  "death": {
+   "frames": 8,
+   "frameMs": 105,
+   "loop": false
+  }
+ },
+ "footY": 62,
+ "anchorX": 37,
+ "kind": "hero",
+ "region": null,
+ "replaces": "mage"
+}

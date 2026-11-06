@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>로그인</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-clouds{background-image:url(/redesign/bg/grassland/clouds.png);animation:drift 90s linear infinite}
+.l-mountains{background-image:url(/redesign/bg/grassland/mountains.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+@keyframes drift{to{background-position:-1280px 0}}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-sable-idle{background-image:url(/redesign/sprites/sable/idle.png)}
+.s-dirge-idle{background-image:url(/redesign/sprites/dirge/idle.png)}
+.gbtn{display:flex;align-items:center;gap:14px;width:100%;height:56px;padding:0 18px;box-sizing:border-box;background:#ffffff;color:#1f1f1f;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Noto Sans KR',sans-serif;font-weight:500;font-size:18px;cursor:pointer}
+.gbtn:hover{background:#f3f1ec}
+.ghost{width:100%;height:46px;background:rgba(29,24,40,0.9);border:2px solid #4a4058;color:#efe9f5;font-family:'Do Hyeon',sans-serif;font-size:20px;cursor:pointer}
+.ghost:hover{border-color:#f4d470}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #5fb4ec; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-sky" aria-hidden="true"></div>
+  <div class="layer l-clouds" aria-hidden="true"></div>
+  <div class="layer l-mountains" aria-hidden="true"></div>
+  <div class="layer l-hills" aria-hidden="true"></div>
+  <div class="layer l-meadow" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(18,15,26,0.25) 0%, rgba(18,15,26,0.7) 70%)"></div>
+
+  <div class="spr n6 s-cairn-idle" aria-hidden="true" style="position: absolute; left: 120px; top: 450px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+  <div class="spr n8 s-dirge-idle" aria-hidden="true" style="position: absolute; left: 900px; top: 450px; width: 288px; height: 192px; background-size: 2304px 192px; animation-duration: 960ms; transform: scaleX(-1)"></div>
+
+  <main style="position: absolute; left: 50%; top: 92px; width: 440px; margin-left: -220px; display: flex; flex-direction: column; align-items: center; gap: 22px">
+    <h1 style="margin: 0; font-family: 'Silkscreen', monospace; font-weight: 700; font-size: 84px; line-height: 0.92; text-align: center; color: #fff6dc; text-shadow: 0 6px 0 #7a5418, 0 12px 0 #2a1c10">GRID<br>BRAWL</h1>
+    <p style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-size: 24px">카드 세 장, 한 칸의 승부</p>
+
+    <section aria-label="로그인" style="width: 100%; box-sizing: border-box; padding: 22px 24px; background: rgba(18,15,26,0.94); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #f4d470, 0 10px 0 rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 12px">
+      <button type="button" class="gbtn">
+        <span aria-hidden="true" style="width: 26px; height: 26px; flex-shrink: 0; border: 1px dashed #9a9a9a; font-size: 9px; color: #7a7a7a; display: flex; align-items: center; justify-content: center">로고</span>
+        <span style="flex-grow: 1; text-align: center">Google 계정으로 계속하기</span>
+      </button>
+      <button type="button" class="ghost">게스트로 둘러보기</button>
+      <ul style="margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.7; color: #c9c2d6">
+        <li>로그인하면 덱 · 도감 · 클리어 기록이 기기 사이에 저장된다</li>
+        <li>게스트는 이 기기에만 저장 — 나중에 Google로 옮길 수 있다</li>
+      </ul>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #c9c2d6">계속하면 <a href="#terms">이용약관</a> · <a href="#privacy">개인정보 처리방침</a>에 동의하게 됩니다.</p>
+  </main>
+  <span style="position: absolute; right: 20px; bottom: 14px; font-family: 'Silkscreen', monospace; font-size: 11px; color: #c9c2d6">V0.2</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

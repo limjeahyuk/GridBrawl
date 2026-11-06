@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>? 이벤트 목록</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.px{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0}
+.a-forge{background-image:url(/redesign/ui/events/forge.png)}
+.a-trader{background-image:url(/redesign/ui/events/trader.png)}
+.a-hotspring{background-image:url(/redesign/ui/events/hotspring.png)}
+.a-apothecary{background-image:url(/redesign/ui/events/apothecary.png)}
+.a-jar{background-image:url(/redesign/ui/events/jar.png)}
+.a-gacha{background-image:url(/redesign/ui/events/gacha.png)}
+.a-mole{background-image:url(/redesign/ui/events/mole.png)}
+.a-surgery{background-image:url(/redesign/ui/events/surgery.png)}
+.lock{background-image:url(/redesign/ui/events/lock.png);background-size:20px 24px;width:20px;height:24px;image-rendering:pixelated;flex-shrink:0}
+.card{background:#1a1626;border:3px solid #0a0810;box-shadow:inset 0 0 0 2px #3a3150;box-sizing:border-box;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:6px 8px;background:#120f1a;border:1px solid #2a2438}
+.chip{font-size:11px;padding:1px 7px;font-family:'Silkscreen','Noto Sans KR',monospace;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 1640px; min-height: 1180px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; padding: 30px 36px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+  <header style="display: flex; justify-content: space-between; align-items: flex-end">
+    <div>
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 38px; color: #fff6dc">? 이벤트 목록 <span style="font-size: 18px; color: #b9b1c9">개발용 — 숨은 결과까지 보인다</span></h1>
+      <p style="margin: 6px 0 0; font-size: 14px; color: #c9c2d6">원본은 <code style="color: #ffd86a">docs/redesign/EVENTS.md</code> · 데이터 <code style="color: #ffd86a">docs/redesign/events.json</code>. 새 이벤트는 문서 맨 아래 틀을 복사해 적는다.</p>
+    </div>
+    <div style="display: flex; gap: 14px; font-size: 12px; color: #c9c2d6; align-items: center">
+      <span><span class="chip" style="background: #2a1c08; color: #ffd86a; border: 1px solid #c9952f">50G</span> 대가(보인다)</span>
+      <span><span class="chip" style="background: #2a2438; color: #8a849a; border: 1px dashed #4a4058">→ 결과</span> 결과(안 보인다)</span>
+      <span style="display: inline-flex; gap: 4px; align-items: center"><span class="lock" aria-hidden="true"></span> 히든(조건 충족 전엔 잠금)</span>
+    </div>
+  </header>
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px">
+    <sc-for list="{{events}}" as="e" hint-placeholder-count="8">
+      <article class="card" style="box-shadow: inset 0 0 0 2px {{e.edge}}">
+        <div style="display: flex; gap: 12px; align-items: flex-end; height: 128px">
+          <div style="width: 150px; height: 128px; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(ellipse at 50% 80%, {{e.glow}} 0%, rgba(0,0,0,0) 70%); flex-shrink: 0">
+            <div class="px {{e.art}}" style="width: {{e.w}}px; height: {{e.h}}px; background-size: {{e.bs}}"></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="font-family: 'Silkscreen', monospace; font-size: 11px; color: #8a849a">{{e.id}}</span>
+            <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #fff6dc">{{e.name}}</b>
+            <span class="chip" style="align-self: flex-start; background: #1a1626; color: {{e.kindFg}}; border: 1px solid {{e.kindFg}}">{{e.kind}}</span>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #e4def0; white-space: pre-line">{{e.text}}</p>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <sc-for list="{{e.choices}}" as="c" hint-placeholder-count="3">
+            <div class="row" style="border-color: {{c.edge}}">
+              <span style="display: flex; flex-direction: column; gap: 3px">
+                <span style="display: flex; gap: 6px; align-items: center"><span class="lock" aria-hidden="true" style="display: {{c.lockD}}"></span><b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 17px">{{c.label}}</b></span>
+                <span style="font-size: 11px; color: #8a849a">→ {{c.result}}</span>
+                <span style="display: {{c.condD}}; font-size: 11px; color: #ffd86a">조건: {{c.cond}}</span>
+              </span>
+              <span style="display: {{c.costD}}" class="chip" ><span style="padding: 1px 7px; background: {{c.costBg}}; color: {{c.costFg}}; border: 1px solid {{c.costEdge}}">{{c.cost}}</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="margin-top: auto; font-size: 11px; line-height: 1.5; color: #b9b1c9">{{e.note}}</span>
+      </article>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const G = ['#2a1c08', '#ffd86a', '#c9952f'], HP = ['#3a1016', '#ff9a9a', '#e0485a'], MHP = ['#3a0a20', '#ff8ab0', '#c0305a'], T = ['#1a1626', '#b9b1c9', '#4a4058'];
+    const ch = (label, result, cost, costCol, extra = {}) => Object.assign({ label, result, cost: cost || '', costD: cost ? 'block' : 'none', costBg: (costCol || T)[0], costFg: (costCol || T)[1], costEdge: (costCol || T)[2], lockD: 'none', condD: 'none', cond: '', edge: '#2a2438' }, extra);
+    const hid = (label, result, cond) => ch(label, result, '', null, { lockD: 'block', condD: 'block', cond, edge: '#c9952f' });
+    const art = (cls, w, h, sc, nf) => ({ art: cls, w: w * sc, h: h * sc, bs: `${w * sc * nf}px ${h * sc}px` });
+    const events = [
+      Object.assign({ id: 'EV-FORGE', name: '대장장이', kind: '한 번', kindFg: '#ff8a5a', edge: '#6a3428', glow: 'rgba(255,138,58,0.35)', text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
+        choices: [ch('카드라도 두들긴다', '카드 강화 화면(룰렛)'), ch('주변에 쇠라도 챙긴다', '유물 「차가운 쇠」'), hid('쇠를 두들긴다', '차가운 쇠를 잃고 쇠 유물 하나(무작위)', '「차가운 쇠」 보유')],
+        note: '쇠 유물 풀: 두꺼운 판금 · 무쇠 신발 · 단단한 손잡이 · 강철 의지 · 탑 방패 · 가시 방패 · 가시 갑옷' }, art('a-forge', 64, 52, 2, 6)),
+      Object.assign({ id: 'EV-TRADE', name: '거래', kind: '한 번', kindFg: '#c48aff', edge: '#4a3a6a', glow: 'rgba(196,138,255,0.3)', text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.',
+        choices: [ch('내 카드 한 장 ↔ 다른 카드', '내 카드 1장 고름 → 무작위 카드', '카드 1장', T), ch('내 카드 한 장 ↔ 유물', '내 카드 1장 고름 → 무작위 유물', '카드 1장', T), ch('내 유물 하나 ↔ 다른 유물', '내 유물 1개 고름 → 무작위 유물', '유물 1개', T)],
+        note: '받는 것은 고른 뒤에 공개. 이동 카드는 내놓을 수 없게 해도 됨(정할 것).' }, art('a-trader', 52, 60, 2, 1)),
+      Object.assign({ id: 'EV-SPRING', name: '온천', kind: '한 번', kindFg: '#6ae0e0', edge: '#1e5a6a', glow: 'rgba(106,224,224,0.3)', text: '김이 모락모락 나는 아주 뜨끈한 온천을 발견했다.\n당장 쉬고 싶어진다.',
+        choices: [ch('휴식', '체력 회복(시안: 최대 체력 30%)')], note: '선택지가 하나뿐 — 고르면 끝.' }, art('a-hotspring', 76, 48, 2, 4)),
+      Object.assign({ id: 'EV-APOTHECARY', name: '약방', kind: '반복', kindFg: '#8a6ae0', edge: '#3a2a6a', glow: 'rgba(138,106,224,0.3)', text: '엄청나게 많은 약들이 있는 약방에 들어섰다.\n의문의 남자가 약 3가지를 보여 준다.',
+        choices: [ch('약 (빨강)', '셋 중 하나: 회복 +20', '50G', G), ch('약 (초록)', '셋 중 하나: 체력 -10', '50G', G), ch('약 (보라)', '셋 중 하나: 아무 일 없음', '50G', G), ch('나간다', '끝')],
+        note: '세 병의 효과는 방문마다 섞인다. 같은 약 중복 구매 가능 · 골드가 있는 동안 계속.' }, art('a-apothecary', 72, 60, 2, 1)),
+      Object.assign({ id: 'EV-JAR', name: '항아리', kind: '한 번 · 전투', kindFg: '#b6ea6a', edge: '#2a4a1a', glow: 'rgba(106,184,58,0.3)', text: '어둡고 매우 습한 동굴에 들어왔다.\n눈앞에 항아리 하나가 떡하니 있다. 열어 보겠습니까?',
+        choices: [ch('연다', '50%: 중독 상태로 동굴 뱀과 전투 → 이기면 독 유물 / 50%: 빈 항아리'), ch('건드리지 않는다', '아무 일 없음')],
+        note: '독 유물 풀: 독약 플라스크 · 맹독 병 · 마녀의 탕약. 뱀 스프라이트 sprites/snake.' }, art('a-jar', 48, 52, 2, 1)),
+      Object.assign({ id: 'EV-GACHA', name: '갓챠', kind: '반복', kindFg: '#ff8ab0', edge: '#6a2244', glow: 'rgba(255,138,176,0.3)', text: '반짝반짝 거리는 가게에 들어서니, 돈을 넣으면 무언가를 집을 수 있을 것 같은 기계가 있다.',
+        choices: [ch('돈 넣기', '당첨 10%에서 시작, 실패마다 +10% · 상품: 체력 회복 / 유물', '50G', G), ch('나가기', '끝')],
+        note: '상품 2개를 다 뽑으면 "다 뽑은 것 같다…" 하고 자동으로 나간다. 당첨되면 확률은 10%로 돌아간다(시안).' }, art('a-gacha', 52, 68, 2, 2)),
+      Object.assign({ id: 'EV-MOLE', name: '두더지', kind: '반복', kindFg: '#6ae0ff', edge: '#1e4a5a', glow: 'rgba(106,224,255,0.25)', text: '반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?',
+        choices: [ch('땅 파기', '30%에서 시작, 실패마다 +10% → 유물 받고 자동으로 나감', 'HP -10', HP), ch('가던 길 가기', '끝')],
+        note: '팔 때마다 체력 소모가 3씩 는다: 10 → 13 → 16 → …' }, art('a-mole', 64, 44, 2, 4)),
+      Object.assign({ id: 'EV-SURGERY', name: '수술실', kind: '한 번', kindFg: '#fff6dc', edge: '#5a5a6a', glow: 'rgba(255,246,220,0.25)', text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?',
+        choices: [ch('심장', '심장 유물 하나', '최대 HP -10', MHP), ch('손', '손 유물 하나', 'HP -15', HP), ch('발', '발 유물 하나', 'HP -15', HP)],
+        note: '심장: 심장 강화 · 황소 심장 · 거인의 심장 · 잿불 심장 / 손: 동상의 손 · 처벌자의 손 · 황금손 · 연쇄 벼락 / 발: 무쇠 신발 · 고정 말뚝 · 허공 걸음' }, art('a-surgery', 72, 56, 2, 1)),
+    ];
+    return { events };
+  }
+}
+</script>
+</body>
+</html>

@@ -47,7 +47,7 @@ export function DeckSelectScreen({
       <div className="grid-bg" />
       <div className="deckmgr__bar">
         <button className="btn btn--ghost" onClick={onBack}>
-          ◀ 뒤로
+          ← 돌아가기
         </button>
         <h2 className="neon-text">덱 선택</h2>
         {/* 타이틀에서 내려온 **덱 관리의 유일한 입구**(2026-08-04) — 그래서 ghost가

@@ -1,10 +1,14 @@
 // ---------------------------------------------------------------------------
 // 어드민(밸런스 튜닝 콘솔) — **개발 빌드 전용 화면**. 몬스터 20종과 카드 전량을
-// 한자리에서 보고 고친다. 저장 모델·왜 소스가 진실의 원천인지는 `game/admin.ts` 머리말.
+// **엑셀 같은 스프레드시트**로 한자리에서 보고 인라인으로 고친다. 저장 모델·왜 소스가
+// 진실의 원천인지는 `game/admin.ts` 머리말.
 //
 // ⚠ 배포 번들에 남지 않아야 하므로 **부작용 있는 import를 만들지 않는다** — 스타일도
 // CSS 파일이 아니라 문자열(`adminCss.ts`)을 `<style>`로 렌더한다. `App.tsx`가 이
 // 화면을 `import.meta.env.DEV` 뒤에서만 참조하므로 배포 빌드에서는 통째로 사라진다.
+//
+// 데이터 계층(setField/diffAll…)은 `admin.ts` 그대로 쓴다 — 이 파일은 표 렌더링만
+// 담당한다. 사거리 격자·몬스터 덱처럼 표에 못 담는 편집은 셀의 버튼으로 모달을 연다.
 // ---------------------------------------------------------------------------
 import { useMemo, useReducer, useState } from 'react'
 import { ROSTER } from '../../data/roster'
@@ -30,13 +34,6 @@ import { ADMIN_CSS } from './adminCss'
 // --- 선택지 표 ---------------------------------------------------------------
 const AI_LEVELS = ['easy', 'normal', 'hard'] as const
 const BEHAVIORS = ['balanced', 'rusher', 'kiter', 'turtle', 'skirmisher'] as const
-const BEHAVIOR_LABEL: Record<string, string> = {
-  balanced: 'balanced · 균형 (조정 없음)',
-  rusher: 'rusher · 돌격 (무조건 붙는다)',
-  kiter: 'kiter · 카이팅 (붙으면 물러나 쏜다)',
-  turtle: 'turtle · 거북이 (버티며 기다린다)',
-  skirmisher: 'skirmisher · 교란 (붙었다 빠진다)',
-}
 const FX_LIST = ['slash', 'bolt', 'orb', 'quake', 'flame', 'shield', 'rush', 'punch'] as const
 const DIR_LIST = [
   'right',
@@ -49,11 +46,6 @@ const DIR_LIST = [
   'down-left',
 ] as const
 const BUFF_LIST = ['atkUp', 'defUp', 'freeCast'] as const
-const BUFF_LABEL: Record<string, string> = {
-  atkUp: 'atkUp · 피해 +N',
-  defUp: 'defUp · 받는 피해 −N',
-  freeCast: 'freeCast · 기력 소모 0',
-}
 
 interface Hook {
   key: string
@@ -114,139 +106,163 @@ const MONSTER_DECK_GROUPS: CardGroup[] = ['common', 'class', 'boss']
 
 type Bag = Record<string, unknown>
 type Tab = 'monster' | 'card' | 'export'
+type Edit = (kind: EntityKind, id: string, field: string, value: unknown) => void
 
-// --- 작은 조각들 --------------------------------------------------------------
-function Field({
-  label,
-  dirty,
-  children,
-}: {
+// --- 스프레드시트 열 정의 ------------------------------------------------------
+type ColKind = 'num' | 'text' | 'sel' | 'bool'
+interface Col {
+  key: string
+  /** 헤더에 뜨는 짧은 라벨. */
   label: string
-  dirty?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <>
-      <div className={`admin__label ${dirty ? 'is-dirty' : ''}`}>{label}</div>
-      <div>{children}</div>
-    </>
-  )
+  /** 마우스 오버 툴팁(긴 설명). */
+  title?: string
+  kind: ColKind
+  w?: number
+  /** num: 비우면 필드를 지운다. false면 빈 입력을 무시(필수 필드). */
+  opt?: boolean
+  options?: readonly string[]
+  /** sel: 빈 선택지 라벨. 있으면 "지움"이 가능하다. */
+  empty?: string
+  /** 이 카드/몬스터에 이 열이 해당하는가(카드 종류 게이팅). false면 회색 빈 칸. */
+  applies?: (row: Bag) => boolean
+  /** 값이 몬스터 `passive` 안에 있으면 'passive'. 기본은 최상위. */
+  path?: 'passive'
 }
 
-function Num({
-  v,
-  on,
-  optional,
-}: {
-  v: number | undefined
-  on: (n: number | undefined) => void
-  /** 비우면 필드를 지운다. 필수 필드(체력 등)는 false — 빈 입력을 무시한다. */
-  optional?: boolean
-}) {
-  return (
-    <input
-      className="admin__in admin__in--num"
-      type="number"
-      value={v ?? ''}
-      onChange={(e) => {
-        const s = e.target.value
-        if (s === '') {
-          if (optional) on(undefined)
-          return
-        }
-        on(Number(s))
-      }}
-    />
-  )
-}
+const isKind = (k: string) => (row: Bag) => row.kind === k
 
-function Sel({
-  v,
-  on,
-  options,
-  labels,
-  allowEmpty,
-}: {
-  v: string | undefined
-  on: (s: string | undefined) => void
-  options: readonly string[]
-  labels?: Record<string, string>
-  allowEmpty?: string
-}) {
-  return (
-    <select className="admin__in" value={v ?? ''} onChange={(e) => on(e.target.value || undefined)}>
-      {allowEmpty !== undefined && <option value="">{allowEmpty}</option>}
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {labels?.[o] ?? o}
-        </option>
-      ))}
-    </select>
-  )
-}
+const MON_COLS: Col[] = [
+  { key: 'tier', label: '티어', kind: 'num', w: 46, opt: false },
+  { key: 'maxHp', label: 'HP', kind: 'num', w: 58, opt: false },
+  { key: 'startEnergy', label: '기력', kind: 'num', w: 52, opt: false },
+  { key: 'aiLevel', label: 'AI', kind: 'sel', options: AI_LEVELS, w: 74 },
+  { key: 'behavior', label: '성격', kind: 'sel', options: BEHAVIORS, w: 100 },
+  { key: 'baseArtId', label: '아트', kind: 'sel', options: ROSTER.map((c) => c.id), w: 84 },
+  {
+    key: 'spriteId',
+    label: '스프라이트',
+    kind: 'sel',
+    options: Object.keys(SHEETS),
+    empty: '(빌림)',
+    w: 118,
+  },
+  { key: 'note', label: '설명', kind: 'text', w: 240 },
+  ...PASSIVE_HOOKS.map(
+    (h): Col => ({
+      key: h.key,
+      label: h.key,
+      title: h.label,
+      kind: h.type === 'bool' ? 'bool' : 'num',
+      opt: true,
+      path: 'passive',
+      w: h.type === 'bool' ? 40 : 60,
+    }),
+  ),
+]
 
-/** 훅 편집기 — 몬스터 패시브와 카드 특수 능력이 같은 모양이라 하나로 쓴다. */
-function Hooks({
-  bag,
-  hooks,
-  on,
+const attack = isKind('attack')
+const CARD_COLS: Col[] = [
+  { key: 'cooldown', label: '쿨', kind: 'num', w: 44, opt: true },
+  { key: 'damage', label: '피해', kind: 'num', w: 54, applies: attack },
+  { key: 'energyCost', label: '기력', kind: 'num', w: 52, applies: attack },
+  { key: 'fx', label: '연출', kind: 'sel', options: FX_LIST, empty: '(없음)', w: 82, applies: attack },
+  { key: 'block', label: '흡수', kind: 'num', w: 54, applies: isKind('guard') },
+  { key: 'guardCost', label: '가드기력', kind: 'num', w: 60, applies: isKind('guard') },
+  { key: 'gain', label: '회복기력', kind: 'num', w: 60, applies: isKind('energy') },
+  { key: 'healHp', label: '회복HP', kind: 'num', w: 58, applies: isKind('heal') },
+  { key: 'healCost', label: '힐기력', kind: 'num', w: 56, applies: isKind('heal') },
+  { key: 'buff', label: '버프', kind: 'sel', options: BUFF_LIST, w: 86, applies: isKind('buff') },
+  { key: 'buffPower', label: '위력', kind: 'num', w: 50, opt: true, applies: isKind('buff') },
+  { key: 'buffRounds', label: '지속', kind: 'num', w: 50, opt: true, applies: isKind('buff') },
+  { key: 'buffCost', label: '버프기력', kind: 'num', w: 60, opt: true, applies: isKind('buff') },
+  { key: 'dir', label: '방향', kind: 'sel', options: DIR_LIST, w: 96, applies: isKind('move') },
+  { key: 'steps', label: '칸', kind: 'num', w: 44, applies: isKind('move') },
+  { key: 'desc', label: '설명', kind: 'text', w: 260 },
+  ...CARD_ABILITIES.map(
+    (h): Col => ({
+      key: h.key,
+      label: h.key,
+      title: h.label,
+      kind: h.type === 'bool' ? 'bool' : 'num',
+      opt: true,
+      applies: attack,
+      w: h.type === 'bool' ? 52 : 60,
+    }),
+  ),
+]
+
+// --- 셀 ----------------------------------------------------------------------
+function Cell({
+  col,
+  row,
+  kind,
+  id,
+  edit,
+  dirty,
 }: {
-  bag: Bag
-  hooks: Hook[]
-  on: (key: string, value: unknown) => void
+  col: Col
+  row: Bag
+  kind: EntityKind
+  id: string
+  edit: Edit
+  dirty: boolean
 }) {
-  const set = hooks.filter((h) => bag[h.key] !== undefined)
-  const unset = hooks.filter((h) => bag[h.key] === undefined)
+  if (col.applies && !col.applies(row)) return <td className="xl__td xl__na" />
+
+  const val = col.path === 'passive' ? (row.passive as Bag | undefined)?.[col.key] : row[col.key]
+  const put = (v: unknown) => {
+    if (col.path === 'passive') {
+      const next: Bag = { ...((row.passive as Bag | undefined) ?? {}) }
+      if (v === undefined) delete next[col.key]
+      else next[col.key] = v
+      edit(kind, id, 'passive', next)
+    } else edit(kind, id, col.key, v)
+  }
+
+  const cls = `xl__td ${dirty ? 'is-dirty' : ''} xl__td--${col.kind}`
   return (
-    <div className="admin__hooks">
-      {set.map((h) => (
-        <div className="admin__hook" key={h.key}>
-          <span className="admin__hook-name">
-            {h.label} <span className="admin__hook-key">{h.key}</span>
-          </span>
-          {h.type === 'int' ? (
-            <Num v={bag[h.key] as number} on={(n) => on(h.key, n)} optional />
-          ) : (
-            <input
-              type="checkbox"
-              checked={!!bag[h.key]}
-              onChange={(e) => on(h.key, e.target.checked)}
-            />
-          )}
-          <button className="admin__x" onClick={() => on(h.key, undefined)} title="이 훅을 제거">
-            ✕
-          </button>
-        </div>
-      ))}
-      {!set.length && <div className="admin__note">없음.</div>}
-      {unset.length > 0 && (
-        <div className="admin__add">
-          <select
-            className="admin__in"
-            value=""
-            onChange={(e) => {
-              const h = hooks.find((x) => x.key === e.target.value)
-              if (h) on(h.key, h.type === 'bool' ? true : 0)
-            }}
-          >
-            <option value="">+ 추가…</option>
-            {unset.map((h) => (
-              <option key={h.key} value={h.key}>
-                {h.label} ({h.key})
-              </option>
-            ))}
-          </select>
-        </div>
+    <td className={cls} style={col.w ? { width: col.w } : undefined} title={col.title}>
+      {col.kind === 'bool' ? (
+        <input
+          type="checkbox"
+          checked={!!val}
+          onChange={(e) => put(e.target.checked || undefined)}
+        />
+      ) : col.kind === 'sel' ? (
+        <select className="xl__in" value={(val as string) ?? ''} onChange={(e) => put(e.target.value || undefined)}>
+          {col.empty !== undefined && <option value="">{col.empty}</option>}
+          {col.options!.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      ) : col.kind === 'text' ? (
+        <input
+          className="xl__in xl__in--text"
+          value={(val as string) ?? ''}
+          onChange={(e) => put(e.target.value)}
+        />
+      ) : (
+        <input
+          className="xl__in xl__in--num"
+          type="number"
+          value={(val as number) ?? ''}
+          onChange={(e) => {
+            const s = e.target.value
+            if (s === '') {
+              if (col.opt) put(undefined)
+              return
+            }
+            put(Number(s))
+          }}
+        />
       )}
-    </div>
+    </td>
   )
 }
 
-/**
- * 사거리 격자. 가운데(내 칸)는 `pointBlank` 토글이다 — "밀착한 상대에게도 맞는가"가
- * 곧 자기 칸을 사거리에 넣느냐와 같은 질문이라, 같은 그림 안에서 다루는 게 맞다.
- * 기본 폭은 앞뒤 3칸이고, 그보다 먼 칸을 쓰는 카드는 자동으로 넓어진다.
- */
+// --- 사거리 격자(모달) --------------------------------------------------------
 function RangeGrid({ card, on }: { card: CardDef; on: (field: string, v: unknown) => void }) {
   const range = card.range ?? []
   const [pad, setPad] = useState(0)
@@ -315,7 +331,7 @@ function DeckEditor({ ids, on }: { ids: string[]; on: (next: string[]) => void }
     const m = new Map<string, typeof pickable>()
     for (const e of pickable) m.set(e.owner, [...(m.get(e.owner) ?? []), e])
     return [...m.entries()]
-  }, [])
+  }, [pickable])
   return (
     <div>
       <div className="admin__chipsrow">
@@ -369,42 +385,50 @@ function DeckEditor({ ids, on }: { ids: string[]; on: (next: string[]) => void }
 }
 
 // --- 화면 --------------------------------------------------------------------
+type Modal =
+  | { kind: 'range'; id: string }
+  | { kind: 'deck'; id: string }
+  | { kind: 'card'; id: string }
+  | null
+
 export function AdminScreen({ onBack }: { onBack: () => void }) {
   const [, bump] = useReducer((x: number) => x + 1, 0)
   const [tab, setTab] = useState<Tab>('monster')
-  const [monsterId, setMonsterId] = useState(MONSTERS[0].id)
-  const [cardId, setCardId] = useState(CARD_ENTRIES[0].card.id)
   const [q, setQ] = useState('')
   const [groups, setGroups] = useState<CardGroup[]>([])
   const [copied, setCopied] = useState(false)
+  const [modal, setModal] = useState<Modal>(null)
 
-  const edit = (kind: EntityKind, id: string, field: string, value: unknown) => {
+  const edit: Edit = (kind, id, field, value) => {
     setField(kind, id, field, value)
     bump()
   }
 
   const diffs = diffAll()
   const dirty = diffs.length
+  // 셀 하이라이트용: entity별 바뀐 필드 집합.
+  const dirtyBy = new Map<string, Set<string>>()
+  for (const d of diffs) dirtyBy.set(`${d.kind}:${d.id}`, new Set(d.fields.map((f) => f.field)))
+  const isDirtyCell = (kind: EntityKind, id: string, col: Col) =>
+    dirtyBy.get(`${kind}:${id}`)?.has(col.path === 'passive' ? 'passive' : col.key) ?? false
 
-  const monster = MONSTERS.find((m) => m.id === monsterId) as MonsterDef
-  const entry = CARD_ENTRY_BY_ID[cardId]
-
+  const s = q.trim().toLowerCase()
   const cards = CARD_ENTRIES.filter((e) => {
     if (groups.length && !groups.includes(e.group)) return false
-    if (!q.trim()) return true
-    const s = q.trim().toLowerCase()
+    if (!s) return true
     return (
       e.card.name.toLowerCase().includes(s) ||
       e.card.id.toLowerCase().includes(s) ||
       e.owner.toLowerCase().includes(s)
     )
   })
+  const monstersShown = MONSTERS.filter(
+    (m) => !s || m.name.toLowerCase().includes(s) || m.id.toLowerCase().includes(s),
+  )
 
-  const monstersShown = MONSTERS.filter((m) => {
-    if (!q.trim()) return true
-    const s = q.trim().toLowerCase()
-    return m.name.toLowerCase().includes(s) || m.id.toLowerCase().includes(s)
-  })
+  const modalCard = modal && modal.kind !== 'deck' ? CARD_ENTRY_BY_ID[modal.id] : undefined
+  const modalMonster =
+    modal?.kind === 'deck' ? MONSTERS.find((m) => m.id === modal.id) : undefined
 
   return (
     <div className="screen admin">
@@ -502,329 +526,211 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
           <textarea className="admin__export" readOnly value={exportText()} />
         </div>
       ) : (
-        <div className="admin__body">
-          <div className="admin__list">
-            <div className="admin__filters">
-              <input
-                className="admin__search"
-                placeholder="이름 · id 검색"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-              {tab === 'card' && (
-                <div className="admin__chips">
-                  {(Object.keys(CARD_GROUP_LABEL) as CardGroup[]).map((g) => (
-                    <button
-                      key={g}
-                      className={`admin__chip ${groups.includes(g) ? 'is-on' : ''}`}
-                      onClick={() =>
-                        setGroups((cur) =>
-                          cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g],
-                        )
-                      }
-                    >
-                      {CARD_GROUP_LABEL[g]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {tab === 'monster'
-              ? monstersShown.map((m) => (
+        <div className="admin__sheetwrap">
+          <div className="admin__toolbar">
+            <input
+              className="admin__search"
+              placeholder="이름 · id 검색"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            {tab === 'card' && (
+              <div className="admin__chips">
+                {(Object.keys(CARD_GROUP_LABEL) as CardGroup[]).map((g) => (
                   <button
-                    key={m.id}
-                    className={`admin__row ${m.id === monsterId ? 'is-on' : ''}`}
-                    onClick={() => setMonsterId(m.id)}
+                    key={g}
+                    className={`admin__chip ${groups.includes(g) ? 'is-on' : ''}`}
+                    onClick={() =>
+                      setGroups((cur) =>
+                        cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g],
+                      )
+                    }
                   >
-                    {isDirty('monster', m.id) && <span className="admin__dot">●</span>}
-                    <span className="admin__row-name">{m.name}</span>
-                    <span className="admin__row-meta">
-                      T{m.tier} · {m.maxHp}
-                    </span>
-                  </button>
-                ))
-              : cards.map((e) => (
-                  <button
-                    key={e.card.id}
-                    className={`admin__row ${e.card.id === cardId ? 'is-on' : ''}`}
-                    onClick={() => setCardId(e.card.id)}
-                  >
-                    {isDirty('card', e.card.id) && <span className="admin__dot">●</span>}
-                    <span className="admin__row-name">{e.card.name}</span>
-                    <span className="admin__row-meta">{e.owner}</span>
+                    {CARD_GROUP_LABEL[g]}
                   </button>
                 ))}
+              </div>
+            )}
+            <span className="admin__count">
+              {tab === 'monster' ? monstersShown.length : cards.length}행
+            </span>
+          </div>
+
+          <div className="xl__scroll">
+            {tab === 'monster' ? (
+              <table className="xl">
+                <thead>
+                  <tr>
+                    <th className="xl__th xl__th--name">몬스터</th>
+                    {MON_COLS.map((c) => (
+                      <th className="xl__th" key={c.key} title={c.title} style={c.w ? { width: c.w } : undefined}>
+                        {c.label}
+                      </th>
+                    ))}
+                    <th className="xl__th">덱</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monstersShown.map((m) => {
+                    const row = m as unknown as Bag
+                    return (
+                      <tr key={m.id} className={isDirty('monster', m.id) ? 'is-dirty' : ''}>
+                        <th className="xl__name">
+                          {isDirty('monster', m.id) && <span className="admin__dot">●</span>}
+                          <input
+                            className="xl__in xl__in--name"
+                            value={m.name}
+                            onChange={(e) => edit('monster', m.id, 'name', e.target.value)}
+                          />
+                          <small>{m.id}</small>
+                        </th>
+                        {MON_COLS.map((c) => (
+                          <Cell
+                            key={c.key}
+                            col={c}
+                            row={row}
+                            kind="monster"
+                            id={m.id}
+                            edit={edit}
+                            dirty={isDirtyCell('monster', m.id, c)}
+                          />
+                        ))}
+                        <td className="xl__td">
+                          <button className="admin__btn xl__mini" onClick={() => setModal({ kind: 'deck', id: m.id })}>
+                            {m.deckCardIds.length}장 ✎
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="xl">
+                <thead>
+                  <tr>
+                    <th className="xl__th xl__th--name">카드</th>
+                    <th className="xl__th">종류</th>
+                    <th className="xl__th">소유</th>
+                    {CARD_COLS.map((c) => (
+                      <th className="xl__th" key={c.key} title={c.title} style={c.w ? { width: c.w } : undefined}>
+                        {c.label}
+                      </th>
+                    ))}
+                    <th className="xl__th">사거리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cards.map((e) => {
+                    const c = e.card
+                    const row = c as unknown as Bag
+                    return (
+                      <tr key={c.id} className={isDirty('card', c.id) ? 'is-dirty' : ''}>
+                        <th className="xl__name">
+                          {isDirty('card', c.id) && <span className="admin__dot">●</span>}
+                          <input
+                            className="xl__in xl__in--name"
+                            value={c.name}
+                            onChange={(ev) => edit('card', c.id, 'name', ev.target.value)}
+                            title={e.pvp ? 'PvP 카드 — 고치면 RULES_VERSION을 올려야 한다' : c.id}
+                          />
+                          <small>
+                            {e.pvp && <span className="xl__pvp" title="PvP에서 쓰이는 카드">PvP</span>}
+                            {c.id}
+                          </small>
+                        </th>
+                        <td className="xl__td xl__td--ro">{c.kind}</td>
+                        <td className="xl__td xl__td--ro">{CARD_GROUP_LABEL[e.group]}</td>
+                        {CARD_COLS.map((col) => (
+                          <Cell
+                            key={col.key}
+                            col={col}
+                            row={row}
+                            kind="card"
+                            id={c.id}
+                            edit={edit}
+                            dirty={isDirtyCell('card', c.id, col)}
+                          />
+                        ))}
+                        <td className="xl__td">
+                          {c.kind === 'attack' ? (
+                            <button className="admin__btn xl__mini" onClick={() => setModal({ kind: 'range', id: c.id })}>
+                              격자 ✎
+                            </button>
+                          ) : (
+                            <span className="xl__na-t">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
             {tab === 'card' && !cards.length && <div className="admin__empty">검색 결과 없음.</div>}
           </div>
+        </div>
+      )}
 
-          <div className="admin__detail">
-            {tab === 'monster'
-              ? renderMonster(monster, edit, bump)
-              : entry && renderCard(entry.card, entry.owner, entry.file, entry.pvp, edit, bump)}
+      {modal && (
+        <div className="xl__overlay" onClick={() => setModal(null)}>
+          <div className="xl__modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin__detail-head">
+              <span className="admin__detail-name">
+                {modalMonster ? modalMonster.name : modalCard?.card.name}
+              </span>
+              <span className="admin__id">{modal.id}</span>
+              <span className="admin__spacer" />
+              {isDirty(modalMonster ? 'monster' : 'card', modal.id) && (
+                <button
+                  className="admin__btn"
+                  onClick={() => {
+                    resetEntity(modalMonster ? 'monster' : 'card', modal.id)
+                    bump()
+                  }}
+                >
+                  ↺ 되돌리기
+                </button>
+              )}
+              <button className="admin__btn" onClick={() => setModal(null)}>
+                닫기 ✕
+              </button>
+            </div>
+
+            {modal.kind === 'deck' && modalMonster && (
+              <>
+                <div className="admin__section">
+                  <span className="admin__section-t">덱 ({modalMonster.deckCardIds.length}장)</span>
+                </div>
+                <DeckEditor
+                  ids={modalMonster.deckCardIds}
+                  on={(next) => edit('monster', modalMonster.id, 'deckCardIds', next)}
+                />
+              </>
+            )}
+
+            {modal.kind === 'range' && modalCard && (
+              <div className="admin__preview">
+                <div className="admin__preview-card">
+                  <CardFace card={modalCard.card} accent={cardAccent(modalCard.card, 'var(--accent)')} />
+                </div>
+                <div style={{ flex: 1, minWidth: 260 }}>
+                  {modalCard.pvp && (
+                    <div className="admin__warn">
+                      ⚠ 이 카드는 <b>PvP에서도 쓰인다</b>. 사거리를 바꾸면 소스에 반영할 때{' '}
+                      <code>RULES_VERSION</code>을 같은 커밋에서 올려야 한다.
+                    </div>
+                  )}
+                  <RangeGrid
+                    card={modalCard.card}
+                    on={(field, v) => edit('card', modalCard.card.id, field, v)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
-  )
-}
-
-type Edit = (kind: EntityKind, id: string, field: string, value: unknown) => void
-
-function DetailHead({
-  kind,
-  id,
-  name,
-  meta,
-  bump,
-}: {
-  kind: EntityKind
-  id: string
-  name: string
-  meta: string
-  bump: () => void
-}) {
-  return (
-    <div className="admin__detail-head">
-      <span className="admin__detail-name">{name}</span>
-      <span className="admin__id">{id}</span>
-      <span className="admin__row-meta">{meta}</span>
-      <span className="admin__spacer" />
-      {isDirty(kind, id) && (
-        <button
-          className="admin__btn"
-          onClick={() => {
-            resetEntity(kind, id)
-            bump()
-          }}
-        >
-          ↺ 이 항목 되돌리기
-        </button>
-      )}
-    </div>
-  )
-}
-
-function renderMonster(m: MonsterDef, edit: Edit, bump: () => void) {
-  const set = (f: string, v: unknown) => edit('monster', m.id, f, v)
-  const passive = m.passive as Bag
-  return (
-    <>
-      <DetailHead kind="monster" id={m.id} name={m.name} meta="src/game/monsters.ts" bump={bump} />
-
-      <div className="admin__section">
-        <span className="admin__section-t">기본</span>
-      </div>
-      <div className="admin__fields">
-        <Field label="이름">
-          <input
-            className="admin__in admin__in--text"
-            value={m.name}
-            onChange={(e) => set('name', e.target.value)}
-          />
-        </Field>
-        <Field label="티어">
-          <Num v={m.tier} on={(n) => set('tier', n)} />
-        </Field>
-        <Field label="최대 체력">
-          <Num v={m.maxHp} on={(n) => set('maxHp', n)} />
-        </Field>
-        <Field label="시작 기력">
-          <Num v={m.startEnergy} on={(n) => set('startEnergy', n)} />
-        </Field>
-        <Field label="AI 난이도">
-          <Sel v={m.aiLevel} on={(s) => set('aiLevel', s)} options={AI_LEVELS} />
-        </Field>
-        <Field label="성격">
-          <Sel
-            v={m.behavior ?? 'balanced'}
-            on={(s) => set('behavior', s)}
-            options={BEHAVIORS}
-            labels={BEHAVIOR_LABEL}
-          />
-        </Field>
-        <Field label="아트 기반">
-          <Sel v={m.baseArtId} on={(s) => set('baseArtId', s)} options={ROSTER.map((c) => c.id)} />
-        </Field>
-        <Field label="스프라이트">
-          <Sel
-            v={m.spriteId}
-            on={(s) => set('spriteId', s)}
-            options={Object.keys(SHEETS)}
-            allowEmpty="(baseArtId의 직업 시트를 빌림)"
-          />
-        </Field>
-        <Field label="설명">
-          <textarea
-            className="admin__in admin__in--area"
-            value={m.note}
-            onChange={(e) => set('note', e.target.value)}
-          />
-        </Field>
-      </div>
-      <p className="admin__note">
-        설명은 조우 안내에 뜨고, 그대로 <code>monsterPassive()</code>의{' '}
-        <code>passive.desc</code>가 된다.
-      </p>
-
-      <div className="admin__section">
-        <span className="admin__section-t">패시브 훅</span>
-      </div>
-      <Hooks
-        bag={passive}
-        hooks={PASSIVE_HOOKS}
-        on={(k, v) => {
-          const next: Bag = { ...passive }
-          if (v === undefined) delete next[k]
-          else next[k] = v
-          set('passive', next)
-        }}
-      />
-      {passive.energyTriggers !== undefined && (
-        <p className="admin__note">
-          ⚠ <code>energyTriggers</code>(누적 기력 트리거)가 걸려 있다 — 객체 배열이라 여기서는
-          편집하지 않는다. 소스에서 직접 고칠 것.
-        </p>
-      )}
-
-      <div className="admin__section">
-        <span className="admin__section-t">덱 ({m.deckCardIds.length}장)</span>
-      </div>
-      <DeckEditor ids={m.deckCardIds} on={(next) => set('deckCardIds', next)} />
-    </>
-  )
-}
-
-function renderCard(
-  c: CardDef,
-  owner: string,
-  file: string,
-  pvp: boolean,
-  edit: Edit,
-  bump: () => void,
-) {
-  const set = (f: string, v: unknown) => edit('card', c.id, f, v)
-  const bag = c as unknown as Bag
-  const accent = cardAccent(c, 'var(--accent)')
-  return (
-    <>
-      <DetailHead kind="card" id={c.id} name={c.name} meta={`${owner} · ${file}`} bump={bump} />
-
-      {pvp && (
-        <div className="admin__warn">
-          ⚠ 이 카드는 <b>PvP(단판·온라인)에서도 쓰인다</b>. 수치·사거리·능력을 바꾸면 소스에
-          반영할 때 <code>battle/types.ts</code>의 <code>RULES_VERSION</code>을 같은 커밋에서
-          올려야 한다 — 안 그러면 구버전 앱과 붙었을 때 조용한 desync가 난다.
-        </div>
-      )}
-
-      <div className="admin__preview">
-        <div className="admin__preview-card">
-          <CardFace card={c} accent={accent} />
-        </div>
-        <div style={{ flex: 1, minWidth: 260 }}>
-          <div className="admin__fields">
-            <Field label="이름">
-              <input
-                className="admin__in admin__in--text"
-                value={c.name}
-                onChange={(e) => set('name', e.target.value)}
-              />
-            </Field>
-            <Field label="종류">
-              <span className="admin__row-meta">{c.kind} (고정)</span>
-            </Field>
-            <Field label="쿨타임">
-              <Num v={c.cooldown} on={(n) => set('cooldown', n)} optional />
-            </Field>
-            {c.kind === 'attack' && (
-              <>
-                <Field label="피해">
-                  <Num v={c.damage} on={(n) => set('damage', n)} />
-                </Field>
-                <Field label="기력 소모">
-                  <Num v={c.energyCost} on={(n) => set('energyCost', n)} />
-                </Field>
-                <Field label="타격 연출">
-                  <Sel v={c.fx} on={(s) => set('fx', s)} options={FX_LIST} allowEmpty="(없음)" />
-                </Field>
-              </>
-            )}
-            {c.kind === 'guard' && (
-              <>
-                <Field label="흡수량">
-                  <Num v={c.block} on={(n) => set('block', n)} />
-                </Field>
-                <Field label="기력 소모">
-                  <Num v={c.guardCost} on={(n) => set('guardCost', n)} />
-                </Field>
-              </>
-            )}
-            {c.kind === 'energy' && (
-              <Field label="회복 기력">
-                <Num v={c.gain} on={(n) => set('gain', n)} />
-              </Field>
-            )}
-            {c.kind === 'heal' && (
-              <>
-                <Field label="회복 체력">
-                  <Num v={c.healHp} on={(n) => set('healHp', n)} />
-                </Field>
-                <Field label="기력 소모">
-                  <Num v={c.healCost} on={(n) => set('healCost', n)} />
-                </Field>
-              </>
-            )}
-            {c.kind === 'buff' && (
-              <>
-                <Field label="버프 종류">
-                  <Sel v={c.buff} on={(s) => set('buff', s)} options={BUFF_LIST} labels={BUFF_LABEL} />
-                </Field>
-                <Field label="위력">
-                  <Num v={c.buffPower} on={(n) => set('buffPower', n)} optional />
-                </Field>
-                <Field label="지속 턴">
-                  <Num v={c.buffRounds} on={(n) => set('buffRounds', n)} optional />
-                </Field>
-                <Field label="기력 소모">
-                  <Num v={c.buffCost} on={(n) => set('buffCost', n)} optional />
-                </Field>
-              </>
-            )}
-            {c.kind === 'move' && (
-              <>
-                <Field label="방향">
-                  <Sel v={c.dir} on={(s) => set('dir', s)} options={DIR_LIST} />
-                </Field>
-                <Field label="칸 수">
-                  <Num v={c.steps} on={(n) => set('steps', n)} />
-                </Field>
-              </>
-            )}
-            <Field label="설명">
-              <textarea
-                className="admin__in admin__in--area"
-                value={c.desc}
-                onChange={(e) => set('desc', e.target.value)}
-              />
-            </Field>
-          </div>
-        </div>
-      </div>
-
-      {c.kind === 'attack' && (
-        <>
-          <div className="admin__section">
-            <span className="admin__section-t">사거리</span>
-          </div>
-          <RangeGrid card={c} on={set} />
-
-          <div className="admin__section">
-            <span className="admin__section-t">특수 능력</span>
-          </div>
-          <Hooks bag={bag} hooks={CARD_ABILITIES} on={(k, v) => set(k, v)} />
-        </>
-      )}
-    </>
   )
 }

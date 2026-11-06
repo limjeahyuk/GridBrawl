@@ -1,0 +1,46 @@
+{
+ "id": "goblin",
+ "frameW": 72,
+ "frameH": 48,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 6,
+   "frameMs": 110,
+   "loop": true
+  },
+  "run": {
+   "frames": 8,
+   "frameMs": 65,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 60,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "attack2": {
+   "frames": 6,
+   "frameMs": 65,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 90,
+   "loop": false
+  },
+  "death": {
+   "frames": 8,
+   "frameMs": 100,
+   "loop": false
+  }
+ },
+ "footY": 45,
+ "anchorX": 30,
+ "kind": "monster",
+ "region": "grassland",
+ "replaces": "goblin"
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>전투 보상</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.coin{width:48px;height:48px;background-image:url(/redesign/ui/map-icons/merchant.png);background-size:48px 40px;background-repeat:no-repeat;background-position:center;image-rendering:pixelated}
+.rf3{width:78px;height:78px;background-image:url(/redesign/ui/relics/atlas-full.png);background-size:780px 780px;background-repeat:no-repeat;image-rendering:pixelated}
+.gold{animation:gold 1.6s ease-out 1}
+@keyframes gold{0%{transform:scale(0.6);opacity:0}40%{transform:scale(1.15);opacity:1}60%,100%{transform:scale(1)}}
+.pick{position:relative;width:176px;height:262px;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:8px;background:#1a1626;border:3px solid #3a3150;color:#efe9f5;font:inherit;text-align:left;cursor:pointer;transition:transform .12s}
+.pick:hover{transform:translateY(-6px);border-color:#f4d470}
+.pick-on{transform:translateY(-10px);border-color:#f4d470;box-shadow:0 0 0 3px #2a1c10,0 0 24px rgba(244,212,112,0.45)}
+.seg{height:40px;padding:0 16px;background:#1a1626;border:2px solid #3a3150;color:#c9c2d6;font:inherit;font-size:14px;cursor:pointer}
+.seg-on{background:#f4d470;color:#1d1408;border-color:#f4d470}
+.take{height:56px;padding:0 30px;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:26px;cursor:pointer}
+.skip{height:46px;padding:0 18px;background:rgba(18,15,26,0.9);border:2px solid #4a4058;color:#efe9f5;font:inherit;font-size:15px;cursor:pointer}
+.skip:hover{border-color:#f4d470}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #5fb4ec; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-sky" aria-hidden="true"></div>
+  <div class="layer l-hills" aria-hidden="true"></div>
+  <div class="layer l-meadow" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(12,10,18,0.72)"></div>
+
+  <header style="position: absolute; left: 0; right: 0; top: 28px; display: flex; flex-direction: column; align-items: center; gap: 8px">
+    <span style="font-family: 'Silkscreen', monospace; font-size: 14px; letter-spacing: 6px; color: #f4d470">VICTORY · 초원 5층</span>
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 52px; color: #fff6dc; text-shadow: 0 4px 0 #2a1c10">보상</h1>
+  </header>
+
+  <div class="gold" style="position: absolute; left: 50%; top: 150px; transform-origin: 50% 50%; margin-left: -150px; width: 300px; height: 64px; display: flex; align-items: center; justify-content: center; gap: 12px; background: #2a1c10; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #f4d470">
+    <div class="coin" aria-hidden="true"></div>
+    <span style="font-family: 'Silkscreen', monospace; font-size: 28px; color: #ffd86a">+32</span>
+    <span style="font-size: 13px; color: #e8d8b0">골드는 늘 받는다 · 보유 96</span>
+  </div>
+
+  <div style="position: absolute; left: 50%; top: 236px; margin-left: -230px; width: 460px; display: flex; justify-content: center; gap: 6px">
+    <sc-for list="{{modes}}" as="m" hint-placeholder-count="2"><button type="button" class="seg {{m.cls}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
+  </div>
+
+  <p style="position: absolute; left: 0; right: 0; top: 286px; margin: 0; text-align: center; font-size: 15px; color: #e4def0">{{lead}}</p>
+
+  <div style="position: absolute; left: 0; right: 0; top: 318px; display: flex; justify-content: center; gap: 16px">
+    <sc-for list="{{items}}" as="c" hint-placeholder-count="5">
+      <button type="button" class="pick {{c.on}}" onClick="{{c.pick}}" style="border-color: {{c.edge}}">
+        <span style="position: absolute; left: 0; right: 0; top: 0; height: 6px; background: {{c.strip}}"></span>
+        <span style="display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 11px; margin-top: 4px"><span style="color: #ff9a9a">{{c.dm}}</span><span style="color: #8ad0ff">{{c.en}}</span></span>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #fff6dc">{{c.name}}</span>
+        <sc-if value="{{c.isRelic}}" hint-placeholder-val="{{false}}">
+          <span class="rf3" aria-hidden="true" style="align-self: center; background-position: {{c.bp}}"></span>
+        </sc-if>
+        <sc-if value="{{c.isCard}}" hint-placeholder-val="{{true}}">
+          <span style="align-self: center; display: grid; grid-template-columns: repeat(3, 18px); gap: 3px">
+            <sc-for list="{{c.grid}}" as="g" hint-placeholder-count="9"><span style="width: 18px; height: 18px; background: {{g}}"></span></sc-for>
+          </span>
+        </sc-if>
+        <span style="font-size: 12px; line-height: 1.5; color: #e4def0">{{c.desc}}</span>
+        <span style="margin-top: auto; font-size: 11px; color: {{c.tagc}}">{{c.tag}}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <footer style="position: absolute; left: 64px; right: 64px; bottom: 26px; display: flex; justify-content: space-between; align-items: center">
+    <button type="button" class="skip">건너뛰고 체력 조금 회복</button>
+    <span style="font-size: 13px; color: #b9b1c9">{{deck}}</span>
+    <a href="RunMap.dc.html" class="take" style="display: flex; align-items: center; text-decoration: none">{{cta}}</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'relic', sel: 4 };
+  }
+  renderVals() {
+    const E = '#2a2438', S = '#f4d470', H = '#e0485a', B = '#c48aff';
+    const C = [
+      { name: '방패 돌진', dm: 'DM15', en: 'EN13', grid: [E, E, E, H, S, H, E, E, E], desc: '앞으로 두 칸 파고들며 지나간 줄을 훑는다. 넉백 1칸.', tag: '공격 · 쿨타임 1' },
+      { name: '응보의 일격', dm: 'DM10', en: 'EN9', grid: [E, E, E, H, S, H, E, E, E], desc: '앞뒤 한 칸을 치면서 보호막 +15.', tag: '공격' },
+      { name: '대지 가르기', dm: 'DM14', en: 'EN12', grid: [H, E, H, H, S, H, H, E, H], desc: '앞뒤 세로 3줄. 맞으면 이 라운드 기절.', tag: '공격 · 쿨타임 2' },
+      { name: '불굴의 함성', dm: 'BUFF', en: 'EN10', grid: [E, E, E, E, B, E, E, E, E], desc: '3라운드간 받는 공격 피해 -5.', tag: '강화 · 쿨타임 2' },
+      { name: '피의 맹세', dm: 'BUFF', en: 'EN13', grid: [E, E, E, E, B, E, E, E, E], desc: '3라운드간 내 공격 피해 +7.', tag: '강화' },
+    ];
+    const relic = { name: '가시 방패', dm: '희귀', en: '유물', bp: '-78px -390px', desc: '매 라운드 보호막 +4, 피격 시 3 반사.', tag: '유물 · 상태바 아래에 붙는다', isRelic: true, isCard: false, strip: '#6ab8ff', edge: '#6ab8ff', tagc: '#8ac8ff' };
+    const mode = this.state.mode, sel = this.state.sel;
+    const base = mode === 'relic' ? C.slice(0, 4).map((c) => Object.assign({}, c)).concat([relic]) : C.map((c) => Object.assign({}, c));
+    const items = base.map((c, i) => Object.assign({ isCard: true, isRelic: false, strip: '#8a3040', edge: '#3a3150', tagc: '#b9b1c9' }, c, {
+      on: sel === i ? 'pick-on' : '', pick: () => this.setState({ sel: i }),
+    }));
+    if (items[sel]) items[sel].edge = '#f4d470';
+    const modes = [['card', '일반 전투 — 카드 5장'], ['relic', '엘리트 — 카드 4장 + 유물 1']].map(([k, label]) => ({ label, cls: mode === k ? 'seg-on' : '', pick: () => this.setState({ mode: k, sel: k === 'relic' ? 4 : 0 }) }));
+    const chosen = items[sel] || items[0];
+    return {
+      modes, items,
+      lead: mode === 'relic' ? '하나만 고른다 — 카드 4장 중 하나, 또는 유물' : '하나만 고른다 — 카드 5장 중 하나',
+      cta: '「' + chosen.name + '」 받기 ▶',
+      deck: chosen.isRelic ? '유물 3 → 4' : '덱 12 / 16장',
+    };
+  }
+}
+</script>
+</body>
+</html>

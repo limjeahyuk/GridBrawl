@@ -54,11 +54,12 @@ export function useStageScale(): StageFit {
       const longSide = portrait ? availH : availW
       const shortSide = portrait ? availW : availH
       const scale = Math.min(longSide / BASE_W, shortSide / BASE_H)
-      setFit({
-        width: BASE_W,
-        height: BASE_H,
-        transform: `translate(${dx}px, ${dy}px) ${portrait ? 'rotate(90deg) ' : ''}scale(${scale})`,
-      })
+      const transform = `translate(${dx}px, ${dy}px) ${portrait ? 'rotate(90deg) ' : ''}scale(${scale})`
+      // ⚠ **값이 그대로면 새 객체를 만들지 않는다.** 여기서 매번 새 객체를 넣으면
+      //   App이 리렌더되고, 전투 중이면 `runFightProps(run)`가 통째로 다시 돈다.
+      //   `resize`·`orientationchange`·`pageshow`·`visualViewport resize`가 전부 이
+      //   함수를 부르는데, 특히 **백그라운드에서 돌아올 때 여러 개가 연달아 터진다**.
+      setFit((prev) => (prev.transform === transform ? prev : { width: BASE_W, height: BASE_H, transform }))
     }
     refit()
     // iOS 홈 화면 앱의 늦은 뷰포트 안정화 대비 재계산

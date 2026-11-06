@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>영웅 선택</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}
+.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-sable-idle{background-image:url(/redesign/sprites/sable/idle.png)}
+.s-dirge-idle{background-image:url(/redesign/sprites/dirge/idle.png)}
+.card{transition:transform .15s}
+.card:hover{transform:translateY(-4px)}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-wall" aria-hidden="true"></div>
+  <div class="layer l-light" aria-hidden="true"></div>
+  <div class="layer l-floor" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(10,8,16,0.62)"></div>
+
+  <header style="position: absolute; left: 64px; right: 64px; top: 36px; display: flex; justify-content: space-between; align-items: flex-end">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <p style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 14px; letter-spacing: 4px; color: #f4d470">CHOOSE YOUR HERO</p>
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 44px; color: #fff6dc">영웅 선택</h1>
+    </div>
+    <a href="Main.dc.html" style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; text-decoration: none; padding: 10px 18px; border: 2px solid #4a4058; color: #efe9f5; background: rgba(29,24,40,0.9)">← 돌아가기</a>
+  </header>
+
+  <div style="position: absolute; left: 64px; right: 64px; top: 134px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px">
+
+    <article class="card" style="height: 470px; display: flex; flex-direction: column; background: #1a1626; border: 3px solid #f4d470; box-shadow: 0 0 0 3px #2a1c10, 0 10px 0 #0a0810">
+      <div style="position: relative; height: 200px; background: linear-gradient(180deg, #123a40 0%, #0d2a30 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
+        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 14px; width: 170px; height: 18px; margin-left: -85px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
+        <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN 대기 모션" style="position: absolute; left: 50%; bottom: 10px; margin-left: -108px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+        <span style="position: absolute; left: 14px; top: 12px; font-family: 'Silkscreen', monospace; font-size: 12px; padding: 4px 8px; background: #f4d470; color: #1d1408">SELECTED</span>
+      </div>
+      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">CAIRN</h2>
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #7fd6c8">전사</span>
+        </div>
+        <p style="margin: -6px 0 0; font-size: 13px; color: #b9b1c9">Oathbound Warden</p>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
+          <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 94%; height: 100%; background: #e0485a"></div></div>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">103</span>
+        </div>
+        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #efe9f5"><b style="color: #7fd6c8">불침의 서약</b> — 받는 공격 피해 -3, 매 라운드 체력 +2.</p>
+        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #0f2a30; border: 2px solid #3c9c98">
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">시그니처 · 서약의 파쇄</span>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #bff5ec">DM23 EN24</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" style="height: 470px; display: flex; flex-direction: column; background: #1a1626; border: 3px solid #3a3150; box-shadow: 0 10px 0 #0a0810">
+      <div style="position: relative; height: 200px; background: linear-gradient(180deg, #3a1e16 0%, #24140f 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
+        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 14px; width: 150px; height: 18px; margin-left: -75px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
+        <div class="spr n6 s-sable-idle" role="img" aria-label="SABLE 대기 모션" style="position: absolute; left: 50%; bottom: 10px; margin-left: -105px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 750ms"></div>
+      </div>
+      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">SABLE</h2>
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #ffa24a">궁수</span>
+        </div>
+        <p style="margin: -6px 0 0; font-size: 13px; color: #b9b1c9">Ashen Fletcher</p>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
+          <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 74%; height: 100%; background: #e0485a"></div></div>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">81</span>
+        </div>
+        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #efe9f5"><b style="color: #ffa24a">독니</b> — 내 공격 피해 +3, 피해를 주면 중독 1라운드를 묻힌다.</p>
+        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #2a160e; border: 2px solid #c4501c">
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">시그니처 · 독의 비</span>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #ffd0a0">DM20 EN23</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" style="height: 470px; display: flex; flex-direction: column; background: #1a1626; border: 3px solid #3a3150; box-shadow: 0 10px 0 #0a0810">
+      <div style="position: relative; height: 200px; background: linear-gradient(180deg, #24183e 0%, #160f28 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
+        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 14px; width: 150px; height: 18px; margin-left: -75px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
+        <div class="spr n8 s-dirge-idle" role="img" aria-label="DIRGE 대기 모션" style="position: absolute; left: 50%; bottom: 10px; margin-left: -111px; width: 288px; height: 192px; background-size: 2304px 192px; animation-duration: 960ms"></div>
+      </div>
+      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">DIRGE</h2>
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #c9a6ff">마법사</span>
+        </div>
+        <p style="margin: -6px 0 0; font-size: 13px; color: #b9b1c9">Hollow Oracle</p>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
+          <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 71%; height: 100%; background: #e0485a"></div></div>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">78</span>
+        </div>
+        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #efe9f5"><b style="color: #c9a6ff">혼백의 등불</b> — 매 라운드 기력 +6, 보호막 +4.</p>
+        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #1e1436; border: 2px solid #8d6fd0">
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">시그니처 · 종언의 만가</span>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #e0d0ff">DM22 EN25</span>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div style="position: absolute; left: 64px; right: 64px; bottom: 30px; display: flex; justify-content: flex-end; align-items: center; gap: 20px">
+    <span style="font-size: 14px; color: #b9b1c9">다음 단계에서 난이도를 고른다</span>
+    <a href="Difficulty.dc.html" style="display: flex; align-items: center; height: 52px; padding: 0 28px; background: #f4d470; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 26px; text-decoration: none">CAIRN 선택 · 다음 ▶</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

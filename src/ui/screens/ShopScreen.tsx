@@ -11,6 +11,7 @@ import {
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
+import { RelicIcon } from '../RelicIcon'
 import { RunBar } from '../RunBar'
 
 
@@ -71,7 +72,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
       <div className="shop__topbar">
         <RunBar run={cur} />
       </div>
-      <h2 className="shop__title">🛒 상점</h2>
+      <h2 className="shop__title">상점</h2>
       <div className="shop__items">
         {shop.map((item) => {
           const owned = bought.has(item.id)
@@ -91,7 +92,7 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
                 {card && <CardFace card={card} accent={cardAccent(card, char.accent)} compact />}
                 {relic && (
                   <div className="shop__relic">
-                    <div className="shop__relic-icon">{relic.icon}</div>
+                    <RelicIcon id={relic.id} size={52} className="shop__relic-icon" />
                     <div className="shop__relic-name">{relic.name}</div>
                     <div className="shop__relic-desc">{relic.desc}</div>
                   </div>

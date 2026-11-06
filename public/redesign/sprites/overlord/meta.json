@@ -1,0 +1,46 @@
+{
+ "id": "overlord",
+ "frameW": 176,
+ "frameH": 128,
+ "scale": 2,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 8,
+   "frameMs": 120,
+   "loop": true
+  },
+  "run": {
+   "frames": 8,
+   "frameMs": 90,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 75,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "attack2": {
+   "frames": 6,
+   "frameMs": 85,
+   "loop": false,
+   "impactFrame": 3
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 100,
+   "loop": false
+  },
+  "death": {
+   "frames": 8,
+   "frameMs": 115,
+   "loop": false
+  }
+ },
+ "footY": 128,
+ "anchorX": 71,
+ "kind": "boss",
+ "region": "dungeon",
+ "replaces": "overlord"
+}

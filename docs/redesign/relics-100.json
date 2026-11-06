@@ -1,0 +1,319 @@
+{
+ "keep": [
+  "sig-warrior",
+  "sig-archer",
+  "sig-mage",
+  "fang",
+  "feather",
+  "thorns",
+  "heart",
+  "battery",
+  "nanobot",
+  "rage",
+  "plating",
+  "crystal",
+  "breaker",
+  "leech-rune",
+  "bulwark",
+  "titanheart",
+  "duelist",
+  "aegis-core",
+  "overdrive",
+  "ironwill",
+  "sanctum",
+  "greatfang",
+  "stoneskin",
+  "quickcharge",
+  "sanctuary",
+  "capacitor",
+  "circuit",
+  "lastditch",
+  "emberheart",
+  "chainshock",
+  "firstguard",
+  "thorncrown",
+  "piercecore",
+  "vanguard",
+  "gravepact",
+  "coupon",
+  "bazaar",
+  "purse",
+  "compass",
+  "saddlebag",
+  "balm",
+  "midastouch",
+  "luckycharm",
+  "venomflask",
+  "emberbrand",
+  "coldiron",
+  "wickedmortar",
+  "toxinvial",
+  "ashlung",
+  "hunterspite",
+  "frostbite",
+  "coldsnap",
+  "permafrost",
+  "buckler",
+  "towershield",
+  "rampart",
+  "poultice",
+  "grailshard",
+  "primer",
+  "jumpstart",
+  "bigbang",
+  "finisher",
+  "headsman",
+  "guillotine",
+  "ironshoes",
+  "anchorstone",
+  "skywalk",
+  "oxheart",
+  "punisher",
+  "sparkplug",
+  "cornered",
+  "cinderbrand",
+  "witchbrew",
+  "bonepicker",
+  "caravan",
+  "ravenomen",
+  "coil",
+  "reservoir",
+  "deathwish",
+  "voidedge",
+  "bloodpact-relic",
+  "rotcrown",
+  "rimeheart",
+  "aegisoath",
+  "worldtree",
+  "firstlight",
+  "reaperveil",
+  "worldpillar",
+  "adamant",
+  "godslayer",
+  "perpetual",
+  "retribution",
+  "colossus",
+  "oblivion",
+  "doomclock",
+  "phoenixrage",
+  "freezerot",
+  "sabbath",
+  "grasproot",
+  "kingsseal"
+ ],
+ "merged": {
+  "sig-warrior": [],
+  "sig-archer": [],
+  "sig-mage": [],
+  "fang": [],
+  "feather": [
+   "phoenix2",
+   "eternal-ember",
+   "secondwind"
+  ],
+  "thorns": [
+   "barbwire"
+  ],
+  "heart": [],
+  "battery": [
+   "spark-chip"
+  ],
+  "nanobot": [
+   "regen-core",
+   "lifebloom"
+  ],
+  "rage": [
+   "brute"
+  ],
+  "plating": [],
+  "crystal": [
+   "reactor",
+   "meditation"
+  ],
+  "breaker": [
+   "razor"
+  ],
+  "leech-rune": [
+   "reaperscythe"
+  ],
+  "bulwark": [
+   "spikes",
+   "hedgehog"
+  ],
+  "titanheart": [],
+  "duelist": [
+   "berserk",
+   "glasscannon",
+   "juggernaut"
+  ],
+  "aegis-core": [
+   "aegis-plate",
+   "balance",
+   "moonwell"
+  ],
+  "overdrive": [],
+  "ironwill": [],
+  "sanctum": [
+   "vitality"
+  ],
+  "greatfang": [],
+  "stoneskin": [
+   "fortress"
+  ],
+  "quickcharge": [],
+  "sanctuary": [],
+  "capacitor": [
+   "flywheel",
+   "dischargelens",
+   "sunforge",
+   "gearbox",
+   "coldengine"
+  ],
+  "circuit": [
+   "condenser",
+   "taser",
+   "siphonring",
+   "turbine"
+  ],
+  "lastditch": [
+   "lastresort",
+   "ragebrand"
+  ],
+  "emberheart": [
+   "painengine"
+  ],
+  "chainshock": [
+   "concussor"
+  ],
+  "firstguard": [
+   "warmup",
+   "warhorn"
+  ],
+  "thorncrown": [
+   "martyr"
+  ],
+  "piercecore": [
+   "shatterfang"
+  ],
+  "vanguard": [],
+  "gravepact": [
+   "tinder"
+  ],
+  "coupon": [
+   "ledger"
+  ],
+  "bazaar": [
+   "blackcard",
+   "lockpick"
+  ],
+  "purse": [],
+  "compass": [
+   "librarian"
+  ],
+  "saddlebag": [
+   "satchel"
+  ],
+  "balm": [
+   "elixir",
+   "bloodleaf"
+  ],
+  "midastouch": [],
+  "luckycharm": [],
+  "venomflask": [],
+  "emberbrand": [],
+  "coldiron": [],
+  "wickedmortar": [],
+  "toxinvial": [
+   "plaguebearer"
+  ],
+  "ashlung": [
+   "pyremark"
+  ],
+  "hunterspite": [],
+  "frostbite": [],
+  "coldsnap": [
+   "glacier"
+  ],
+  "permafrost": [],
+  "buckler": [],
+  "towershield": [
+   "spiked-boss"
+  ],
+  "rampart": [],
+  "poultice": [
+   "saltpouch"
+  ],
+  "grailshard": [
+   "lifewell"
+  ],
+  "primer": [
+   "kindling"
+  ],
+  "jumpstart": [
+   "dynamo"
+  ],
+  "bigbang": [
+   "stormcell"
+  ],
+  "finisher": [],
+  "headsman": [
+   "vulture"
+  ],
+  "guillotine": [
+   "closer"
+  ],
+  "ironshoes": [],
+  "anchorstone": [],
+  "skywalk": [],
+  "oxheart": [],
+  "punisher": [],
+  "sparkplug": [],
+  "cornered": [],
+  "cinderbrand": [],
+  "witchbrew": [],
+  "bonepicker": [],
+  "caravan": [],
+  "ravenomen": [],
+  "coil": [],
+  "reservoir": [],
+  "deathwish": [],
+  "voidedge": [],
+  "bloodpact-relic": [
+   "gluttony"
+  ],
+  "rotcrown": [
+   "blightlord"
+  ],
+  "rimeheart": [
+   "glacialtomb"
+  ],
+  "aegisoath": [],
+  "worldtree": [],
+  "firstlight": [],
+  "reaperveil": [
+   "hollowking"
+  ],
+  "worldpillar": [],
+  "adamant": [],
+  "godslayer": [],
+  "perpetual": [],
+  "retribution": [],
+  "colossus": [
+   "giantserum"
+  ],
+  "oblivion": [
+   "silentbell"
+  ],
+  "doomclock": [],
+  "phoenixrage": [],
+  "freezerot": [],
+  "sabbath": [
+   "hourglass",
+   "everember"
+  ],
+  "grasproot": [],
+  "kingsseal": [
+   "divining"
+  ]
+ }
+}

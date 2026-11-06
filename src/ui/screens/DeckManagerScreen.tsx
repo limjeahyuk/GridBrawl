@@ -38,7 +38,7 @@ export function DeckManagerScreen({
       <div className="grid-bg" />
       <div className="deckmgr__bar">
         <button className="btn btn--ghost" onClick={onBack}>
-          ◀ 뒤로
+          ← 돌아가기
         </button>
         <h2 className="neon-text">내 덱</h2>
         <button className="btn" onClick={onNew}>

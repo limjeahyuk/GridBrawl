@@ -1,0 +1,46 @@
+{
+ "id": "golem",
+ "frameW": 120,
+ "frameH": 92,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 6,
+   "frameMs": 150,
+   "loop": true
+  },
+  "run": {
+   "frames": 8,
+   "frameMs": 95,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 80,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "attack2": {
+   "frames": 6,
+   "frameMs": 90,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 100,
+   "loop": false
+  },
+  "death": {
+   "frames": 9,
+   "frameMs": 110,
+   "loop": false
+  }
+ },
+ "footY": 92,
+ "anchorX": 48,
+ "kind": "monster",
+ "region": "dungeon",
+ "replaces": "golem"
+}

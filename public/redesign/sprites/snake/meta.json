@@ -1,0 +1,51 @@
+{
+ "id": "snake",
+ "frameW": 72,
+ "frameH": 40,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 6,
+   "frameMs": 120,
+   "loop": true
+  },
+  "run": {
+   "frames": 6,
+   "frameMs": 80,
+   "loop": true
+  },
+  "back": {
+   "frames": 6,
+   "frameMs": 90,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 65,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "attack2": {
+   "frames": 6,
+   "frameMs": 75,
+   "loop": false,
+   "impactFrame": 3
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 90,
+   "loop": false
+  },
+  "death": {
+   "frames": 7,
+   "frameMs": 100,
+   "loop": false
+  }
+ },
+ "footY": 40,
+ "anchorX": 34,
+ "kind": "monster",
+ "region": "dungeon",
+ "replaces": null
+}

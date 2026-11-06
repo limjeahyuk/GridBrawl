@@ -1,0 +1,1737 @@
+{
+ "cols": 10,
+ "full": 26,
+ "mini": 16,
+ "relics": [
+  {
+   "id": "sig-warrior",
+   "name": "서약의 돌무덤",
+   "rarity": "rare",
+   "desc": "서약의 돌무덤: 최대 체력 +107, 받는 공격 피해 -2, 매 라운드 체력 +2, 피격 시 2 반사.",
+   "family": "sig-warrior",
+   "badge": null,
+   "col": 0,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "sig-archer",
+   "name": "독니 화살통",
+   "rarity": "rare",
+   "desc": "독니 화살통: 최대 체력 +16, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 체력 2 흡수 + 중독 2라운드.",
+   "family": "sig-archer",
+   "badge": null,
+   "col": 1,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "sig-mage",
+   "name": "혼백의 등불",
+   "rarity": "rare",
+   "desc": "혼백의 등불: 최대 체력 +80, 받는 피해 -2. 매 라운드 기력 +5·보호막 +3, 피해를 주면 화상 2라운드를 묻힌다.",
+   "family": "sig-mage",
+   "badge": null,
+   "col": 2,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "plating",
+   "name": "두꺼운 판금",
+   "rarity": "common",
+   "desc": "받는 피해 -3.",
+   "family": "armor",
+   "badge": null,
+   "col": 3,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "finisher",
+   "name": "마무리 칼",
+   "rarity": "common",
+   "desc": "상대 체력이 절반 이하면 내 공격 피해 +25%.",
+   "family": "axe",
+   "badge": null,
+   "col": 4,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "상대 반피"
+   },
+   "merged": []
+  },
+  {
+   "id": "purse",
+   "name": "두툼한 지갑",
+   "rarity": "common",
+   "desc": "전투 승리 골드 +35%.",
+   "family": "bag",
+   "badge": null,
+   "col": 5,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": []
+  },
+  {
+   "id": "firstguard",
+   "name": "선제 방벽",
+   "rarity": "common",
+   "desc": "전투 첫 라운드에 보호막 +20.",
+   "family": "banner",
+   "badge": null,
+   "col": 6,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": [
+    "warmup",
+    "warhorn"
+   ]
+  },
+  {
+   "id": "battery",
+   "name": "예비 배터리",
+   "rarity": "common",
+   "desc": "매 라운드 기력 +4. 어느 세계에서 굴러떨어진 쇳덩이. 정체는 아무도 모른다.",
+   "family": "bolt",
+   "badge": null,
+   "col": 7,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "spark-chip"
+   ]
+  },
+  {
+   "id": "ironshoes",
+   "name": "무쇠 신발",
+   "rarity": "common",
+   "desc": "무너진 칸에서 받는 피해 -4.",
+   "family": "boot",
+   "badge": null,
+   "col": 8,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "sparkplug",
+   "name": "부싯돌",
+   "rarity": "common",
+   "desc": "기력을 70 쓸 때마다 보호막 +13.",
+   "family": "cog",
+   "badge": "gem",
+   "col": 9,
+   "row": 0,
+   "variant": 0,
+   "behavior": {
+    "kind": "counter",
+    "per": 70,
+    "label": "불붙이기"
+   },
+   "merged": []
+  },
+  {
+   "id": "cornered",
+   "name": "궁지의 이빨",
+   "rarity": "common",
+   "desc": "체력이 절반 이하면 내 공격 피해 +20%.",
+   "family": "drop",
+   "badge": null,
+   "col": 0,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "내 반피"
+   },
+   "merged": []
+  },
+  {
+   "id": "primer",
+   "name": "점화약",
+   "rarity": "common",
+   "desc": "전투 시작 기력 +13.",
+   "family": "drum",
+   "badge": null,
+   "col": 1,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": [
+    "kindling"
+   ]
+  },
+  {
+   "id": "fang",
+   "name": "송곳니",
+   "rarity": "common",
+   "desc": "공격으로 피해를 주면 체력 3 회복.",
+   "family": "fang",
+   "badge": null,
+   "col": 2,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "emberbrand",
+   "name": "잉걸 낙인",
+   "rarity": "common",
+   "desc": "공격으로 피해를 주면 화상 1라운드를 묻힌다.",
+   "family": "flame",
+   "badge": null,
+   "col": 3,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "venomflask",
+   "name": "독약 플라스크",
+   "rarity": "common",
+   "desc": "공격으로 피해를 주면 중독 1라운드를 묻힌다.",
+   "family": "flask",
+   "badge": null,
+   "col": 4,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "crystal",
+   "name": "수정 방벽",
+   "rarity": "common",
+   "desc": "매 라운드 보호막 +6.",
+   "family": "gem",
+   "badge": null,
+   "col": 5,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "reactor",
+    "meditation"
+   ]
+  },
+  {
+   "id": "heart",
+   "name": "심장 강화",
+   "rarity": "common",
+   "desc": "최대 체력 +15.",
+   "family": "heart",
+   "badge": null,
+   "col": 6,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "poultice",
+   "name": "약초 습포",
+   "rarity": "common",
+   "desc": "회복 카드와 매 라운드 체력 회복 +40%.",
+   "family": "jar",
+   "badge": null,
+   "col": 7,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "saltpouch"
+   ]
+  },
+  {
+   "id": "saddlebag",
+   "name": "안장 가방",
+   "rarity": "common",
+   "desc": "덱 상한 +2장.",
+   "family": "pack",
+   "badge": null,
+   "col": 8,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "satchel"
+   ]
+  },
+  {
+   "id": "frostbite",
+   "name": "동상의 손",
+   "rarity": "common",
+   "desc": "전투당 두 번, 피해를 주면 상대를 그 라운드 빙결.",
+   "family": "snow",
+   "badge": null,
+   "col": 9,
+   "row": 1,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 2,
+    "label": "빙결"
+   },
+   "merged": []
+  },
+  {
+   "id": "quickcharge",
+   "name": "성급한 각성",
+   "rarity": "common",
+   "desc": "매 라운드 기력 +5, 내 공격 피해 +2.",
+   "family": "sword",
+   "badge": "bolt",
+   "col": 0,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "coupon",
+   "name": "상인의 인증패",
+   "rarity": "common",
+   "desc": "상점 가격 20% 할인.",
+   "family": "tag",
+   "badge": null,
+   "col": 1,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "ledger"
+   ]
+  },
+  {
+   "id": "coldiron",
+   "name": "차가운 쇠",
+   "rarity": "common",
+   "desc": "상태이상에 걸린 상대에게 주는 피해 +3.",
+   "family": "target",
+   "badge": null,
+   "col": 2,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "thorns",
+   "name": "가시 갑옷",
+   "rarity": "common",
+   "desc": "피해를 입으면 공격자에게 4 반사.",
+   "family": "thorn",
+   "badge": null,
+   "col": 3,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "barbwire"
+   ]
+  },
+  {
+   "id": "buckler",
+   "name": "단단한 손잡이",
+   "rarity": "common",
+   "desc": "수비 카드의 흡수량 +35%.",
+   "family": "tower",
+   "badge": null,
+   "col": 4,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "ironwill",
+   "name": "강철 의지",
+   "rarity": "rare",
+   "desc": "받는 피해 -5.",
+   "family": "armor",
+   "badge": null,
+   "col": 5,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "headsman",
+   "name": "망나니의 도끼",
+   "rarity": "rare",
+   "desc": "상대 체력이 절반 이하면 내 공격 피해 +45%.",
+   "family": "axe",
+   "badge": null,
+   "col": 6,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "상대 반피"
+   },
+   "merged": [
+    "vulture"
+   ]
+  },
+  {
+   "id": "midastouch",
+   "name": "황금손",
+   "rarity": "rare",
+   "desc": "전투 승리 골드 +55%.",
+   "family": "bag",
+   "badge": null,
+   "col": 7,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": []
+  },
+  {
+   "id": "vanguard",
+   "name": "선봉대장",
+   "rarity": "rare",
+   "desc": "전투 첫 라운드에 보호막 +15. 내 공격 피해 +3.",
+   "family": "banner",
+   "badge": "sword",
+   "col": 8,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": []
+  },
+  {
+   "id": "overdrive",
+   "name": "광휘의 각성",
+   "rarity": "rare",
+   "desc": "매 라운드 기력 +8.",
+   "family": "bolt",
+   "badge": null,
+   "col": 9,
+   "row": 2,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "anchorstone",
+   "name": "고정 말뚝",
+   "rarity": "rare",
+   "desc": "무너진 칸에서 받는 피해 -7, 최대 체력 +8.",
+   "family": "boot",
+   "badge": "heart",
+   "col": 0,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "luckycharm",
+   "name": "행운의 편자",
+   "rarity": "rare",
+   "desc": "일반 전투 보상에 유물이 섞일 확률 +8%p.",
+   "family": "clover",
+   "badge": null,
+   "col": 1,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": []
+  },
+  {
+   "id": "circuit",
+   "name": "순환의 매듭",
+   "rarity": "rare",
+   "desc": "기력을 50 쓸 때마다 체력을 13 회복한다.",
+   "family": "cog",
+   "badge": "heart",
+   "col": 2,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "counter",
+    "per": 50,
+    "label": "순환"
+   },
+   "merged": [
+    "condenser",
+    "taser",
+    "siphonring",
+    "turbine"
+   ]
+  },
+  {
+   "id": "compass",
+   "name": "탐색가의 나침반",
+   "rarity": "rare",
+   "desc": "승리 보상 선택지 +1칸.",
+   "family": "compass",
+   "badge": null,
+   "col": 3,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "librarian"
+   ]
+  },
+  {
+   "id": "emberheart",
+   "name": "잿불 심장",
+   "rarity": "rare",
+   "desc": "체력이 절반 이하면 내 공격 피해 +25%, 매 라운드 체력 +2.",
+   "family": "drop",
+   "badge": "leaf",
+   "col": 4,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "내 반피"
+   },
+   "merged": [
+    "painengine"
+   ]
+  },
+  {
+   "id": "jumpstart",
+   "name": "출진의 북",
+   "rarity": "rare",
+   "desc": "전투 시작 기력 +20.",
+   "family": "drum",
+   "badge": null,
+   "col": 5,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": [
+    "dynamo"
+   ]
+  },
+  {
+   "id": "leech-rune",
+   "name": "흡성의 룬",
+   "rarity": "rare",
+   "desc": "공격으로 피해를 주면 체력 5 회복.",
+   "family": "fang",
+   "badge": null,
+   "col": 6,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "reaperscythe"
+   ]
+  },
+  {
+   "id": "gravepact",
+   "name": "무덤의 약조",
+   "rarity": "rare",
+   "desc": "전투당 한 번 체력 18로 되살아난다. 받는 피해 -2.",
+   "family": "feather",
+   "badge": "armor",
+   "col": 7,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 1,
+    "label": "부활"
+   },
+   "merged": [
+    "tinder"
+   ]
+  },
+  {
+   "id": "punisher",
+   "name": "처벌자의 손",
+   "rarity": "rare",
+   "desc": "전투당 두 번, 피해를 주면 상대를 그 라운드 기절시킨다. 받는 피해 -2.",
+   "family": "fist",
+   "badge": "armor",
+   "col": 8,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 2,
+    "label": "기절"
+   },
+   "merged": []
+  },
+  {
+   "id": "cinderbrand",
+   "name": "잿불 인장",
+   "rarity": "rare",
+   "desc": "피해를 주면 화상 2라운드를 묻힌다.",
+   "family": "flame",
+   "badge": null,
+   "col": 9,
+   "row": 3,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "toxinvial",
+   "name": "맹독 병",
+   "rarity": "rare",
+   "desc": "피해를 주면 중독 2라운드를 묻힌다.",
+   "family": "flask",
+   "badge": null,
+   "col": 0,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "plaguebearer"
+   ]
+  },
+  {
+   "id": "aegis-core",
+   "name": "수호의 원석",
+   "rarity": "rare",
+   "desc": "매 라운드 보호막 +9.",
+   "family": "gem",
+   "badge": null,
+   "col": 1,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "aegis-plate",
+    "balance",
+    "moonwell"
+   ]
+  },
+  {
+   "id": "oxheart",
+   "name": "황소 심장",
+   "rarity": "rare",
+   "desc": "최대 체력 +19.",
+   "family": "heart",
+   "badge": null,
+   "col": 2,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "balm",
+   "name": "치유 향유",
+   "rarity": "rare",
+   "desc": "모든 회복 효과 +50%(보상 포기·이벤트·상점).",
+   "family": "jar",
+   "badge": null,
+   "col": 3,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "elixir",
+    "bloodleaf"
+   ]
+  },
+  {
+   "id": "nanobot",
+   "name": "치유의 이끼",
+   "rarity": "rare",
+   "desc": "매 라운드 체력 +3.",
+   "family": "leaf",
+   "badge": null,
+   "col": 4,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "regen-core",
+    "lifebloom"
+   ]
+  },
+  {
+   "id": "wickedmortar",
+   "name": "사악한 절구",
+   "rarity": "rare",
+   "desc": "내가 거는 중독·화상 위력 +40%.",
+   "family": "mortar",
+   "badge": null,
+   "col": 5,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "breaker",
+   "name": "파쇄 날",
+   "rarity": "rare",
+   "desc": "공격이 적중하면 상대 보호막을 전부 없앤다.",
+   "family": "needle",
+   "badge": null,
+   "col": 6,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "razor"
+   ]
+  },
+  {
+   "id": "coldsnap",
+   "name": "한파",
+   "rarity": "rare",
+   "desc": "전투당 두 번 빙결을 걸고, 내가 거는 중독·화상 위력 +25%.",
+   "family": "snow",
+   "badge": null,
+   "col": 7,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 2,
+    "label": "빙결"
+   },
+   "merged": [
+    "glacier"
+   ]
+  },
+  {
+   "id": "rage",
+   "name": "분노의 인장",
+   "rarity": "rare",
+   "desc": "내 공격 피해 +3.",
+   "family": "sword",
+   "badge": null,
+   "col": 8,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "brute"
+   ]
+  },
+  {
+   "id": "caravan",
+   "name": "행상 마차",
+   "rarity": "rare",
+   "desc": "상점 진열 +2칸.",
+   "family": "tag",
+   "badge": null,
+   "col": 9,
+   "row": 4,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": []
+  },
+  {
+   "id": "bonepicker",
+   "name": "뼈 발라내기",
+   "rarity": "rare",
+   "desc": "상태이상에 걸린 상대에게 피해 +5.",
+   "family": "target",
+   "badge": null,
+   "col": 0,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "bulwark",
+   "name": "가시 방패",
+   "rarity": "rare",
+   "desc": "매 라운드 보호막 +4, 피격 시 3 반사.",
+   "family": "thorn",
+   "badge": "gem",
+   "col": 1,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "spikes",
+    "hedgehog"
+   ]
+  },
+  {
+   "id": "towershield",
+   "name": "탑 방패",
+   "rarity": "rare",
+   "desc": "수비 카드의 흡수량 +60%.",
+   "family": "tower",
+   "badge": null,
+   "col": 2,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "spiked-boss"
+   ]
+  },
+  {
+   "id": "stoneskin",
+   "name": "돌갗",
+   "rarity": "epic",
+   "desc": "받는 피해 -7.",
+   "family": "armor",
+   "badge": null,
+   "col": 3,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "fortress"
+   ]
+  },
+  {
+   "id": "guillotine",
+   "name": "단두대",
+   "rarity": "epic",
+   "desc": "상대 체력이 절반 이하면 내 공격 피해 +70%.",
+   "family": "axe",
+   "badge": null,
+   "col": 4,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "상대 반피"
+   },
+   "merged": [
+    "closer"
+   ]
+  },
+  {
+   "id": "skywalk",
+   "name": "허공 걸음",
+   "rarity": "epic",
+   "desc": "무너진 칸에서 받는 피해 -12. 무너진 판을 그냥 딛고 선다.",
+   "family": "boot",
+   "badge": null,
+   "col": 5,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "ravenomen",
+   "name": "까마귀의 전조",
+   "rarity": "epic",
+   "desc": "일반 전투 보상에 유물이 섞일 확률 +18%p.",
+   "family": "clover",
+   "badge": null,
+   "col": 6,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": []
+  },
+  {
+   "id": "capacitor",
+   "name": "넘치는 술잔",
+   "rarity": "epic",
+   "desc": "기력을 100 쓸 때마다 상대를 그 라운드 기절시킨다.",
+   "family": "cog",
+   "badge": "bolt",
+   "col": 7,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "counter",
+    "per": 100,
+    "label": "술잔 범람"
+   },
+   "merged": [
+    "flywheel",
+    "dischargelens",
+    "sunforge",
+    "gearbox",
+    "coldengine"
+   ]
+  },
+  {
+   "id": "lastditch",
+   "name": "벼랑의 각오",
+   "rarity": "epic",
+   "desc": "체력이 절반 이하면 내 공격 피해 +50%.",
+   "family": "drop",
+   "badge": null,
+   "col": 8,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "내 반피"
+   },
+   "merged": [
+    "lastresort",
+    "ragebrand"
+   ]
+  },
+  {
+   "id": "bigbang",
+   "name": "개전의 봉화",
+   "rarity": "epic",
+   "desc": "전투 시작 기력 +28, 내 공격 피해 +3.",
+   "family": "drum",
+   "badge": "sword",
+   "col": 9,
+   "row": 5,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": [
+    "stormcell"
+   ]
+  },
+  {
+   "id": "greatfang",
+   "name": "대송곳니",
+   "rarity": "epic",
+   "desc": "공격으로 피해를 주면 체력 6 회복.",
+   "family": "fang",
+   "badge": null,
+   "col": 0,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "feather",
+   "name": "불꽃 깃털",
+   "rarity": "epic",
+   "desc": "전투당 한 번, 체력 20으로 되살아난다.",
+   "family": "feather",
+   "badge": null,
+   "col": 1,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 1,
+    "label": "부활"
+   },
+   "merged": [
+    "phoenix2",
+    "eternal-ember",
+    "secondwind"
+   ]
+  },
+  {
+   "id": "chainshock",
+   "name": "연쇄 벼락",
+   "rarity": "epic",
+   "desc": "전투당 세 번, 내 공격이 피해를 주면 상대를 그 라운드 기절시킨다.",
+   "family": "fist",
+   "badge": null,
+   "col": 2,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 3,
+    "label": "기절"
+   },
+   "merged": [
+    "concussor"
+   ]
+  },
+  {
+   "id": "ashlung",
+   "name": "재의 폐",
+   "rarity": "epic",
+   "desc": "피해를 주면 화상 2라운드·중독 1라운드를 함께 묻힌다.",
+   "family": "flame",
+   "badge": "poison",
+   "col": 3,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "pyremark"
+   ]
+  },
+  {
+   "id": "sanctuary",
+   "name": "성역의 문장",
+   "rarity": "epic",
+   "desc": "매 라운드 보호막 +7, 체력 +3.",
+   "family": "gem",
+   "badge": "leaf",
+   "col": 4,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "titanheart",
+   "name": "거인의 심장",
+   "rarity": "epic",
+   "desc": "최대 체력 +30.",
+   "family": "heart",
+   "badge": null,
+   "col": 5,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "grailshard",
+   "name": "성배 조각",
+   "rarity": "epic",
+   "desc": "모든 회복 효과 +80%, 회복 카드 회복량 +30%.",
+   "family": "jar",
+   "badge": null,
+   "col": 6,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "lifewell"
+   ]
+  },
+  {
+   "id": "sanctum",
+   "name": "재생의 성소",
+   "rarity": "epic",
+   "desc": "매 라운드 체력 +6.",
+   "family": "leaf",
+   "badge": null,
+   "col": 7,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "vitality"
+   ]
+  },
+  {
+   "id": "witchbrew",
+   "name": "마녀의 탕약",
+   "rarity": "epic",
+   "desc": "내가 거는 중독·화상 위력 +65%.",
+   "family": "mortar",
+   "badge": null,
+   "col": 8,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "piercecore",
+   "name": "꿰뚫는 송곳",
+   "rarity": "epic",
+   "desc": "내 모든 공격이 상대 보호막을 관통한다. 최대 체력 -12.",
+   "family": "needle",
+   "badge": "down",
+   "col": 9,
+   "row": 6,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "shatterfang"
+   ]
+  },
+  {
+   "id": "permafrost",
+   "name": "만년설",
+   "rarity": "epic",
+   "desc": "전투당 네 번, 피해를 주면 상대를 그 라운드 빙결. 내 공격 피해 +3.",
+   "family": "snow",
+   "badge": "sword",
+   "col": 0,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 4,
+    "label": "빙결"
+   },
+   "merged": []
+  },
+  {
+   "id": "duelist",
+   "name": "결투가의 검",
+   "rarity": "epic",
+   "desc": "내 공격 피해 +8.",
+   "family": "sword",
+   "badge": null,
+   "col": 1,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "berserk",
+    "glasscannon",
+    "juggernaut"
+   ]
+  },
+  {
+   "id": "bazaar",
+   "name": "암시장 통로",
+   "rarity": "epic",
+   "desc": "상점 진열 +3칸, 가격 25% 할인.",
+   "family": "tag",
+   "badge": null,
+   "col": 2,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "blackcard",
+    "lockpick"
+   ]
+  },
+  {
+   "id": "hunterspite",
+   "name": "사냥꾼의 앙심",
+   "rarity": "epic",
+   "desc": "상태이상에 걸린 상대에게 피해 +7. 보호막을 무시한다.",
+   "family": "target",
+   "badge": "pierce",
+   "col": 3,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "thorncrown",
+   "name": "가시 왕관",
+   "rarity": "epic",
+   "desc": "피해를 입으면 공격자에게 8 반사.",
+   "family": "thorn",
+   "badge": null,
+   "col": 4,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "martyr"
+   ]
+  },
+  {
+   "id": "rampart",
+   "name": "성벽의 맹세",
+   "rarity": "epic",
+   "desc": "수비 카드의 흡수량 +80%, 최대 체력 +13.",
+   "family": "tower",
+   "badge": "heart",
+   "col": 5,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "adamant",
+   "name": "금강석 갑주",
+   "rarity": "legend",
+   "desc": "받는 피해 -9, 최대 체력 +13.",
+   "family": "adamant",
+   "badge": null,
+   "col": 6,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "colossus",
+   "name": "거상의 뼈",
+   "rarity": "legend",
+   "desc": "최대 체력 +35, 받는 피해 -3. 대신 내 공격 피해 -2.",
+   "family": "colossus",
+   "badge": null,
+   "col": 7,
+   "row": 7,
+   "variant": 1,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "giantserum"
+   ]
+  },
+  {
+   "id": "reaperveil",
+   "name": "사신의 장막",
+   "rarity": "legend",
+   "desc": "상대 체력이 절반 이하면 내 공격 피해 +100%. 보호막을 무시한다.",
+   "family": "reaperveil",
+   "badge": null,
+   "col": 8,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "상대 반피"
+   },
+   "merged": [
+    "hollowking"
+   ]
+  },
+  {
+   "id": "kingsseal",
+   "name": "왕의 봉인",
+   "rarity": "legend",
+   "desc": "승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.",
+   "family": "kingseal",
+   "badge": null,
+   "col": 9,
+   "row": 7,
+   "variant": 0,
+   "behavior": {
+    "kind": "run",
+    "label": "런 효과"
+   },
+   "merged": [
+    "divining"
+   ]
+  },
+  {
+   "id": "worldpillar",
+   "name": "세계의 기둥",
+   "rarity": "legend",
+   "desc": "무너진 칸 피해를 완전히 무시하고, 매 라운드 보호막 +6.",
+   "family": "worldpillar",
+   "badge": null,
+   "col": 0,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "coil",
+   "name": "뇌운의 고리",
+   "rarity": "legend",
+   "desc": "기력을 60 쓸 때마다 상대를 그 라운드 기절시키고 13 고정 피해를 준다.",
+   "family": "coil",
+   "badge": null,
+   "col": 1,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "counter",
+    "per": 60,
+    "label": "뇌격"
+   },
+   "merged": []
+  },
+  {
+   "id": "doomclock",
+   "name": "종말의 모래시계",
+   "rarity": "legend",
+   "desc": "기력을 38 쓸 때마다 상대에게 20 고정 피해.",
+   "family": "doomclock",
+   "badge": null,
+   "col": 2,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "counter",
+    "per": 38,
+    "label": "모래 한 알"
+   },
+   "merged": []
+  },
+  {
+   "id": "reservoir",
+   "name": "심층 저수조",
+   "rarity": "legend",
+   "desc": "기력을 30 쓸 때마다 체력 +6, 보호막 +6, 기력 +10.",
+   "family": "reservoir",
+   "badge": null,
+   "col": 3,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "counter",
+    "per": 30,
+    "label": "저수조 방출"
+   },
+   "merged": []
+  },
+  {
+   "id": "deathwish",
+   "name": "사경의 광기",
+   "rarity": "legend",
+   "desc": "체력이 절반 이하면 내 공격 피해 +100%. 최대 체력 -12.",
+   "family": "deathwish",
+   "badge": null,
+   "col": 4,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "cond",
+    "label": "내 반피"
+   },
+   "merged": []
+  },
+  {
+   "id": "firstlight",
+   "name": "여명의 불꽃",
+   "rarity": "legend",
+   "desc": "전투 시작 기력 +35, 첫 라운드 보호막 +23, 매 라운드 기력 +4.",
+   "family": "firstlight",
+   "badge": null,
+   "col": 5,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": []
+  },
+  {
+   "id": "bloodpact-relic",
+   "name": "피의 계약",
+   "rarity": "legend",
+   "desc": "내 공격 피해 +6. 공격으로 피해를 주면 체력 4 회복. 최대 체력 -7.",
+   "family": "bloodpact",
+   "badge": null,
+   "col": 6,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "gluttony"
+   ]
+  },
+  {
+   "id": "phoenixrage",
+   "name": "잿불의 격정",
+   "rarity": "legend",
+   "desc": "체력이 절반 이하면 피해 +80%. 전투당 한 번 체력 15으로 되살아난다.",
+   "family": "emberfury",
+   "badge": null,
+   "col": 7,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 1,
+    "label": "부활"
+   },
+   "merged": []
+  },
+  {
+   "id": "oblivion",
+   "name": "망각의 종",
+   "rarity": "legend",
+   "desc": "전투당 다섯 번, 피해를 주면 상대를 그 라운드 기절시킨다.",
+   "family": "oblivionbell",
+   "badge": null,
+   "col": 8,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 5,
+    "label": "기절"
+   },
+   "merged": [
+    "silentbell"
+   ]
+  },
+  {
+   "id": "rotcrown",
+   "name": "부패의 왕관",
+   "rarity": "legend",
+   "desc": "피해를 주면 중독 2라운드·화상 2라운드를 함께 묻히고, 중독·화상 위력 +50%, 상태이상 상대에게 피해 +5.",
+   "family": "rotcrown",
+   "badge": null,
+   "col": 9,
+   "row": 8,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": [
+    "blightlord"
+   ]
+  },
+  {
+   "id": "perpetual",
+   "name": "영원의 수레바퀴",
+   "rarity": "legend",
+   "desc": "매 라운드 기력 +12, 보호막 +5.",
+   "family": "perpetual",
+   "badge": null,
+   "col": 0,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "worldtree",
+   "name": "세계수 가지",
+   "rarity": "legend",
+   "desc": "회복량 +140%, 매 라운드 체력 +4, 최대 체력 +15.",
+   "family": "worldtree",
+   "badge": null,
+   "col": 1,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "grasproot",
+   "name": "얽매는 뿌리",
+   "rarity": "legend",
+   "desc": "내가 거는 속박이 다음 라운드까지 이어진다. 받는 피해 -3.",
+   "family": "bindroot",
+   "badge": null,
+   "col": 2,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "sabbath",
+   "name": "마녀의 안식일",
+   "rarity": "legend",
+   "desc": "내가 거는 중독·화상이 각각 1라운드 더 간다.",
+   "family": "sabbath",
+   "badge": null,
+   "col": 3,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": [
+    "hourglass",
+    "everember"
+   ]
+  },
+  {
+   "id": "godslayer",
+   "name": "신살자의 창",
+   "rarity": "legend",
+   "desc": "내 공격 피해 +10, 보호막을 무시한다. 최대 체력 -10.",
+   "family": "godslayer",
+   "badge": null,
+   "col": 4,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "voidedge",
+   "name": "공허의 날",
+   "rarity": "legend",
+   "desc": "내 모든 공격이 상대 보호막을 무시하고 관통한다.",
+   "family": "voidedge",
+   "badge": null,
+   "col": 5,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "passive",
+    "label": "상시"
+   },
+   "merged": []
+  },
+  {
+   "id": "freezerot",
+   "name": "동사의 저주",
+   "rarity": "legend",
+   "desc": "전투당 세 번 빙결을 걸고, 피해를 주면 중독 2라운드·화상 2라운드를 묻힌다.",
+   "family": "frostcurse",
+   "badge": null,
+   "col": 6,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 3,
+    "label": "빙결"
+   },
+   "merged": []
+  },
+  {
+   "id": "rimeheart",
+   "name": "서릿발 심장",
+   "rarity": "legend",
+   "desc": "전투당 여섯 번, 피해를 주면 상대를 그 라운드 빙결. 상태이상 상대에게 피해 +6.",
+   "family": "rimeheart",
+   "badge": null,
+   "col": 7,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "limited",
+    "uses": 6,
+    "label": "빙결"
+   },
+   "merged": [
+    "glacialtomb"
+   ]
+  },
+  {
+   "id": "retribution",
+   "name": "응보의 문장",
+   "rarity": "legend",
+   "desc": "피격 시 11 반사, 받는 피해 -2.",
+   "family": "retribution",
+   "badge": null,
+   "col": 8,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "proc",
+    "label": "발동"
+   },
+   "merged": []
+  },
+  {
+   "id": "aegisoath",
+   "name": "불괴의 서약",
+   "rarity": "legend",
+   "desc": "수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.",
+   "family": "aegisoath",
+   "badge": null,
+   "col": 9,
+   "row": 9,
+   "variant": 0,
+   "behavior": {
+    "kind": "opening",
+    "label": "첫 라운드"
+   },
+   "merged": []
+  }
+ ]
+}

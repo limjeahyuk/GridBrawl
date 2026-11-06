@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>1칸 함정</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-mountains{background-image:url(/redesign/bg/grassland/mountains.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.px{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0}
+.hz{position:absolute;width:184px;height:96px;pointer-events:none;image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0}
+.a4{animation:f4 800ms steps(4) infinite}
+.a6{animation:f6 540ms steps(6) infinite}
+.a6s{animation:f6 960ms steps(6) infinite}
+.a5{animation:f5 1500ms steps(5) infinite}
+@keyframes f4{to{background-position:133.3333% 0}}
+@keyframes f5{to{background-position:125% 0}}
+@keyframes f6{to{background-position:120% 0}}
+.c-rock{background-image:url(/redesign/terrain/hazards-cell/rock-meadow.png);background-size:1104px 96px}
+.c-pillar{background-image:url(/redesign/terrain/hazards-cell/rock-pillar.png);background-size:1104px 96px}
+.c-fire{background-image:url(/redesign/terrain/hazards-cell/fire.png);background-size:1104px 96px}
+.c-spikes{background-image:url(/redesign/terrain/hazards-cell/spikes.png);background-size:1104px 96px}
+.c-bramble{background-image:url(/redesign/terrain/hazards-cell/bramble.png);background-size:1288px 96px}
+.c-fog{background-image:url(/redesign/terrain/hazards-cell/fog.png);background-size:1104px 96px}
+.c-col{background-image:url(/redesign/terrain/hazards-cell/collapse-meadow.png);background-size:920px 96px;background-position:-184px 0}
+.c-cold{background-image:url(/redesign/terrain/hazards-cell/collapse-dungeon.png);background-size:920px 96px}
+.c-ice{background-image:url(/redesign/terrain/hazards-cell/ice.png);background-size:736px 96px}
+.s3{width:138px;height:72px}
+.s3.c-pillar,.s3.c-spikes{background-size:828px 72px}
+.s3.c-ice{background-size:552px 72px}
+.s3.c-cold{background-size:690px 72px}
+.old-rock{background-image:url(/redesign/terrain/hazards/rock-meadow.png);background-size:768px 128px}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-goblin-idle{background-image:url(/redesign/sprites/goblin/idle.png)}
+.cell{border:1px solid rgba(232,220,192,0.22);border-radius:7px;background:linear-gradient(180deg,rgba(38,30,26,0.36),rgba(10,8,12,0.2))}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 880px; overflow: hidden; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div style="position: absolute; left: 0; top: 0; width: 1280px; height: 520px; overflow: hidden">
+    <div class="layer l-sky" aria-hidden="true"></div>
+    <div class="layer l-mountains" aria-hidden="true" style="top: -150px"></div>
+    <div class="layer l-hills" aria-hidden="true" style="top: -150px"></div>
+    <div class="layer l-meadow" aria-hidden="true" style="top: -150px"></div>
+  </div>
+
+  <header style="position: absolute; left: 40px; top: 24px; padding: 12px 18px; background: rgba(18,15,26,0.9); border: 3px solid #0a0810; display: flex; flex-direction: column; gap: 4px">
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">1칸 함정 — 칸 하나에만 걸리는 버전</h1>
+    <p style="margin: 0; font-size: 13px; color: #c9c2d6">실제 판 크기(칸 184×58 · 간격 7) 그대로. 바닥은 칸을 꽉 채우고 테두리 색으로 종류를 알린다 — 서 있는 것은 칸 폭 안, 위로는 최대 반 칸.</p>
+  </header>
+
+  <div aria-label="6×4 판" style="position: absolute; left: 70px; top: 210px; display: grid; grid-template-columns: repeat(6, 184px); grid-template-rows: repeat(4, 58px); gap: 7px">
+    <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div class="cell"></div></sc-for>
+  </div>
+
+  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 174px"></div>
+  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 239px"></div>
+  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 304px"></div>
+  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 369px"></div>
+  <div class="hz c-bramble a4" role="img" aria-label="가시덩굴" style="left: 452px; top: 369px"></div>
+  <div class="hz c-fire a6" role="img" aria-label="불길" style="left: 643px; top: 369px"></div>
+  <div class="hz c-fire a6" role="img" aria-label="불길" style="left: 834px; top: 369px; animation-delay: -180ms"></div>
+
+  <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="position: absolute; left: 245px; top: 149px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+  <div class="hz c-rock" role="img" aria-label="바위" style="left: 452px; top: 239px"></div>
+  <div class="spr n6 s-goblin-idle" role="img" aria-label="고블린" style="position: absolute; left: 800px; top: 200px; width: 216px; height: 144px; background-size: 1296px 144px; animation-duration: 660ms; transform: scaleX(-1)"></div>
+  <div class="hz c-fog a6s" role="img" aria-label="독안개" style="left: 1025px; top: 174px"></div>
+
+  <div style="position: absolute; left: 70px; top: 478px; display: flex; gap: 20px; font-size: 13px">
+    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">붕괴 경고 열 (가장자리 1칸씩)</span>
+    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">바위 — 사이에 끼어 같은 줄 사격선을 가림</span>
+    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">불길 2칸 = 1칸 타일 두 장을 나란히</span>
+  </div>
+
+  <section style="position: absolute; left: 40px; top: 544px; width: 520px; height: 304px; box-sizing: border-box; padding: 16px 20px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px; color: #fff6dc">왜 1칸 버전이 따로 필요한가</h2>
+    <div style="display: flex; gap: 28px">
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px; width: 210px">
+        <div style="position: relative; width: 184px; height: 123px; margin: 0 auto">
+          <div class="cell" style="position: absolute; left: 0; top: 0; width: 184px; height: 58px; box-sizing: border-box"></div>
+          <div class="cell" style="position: absolute; left: 0; top: 65px; width: 184px; height: 58px; box-sizing: border-box; box-shadow: inset 0 0 0 2px #f4d470"></div>
+          <div class="px old-rock" style="position: absolute; left: 28px; top: 17px; width: 128px; height: 128px"></div>
+        </div>
+        <figcaption style="font-size: 12px; line-height: 1.5; color: #c9c2d6"><b style="color: #ff9a8a">지금 (128px)</b> — 바닥 자국이 없고 돌이 윗칸 절반을 덮는다. 금색 칸이 진짜 위치인데 윗칸으로 보이기 쉽다.</figcaption>
+      </figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px; width: 210px">
+        <div style="position: relative; width: 184px; height: 123px; margin: 0 auto">
+          <div class="cell" style="position: absolute; left: 0; top: 0; width: 184px; height: 58px; box-sizing: border-box"></div>
+          <div class="cell" style="position: absolute; left: 0; top: 65px; width: 184px; height: 58px; box-sizing: border-box"></div>
+          <div class="hz c-rock" style="left: 0; top: 29px"></div>
+        </div>
+        <figcaption style="font-size: 12px; line-height: 1.5; color: #c9c2d6"><b style="color: #b6ea6a">1칸 맞춤</b> — 칸 모양 바닥 + 테두리로 위치가 확정되고, 돌은 윗칸을 3분의 1 이하만 가린다.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section style="position: absolute; left: 580px; top: 544px; width: 660px; height: 304px; box-sizing: border-box; padding: 16px 20px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px; color: #fff6dc">던전 쪽 1칸 타일 <span style="font-size: 14px; color: #b9b1c9">(×3 미리보기)</span></h2>
+    <div style="display: flex; gap: 18px">
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-pillar" role="img" aria-label="돌기둥" style="animation: f6 2400ms steps(6) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">돌기둥</figcaption></figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-spikes" role="img" aria-label="가시덫" style="animation: f6 1080ms steps(6) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">가시덫</figcaption></figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-ice" role="img" aria-label="빙판" style="animation: f4 800ms steps(4) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">빙판</figcaption></figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-cold" role="img" aria-label="붕괴 판석" style="animation: f5 1500ms steps(5) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">붕괴(판석)</figcaption></figure>
+    </div>
+    <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.55; color: #e4def0">
+      <li>프레임 46×24 · ×4 = 184×96. 아래 15줄(60px)이 칸, 위 9줄(36px)이 서 있는 것만 쓰는 여유 공간.</li>
+      <li>놓는 법: 칸의 왼쪽 위에 맞추고 <code style="color: #f4d470">top = 칸 top − 36px</code>. 중앙 정렬 계산이 필요 없다.</li>
+      <li>테두리 색 = 종류: 회색 바위 · 주황 불/붕괴 · 빨강 가시(경고 때부터) · 초록 덩굴/독 · 하늘색 빙판.</li>
+    </ul>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { cells: Array.from({ length: 24 }, (_, i) => ({ i })) };
+  }
+}
+</script>
+</body>
+</html>

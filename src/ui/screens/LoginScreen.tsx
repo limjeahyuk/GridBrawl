@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { authConfigured, signInAsGuest, signInWithGoogle } from '../../net/auth'
+import { SceneLayers } from '../SceneLayers'
+import { TitleLogo, TitleParty } from './TitleScreen'
 
 // 네이티브 앱(WebView)에서는 구글이 임베디드 WebView OAuth를 차단하므로
 // (disallowed_useragent) 팝업 로그인을 숨기고 게스트를 기본으로 쓴다.
@@ -38,17 +40,13 @@ export function LoginScreen() {
 
   return (
     <div className="screen login">
-      <div className="grid-bg grid-bg--hall" />
+      <SceneLayers scene="grassland" />
+      <div className="title__shade" aria-hidden="true" />
+      {/* ⚠ 타이틀 화면과 같은 머리글을 쓴다 — 로그인 직후 타이틀로 넘어가므로 다르면
+          글자만 바뀌어 깜빡이는 것처럼 보인다. */}
+      <TitleLogo />
+      <TitleParty />
       <div className="login__content">
-        {/* ⚠ 타이틀 화면과 같은 문구를 쓴다(TitleScreen 참고) — 로그인 직후 타이틀로
-            넘어가므로 다르면 글자만 바뀌어 깜빡이는 것처럼 보인다. */}
-        <div className="title__kicker neon-text">THE GRID · DEMON ASCENT</div>
-        <h1 className="title__logo">
-          <span className="title__word title__word--a">GRID</span>
-          <span className="title__word title__word--b">BRAWL</span>
-        </h1>
-        <p className="login__lead">계정으로 로그인하고 그리드에 입장하세요.</p>
-
         <div className="login__actions">
           {configured ? (
             <button className="btn login__google" onClick={onGoogle} disabled={busy}>

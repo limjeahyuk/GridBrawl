@@ -31,7 +31,7 @@
   padding: 8px 14px;
   background: rgba(10, 16, 28, 0.8);
   border: 1px solid var(--panel-edge);
-  border-radius: 8px;
+  border-radius: 0;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 16px;
@@ -72,7 +72,7 @@
   margin: -6px 26px 8px;
   text-align: center;
   font-size: 12px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   color: var(--text-faint);
   z-index: 2;
 }
@@ -84,7 +84,7 @@
   background: rgba(12, 18, 32, 0.75);
   border: 1px solid var(--panel-edge);
   border-left: 4px solid var(--accent);
-  border-radius: 12px;
+  border-radius: 0;
 }
 .deckmgr__portrait {
   width: 54px;
@@ -128,7 +128,7 @@
   gap: 2px;
   padding: 6px 8px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 0;
   background: rgba(12, 18, 32, 0.5);
   color: var(--text-dim);
   font-size: 11px;
@@ -201,7 +201,7 @@
   font-weight: 900;
   font-size: 11px;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 0;
   z-index: 1;
 }
 .deckcard__badge--fixed {
@@ -228,7 +228,7 @@
 .deckbuild__trayhead {
   font-family: var(--font-display);
   font-size: 13px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--text-dim);
   margin: 0 6px 6px;
 }
@@ -251,11 +251,11 @@
 }
 .deckbuild__trayrow::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
+  border-radius: 0;
 }
 .deckbuild__trayrow::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--accent) 70%, transparent);
-  border-radius: 999px;
+  border-radius: 0;
 }
 .traycard {
   position: relative;
@@ -321,7 +321,7 @@
 .deckselect__label {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   color: var(--text-dim);
   font-size: 13px;
   margin: 14px 4px 8px;
@@ -336,7 +336,7 @@
   padding: 14px 10px;
   border: 1px solid var(--panel-edge);
   border-top: 3px solid var(--accent);
-  border-radius: 12px;
+  border-radius: 0;
   background: rgba(12, 18, 32, 0.75);
   display: flex;
   flex-direction: column;
@@ -398,7 +398,7 @@
   width: 260px;
   height: 220px;
   border: 1px solid var(--panel-edge);
-  border-radius: 16px;
+  border-radius: 0;
   background: rgba(12, 18, 32, 0.8);
   display: flex;
   flex-direction: column;
@@ -438,9 +438,6 @@
 /* Make every inlined portrait SVG fill its frame */
 .avatar-card__art svg,
 .detail__portrait svg,
-.rung__art svg,
-.bracket__playerart svg,
-.hud__avatar svg,
 .mp__me-art svg,
 .result__portrait svg,
 .deckbuild__charart svg,
@@ -457,14 +454,10 @@
   display: grid;
   place-items: center;
 }
-.title__content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-}
+
 .title__kicker {
   color: var(--neon-cyan);
-  letter-spacing: 0.5em;
+  letter-spacing: 0;
   font-family: var(--font-display);
   font-size: 16px;
   margin-bottom: 18px;
@@ -474,46 +467,9 @@
   margin: 0;
   line-height: 0.86;
 }
-.title__word {
-  display: block;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 168px;
-  letter-spacing: 0.02em;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-/* 로고 = 횃불 금(GRID) 위 핏빛(BRAWL). 2026-07-31 리스킨이 **가운데 정지점만**
-   변수였던 탓에 위아래 리터럴(#aef6ff·#0bb6c8·#ffd2f6·#b71f9a)이 사이버 시절
-   청록→보라로 남아, 팔레트를 갈아도 로고만 계속 SF로 읽혔다.
-   ⚠ **밝은 끝·어두운 끝을 리터럴로 되돌리지 말 것** — `color-mix`로 팔레트 변수에서
-   파생시켜야 다음 리스킨 때 로고가 또 혼자 뒤처지지 않는다. 섞는 상대만 따뜻한
-   양피지빛/그을음이라 색상(hue)은 `--neon-*`가 정한다. */
-/* ⚠ 각 단어의 **첫 줄은 폴백이고 지우면 안 된다.** 글자는 `-webkit-text-fill-color:
-   transparent`라 배경 그라디언트가 곧 글자색인데, `color-mix`를 모르는 WebView에서는
-   아랫줄이 통째로 무효가 되어 **로고가 첫 화면에서 아예 안 보인다**(minSdk 24라
-   업데이트가 멈춘 WebView가 사정권에 있다). 리터럴을 쓰는 유일하게 옳은 자리다 —
-   값은 아랫줄 `color-mix`의 계산 결과와 같게 맞춰 뒀다. */
-.title__word--a {
-  background-image: linear-gradient(180deg, #e8d4a9, #c9a86a 64%, #7a6239);
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--neon-cyan) 42%, #fff4d6),
-    var(--neon-cyan) 64%,
-    color-mix(in srgb, var(--neon-cyan) 52%, #241705)
-  );
-}
-.title__word--b {
-  background-image: linear-gradient(180deg, #eaa899, #c8483f 64%, #6f2622);
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--neon-red) 38%, #ffe3d0),
-    var(--neon-red) 64%,
-    color-mix(in srgb, var(--neon-red) 48%, #1e0708)
-  );
-  margin-top: -10px;
-}
+
+
+
 .title__tag {
   margin: 26px auto 34px;
   max-width: 620px;
@@ -521,11 +477,7 @@
   font-size: 19px;
   font-weight: 600;
 }
-.title__buttons {
-  display: flex;
-  gap: 18px;
-  justify-content: center;
-}
+
 
 /* ---- Login gate ---------------------------------------------------------- */
 .login {
@@ -583,7 +535,7 @@
   margin: 0 auto;
   padding: 22px 26px;
   border: 1px solid var(--panel-edge);
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--panel);
 }
 .login__setup-title {
@@ -599,7 +551,7 @@
 .login__hint code {
   background: var(--bg-2);
   border: 1px solid var(--panel-edge);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 1px 6px;
   font-size: 13px;
 }
@@ -615,7 +567,7 @@
   gap: 10px;
   padding: 6px 10px 6px 6px;
   border: 1px solid var(--panel-edge);
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(8, 12, 20, 0.7);
 }
 .userchip__avatar {
@@ -661,11 +613,11 @@
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 15px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--neon-cyan);
   padding: 2px 10px;
   border: 1px solid var(--neon-cyan);
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(8, 12, 20, 0.75);
 }
 .bhud__timer--urgent {
@@ -697,19 +649,19 @@
   padding: 10px 12px 10px 14px;
   background: rgba(8, 12, 20, 0.92);
   border: 1px solid #2ff3ff;
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 .tut-tip__badge {
   flex: none;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: 0;
   background: #2ff3ff;
   color: var(--ink);
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 .tut-tip__text {
   font-size: 14px;
@@ -742,7 +694,7 @@
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-edge);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 30px 36px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
@@ -750,34 +702,23 @@
   color: var(--neon-cyan);
   margin-bottom: 20px;
   text-align: center;
-  letter-spacing: 0.2em;
+  letter-spacing: 0;
 }
-.controls__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 30px;
-}
-.controls__row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
+
+
 .key {
   min-width: 52px;
   text-align: center;
   padding: 7px 10px;
   border: 1px solid var(--panel-edge);
   border-bottom-width: 3px;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--bg-2);
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--neon-cyan);
 }
-.controls__label {
-  color: var(--text-dim);
-  font-weight: 600;
-}
+
 .controls__note {
   margin: 22px 0;
   color: var(--text-faint);
@@ -801,27 +742,15 @@
 }
 .select__header h2 {
   color: var(--neon-cyan);
-  letter-spacing: 0.3em;
+  letter-spacing: 0;
   font-size: 26px;
 }
-.select__body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 460px;
-  gap: 26px;
-  padding: 12px 36px 30px;
-  min-height: 0;
-}
-.select__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 16px;
-}
+
+
 .avatar-card {
   position: relative;
   border: 1px solid var(--panel-edge);
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--bg-1);
   overflow: hidden;
   padding: 0;
@@ -841,7 +770,7 @@
   place-items: center;
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0;
   color: var(--text);
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.75), transparent);
 }
@@ -857,13 +786,7 @@
   color: var(--accent);
 }
 
-.select__detail {
-  display: flex;
-  border: 1px solid var(--accent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-1));
-  overflow: hidden;
-}
+
 .detail__portrait {
   width: 210px;
   flex: none;
@@ -883,7 +806,7 @@
 }
 .detail__title {
   color: var(--text-dim);
-  letter-spacing: 0.24em;
+  letter-spacing: 0;
   font-weight: 600;
   text-transform: uppercase;
   margin: 6px 0 14px;
@@ -902,7 +825,7 @@
   margin: 0 0 18px;
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 8px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .detail__passive-tag {
@@ -910,10 +833,10 @@
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   color: var(--ink);
   background: var(--accent);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 2px 7px;
   margin-top: 1px;
 }
@@ -938,7 +861,7 @@
   width: 70px;
   font-family: var(--font-display);
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   color: var(--text-faint);
 }
 .stat__track {
@@ -946,7 +869,7 @@
   height: 12px;
   background: var(--bg-0);
   border: 1px solid var(--panel-edge);
-  border-radius: 3px;
+  border-radius: 0;
   overflow: hidden;
 }
 .stat__fill {
@@ -954,351 +877,84 @@
   height: 100%;
   background: var(--accent);
 }
-.detail__confirm {
-  margin-top: 18px;
-  border-color: var(--accent);
-  color: #fff;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-}
+
 
 /* ---- Bracket / ladder ---------------------------------------------------- */
-.bracket {
-  display: flex;
-  flex-direction: column;
-}
-.bracket__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px 36px 6px;
-}
-.bracket__header h2 {
-  color: var(--neon-cyan);
-  letter-spacing: 0.3em;
-}
-.bracket__progress {
-  font-family: var(--font-display);
-  color: var(--neon-yellow);
-  letter-spacing: 0.12em;
-}
-.bracket__body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 30px;
-  padding: 12px 36px;
-  min-height: 0;
-}
-.bracket__player {
-  border: 1px solid var(--accent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 7%, var(--bg-1));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-bottom: 16px;
-  overflow: hidden;
-}
-.bracket__youtag {
-  align-self: stretch;
-  text-align: center;
-  padding: 8px;
-  font-family: var(--font-display);
-  letter-spacing: 0.4em;
-  color: var(--ink);
-  background: var(--accent);
-  font-weight: 900;
-}
-.bracket__playerart {
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-}
-.bracket__playername {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 30px;
-  color: var(--accent);
-}
-.bracket__ladder {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: auto;
-}
-.rung {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
-  border: 1px solid var(--panel-edge);
-  border-left: 4px solid var(--accent);
-  border-radius: 8px;
-  background: rgba(12, 18, 32, 0.7);
-}
-.rung__no {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 22px;
-  color: var(--text-faint);
-  width: 34px;
-}
-.rung__art {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 1px solid var(--accent);
-  flex: none;
-}
-.rung__name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  font-size: 20px;
-  width: 130px;
-}
-.rung__diff {
-  color: var(--text-dim);
-  font-weight: 600;
-  width: 60px;
-}
-.rung__status {
-  margin-left: auto;
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-}
-.rung--current {
-  background: color-mix(in srgb, var(--accent) 14%, rgba(12, 18, 32, 0.7));
-}
-.rung--current .rung__status {
-  color: var(--accent);
-}
-.rung--done {
-  opacity: 0.45;
-  filter: grayscale(0.5);
-}
-.rung--done .rung__status {
-  color: var(--neon-green);
-}
-.bracket__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 36px 26px;
-}
-.bracket__vs {
-  color: var(--text-dim);
-  font-size: 18px;
-  font-weight: 600;
-}
-.bracket__fight {
-  font-size: 18px;
-  padding: 16px 40px;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ---- Fight screen + HUD -------------------------------------------------- */
 .fight {
   background: var(--bg-0);
 }
-.fight__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.fight__quit {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  z-index: 6;
-  padding: 8px 14px;
-  font-size: 12px;
-}
-.fight__hint {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: var(--text-faint);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  z-index: 5;
-  text-shadow: 0 1px 3px #000;
-}
 
-.hud {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-}
-.hud__fighter {
-  position: absolute;
-  top: 22px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  width: 540px;
-}
-.hud__fighter--left {
-  left: 26px;
-}
-.hud__fighter--right {
-  right: 26px;
-  flex-direction: row-reverse;
-}
-.hud__avatar {
-  width: 66px;
-  height: 66px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid var(--accent);
-  background: var(--bg-1);
-  flex: none;
-}
-.hud__avatar svg {
-  transform: scale(1.5) translateY(8%);
-}
-.hud__bars {
-  flex: 1;
-}
-.hud__name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  font-size: 15px;
-  margin-bottom: 5px;
-  color: var(--accent);
-}
-.hud__fighter--right .hud__name {
-  text-align: right;
-}
-.hud__hp {
-  position: relative;
-  height: 24px;
-  background: #15080c;
-  border: 2px solid var(--frame);
-  transform: skewX(-16deg);
-  overflow: hidden;
-}
-.hud__hpfill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: #46b877;
-  transition: width 0.18s ease;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .hud__hpfill--left {
   right: 0;
 }
 .hud__hpfill--right {
   left: 0;
 }
-.hud__meter {
-  position: relative;
-  height: 9px;
-  margin-top: 5px;
-  width: 78%;
-  background: var(--bg-1);
-  border: 1px solid var(--frame);
-  transform: skewX(-16deg);
-  overflow: hidden;
-}
-.hud__fighter--right .hud__meter {
-  margin-left: auto;
-}
-.hud__meterfill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: var(--accent);
-  transition: width 0.12s linear;
-}
-.hud__meterfill--left {
-  left: 0;
-}
-.hud__meterfill--right {
-  right: 0;
-}
-.hud__meter.is-ready {
-  border-color: var(--accent);
-}
+
+
+
+
+
+
 @keyframes soft-pulse {
   50% {
     opacity: 0.5;
   }
 }
-.hud__timer {
-  position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 44px;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-  min-width: 90px;
-  text-align: center;
-}
-.hud__combo {
-  position: absolute;
-  top: 150px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  color: var(--neon-yellow);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  font-size: 26px;
-  animation: combo-pop 0.18s ease;
-}
-.hud__combo b {
-  font-size: 42px;
-}
-.hud__combo--left {
-  left: 90px;
-}
-.hud__combo--right {
-  right: 90px;
-  text-align: right;
-}
+
+
+
+
+
 @keyframes combo-pop {
   from {
     transform: scale(1.4);
   }
 }
-.hud__banner {
-  position: absolute;
-  top: 44%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 92px;
-  letter-spacing: 0.06em;
-  color: #fff;
-  animation: banner-pop 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
-}
-.hud__banner--ready {
-  color: var(--neon-cyan);
-  text-shadow: 0 0 30px var(--neon-cyan);
-}
-.hud__banner--fight {
-  color: var(--neon-yellow);
-  text-shadow: 0 0 34px var(--neon-yellow);
-}
-.hud__banner--ko {
-  color: var(--neon-red);
-  font-size: 130px;
-  text-shadow: 0 0 40px var(--neon-red);
-}
-.hud__banner--time {
-  color: #fff;
-  text-shadow: 0 0 30px #fff;
-}
+
+
+
+
+
 @keyframes banner-pop {
   from {
     transform: translate(-50%, -50%) scale(0.4);
@@ -1321,7 +977,7 @@
 }
 .result__sub {
   font-family: var(--font-display);
-  letter-spacing: 0.4em;
+  letter-spacing: 0;
   color: var(--accent);
   font-size: 18px;
   margin-bottom: 4px;
@@ -1364,13 +1020,7 @@
   display: grid;
   place-items: center;
 }
-.loading__text {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  color: var(--neon-cyan);
-  animation: meter-pulse 1.2s ease-in-out infinite;
-}
+
 
 /* ===========================================================================
    Card battle screen
@@ -1401,27 +1051,13 @@
 .bhud__name {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
   color: var(--accent);
   font-size: 17px;
   margin-bottom: 5px;
 }
-.bhud__you {
-  display: inline-block;
-  margin: 0 6px;
-  padding: 1px 7px;
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--text);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  vertical-align: middle;
-}
-.bhud__side--right .bhud__you {
-  /* keep the badge tight to the name on the right-aligned side */
-  margin-left: 0;
-}
+
+
 /* HP/기력 바 — 가독성 우선: 단색 채움 + 크고 뚜렷한 숫자(현재/최대) */
 .bhud__hp {
   position: relative;
@@ -1456,30 +1092,9 @@
 .bhud__hpfill--right {
   right: 0;
 }
-.bhud__hpnum {
-  position: absolute;
-  top: 50%;
-  z-index: 1;
-  white-space: nowrap;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 16px;
-  letter-spacing: 0.04em;
-  color: #fff;
-  text-shadow:
-    -1px -1px 0 rgba(0, 0, 0, 0.9),
-    1px -1px 0 rgba(0, 0, 0, 0.9),
-    -1px 1px 0 rgba(0, 0, 0, 0.9),
-    1px 1px 0 rgba(0, 0, 0, 0.9);
-  /* 막대의 기울기를 되돌리고 세로 중앙에 앉힌다 */
-  transform: translateY(-50%) skewX(15deg);
-}
-.bhud__side--left .bhud__hpnum {
-  left: 10px;
-}
-.bhud__side--right .bhud__hpnum {
-  right: 10px;
-}
+
+
+
 .bhud__energy {
   position: relative;
   height: 18px;
@@ -1501,28 +1116,9 @@
 .bhud__energyfill--right {
   right: 0;
 }
-.bhud__energynum {
-  position: absolute;
-  top: 50%;
-  z-index: 1;
-  white-space: nowrap;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 900;
-  color: #fff;
-  text-shadow:
-    -1px -1px 0 rgba(0, 0, 0, 0.9),
-    1px -1px 0 rgba(0, 0, 0, 0.9),
-    -1px 1px 0 rgba(0, 0, 0, 0.9),
-    1px 1px 0 rgba(0, 0, 0, 0.9);
-  transform: translateY(-50%) skewX(15deg);
-}
-.bhud__side--left .bhud__energynum {
-  left: 10px;
-}
-.bhud__side--right .bhud__energynum {
-  right: 10px;
-}
+
+
+
 .bhud__turn {
   display: flex;
   flex-direction: column;
@@ -1562,7 +1158,7 @@
    여기 옛 시안(#2ff3ff)이 박혀 있던 탓에 팔레트를 바꿔도 판만 사이버로 남았다. */
 .cell {
   border: 1px solid color-mix(in srgb, var(--neon-cyan) 15%, transparent);
-  border-radius: 7px;
+  border-radius: 0;
   background: linear-gradient(180deg, rgba(38, 30, 26, 0.46), rgba(10, 8, 12, 0.26));
   box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.5);
 }
@@ -1600,16 +1196,7 @@
   animation: banner-pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
   z-index: 6;
 }
-.board__turnflash {
-  position: absolute;
-  top: 12px;
-  right: 18px;
-  font-family: var(--font-display);
-  letter-spacing: 0.3em;
-  color: var(--neon-cyan);
-  opacity: 0.7;
-  animation: meter-pulse 0.7s ease-in-out infinite;
-}
+
 /* 보스 예고 — 선택 화면 상단 중앙 경고 배너 */
 .board__telegraph {
   position: absolute;
@@ -1622,11 +1209,11 @@
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 16px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   color: #fff;
   background: linear-gradient(180deg, rgba(226, 85, 99, 0.95), rgba(150, 30, 45, 0.92));
   border: 1px solid #ff7a88;
-  border-radius: 10px;
+  border-radius: 0;
   box-shadow: 0 0 24px rgba(255, 77, 94, 0.5);
   animation: telegraph-pulse 0.9s ease-in-out infinite;
   z-index: 6;
@@ -1714,10 +1301,10 @@
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   color: var(--ink);
   background: var(--accent);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 1px 9px;
   box-shadow: 0 0 12px var(--accent);
   z-index: 4;
@@ -1779,12 +1366,7 @@
   72% { transform: scaleX(var(--flip)) translateX(12px) rotate(2deg); }
   100% { transform: scaleX(var(--flip)) translateX(0) rotate(0deg); }
 }
-/* 원거리 계열 — 제자리에서 기를 모았다가 내지른다 */
-.fighter.is-atk-bolt .fighter__art,
-.fighter.is-atk-orb .fighter__art,
-.fighter.is-atk-flame .fighter__art {
-  animation: atk-cast 0.78s ease-out;
-}
+
 @keyframes atk-cast {
   0% { transform: scaleX(var(--flip)) translateX(0) rotate(0deg); }
   24% { transform: scaleX(var(--flip)) translateX(-16px) rotate(-6deg) scale(1.05); } /* 차지 */
@@ -1792,10 +1374,7 @@
   62% { transform: scaleX(var(--flip)) translateX(12px) rotate(3deg); }
   100% { transform: scaleX(var(--flip)) translateX(0) rotate(0deg); }
 }
-/* 돌진 — 크게 파고들며 잔상을 끈다 */
-.fighter.is-atk-rush .fighter__art {
-  animation: atk-rush 0.78s cubic-bezier(0.16, 1, 0.3, 1);
-}
+
 @keyframes atk-rush {
   0% { transform: scaleX(var(--flip)) translateX(0) scale(1); }
   14% { transform: scaleX(var(--flip)) translateX(-26px) scale(0.93); }
@@ -1807,10 +1386,7 @@
   52% { transform: scaleX(var(--flip)) translateX(54px) scale(1.02); }
   100% { transform: scaleX(var(--flip)) translateX(0) scale(1); }
 }
-/* 내려찍기 — 솟구쳤다가 지면에 꽂힌다 */
-.fighter.is-atk-quake .fighter__art {
-  animation: atk-quake 0.78s ease-in;
-}
+
 @keyframes atk-quake {
   0% { transform: scaleX(var(--flip)) translate(0, 0) rotate(0deg); }
   26% { transform: scaleX(var(--flip)) translate(8px, -46px) rotate(-8deg) scale(1.04); }
@@ -1910,11 +1486,11 @@
   white-space: nowrap;
   font-family: var(--font-display);
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--text);
   background: rgba(8, 12, 20, 0.85);
   border: 1px solid var(--accent);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 3px 10px;
 }
 /* 기절 — 이 턴을 통째로 버린 파이터에 별 배지 + 휘청임 */
@@ -1930,7 +1506,7 @@
   color: #ffe14d;
   background: rgba(40, 30, 6, 0.9);
   border: 1px solid #ffe14d;
-  border-radius: 12px;
+  border-radius: 0;
   padding: 2px 10px;
   text-shadow: 0 0 8px rgba(255, 225, 77, 0.6);
   animation: stun-bob 0.6s ease-in-out infinite;
@@ -1982,7 +1558,7 @@
 .fx--bolt {
   width: 150px;
   height: 40px;
-  border-radius: 20px;
+  border-radius: 0;
   bottom: 130px;
 }
 .fx--orb {
@@ -2095,7 +1671,7 @@
   padding: 18px 20px 16px;
   border: 1px solid var(--accent);
   border-left: 5px solid var(--accent);
-  border-radius: 14px;
+  border-radius: 0;
   background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 15%, var(--bg-1)), var(--bg-0));
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
   text-align: left;
@@ -2120,7 +1696,7 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--accent);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 .cardzoom__kind em {
   font-style: normal;
@@ -2146,7 +1722,7 @@
   gap: 2px;
   padding: 8px 6px;
   border: 1px solid var(--panel-edge);
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--bg-2);
 }
 .cardzoom__stat b {
@@ -2164,7 +1740,7 @@
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--text-faint);
   margin-bottom: 6px;
 }
@@ -2215,7 +1791,7 @@
   align-self: stretch;
   padding: 10px;
   border: 1px solid var(--panel-edge);
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--bg-2);
   color: var(--text);
   font-family: var(--font-display);
@@ -2325,7 +1901,7 @@
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 900;
-  letter-spacing: 0.22em;
+  letter-spacing: 0;
   color: var(--accent);
   text-shadow: 0 0 16px var(--accent), 2px 2px 0 var(--bg-0);
   margin-bottom: 8px;
@@ -2334,7 +1910,7 @@
   font-family: var(--font-display);
   font-size: 88px;
   font-weight: 900;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
   line-height: 1;
   color: #fff;
   -webkit-text-stroke: 9px var(--bg-0);
@@ -2402,7 +1978,7 @@
 .cards__status {
   font-family: var(--font-display);
   font-size: 22px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--neon-cyan);
   min-height: 30px;
 }
@@ -2418,7 +1994,7 @@
   width: 116px;
   height: 92px;
   border: 1px dashed var(--panel-edge);
-  border-radius: 10px;
+  border-radius: 0;
   background: rgba(9, 6, 5, 0.5);
   padding: 0;
   display: grid;
@@ -2444,7 +2020,7 @@
 .slot__empty {
   color: var(--text-faint);
   font-family: var(--font-display);
-  letter-spacing: 0.2em;
+  letter-spacing: 0;
   font-size: 12px;
 }
 .cards__actions {
@@ -2467,11 +2043,7 @@
   cursor: not-allowed;
   filter: grayscale(0.5);
 }
-/* 종류별 탭 — 한 번에 한 종류만 크게 보여준다 */
-.cards__tabs {
-  display: flex;
-  gap: 10px;
-}
+
 .cards__tab {
   display: inline-flex;
   align-items: center;
@@ -2480,11 +2052,11 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 15px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
   color: var(--text-dim);
   background: rgba(10, 16, 28, 0.6);
   border: 1px solid var(--panel-edge);
-  border-radius: 9px;
+  border-radius: 0;
   cursor: pointer;
   transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
@@ -2498,16 +2070,7 @@
   background: color-mix(in srgb, var(--neon-cyan) 14%, var(--bg-1));
   box-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 30%, transparent);
 }
-/* 이 탭의 카드가 슬롯에 몇 장 들어갔는지 */
-.cards__tab-count {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--ink);
-  background: var(--neon-cyan);
-  border-radius: 8px;
-  padding: 0 7px;
-  line-height: 16px;
-}
+
 /* 탭을 없앤 뒤로는 공격+수비가 **한 줄에 모두** 온다(2026-08-03).
    ⚠ `flex-wrap: wrap`이면 안 된다 — 넘치는 순간 두 번째 줄이 생기고 그대로
    `.cards`(높이 고정) 밖으로 잘려 나간다. 줄바꿈 대신 가로 스크롤로 받는다. */
@@ -2529,7 +2092,7 @@
 }
 .cards__hand::-webkit-scrollbar-thumb {
   background: var(--panel-edge);
-  border-radius: 3px;
+  border-radius: 0;
 }
 /* 로그라이크에서 덱이 커지면 10장을 넘길 수 있어 줄어들지 않게 고정폭을 준다 */
 .handcard {
@@ -2584,7 +2147,7 @@
   flex-direction: column;
   border: 1px solid var(--accent);
   border-left: 4px solid var(--accent);
-  border-radius: 10px;
+  border-radius: 0;
   background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, var(--bg-1)), var(--ink));
   padding: 8px 9px;
   text-align: left;
@@ -2604,7 +2167,7 @@
   font-weight: 900;
   color: var(--ink);
   background: var(--accent);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 1px 4px;
 }
 .cardface__name {
@@ -2664,158 +2227,6 @@
 }
 /* 전투용 압축 카드 — 이름 → 수치(기력·데미지) → 사거리만. 설명이 없어 남는
    자리는 이름 아래 auto 마진이 먹고, 수치를 사거리 위로 올린다(요청 순서). */
-/* ---- 압축 카드(전투 손패·슬롯) — 2026-08-05 전면 재설계 -------------------
-   신고: "가독성이 정말 최악입니다."
-   전엔 104px 폭에 이름 + `⚔14 ↦1 ⚡10` + 사거리표 + `넉백1` 칩을 다 넣어서,
-   ① 무엇이 중요한 숫자인지 안 읽히고 ② 능력은 뜻을 알 방법이 없었다.
-   이제 **이름 → 큰 수치 하나 → 사거리 → (기력·쿨·능력 아이콘)** 네 줄로 세우고,
-   자세한 건 꾹 눌러 여는 `.cardzoom`이 맡는다.
-   ⚠ 마크업이 `cf__*`로 바뀌었다 — 옛 `cardface__*` 규칙은 **설명이 붙는 큰
-     카드(덱 빌더·도감·상점) 전용**으로 남아 있다. 둘을 섞지 말 것. */
-.cardface--compact {
-  padding: 8px 8px 7px;
-  gap: 0;
-}
-.cf__head {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.cf__kind {
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0.75;
-  flex: none;
-}
-/* 이름 — 카드에서 가장 먼저 읽히는 것. 두 줄까지 허용하고 넘치면 자른다. */
-.cf__name {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.15;
-  color: #fff;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.cf__sig {
-  font-family: var(--font-display);
-  font-size: 8px;
-  font-weight: 900;
-  color: var(--ink);
-  background: var(--accent);
-  border-radius: 3px;
-  padding: 0 3px;
-  flex: none;
-}
-/* 주 수치 — 카드를 고를 때 보는 값 **하나**. 크게, 단위는 작게 옆에. */
-.cf__stat {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  color: var(--accent);
-}
-.cf__stat b {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-.cf__stat span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-dim);
-}
-/* 이동 카드 — 화살표가 곧 정보다(런 보상으로 들어오는 이동 카드는 슬롯에 뜬다) */
-.cf__moveart {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  font-size: 34px;
-  line-height: 1;
-  color: var(--accent);
-  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
-}
-.cardface--compact .rangechart {
-  width: 100%;
-  gap: 2px;
-  margin: 0 0 6px;
-}
-/* 아래 줄 — 기력·쿨타임·능력 아이콘. 글자는 최소로, 나머지는 그림으로. */
-.cf__foot {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 16px;
-}
-.cf__cost {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--neon-yellow);
-  flex: none;
-}
-.cf__cd {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-faint);
-  border: 1px solid var(--panel-edge);
-  border-radius: 4px;
-  padding: 0 3px;
-  flex: none;
-}
-/* 능력은 **아이콘만**. 뜻은 꾹 눌러 읽는다 — 여기 글자를 넣으면 카드가 다시
-   빽빽해지고, 그게 원래 문제였다. */
-.cf__abils {
-  margin-left: auto;
-  display: flex;
-  gap: 2px;
-  font-size: 12px;
-  line-height: 1;
-}
-.cf__abils i {
-  font-style: normal;
-}
-.cf__abils i.is-bad {
-  filter: grayscale(0.3);
-  opacity: 0.85;
-}
-
-/* 슬롯은 손패의 **절반 높이**다(90px vs 146px) — 손패와 같은 것을 담으면 넘친다.
-   ⚠ 실제로 넘쳤다: 이름 위에 수치가 겹쳐 찍혔다(2026-08-05).
-   그래서 슬롯에선 **사거리표를 뺀다.** 슬롯이 답해야 하는 건 "무엇을 몇 번째에
-   넣었나"이고, "어디를 때리나"는 이미 판이 붉은 칸으로 보여 준다. */
-.slot .cardface--compact {
-  padding: 6px 7px;
-}
-.slot .cardface--compact .rangechart {
-  display: none;
-}
-/* 슬롯 번호(`.slot__no`)가 좌상단에 겹쳐 있다 — 그만큼 머리줄을 밀어 준다 */
-.slot .cf__head {
-  padding-left: 11px;
-}
-.slot .cf__name {
-  font-size: 12px;
-}
-.slot .cf__stat b {
-  font-size: 26px;
-}
-.slot .cf__moveart {
-  font-size: 28px;
-}
-.slot .cf__foot {
-  min-height: 14px;
-}
-.slot .cf__cost {
-  font-size: 11px;
-}
-
 /* ---- 설명이 붙는 큰 카드(덱 빌더·도감·상점) ------------------------------ */
 .cardface__meta {
   display: flex;
@@ -2835,7 +2246,7 @@
   color: #fff;
   background: color-mix(in srgb, var(--accent) 35%, var(--bg-2));
   border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 0 3px;
   line-height: 1.4;
   white-space: nowrap;
@@ -2846,7 +2257,7 @@
   font-weight: 700;
   color: var(--text-faint);
   border: 1px solid var(--panel-edge);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 0 3px;
 }
 
@@ -2861,7 +2272,7 @@
 }
 .rc {
   aspect-ratio: 1;
-  border-radius: 2px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.06);
 }
 .rc--on {
@@ -2900,7 +2311,7 @@
   font-size: 34px;
   color: #fff;
   background: rgba(5, 8, 14, 0.62);
-  border-radius: 10px;
+  border-radius: 0;
   text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
 }
 .handcard__slot-badge {
@@ -2912,7 +2323,7 @@
   font-weight: 900;
   color: var(--ink);
   background: var(--neon-cyan);
-  border-radius: 3px;
+  border-radius: 0;
   padding: 0 3px;
   z-index: 3;
   line-height: 14px;
@@ -2950,9 +2361,7 @@
 }
 
 /* ---- Codex (영웅 도감) ---------------------------------------------------- */
-.btn--codex {
-  --accent: #ffb84d;
-}
+
 .codex__body {
   flex: 1;
   display: grid;
@@ -2973,7 +2382,7 @@
   flex-direction: column;
   gap: 16px;
   border: 1px solid var(--accent);
-  border-radius: 12px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--accent) 6%, var(--bg-1));
   padding: 18px;
   min-height: 0;
@@ -2986,7 +2395,7 @@
 .codex__hero .detail__portrait {
   width: 180px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 10px;
+  border-radius: 0;
   overflow: hidden;
 }
 .codex__hero .detail__info {
@@ -3008,7 +2417,7 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 13px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
   color: var(--accent);
   margin: 4px 0 10px;
 }
@@ -3036,18 +2445,18 @@
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--rarity) 55%, transparent);
   border-left: 3px solid var(--rarity);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(8, 12, 20, 0.5);
   font-size: 12px;
 }
-.codex__relic.is-rare { --rarity: #5b9ee0; }
-.codex__relic.is-epic { --rarity: #b06fd4; }
-.codex__relic.is-legend { --rarity: #f7c948; }
+
+
+
 .codex__relic-icon { font-size: 18px; }
 .codex__relic b { color: #e8eef8; }
 .codex__relic-rarity {
   font-size: 10px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--rarity);
 }
 .codex__relic p {
@@ -3100,7 +2509,7 @@
 }
 .mp__header h2 {
   color: var(--neon-magenta);
-  letter-spacing: 0.3em;
+  letter-spacing: 0;
   font-size: 26px;
 }
 .mp__me {
@@ -3111,14 +2520,14 @@
   justify-content: flex-end;
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   color: var(--accent);
 }
 .mp__me-art {
   width: 38px;
   height: 38px;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  border-radius: 6px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-1));
 }
 .mp__body {
@@ -3156,7 +2565,7 @@
   width: 320px;
   padding: 22px 26px;
   text-transform: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   font-size: 19px;
 }
 .mp__roleicon {
@@ -3165,7 +2574,7 @@
 .mp__rolehint {
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   color: var(--text-dim);
   text-transform: none;
 }
@@ -3208,7 +2617,7 @@
   gap: 12px;
   padding: 18px 28px;
   border: 2px solid var(--neon-cyan);
-  border-radius: 12px;
+  border-radius: 0;
   font-size: 20px;
   font-weight: 700;
   color: var(--neon-cyan);
@@ -3233,7 +2642,7 @@
 }
 .mp__codelabel {
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--text-dim);
   font-size: 15px;
 }
@@ -3241,12 +2650,12 @@
   min-width: 360px;
   padding: 18px 28px;
   border: 2px solid var(--neon-magenta);
-  border-radius: 10px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--neon-magenta) 8%, var(--bg-1));
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 64px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0;
   text-align: center;
   color: #ffe6fb;
   text-shadow: 0 0 24px color-mix(in srgb, var(--neon-magenta) 60%, transparent);
@@ -3260,13 +2669,13 @@
   box-sizing: border-box;
   padding: 16px 20px;
   border: 2px solid var(--panel-edge);
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--bg-1);
   color: #ffe6fb;
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 44px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0;
   text-align: center;
   text-transform: uppercase;
 }
@@ -3276,7 +2685,7 @@
 }
 .mp__codeinput::placeholder {
   color: var(--text-faint);
-  letter-spacing: 0.18em;
+  letter-spacing: 0;
 }
 .mp__notice {
   display: flex;
@@ -3293,7 +2702,7 @@
 }
 .mp__notice-detail code {
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 0;
   background: rgba(255, 61, 240, 0.12);
   border: 1px solid color-mix(in srgb, var(--neon-magenta) 35%, transparent);
   color: #ffd2f6;
@@ -3362,17 +2771,8 @@
 /* ===========================================================================
    로그라이크 (2026-07-24) — 런 화면들. 1280x720 .screen 안에서 flex 레이아웃.
    =========================================================================== */
-/* ⚠ 버튼 색은 반드시 `--accent`로 준다(`.btn--online`·`.btn--codex`와 같은 방식).
-   `border-color`·`color`를 직접 쓰면 **안 먹는다** — `index.css`의 `.btn`이 같은
-   특이도(0,1,0)에 `border` 단축·`color`를 갖고 있고 나중에 로드되므로 순서로 진다.
-   실제로 `.btn--roguelike`가 그래서 계속 기본 황동색이었다(2026-08-04 발견·수정). */
-.btn--roguelike {
-  --accent: #a860ff;
-}
-/* PVP — 로그라이크(혼자 사다리를 오른다)와 한눈에 갈리도록 붉은 결투색. */
-.btn--pvp {
-  --accent: #c9524d;
-}
+
+
 
 /* ---- 공용 런 바 + 유물 칩 ------------------------------------------------- */
 .runbar {
@@ -3383,7 +2783,7 @@
   padding: 10px 16px;
   background: rgba(8, 12, 20, 0.7);
   border: 1px solid var(--panel-edge);
-  border-radius: 10px;
+  border-radius: 0;
 }
 .runbar__stat { display: flex; align-items: baseline; gap: 6px; }
 .runbar__label { font-size: 12px; color: var(--text-faint); }
@@ -3391,7 +2791,7 @@
 .runbar__hp {
   position: relative;
   width: 220px; height: 22px;
-  border: 1px solid var(--panel-edge); border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--panel-edge); border-radius: 0; overflow: hidden;
   background: var(--bg-2);
 }
 .runbar__hpfill {
@@ -3403,235 +2803,93 @@
   position: absolute; inset: 0; display: grid; place-items: center;
   font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000;
 }
-.runbar__gold, .runbar__deck { font-weight: 700; color: var(--neon-yellow); font-size: 14px; }
+.runbar__gold,
+.runbar__deck { font-weight: 700; color: var(--neon-yellow); font-size: 14px; }
 .runbar__deck { color: var(--text-dim); }
 .runbar__relics { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 .relicchip {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 8px; border-radius: 999px;
+  padding: 2px 8px; border-radius: 0;
   background: rgba(168, 96, 255, 0.14); border: 1px solid rgba(168, 96, 255, 0.5);
   font-size: 12px; color: #d9c2ff; white-space: nowrap;
 }
-.relicchip__icon { font-size: 13px; }
+
 
 /* ---- 런 시작 화면 --------------------------------------------------------- */
 .runstart { display: flex; flex-direction: column; padding: 18px 30px; gap: 14px; }
 .runstart__head { display: flex; align-items: center; justify-content: space-between; }
-.runstart__head h2 { color: var(--neon-cyan); letter-spacing: 0.2em; font-size: 22px; }
+.runstart__head h2 { color: var(--neon-cyan); letter-spacing: 0; font-size: 22px; }
 .runstart__chars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; height: 168px; }
 /* 난이도 4단계 — 축은 "봇이 나를 얼마나 읽는가" 하나다(run.ts의 RUN_DIFFICULTIES).
    ⚠ 잠긴 칸도 **읽을 수는 있어야** 하므로 흐리게만 하고 `disabled`는 걸지 않는다. */
 .runstart__diffs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.diffcard {
-  text-align: left; padding: 8px 12px; border-radius: 10px; cursor: pointer;
-  background: var(--bg-1); border: 1px solid var(--panel-edge);
-  transition: border-color 0.12s ease, background 0.12s ease;
-}
-.diffcard__name {
-  font-family: var(--font-display); font-size: 15px; letter-spacing: 0.08em;
-  color: var(--text); margin-bottom: 3px;
-}
-.diffcard__desc { font-size: 11.5px; line-height: 1.35; color: var(--text-dim); }
-.diffcard.is-active { border-color: var(--neon-yellow); background: rgba(226, 178, 74, 0.12); }
-.diffcard.is-active .diffcard__name { color: var(--neon-yellow); }
-.diffcard.is-locked { opacity: 0.42; cursor: not-allowed; }
-.runstart__pick {
-  flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px;
-  border-top: 1px solid var(--panel-edge); padding-top: 10px;
-}
-.runstart__sig { display: flex; align-items: center; gap: 12px; }
-.runstart__sig-label {
-  font-family: var(--font-display); font-size: 12px; letter-spacing: 0.15em;
-  color: #c98bff;
-}
-.runstart__sig-relic { color: var(--text-dim); font-size: 14px; }
-.runstart__cards-label { color: var(--text); font-weight: 600; }
-.runstart__cards { display: flex; gap: 12px; }
-.runstart__card {
-  width: 140px; height: 176px; padding: 0; border: none; background: none;
-  border-radius: 12px; transition: transform 0.1s ease;
-}
-.runstart__card.is-active { transform: translateY(-6px); box-shadow: 0 0 0 3px var(--accent); border-radius: 12px; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .runstart__foot { display: flex; justify-content: center; }
 
 /* ---- 런 지도 ------------------------------------------------------------- */
 .runmap { display: flex; flex-direction: column; padding: 16px 30px; gap: 18px; }
-.runmap__topbar { display: flex; align-items: center; gap: 12px; }
-.runmap__quit { flex: none; }
-/* 분기 지도 트랙 — 층이 가로로 흐르고, 한 층의 갈래는 **세로로 쌓인다**.
-   ⚠ 2026-08-04(2차): 아래에 큰 선택 카드를 두던 걸 없애고 **지도의 칸을 직접
-   누르게** 바꿨다. 전엔 카드가 화면 절반을 먹어 지도가 얇은 띠로 눌렸고,
-   그래서 정작 "앞에 뭐가 있는지"가 안 보였다. 남는 세로 공간을 전부 칸에 준다.
 
-   ⚠ **가로가 유일한 제약이다** — 15층이 한 줄에 들어가야 경로가 왼→오로 읽힌다.
-   .screen 안폭 1220px 기준 76px × 15 + 4px × 14 = 1196. 층을 늘리면 여기가 먼저
-   깨지므로 칸 너비부터 다시 계산할 것(줄바꿈은 경로 읽기를 망친다). */
-.runmap__prompt {
-  /* 위아래 auto 여백으로 프롬프트+트랙 묶음을 남는 공간 **가운데**에 앉힌다.
-     트랙에 flex:1을 주면 테두리만 커지고 속은 텅 비어 보인다. */
-  margin-top: auto;
-  font-family: var(--font-display);
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  font-size: 13px;
-  text-align: center;
-}
-.runmap__track {
-  position: relative; /* 간선 SVG(.runmap__edges)의 기준 */
-  flex: none;
-  margin-bottom: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 18px 10px;
-  border: 1px solid var(--panel-edge);
-  border-radius: 12px;
-  background: rgba(8, 12, 20, 0.5);
-}
+
+
+
 /* ---- 간선 (2026-08-05) ------------------------------------------------------
    칸과 칸을 잇는 선. **칸 뒤에 깔린다**(z-index 0 + 칸은 position: relative).
    ⚠ 좌표는 층/줄 번호에서 계산한 백분율이다(`RunMapScreen`의 edgeX/edgeY) —
    격자가 균일하다는 전제라, 층 수(LADDER_FLOORS)나 줄 수(LANES)를 바꾸면 그쪽
    상수도 같이 고쳐야 선이 칸 중심에서 어긋나지 않는다. `preserveAspectRatio:
    none`이라 세로/가로 비율이 달라도 칸 중심을 그대로 따라간다. */
-.runmap__edges {
-  position: absolute;
-  /* 칸 격자와 정확히 같은 영역을 덮는다 — .runcol이 차지하는 안쪽 상자. */
-  left: 10px;
-  /* ⚠ **폭을 명시해야 한다.** SVG는 viewBox에서 온 고유 비율을 가진 대체 요소라
-     `left`+`right`만 주면 폭이 과잉 지정으로 보여 고유 비율(1:1)로 접힌다 —
-     실제로 288×288 정사각으로 접혀서 간선이 전부 왼쪽 5분의 1에 뭉쳐 있었다. */
-  width: calc(100% - 20px);
-  top: 18px;
-  height: 288px;
-  z-index: 0;
-  pointer-events: none;
-}
-.runedge {
-  stroke: var(--text-faint);
-  /* ⚠ `non-scaling-stroke`라 두께는 **화면 픽셀**이다. viewBox 단위(0.x)로 적으면
-     선이 사실상 안 보인다 — 실제로 처음에 0.35로 뒀다가 지도에 선이 없는 것처럼
-     보였다. 1px 아래로 내리지 말 것. */
-  stroke-width: 1.4;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.55;
-}
-/* 실제로 밟고 지나온 길 */
-.runedge--taken {
-  stroke: var(--neon-cyan);
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.95;
-}
-/* 지금 서 있는 칸에서 뻗어 나가는 길 — 무엇이 열려 있는지가 한눈에 보여야 한다. */
-.runedge--live {
-  stroke: var(--neon-yellow);
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.95;
-}
-.runcol {
-  position: relative;
-  z-index: 1; /* 간선 위 */
-  flex: none;
-  width: 76px;
-  height: 288px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0;
-}
-/* 빈 줄 자리 — 칸이 없는 줄도 자리를 차지해야 줄 위치가 층마다 흔들리지 않는다. */
-.runnode-slot {
-  width: 100%;
-  height: 88px;
-  flex: none;
-}
-.runcol__floor {
-  position: absolute;
-  bottom: -14px;
-  font-size: 10px;
-  color: var(--text-faint);
-}
-/* 이번 층 기둥은 배경으로 한 번 더 짚어 준다 — 갈래가 여럿이라 테두리만으론 약하다. */
-.runcol--cur {
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--neon-cyan) 12%, transparent);
-}
-.runnode {
-  width: 100%;
-  height: 88px;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 5px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-edge);
-  background: var(--bg-2);
-  opacity: 0.5;
-  color: inherit;
-  font: inherit;
-  text-align: center;
-  overflow: hidden;
-}
-.runnode__icon { font-size: 24px; line-height: 1; }
-.runnode__label {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.15;
-  color: var(--text-dim);
-  /* 이름이 길면 두 줄까지만 — 세 줄이 되면 칸 높이가 흔들린다. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.runnode__meta {
-  font-size: 11px;
-  line-height: 1.1;
-  color: var(--text-faint);
-}
-/* 밟은 칸 / 안 밟고 지나친 칸 / 이번 층 / 앞으로의 층 */
-.runnode--done { opacity: 0.9; border-color: var(--neon-cyan); }
-.runnode--done .runnode__label { color: var(--text); }
-.runnode--missed { opacity: 0.18; }
-.runnode--next { opacity: 0.62; }
-/* 이번 층이지만 **이어져 있지 않아** 못 가는 칸 — 있는 건 보이되 잠겨 있다. */
-.runnode--locked { opacity: 0.22; filter: grayscale(0.6); }
-.runnode--next .runnode__label { color: var(--text-dim); }
-/* 이번 층 칸만 누를 수 있다 — 커서·호버로 그걸 분명히 한다. */
-.runnode--cur {
-  opacity: 1;
-  cursor: pointer;
-  background: var(--panel);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--neon-cyan) 40%, transparent);
-  transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
-}
-.runnode--cur .runnode__label { color: #fff; font-size: 14px; }
-.runnode--cur:hover {
-  transform: translateY(-3px);
-  background: var(--bg-2);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 18px color-mix(in srgb, var(--neon-cyan) 55%, transparent);
-}
-.runnode--cur:active { transform: translateY(0); }
-/* 종류별 테두리 — 아이콘만으로는 흘려보게 되므로 색으로도 가른다. */
-.runnode--elite { border-color: #ff8a3c; }
-.runnode--boss { border-color: var(--neon-red); }
-.runnode--event { border-color: #c98bff; }
-.runnode--shop { border-color: var(--neon-yellow); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ---- 보상 화면 ----------------------------------------------------------- */
-.reward, .event, .shop, .runend {
+.reward,
+.event,
+.shop,
+.runend {
   display: flex; flex-direction: column; align-items: center;
   padding: 22px 30px; gap: 18px;
 }
-.reward__title, .event__title, .shop__title {
-  color: var(--neon-cyan); font-family: var(--font-display); letter-spacing: 0.15em;
+.reward__title,
+.event__title,
+.shop__title {
+  color: var(--neon-cyan); font-family: var(--font-display); letter-spacing: 0;
   font-size: 22px;
 }
 .reward__hint {
@@ -3642,13 +2900,13 @@
 .reward__options { display: flex; gap: 16px; justify-content: center; align-items: stretch; }
 .reward__opt {
   width: 150px; height: 190px; padding: 0; border: none; background: none;
-  border-radius: 12px; transition: transform 0.1s ease; cursor: pointer;
+  border-radius: 0; transition: transform 0.1s ease; cursor: pointer;
 }
 .reward__opt:hover { transform: translateY(-6px); }
 .reward__opt--relic {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 8px; padding: 14px;
-  border: 2px solid #a860ff; border-radius: 12px;
+  border: 2px solid #a860ff; border-radius: 0;
   background: linear-gradient(160deg, rgba(120, 60, 200, 0.28), var(--bg-1));
   position: relative;
 }
@@ -3657,7 +2915,7 @@
 .reward__relic-desc { font-size: 12px; color: #d9c2ff; text-align: center; line-height: 1.35; }
 .reward__relic-tag {
   position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 900;
-  color: var(--bg-1); background: #c98bff; border-radius: 6px; padding: 1px 6px;
+  color: var(--bg-1); background: #c98bff; border-radius: 0; padding: 1px 6px;
 }
 .reward__card { width: 150px; height: 190px; padding: 0; border: none; background: none; position: relative; }
 /* "강화" 리본 — 이미 가진 카드가 보상·상점에 나오면 그 칸은 새 카드가 아니라 강화다
@@ -3665,8 +2923,8 @@
    칸을 훑을 때 **고르기 전에** 성격이 갈려 보여야 해서 칸 자체에도 표를 단다. */
 .reward__uptag {
   position: absolute; top: -7px; left: 50%; transform: translateX(-50%); z-index: 2;
-  font-family: var(--font-display); font-size: 10px; font-weight: 900; letter-spacing: 0.12em;
-  color: var(--ink); background: var(--up); border-radius: 6px; padding: 2px 8px;
+  font-family: var(--font-display); font-size: 10px; font-weight: 900; letter-spacing: 0;
+  color: var(--ink); background: var(--up); border-radius: 0; padding: 2px 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   pointer-events: none;
 }
@@ -3728,18 +2986,21 @@
 .shop__items { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 .shop__item {
   width: 150px; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 10px; border: 1px solid var(--panel-edge); border-radius: 12px;
+  padding: 10px; border: 1px solid var(--panel-edge); border-radius: 0;
   background: rgba(8, 12, 20, 0.5);
 }
 .shop__item.is-owned { opacity: 0.4; }
 .shop__item-body { width: 128px; height: 168px; display: grid; place-items: center; position: relative; }
 .shop__item-body .cardface { width: 128px; height: 168px; }
-.shop__relic, .shop__service {
+.shop__relic,
+.shop__service {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 6px; text-align: center; height: 100%;
 }
-.shop__relic-icon, .shop__service-icon { font-size: 40px; }
-.shop__relic-name, .shop__service-name { font-weight: 800; color: #fff; font-size: 14px; }
+.shop__relic-icon,
+.shop__service-icon { font-size: 40px; }
+.shop__relic-name,
+.shop__service-name { font-weight: 800; color: #fff; font-size: 14px; }
 .shop__relic-desc { font-size: 11px; color: #d9c2ff; line-height: 1.3; }
 .shop__buy { padding: 8px 16px; font-size: 14px; width: 100%; }
 .shop__leave { margin-top: 6px; }
@@ -3756,7 +3017,7 @@
 .runend__banner--loss { color: var(--neon-red); text-shadow: 0 0 40px rgba(255, 77, 94, 0.5); }
 .runend__stat { color: var(--text-dim); font-size: 16px; }
 .runend__unlock {
-  padding: 8px 16px; border-radius: 999px; font-size: 14px; text-align: center; max-width: 720px;
+  padding: 8px 16px; border-radius: 0; font-size: 14px; text-align: center; max-width: 720px;
   color: var(--neon-yellow); background: rgba(226, 178, 74, 0.12);
   border: 1px solid rgba(226, 178, 74, 0.5);
 }
@@ -3811,21 +3072,16 @@
 .bhud__bosstag {
   margin-left: 8px;
   padding: 1px 7px;
-  border-radius: 4px;
+  border-radius: 0;
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
   color: var(--ink);
   background: var(--boss, var(--accent));
   vertical-align: middle;
 }
-.bhud__bosstitle {
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  color: color-mix(in srgb, var(--boss, var(--accent)) 78%, #fff);
-  margin: -2px 0 4px;
-}
+
 .bhud__side--boss .bhud__name {
   text-shadow: 0 0 18px color-mix(in srgb, var(--boss) 60%, transparent);
 }
@@ -3939,7 +3195,7 @@
   font-family: var(--font-display);
   font-size: 19px;
   font-weight: 900;
-  letter-spacing: 0.34em;
+  letter-spacing: 0;
   color: var(--boss);
   text-shadow: 0 0 20px var(--boss), 2px 2px 0 var(--bg-0);
   margin-bottom: 6px;
@@ -3948,7 +3204,7 @@
   font-family: var(--font-display);
   font-size: 82px;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   line-height: 1;
   color: #fff;
   -webkit-text-stroke: 9px var(--bg-0);
@@ -3959,12 +3215,12 @@
 .bosscut__line {
   margin-top: 12px;
   font-size: 17px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: color-mix(in srgb, var(--boss) 40%, #fff);
   text-shadow: 0 2px 10px #000;
 }
 @keyframes bosscut-label {
-  0% { opacity: 0; transform: translateY(38px) scale(0.94); letter-spacing: 0.2em; }
+  0% { opacity: 0; transform: translateY(38px) scale(0.94); letter-spacing: 0; }
   20% { opacity: 1; transform: translateY(0) scale(1); }
   86% { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 0; transform: translateY(-14px) scale(1); }

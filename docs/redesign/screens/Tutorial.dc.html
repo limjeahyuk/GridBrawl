@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>튜토리얼</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-mountains{background-image:url(/redesign/bg/grassland/mountains.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.board{background-image:url(/redesign/terrain/grass-tile.png);background-size:64px 64px;image-rendering:pixelated}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+@keyframes f6{to{background-position:120% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-slime-idle{background-image:url(/redesign/sprites/slime/idle.png)}
+.rl{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-mini.png);background-size:320px 320px;background-repeat:no-repeat;image-rendering:pixelated}
+.pop{animation:pop 1.6s infinite}
+@keyframes pop{0%,10%{transform:scale(1);filter:none}18%{transform:scale(1.5);filter:brightness(2.2)}30%,100%{transform:scale(1);filter:none}}
+.spot{position:absolute;pointer-events:none;border-radius:8px;box-shadow:0 0 0 3px #f4d470,0 0 0 9999px rgba(8,6,14,0.72);transition:all .35s ease}
+.tap{position:absolute;width:36px;height:36px;border-radius:50%;border:3px solid #fff6dc;pointer-events:none;animation:tap 1.1s ease-out infinite}
+@keyframes tap{0%{transform:scale(0.6);opacity:1}100%{transform:scale(1.6);opacity:0}}
+.nav{height:40px;padding:0 18px;font:inherit;font-family:'Do Hyeon',sans-serif;font-size:19px;cursor:pointer}
+.next{background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 4px 0 #7a5418}
+.prev{background:none;color:#c9c2d6;border:2px solid #4a4058}
+.prev:hover{border-color:#f4d470;color:#fff6dc}
+.card{width:96px;height:106px;box-sizing:border-box;padding:6px;display:flex;flex-direction:column;gap:5px}
+.boot{background-image:url(/redesign/ui/move/boot.png);background-size:28px 28px;width:28px;height:28px;image-rendering:pixelated;flex-shrink:0}
+.bd{position:relative;width:112px;height:120px;flex-shrink:0}
+.bd .b2,.bd .b1{position:absolute;left:0;right:0;height:110px;background:#10203a;border:2px solid #2a4a78;box-sizing:border-box}
+.bd .b2{top:0;transform:translateX(4px)}
+.bd .b1{top:5px;transform:translateX(2px)}
+.bd .f{position:absolute;left:0;right:0;bottom:0;height:110px;box-sizing:border-box;padding:6px 7px;background:#14243a;border:2px solid #5aa8ff;box-shadow:inset 0 0 0 2px #0a1424;display:flex;flex-direction:column;gap:6px}
+.cmp{display:grid;grid-template-columns:repeat(3,14px);gap:2px}
+.cmp span{width:14px;height:14px}
+.gocell{animation:blink 1.1s ease-in-out infinite}
+@keyframes blink{50%{box-shadow:inset 0 0 0 3px #fff1b8,0 0 16px rgba(244,212,112,0.75)}}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #5fb4ec; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-sky" aria-hidden="true"></div>
+  <div class="layer l-mountains" aria-hidden="true"></div>
+  <div class="layer l-hills" aria-hidden="true"></div>
+  <div class="layer l-meadow" aria-hidden="true"></div>
+
+  <header style="position: absolute; left: 24px; right: 24px; top: 16px; height: 84px; display: grid; grid-template-columns: 1fr 220px 1fr; gap: 16px">
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 10px 14px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3c9c98">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 16px; color: #fff6dc">CAIRN</span>
+      <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 100%; height: 100%; background: #e0485a"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">103/103</span></div>
+      <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #7fc8ff">EN</span><div style="flex-grow: 1; height: 8px; background: #0a0810; border: 2px solid #3a3150"><div style="width: {{en}}%; height: 100%; background: #4a9aff"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">{{enN}}</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 22px; color: #f4d470">TUTORIAL</span>
+      <span style="font-size: 13px; color: #b6ea6a">첫 상대 · 연습용 슬라임</span>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 10px 14px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #6ab83a">
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px; color: #fff6dc; text-align: right">슬라임</span>
+      <div style="display: flex; align-items: center; gap: 8px; flex-direction: row-reverse"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: {{foeHp}}%; height: 100%; background: #e0485a"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px">{{foeHpN}}</span></div>
+    </div>
+  </header>
+
+  <sc-if value="{{showRelic}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 24px; top: 106px; display: flex; gap: 6px; padding: 6px 8px; background: rgba(18,15,26,0.86); border: 2px solid #0a0810">
+      <div class="rl pop" role="img" aria-label="송곳니" style="background-position: -64px -32px"></div>
+    </div>
+  </sc-if>
+
+  <div class="board" aria-label="6×4 판" style="position: absolute; left: 160px; top: 300px; width: 960px; height: 272px; border: 4px solid #2a1c10; box-shadow: 0 8px 0 #5a3c22, 0 12px 0 #2a1c10; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, 68px)">
+    <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div class="{{c.cls}}" style="border-right: 1px solid rgba(20,50,20,0.45); border-bottom: 1px solid rgba(20,50,20,0.45); background: {{c.bg}}; box-shadow: {{c.sh}}; display: flex; align-items: flex-end; justify-content: center"><span style="display: {{c.labD}}; margin-bottom: 5px; padding: 1px 7px; font-size: 12px; font-weight: 700; background: #f4d470; color: #1d1408; border: 2px solid #2a1c10">→ 오른쪽</span></div></sc-for>
+  </div>
+  <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="position: absolute; left: {{heroL}}px; top: 372px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: 720ms"></div>
+  <sc-if value="{{foeAlive}}" hint-placeholder-val="{{true}}">
+    <div class="spr n6 s-slime-idle" role="img" aria-label="슬라임" style="position: absolute; left: 644px; top: 410px; width: 128px; height: 88px; background-size: 768px 88px; animation-duration: 780ms; transform: scaleX(-1)"></div>
+  </sc-if>
+
+  <footer style="position: absolute; left: 0; right: 0; bottom: 0; height: 136px; background: linear-gradient(180deg, rgba(18,15,26,0) 0%, rgba(18,15,26,0.92) 22%); display: flex; align-items: flex-end; gap: 16px; padding: 0 24px 12px; box-sizing: border-box">
+    <div style="display: flex; gap: 8px; padding: 8px; background: #120f1a; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #f4d470">
+      <sc-for list="{{slots}}" as="k" hint-placeholder-count="3">
+        <div class="card" style="position: relative; background: {{k.bg}}; border: 2px {{k.bs}} {{k.edge}}">
+          <span style="position: absolute; left: -2px; top: -12px; font-family: 'Silkscreen', monospace; font-size: 12px; padding: 1px 6px; background: #f4d470; color: #1d1408">{{k.order}}</span>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 10px; margin-top: 4px; color: #c9c2d6">{{k.kind}}</span>
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 16px; text-align: center; margin-top: auto">{{k.name}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div class="bd" role="img" aria-label="이동 카드 묶음 4장">
+      <span class="b2"></span><span class="b1"></span>
+      <span class="f">
+        <span style="display: flex; align-items: center; gap: 4px"><span class="boot" aria-hidden="true"></span><span style="display: flex; flex-direction: column; line-height: 1.05"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; color: #8ad0ff">MOVE</span><span style="font-family: 'Silkscreen', monospace; font-size: 15px; color: #fff6dc">×4</span></span></span>
+        <span class="cmp" aria-hidden="true"><sc-for list="{{compass}}" as="q" hint-placeholder-count="9"><span style="background: {{q}}"></span></sc-for></span>
+        <span style="margin-top: auto; font-size: 11px; color: #8ad0ff; text-align: center">판을 눌러 이동</span>
+      </span>
+    </div>
+    <div style="display: flex; gap: 8px; flex-grow: 1">
+      <sc-for list="{{hand}}" as="k" hint-placeholder-count="2">
+        <div class="card" style="background: {{k.bg}}; border: 2px solid {{k.edge}}; opacity: {{k.op}}">
+          <div style="display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 10px"><span style="color: #ff9a9a">{{k.dm}}</span><span style="color: #8ad0ff">{{k.en}}</span></div>
+          <div style="display: grid; grid-template-columns: repeat(3, 12px); gap: 2px; justify-content: center">
+            <sc-for list="{{k.grid}}" as="g" hint-placeholder-count="9"><div style="width: 12px; height: 12px; background: {{g}}"></div></sc-for>
+          </div>
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 15px; text-align: center; margin-top: auto">{{k.name}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="height: 64px; padding: 0 22px; display: flex; align-items: center; background: #f4d470; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 24px; opacity: {{confirmOp}}">확정 ▶</div>
+  </footer>
+
+  <div class="spot" aria-hidden="true" style="left: {{s.x}}px; top: {{s.y}}px; width: {{s.w}}px; height: {{s.h}}px"></div>
+  <sc-if value="{{s.tap}}" hint-placeholder-val="{{false}}">
+    <div class="tap" aria-hidden="true" style="left: {{s.tx}}px; top: {{s.ty}}px"></div>
+  </sc-if>
+
+  <section aria-live="polite" style="position: absolute; left: {{s.bx}}px; top: {{s.by}}px; width: 380px; box-sizing: border-box; padding: 16px 18px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #f4d470, 0 8px 0 rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #f4d470">STEP {{s.n}} / {{total}}</span>
+      <span style="font-size: 12px; color: #b9b1c9">{{s.tag}}</span>
+    </div>
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #fff6dc">{{s.title}}</h2>
+    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #e4def0; white-space: pre-line">{{s.body}}</p>
+    <div style="display: flex; gap: 6px">
+      <sc-for list="{{dots}}" as="d" hint-placeholder-count="9"><span style="width: 18px; height: 4px; background: {{d}}"></span></sc-for>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <button type="button" class="nav prev" onClick="{{prev}}">이전</button>
+      <button type="button" class="nav next" onClick="{{next}}">{{s.cta}}</button>
+    </div>
+  </section>
+  <button type="button" onClick="{{skip}}" style="position: absolute; right: 24px; top: 108px; background: rgba(18,15,26,0.9); border: 2px solid #4a4058; color: #c9c2d6; font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer">튜토리얼 건너뛰기</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 0 };
+  }
+  renderVals() {
+    const S = [
+      { tag: '상대', title: '한 명만 쓰러뜨리면 끝', body: '6×4 칸짜리 판 위에서 1:1로 싸운다.\n이 슬라임이 첫 상대 — 쓰러뜨리면 튜토리얼이 끝난다.', x: 150, y: 290, w: 980, h: 292, bx: 450, by: 116, cta: '다음' },
+      { tag: 'HP', title: 'HP — 0이 되면 진다', body: '빨간 막대가 내 체력. 상대 막대도 똑같이 읽는다.\n상대를 먼저 0으로 만들면 이긴다.', x: 84, y: 54, w: 470, h: 24, bx: 84, by: 150, cta: '다음' },
+      { tag: '기력', title: '기력(EN) — 카드의 연료', body: '공격 카드는 기력을 쓴다. 카드 오른쪽 위 숫자가 비용.\n매 라운드 조금씩 다시 찬다 — 한 번에 다 쓰지 말 것.', x: 84, y: 76, w: 470, h: 20, bx: 84, by: 150, cta: '다음' },
+      { tag: '이동', title: '판을 눌러 다가가기', body: '노랗게 깜빡이는 칸을 눌러 보자.\n그 칸으로 가는 「오른쪽」이 1번 칸에 담긴다.\n이동 카드는 손패 왼쪽 묶음(×4)에 모여 있다.', x: 480, y: 436, w: 168, h: 76, tap: true, tx: 544, ty: 456, bx: 680, by: 150, cta: '칸을 눌렀다' },
+      { tag: '사거리', title: '빨간 칸 = 맞는 자리', body: '공격 카드의 3×3 그림에서 가운데가 나, 빨간 칸이 때리는 자리.\n「파쇄 베기」는 앞뒤 한 칸 — 다가간 뒤면 슬라임이 딱 그 칸이다.', x: 490, y: 592, w: 104, h: 122, tap: true, tx: 528, ty: 630, bx: 600, by: 130, cta: '3번 칸에 놓았다' },
+      { tag: '가드', title: '붉은 예고 칸은 피하거나 막는다', body: '슬라임이 다음에 칠 자리가 판에 붉게 보인다.\n그 칸에 서게 되면 「가드」를 2번 칸에 — 이번 라운드 피해를 25까지 막는다.', x: 594, y: 592, w: 104, h: 122, tap: true, tx: 632, ty: 630, bx: 720, by: 130, cta: '가드를 놓았다' },
+      { tag: '순서', title: '3장은 이동 → 수비 → 공격', body: '놓은 순서와 상관없이 이동이 먼저, 그다음 가드, 마지막에 공격이 풀린다.\n상대도 동시에 3장을 낸다. 준비됐으면 확정!', x: 26, y: 592, w: 324, h: 122, tap: true, tx: 1138, ty: 630, bx: 380, by: 260, cta: '확정 ▶' },
+      { tag: '유물', title: '유물은 상태바 바로 아래', body: '첫 유물 「송곳니」를 얻었다 — 때리면 체력 +3.\n발동하면 아이콘이 번쩍이고 숫자가 뜬다. 눌러 보면 설명.', x: 18, y: 100, w: 64, h: 50, bx: 100, by: 150, cta: '다음' },
+      { tag: '완료', title: '첫 승리!', body: 'HP · 기력 · 이동 · 사거리 · 가드 · 순서 · 유물 — 이게 전부다.\n이제 진짜 모험을 시작하자.', x: 430, y: 300, w: 420, h: 0, bx: 450, by: 250, cta: '모험 시작 ▶' },
+    ];
+    const n = this.state.step;
+    const s = Object.assign({ tap: false, tx: 0, ty: 0 }, S[n], { n: n + 1 });
+    const E = '#2a2438', SF = '#f4d470', H = '#e0485a', M = '#5aa8ff', G = '#7fd6c8';
+    // 이동 카드는 손패에 없다 — 왼쪽 묶음에 접혀 있고, 판의 칸을 눌러 담는다
+    const allHand = [
+      { name: '파쇄 베기', dm: 'DM13', en: 'EN5', grid: [E, E, E, H, SF, H, E, E, E], bg: '#2a1620', edge: '#8a3040' },
+      { name: '가드', dm: 'BLOCK', en: '25', grid: [E, E, E, E, G, E, E, E, E], bg: '#122a2a', edge: '#3c9c98' },
+    ];
+    const placed = [n >= 5, n >= 6];
+    const hand = allHand.map((c, i) => Object.assign({}, c, { op: placed[i] ? 0.25 : 1 }));
+    const N0 = '#1a1626', U = '#7a5418';
+    const compass = [N0, M, N0, M, SF, n >= 4 ? U : M, N0, M, N0];
+    const emp = (o) => ({ order: o, name: '', kind: '', bg: 'rgba(42,36,56,0.6)', edge: '#4a4058', bs: 'dashed' });
+    const slots = [
+      n >= 4 ? { order: '1', name: '→ 오른쪽', kind: 'MOVE', bg: '#14243a', edge: '#5aa8ff', bs: 'solid' } : emp('1'),
+      n >= 6 ? { order: '2', name: '가드', kind: 'GUARD', bg: '#122a2a', edge: '#3c9c98', bs: 'solid' } : emp('2'),
+      n >= 5 ? { order: '3', name: '파쇄 베기', kind: 'ATTACK', bg: '#2a1620', edge: '#8a3040', bs: 'solid' } : emp('3'),
+    ];
+    const moved = n >= 7;
+    const cells = [];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) {
+      let bg = 'transparent', sh = 'none', cls = '', labD = 'none';
+      if (n === 3 && r === 2 && c === 2) { bg = 'rgba(244,212,112,0.32)'; sh = 'inset 0 0 0 3px #f4d470'; cls = 'gocell'; labD = 'block'; }
+      if (n >= 4 && n <= 6 && r === 2 && (c === 1 || c === 3)) { bg = 'rgba(127,214,200,0.35)'; sh = 'inset 0 0 0 2px #bff5ec'; }
+      if (n === 5 && r === 2 && c === 2) { bg = 'rgba(224,72,90,0.45)'; sh = 'inset 0 0 0 2px #ff8a8a'; }
+      cells.push({ bg, sh, cls, labD });
+    }
+    const foeHpV = n >= 8 ? 0 : n >= 7 ? 46 : 100;
+    return {
+      s, total: S.length, hand, slots, cells, compass,
+      dots: S.map((_, i) => (i <= n ? '#f4d470' : '#3a3150')),
+      heroL: moved ? 488 : 328, foeAlive: n < 8, showRelic: n >= 7,
+      foeHp: foeHpV, foeHpN: Math.round(24 * foeHpV / 100) + '/24',
+      en: n >= 7 ? 30 : 60, enN: n >= 7 ? 15 : 30,
+      confirmOp: n === 6 ? 1 : 0.4,
+      next: () => this.setState({ step: n >= S.length - 1 ? 0 : n + 1 }),
+      prev: () => this.setState({ step: Math.max(0, n - 1) }),
+      skip: () => this.setState({ step: S.length - 1 }),
+    };
+  }
+}
+</script>
+</body>
+</html>

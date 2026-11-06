@@ -16,6 +16,7 @@ import {
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
+import { RelicIcon } from '../RelicIcon'
 
 
 export function RewardScreen({
@@ -80,7 +81,7 @@ export function RewardScreen({
             const relic = getRelic(r.relicId)
             return (
               <button key={i} className="reward__opt reward__opt--relic" onClick={() => take(r)}>
-                <div className="reward__relic-icon">{relic?.icon}</div>
+                <RelicIcon id={r.relicId} size={78} className="reward__relic-icon" />
                 <div className="reward__relic-name">{relic?.name}</div>
                 <div className="reward__relic-desc">{relic?.desc}</div>
                 <div className="reward__relic-tag">유물</div>

@@ -1,0 +1,392 @@
+{
+ "rules": {
+  "showCostOnly": true,
+  "hiddenChoiceLocked": true,
+  "probabilitiesHidden": true
+ },
+ "relicPools": {
+  "iron": [
+   "plating",
+   "ironshoes",
+   "buckler",
+   "ironwill",
+   "towershield",
+   "bulwark",
+   "thorns"
+  ],
+  "poison": [
+   "venomflask",
+   "toxinvial",
+   "witchbrew"
+  ],
+  "heart": [
+   "heart",
+   "oxheart",
+   "titanheart",
+   "emberheart"
+  ],
+  "hand": [
+   "frostbite",
+   "punisher",
+   "midastouch",
+   "chainshock"
+  ],
+  "foot": [
+   "ironshoes",
+   "anchorstone",
+   "skywalk"
+  ]
+ },
+ "events": [
+  {
+   "id": "EV-FORGE",
+   "name": "대장장이",
+   "mode": "once",
+   "art": {
+    "src": "/redesign/ui/events/forge.png",
+    "w": 64,
+    "h": 52,
+    "frames": 6,
+    "frameMs": 110
+   },
+   "text": "빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.",
+   "choices": [
+    {
+     "label": "카드라도 두들긴다",
+     "cost": null,
+     "effect": {
+      "type": "openUpgrade"
+     }
+    },
+    {
+     "label": "주변에 쇠라도 챙긴다",
+     "cost": null,
+     "effect": {
+      "type": "gainRelic",
+      "id": "coldiron"
+     }
+    },
+    {
+     "label": "쇠를 두들긴다",
+     "hidden": {
+      "needRelic": "coldiron"
+     },
+     "cost": null,
+     "effect": {
+      "type": "swapRelic",
+      "lose": "coldiron",
+      "pool": "iron"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-TRADE",
+   "name": "거래",
+   "mode": "once",
+   "art": {
+    "src": "/redesign/ui/events/trader.png",
+    "w": 52,
+    "h": 60,
+    "frames": 1
+   },
+   "text": "\"그 물건 탐나는군요. 저와 거래하실래요?\"\n누군가가 거래를 요청했다.",
+   "choices": [
+    {
+     "label": "내 카드 한 장 ↔ 다른 카드",
+     "cost": {
+      "type": "card",
+      "n": 1
+     },
+     "effect": {
+      "type": "tradeCardForCard"
+     }
+    },
+    {
+     "label": "내 카드 한 장 ↔ 유물",
+     "cost": {
+      "type": "card",
+      "n": 1
+     },
+     "effect": {
+      "type": "tradeCardForRelic"
+     }
+    },
+    {
+     "label": "내 유물 하나 ↔ 다른 유물",
+     "cost": {
+      "type": "relic",
+      "n": 1
+     },
+     "effect": {
+      "type": "tradeRelicForRelic"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-SPRING",
+   "name": "온천",
+   "mode": "once",
+   "art": {
+    "src": "/redesign/ui/events/hotspring.png",
+    "w": 76,
+    "h": 48,
+    "frames": 4,
+    "frameMs": 225
+   },
+   "text": "김이 모락모락 나는 아주 뜨끈한 온천을 발견했다.\n당장 쉬고 싶어진다.",
+   "choices": [
+    {
+     "label": "휴식",
+     "cost": null,
+     "effect": {
+      "type": "healPct",
+      "pct": 30
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-APOTHECARY",
+   "name": "약방",
+   "mode": "repeat",
+   "art": {
+    "src": "/redesign/ui/events/apothecary.png",
+    "w": 72,
+    "h": 60,
+    "frames": 1
+   },
+   "text": "엄청나게 많은 약들이 있는 약방에 들어섰다.\n의문의 남자가 약 3가지를 보여 준다.",
+   "shuffleEffects": true,
+   "choices": [
+    {
+     "label": "약",
+     "icon": "/redesign/ui/events/potion-0.png",
+     "cost": {
+      "type": "gold",
+      "n": 50
+     },
+     "effectSlot": 0
+    },
+    {
+     "label": "약",
+     "icon": "/redesign/ui/events/potion-1.png",
+     "cost": {
+      "type": "gold",
+      "n": 50
+     },
+     "effectSlot": 1
+    },
+    {
+     "label": "약",
+     "icon": "/redesign/ui/events/potion-2.png",
+     "cost": {
+      "type": "gold",
+      "n": 50
+     },
+     "effectSlot": 2
+    },
+    {
+     "label": "나간다",
+     "cost": null,
+     "effect": {
+      "type": "leave"
+     }
+    }
+   ],
+   "effectSlots": [
+    {
+     "type": "heal",
+     "n": 20
+    },
+    {
+     "type": "damage",
+     "n": 10
+    },
+    {
+     "type": "none"
+    }
+   ]
+  },
+  {
+   "id": "EV-JAR",
+   "name": "항아리",
+   "mode": "once",
+   "art": {
+    "src": "/redesign/ui/events/jar.png",
+    "w": 48,
+    "h": 52,
+    "frames": 1
+   },
+   "text": "어둡고 매우 습한 동굴에 들어왔다.\n눈앞에 항아리 하나가 떡하니 있다. 열어 보겠습니까?",
+   "choices": [
+    {
+     "label": "연다",
+     "cost": null,
+     "effect": {
+      "type": "chance",
+      "p": 0.5,
+      "then": {
+       "type": "battle",
+       "monster": "cave-snake",
+       "sprite": "snake",
+       "maxHp": 34,
+       "startStatus": {
+        "poison": 2
+       },
+       "onWin": {
+        "type": "gainRelicFromPool",
+        "pool": "poison"
+       }
+      },
+      "else": {
+       "type": "none",
+       "text": "텅 비어 있다"
+      }
+     }
+    },
+    {
+     "label": "건드리지 않는다",
+     "cost": null,
+     "effect": {
+      "type": "none"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-GACHA",
+   "name": "갓챠",
+   "mode": "repeat",
+   "art": {
+    "src": "/redesign/ui/events/gacha.png",
+    "w": 52,
+    "h": 68,
+    "frames": 2,
+    "frameMs": 450
+   },
+   "text": "반짝반짝 거리는 가게에 들어서니, 돈을 넣으면 무언가를 집을 수 있을 것 같은 기계가 있다.\n해 보겠습니까?",
+   "choices": [
+    {
+     "label": "돈 넣기",
+     "cost": {
+      "type": "gold",
+      "n": 50
+     },
+     "effect": {
+      "type": "gacha",
+      "startP": 0.1,
+      "stepP": 0.1,
+      "resetOnWin": true,
+      "prizes": [
+       {
+        "type": "heal",
+        "n": 25
+       },
+       {
+        "type": "gainRelicFromPool",
+        "pool": "any"
+       }
+      ],
+      "allDoneText": "다 뽑은 것 같다…"
+     }
+    },
+    {
+     "label": "나가기",
+     "cost": null,
+     "effect": {
+      "type": "leave"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-MOLE",
+   "name": "두더지",
+   "mode": "repeat",
+   "art": {
+    "src": "/redesign/ui/events/mole.png",
+    "w": 64,
+    "h": 44,
+    "frames": 4,
+    "frameMs": 225
+   },
+   "text": "반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?",
+   "choices": [
+    {
+     "label": "땅 파기",
+     "cost": {
+      "type": "hp",
+      "n": 10,
+      "stepPerTry": 3
+     },
+     "effect": {
+      "type": "retryChance",
+      "startP": 0.3,
+      "stepP": 0.1,
+      "onSuccess": {
+       "type": "gainRelicFromPool",
+       "pool": "any",
+       "then": "leave"
+      }
+     }
+    },
+    {
+     "label": "가던 길 가기",
+     "cost": null,
+     "effect": {
+      "type": "leave"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-SURGERY",
+   "name": "수술실",
+   "mode": "once",
+   "art": {
+    "src": "/redesign/ui/events/surgery.png",
+    "w": 72,
+    "h": 56,
+    "frames": 1
+   },
+   "text": "누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?",
+   "choices": [
+    {
+     "label": "심장",
+     "cost": {
+      "type": "maxHp",
+      "n": 10
+     },
+     "effect": {
+      "type": "gainRelicFromPool",
+      "pool": "heart"
+     }
+    },
+    {
+     "label": "손",
+     "cost": {
+      "type": "hp",
+      "n": 15
+     },
+     "effect": {
+      "type": "gainRelicFromPool",
+      "pool": "hand"
+     }
+    },
+    {
+     "label": "발",
+     "cost": {
+      "type": "hp",
+      "n": 15
+     },
+     "effect": {
+      "type": "gainRelicFromPool",
+      "pool": "foot"
+     }
+    }
+   ]
+  }
+ ]
+}

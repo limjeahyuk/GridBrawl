@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>몬스터 스프라이트 시트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n3{animation-name:f3;animation-timing-function:steps(3)}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+.n9{animation-name:f9;animation-timing-function:steps(9)}
+@keyframes f3{to{background-position:150% 0}}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+@keyframes f9{to{background-position:112.5% 0}}
+.slime-idle{background-image:url(/redesign/sprites/slime/idle.png)}
+.slime-run{background-image:url(/redesign/sprites/slime/run.png)}
+.slime-attack1{background-image:url(/redesign/sprites/slime/attack1.png)}
+.slime-hurt{background-image:url(/redesign/sprites/slime/hurt.png)}
+.slime-death{background-image:url(/redesign/sprites/slime/death.png)}
+.goblin-idle{background-image:url(/redesign/sprites/goblin/idle.png)}
+.goblin-run{background-image:url(/redesign/sprites/goblin/run.png)}
+.goblin-attack1{background-image:url(/redesign/sprites/goblin/attack1.png)}
+.goblin-attack2{background-image:url(/redesign/sprites/goblin/attack2.png)}
+.goblin-hurt{background-image:url(/redesign/sprites/goblin/hurt.png)}
+.goblin-death{background-image:url(/redesign/sprites/goblin/death.png)}
+.ogre-idle{background-image:url(/redesign/sprites/ogre/idle.png)}
+.ogre-run{background-image:url(/redesign/sprites/ogre/run.png)}
+.ogre-attack1{background-image:url(/redesign/sprites/ogre/attack1.png)}
+.ogre-attack2{background-image:url(/redesign/sprites/ogre/attack2.png)}
+.ogre-hurt{background-image:url(/redesign/sprites/ogre/hurt.png)}
+.ogre-death{background-image:url(/redesign/sprites/ogre/death.png)}
+.bat-idle{background-image:url(/redesign/sprites/bat/idle.png)}
+.bat-run{background-image:url(/redesign/sprites/bat/run.png)}
+.bat-attack1{background-image:url(/redesign/sprites/bat/attack1.png)}
+.bat-hurt{background-image:url(/redesign/sprites/bat/hurt.png)}
+.bat-death{background-image:url(/redesign/sprites/bat/death.png)}
+.golem-idle{background-image:url(/redesign/sprites/golem/idle.png)}
+.golem-run{background-image:url(/redesign/sprites/golem/run.png)}
+.golem-attack1{background-image:url(/redesign/sprites/golem/attack1.png)}
+.golem-attack2{background-image:url(/redesign/sprites/golem/attack2.png)}
+.golem-hurt{background-image:url(/redesign/sprites/golem/hurt.png)}
+.golem-death{background-image:url(/redesign/sprites/golem/death.png)}
+.witch-idle{background-image:url(/redesign/sprites/witch/idle.png)}
+.witch-run{background-image:url(/redesign/sprites/witch/run.png)}
+.witch-attack1{background-image:url(/redesign/sprites/witch/attack1.png)}
+.witch-attack2{background-image:url(/redesign/sprites/witch/attack2.png)}
+.witch-hurt{background-image:url(/redesign/sprites/witch/hurt.png)}
+.witch-death{background-image:url(/redesign/sprites/witch/death.png)}
+.cellbg{background:linear-gradient(180deg,#1d1828 0%,#1d1828 85%,#2a2438 85%,#2a2438 100%)}
+</style>
+</helmet>
+<div style="width: 1640px; height: 1760px; box-sizing: border-box; padding: 40px 60px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 22px">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end">
+    <div>
+      <p style="margin: 0 0 6px; font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #f4d470">MONSTER SPRITES · ×2 PREVIEW</p>
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">지역 몬스터 6종</h1>
+    </div>
+    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #b9b1c9; text-align: right">대기 · 이동 · 공격(1~2) · 피격 · 사망<br>기존 몬스터 id에 그대로 끼울 수 있게 이름을 맞췄다</p>
+  </div>
+  <sc-for list="{{regions}}" as="r" hint-placeholder-count="2">
+    <div style="display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; border-bottom: 2px solid {{r.edge}}">
+        <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: {{r.accent}}">{{r.name}}</h2>
+        <span style="font-size: 13px; color: #b9b1c9">{{r.sub}}</span>
+      </div>
+      <sc-for list="{{r.mons}}" as="m" hint-placeholder-count="3">
+        <section style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; gap: 12px; align-items: baseline">
+            <h3 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">{{m.name}}</h3>
+            <span style="font-family: 'Silkscreen', monospace; font-size: 11px; color: #b9b1c9">{{m.spec}}</span>
+            <span style="font-size: 13px; color: #c9c2d6">{{m.look}}</span>
+          </div>
+          <div style="display: flex; gap: 14px">
+            <sc-for list="{{m.clips}}" as="c" hint-placeholder-count="6">
+              <figure style="margin: 0; display: flex; flex-direction: column; gap: 4px">
+                <div class="cellbg" style="border: 2px solid #2a2438">
+                  <div class="spr {{c.cls}} {{c.n}}" role="img" aria-label="{{c.aria}}" style="width: {{c.w}}px; height: {{c.h}}px; background-size: {{c.bw}}px {{c.h}}px; animation-duration: {{c.d}}ms"></div>
+                </div>
+                <figcaption style="display: flex; justify-content: space-between; gap: 6px; align-items: baseline">
+                  <span style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">{{c.label}}</span>
+                  <span style="font-family: 'Silkscreen', monospace; font-size: 10px; color: #b9b1c9">{{c.meta}}</span>
+                </figcaption>
+              </figure>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mk = (id, fw, fh, rows) => rows.map(([clip, label, n, ms, imp]) => ({
+      cls: id + '-' + clip, n: 'n' + n, w: fw * 2, h: fh * 2, bw: n * fw * 2, d: n * ms, label,
+      aria: id + ' ' + clip, meta: n + 'F ' + ms + 'MS' + (imp != null ? ' HIT' + imp : ''),
+    }));
+    const regions = [
+      { name: '초원', sub: '1–7층 · 밝고 경쾌한 적들', accent: '#b6ea6a', edge: '#4a9a44', mons: [
+        { name: '슬라임', spec: '64×44', look: '머리에 새싹이 난 젤리. 찌그러지고 늘어나며 통통 튄다.',
+          clips: mk('slime', 64, 44, [['idle', '대기', 6, 130], ['run', '이동', 6, 85], ['attack1', '몸통 박치기', 6, 70, 3], ['hurt', '피격', 3, 95], ['death', '사망', 6, 100]]) },
+        { name: '고블린', spec: '72×48', look: '큰 귀 · 녹슨 단검. 몸을 낮추고 찌르거나 뛰어올라 두 번 찌른다.',
+          clips: mk('goblin', 72, 48, [['idle', '대기', 6, 110], ['run', '이동', 8, 65], ['attack1', '찌르기', 6, 60, 2], ['attack2', '도약 연속찌르기', 6, 65, 2], ['hurt', '피격', 3, 90], ['death', '사망', 8, 100]]) },
+        { name: '오우거 (엘리트)', spec: '120×92', look: '엄니 · 가죽 허리감개 · 못 박힌 몽둥이. 내려찍으면 땅이 갈라진다.',
+          clips: mk('ogre', 120, 92, [['idle', '대기', 6, 140], ['run', '이동', 8, 90], ['attack1', '몽둥이 휘두르기', 6, 75, 2], ['attack2', '지면 강타', 6, 85, 2], ['hurt', '피격', 3, 100], ['death', '사망', 8, 110]]) },
+      ] },
+      { name: '던전', sub: '8–14층 · 어둡고 차가운 적들', accent: '#c9c4ee', edge: '#6a6488', mons: [
+        { name: '박쥐 떼', spec: '64×52', look: '날개막에 뼈대가 비치는 붉은 눈 박쥐. 공중에서 급강하해 문다.',
+          clips: mk('bat', 64, 52, [['idle', '정지 비행', 6, 80], ['run', '돌진 비행', 6, 60], ['attack1', '급강하 물기', 6, 65, 3], ['hurt', '피격', 3, 90], ['death', '추락', 6, 95]]) },
+        { name: '골렘 (엘리트)', spec: '120×92', look: '이끼 낀 석괴와 청록 룬 코어. 주먹 한 방, 두 주먹 내려찍기.',
+          clips: mk('golem', 120, 92, [['idle', '대기', 6, 150], ['run', '이동', 8, 95], ['attack1', '룬 주먹', 6, 80, 2], ['attack2', '대지 분쇄', 6, 90, 2], ['hurt', '피격', 3, 100], ['death', '붕괴', 9, 110]]) },
+        { name: '마녀', spec: '96×64', look: '휜 고깔모자 · 녹색 피부 · 독불 지팡이. 독구슬과 독 기둥.',
+          clips: mk('witch', 96, 64, [['idle', '대기', 8, 120], ['run', '이동', 8, 78], ['attack1', '독구슬', 6, 70, 2], ['attack2', '독 기둥', 8, 75, 3], ['hurt', '피격', 3, 95], ['death', '사망', 8, 105]]) },
+      ] },
+    ];
+    return { regions };
+  }
+}
+</script>
+</body>
+</html>

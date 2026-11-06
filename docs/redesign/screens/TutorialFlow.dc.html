@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>튜토리얼 순서표</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+</style>
+</helmet>
+<div style="width: 1600px; height: 1040px; box-sizing: border-box; padding: 40px 48px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 22px">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end">
+    <div>
+      <p style="margin: 0 0 6px; font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #f4d470">ONBOARDING · 1 BATTLE · 9 STEPS · ~3 MIN</p>
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">튜토리얼 — 슬라임 한 마리를 쓰러뜨리며 배운다</h1>
+    </div>
+    <a href="Tutorial.dc.html" style="font-size: 14px">직접 눌러 보기 →</a>
+  </div>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap">
+    <span style="padding: 6px 12px; background: #1a1626; border: 2px solid #3a3150; font-size: 13px"><b>한 단계에 하나만</b> — 나머지 UI는 어둡게</span>
+    <span style="padding: 6px 12px; background: #1a1626; border: 2px solid #3a3150; font-size: 13px"><b>직접 누르게</b> — 설명보다 행동이 먼저</span>
+    <span style="padding: 6px 12px; background: #1a1626; border: 2px solid #3a3150; font-size: 13px"><b>질 수 없다</b> — 슬라임 HP 24 · 행동 고정 · 내 HP는 안 깎임</span>
+    <span style="padding: 6px 12px; background: #1a1626; border: 2px solid #3a3150; font-size: 13px"><b>언제든 건너뛰기</b> — 도감 › 도움말에서 다시 보기</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+    <sc-for list="{{steps}}" as="s" hint-placeholder-count="9">
+      <article style="padding: 14px 16px; background: #1a1626; border: 2px solid {{s.edge}}; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; gap: 10px; align-items: center">
+          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; padding: 3px 8px; background: {{s.edge}}; color: #120f1a">{{s.n}}</span>
+          <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">{{s.title}}</h2>
+          <span style="margin-left: auto; font-size: 11px; color: #b9b1c9">{{s.spot}}</span>
+        </div>
+        <dl style="margin: 0; display: grid; grid-template-columns: 64px 1fr; gap: 4px 10px; font-size: 13px; line-height: 1.5">
+          <dt style="color: #b9b1c9">배우는 것</dt><dd style="margin: 0">{{s.learn}}</dd>
+          <dt style="color: #b9b1c9">할 일</dt><dd style="margin: 0; color: #fff6dc">{{s.act}}</dd>
+          <dt style="color: #b9b1c9">넘어감</dt><dd style="margin: 0; color: #b6ea6a">{{s.done}}</dd>
+        </dl>
+      </article>
+    </sc-for>
+  </div>
+
+  <section style="padding: 16px 20px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">튜토리얼 뒤 — 처음 만날 때 딱 한 번 뜨는 팁</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 24px; font-size: 13px; line-height: 1.55">
+      <span><b style="color: #f4d470">첫 지도</b> — 갈림길은 직접 고른다. 아이콘 범례 강조</span>
+      <span><b style="color: #f4d470">첫 ? 칸</b> — 전투 · 휴식 · 상점 · 이벤트 중 하나</span>
+      <span><b style="color: #f4d470">첫 상점</b> — 골드는 전투마다 쌓인다 · 회복도 살 수 있다</span>
+      <span><b style="color: #f4d470">첫 엘리트</b> — 바위는 못 지나가고 사격선을 막는다</span>
+      <span><b style="color: #f4d470">6라운드</b> — 판 가장자리가 무너지기 시작한다</span>
+      <span><b style="color: #f4d470">첫 보스</b> — 붉은 ? 칸은 아직 숨은 보스 능력</span>
+      <span><b style="color: #f4d470">기력 부족</b> — 비싼 카드가 흐려지면 기력이 모자란 것</span>
+      <span><b style="color: #f4d470">카드 길게 누르기</b> — 처음 손패를 볼 때 손가락 힌트</span>
+      <span><b style="color: #f4d470">첫 상태이상</b> — 중독 · 화상 · 빙결 아이콘을 상태바 옆에 설명</span>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const steps = [
+      ['상대를 만나다', '판 전체', '6×4 판 · 1:1 · 이 적만 쓰러뜨리면 끝', '화면을 한 번 누른다', '탭'],
+      ['HP', '내 체력 막대', 'HP 0 = 패배, 상대 HP도 같이 읽는다', '읽고 넘긴다', '다음'],
+      ['기력(EN)', '기력 막대', '카드 비용 · 매 라운드 회복 · 아껴 쓰기', '읽고 넘긴다', '다음'],
+      ['이동', '판의 노란 칸 + 이동 묶음', '깜빡이는 칸을 누르면 그 칸에 닿는 이동 카드가 순서 칸에 담긴다. 이동 카드는 손패 왼쪽 묶음에 모여 있다', '노란 칸 한 번 누르기', '칸을 누르면 자동'],
+      ['사거리', '공격 카드', '3×3 그림: 가운데 = 나, 빨강 = 맞는 칸', '「파쇄 베기」를 3번 칸으로', '카드를 놓으면 자동'],
+      ['가드', '적 예고 칸 + 가드', '적이 칠 칸이 붉게 예고된다 · 가드는 25까지 막는다', '「가드」를 2번 칸으로', '카드를 놓으면 자동'],
+      ['실행 순서', '순서 칸 3개 + 확정', '이동 → 수비 → 공격 순으로, 상대와 동시에 풀린다', '확정을 누른다', '라운드 재생이 끝나면'],
+      ['유물', '상태바 아래 줄', '첫 유물 지급 · 발동 연출 · 눌러서 설명 보기', '아이콘을 한 번 누른다', '설명창을 닫으면'],
+      ['첫 승리', '보상 화면으로', '골드는 무조건, 카드나 유물 중 하나를 고른다', '보상 하나 고르기', '지도로 이동'],
+    ];
+    const C = ['#6ab83a', '#e0485a', '#4a9aff', '#5aa8ff', '#e0485a', '#3c9c98', '#f4d470', '#ffd86a', '#b6ea6a'];
+    return { steps: steps.map(([title, spot, learn, act, done], i) => ({ n: String(i + 1).padStart(2, '0'), title, spot, learn, act, done, edge: C[i] })) };
+  }
+}
+</script>
+</body>
+</html>

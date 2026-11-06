@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>카드 상세</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.ring{animation:ring 1.2s linear infinite}
+@keyframes ring{0%{background:conic-gradient(#f4d470 0 0%,rgba(255,255,255,0.15) 0 100%)}100%{background:conic-gradient(#f4d470 0 100%,rgba(255,255,255,0.15) 0 100%)}}
+.lift{animation:lift .4s ease-out 1}
+@keyframes lift{from{transform:translateY(40px) scale(0.6);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #5fb4ec; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-sky" aria-hidden="true"></div>
+  <div class="layer l-hills" aria-hidden="true"></div>
+  <div class="layer l-meadow" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,6,14,0.78)"></div>
+
+  <footer aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 136px; display: flex; align-items: flex-end; gap: 8px; padding: 0 24px 12px 376px; box-sizing: border-box; opacity: 0.55">
+    <sc-for list="{{hand}}" as="k" hint-placeholder-count="5"><div style="width: 96px; height: 106px; background: {{k.bg}}; border: 2px solid {{k.edge}}; opacity: {{k.op}}"></div></sc-for>
+  </footer>
+  <div aria-hidden="true" style="position: absolute; left: 474px; top: 572px; width: 108px; height: 118px; border: 3px dashed #f4d470"></div>
+  <div class="ring" aria-hidden="true" style="position: absolute; left: 500px; top: 612px; width: 56px; height: 56px; border-radius: 50%; padding: 4px; box-sizing: border-box"><div style="width: 100%; height: 100%; border-radius: 50%; background: rgba(18,15,26,0.9); display: flex; align-items: center; justify-content: center; font-size: 11px">꾹</div></div>
+
+  <section class="lift" aria-label="카드 상세 — 방패 밀치기" style="position: absolute; left: 120px; top: 36px; width: 1040px; height: 520px; display: grid; grid-template-columns: 300px 1fr; gap: 30px">
+    <article style="position: relative; height: 420px; box-sizing: border-box; padding: 18px; background: #1e1622; border: 4px solid #e0485a; box-shadow: 0 0 0 4px #2a1c10, 0 14px 0 rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 14px">
+      <span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; background: #8a3040"></span>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 20px; padding: 4px 10px; background: #3a1016; color: #ff9a9a; border: 2px solid #e0485a">DM 14</span>
+        <span style="font-family: 'Silkscreen', monospace; font-size: 20px; padding: 4px 10px; background: #10203a; color: #8ad0ff; border: 2px solid #4a9aff">EN 13</span>
+      </div>
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 36px; color: #fff6dc; text-align: center">방패 밀치기</h2>
+      <div style="align-self: center; display: grid; grid-template-columns: repeat(5, 34px); gap: 4px">
+        <sc-for list="{{grid}}" as="g" hint-placeholder-count="15"><span style="width: 34px; height: 34px; background: {{g.bg}}; box-shadow: {{g.sh}}"></span></sc-for>
+      </div>
+      <span style="text-align: center; font-size: 13px; color: #c9c2d6">가운데 = 나 · 빨강 = 맞는 칸 · 앞뒤 세로 3줄</span>
+      <span style="margin-top: auto; display: flex; gap: 6px; justify-content: center"><span style="font-size: 12px; padding: 2px 8px; background: #2a1620; border: 1px solid #8a3040">공격</span><span style="font-size: 12px; padding: 2px 8px; background: #14243a; border: 1px solid #3a6aa8">CAIRN 고유</span></span>
+    </article>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; padding: 18px 22px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3a3150; height: 420px; box-sizing: border-box">
+      <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #fff6dc">몸 앞뒤 세로 3줄을 방패로 후려쳐 두 칸 넉백. 들러붙는 상대를 떼어낸다.</p>
+      <dl style="margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+        <div style="padding: 10px; background: #120f1a; border: 2px solid #2a2438"><dt style="font-size: 11px; color: #b9b1c9">피해</dt><dd style="margin: 4px 0 0; font-family: 'Silkscreen', monospace; font-size: 22px; color: #ff9a9a">14</dd></div>
+        <div style="padding: 10px; background: #120f1a; border: 2px solid #2a2438"><dt style="font-size: 11px; color: #b9b1c9">기력</dt><dd style="margin: 4px 0 0; font-family: 'Silkscreen', monospace; font-size: 22px; color: #8ad0ff">13</dd></div>
+        <div style="padding: 10px; background: #120f1a; border: 2px solid #2a2438"><dt style="font-size: 11px; color: #b9b1c9">넉백</dt><dd style="margin: 4px 0 0; font-family: 'Silkscreen', monospace; font-size: 22px; color: #ffd86a">2칸</dd></div>
+        <div style="padding: 10px; background: #120f1a; border: 2px solid #2a2438"><dt style="font-size: 11px; color: #b9b1c9">쿨타임</dt><dd style="margin: 4px 0 0; font-family: 'Silkscreen', monospace; font-size: 22px">없음</dd></div>
+      </dl>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; color: #b9b1c9">용어</span>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #e4def0"><b style="color: #ffd86a">넉백</b> — 맞은 상대를 내 반대쪽으로 밀어낸다. 바위나 판 끝에 막히면 거기서 멈춘다.</p>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #e4def0"><b style="color: #ffd86a">세로 3줄</b> — 위·같은 줄·아래 세 칸. 줄이 어긋난 상대도 잡는다.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; color: #b9b1c9">지금 쓰면</span>
+          <div style="display: grid; grid-template-columns: repeat(6, 26px); grid-template-rows: repeat(4, 18px); gap: 2px">
+            <sc-for list="{{mini}}" as="c" hint-placeholder-count="24"><span style="background: {{c.bg}}; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #0a0810">{{c.t}}</span></sc-for>
+          </div>
+          <span style="font-size: 13px; color: #b6ea6a">고블린이 범위 안 — 맞고 두 칸 밀려난다</span>
+        </div>
+      </div>
+      <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 2px solid #2a2438">
+        <span style="font-size: 13px; color: #c9c2d6">강화하면 예) 기력 13 → 11</span>
+        <span style="font-size: 12px; color: #b9b1c9">꾹 누르면 열림 · 손을 떼면 닫힘 · 그대로 끌면 순서 칸에 놓기</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const grid = [];
+    for (let r = 0; r < 3; r++) for (let c = -2; c <= 2; c++) {
+      let bg = '#2a2438', sh = 'none';
+      if (c === 0 && r === 1) { bg = '#f4d470'; sh = 'inset 0 0 0 3px #7a5418'; }
+      else if (c === -1 || c === 1) { bg = '#e0485a'; sh = 'inset 0 0 0 2px #ff8a8a'; }
+      grid.push({ bg, sh });
+    }
+    const mini = [];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) {
+      let bg = 'rgba(232,220,192,0.12)', t = '';
+      if ((c === 1 || c === 3) && r >= 1 && r <= 3) bg = 'rgba(224,72,90,0.7)';
+      if (c === 2 && r === 2) { bg = '#f4d470'; t = '나'; }
+      if (c === 3 && r === 1) { bg = '#ff6a6a'; t = '적'; }
+      mini.push({ bg, t });
+    }
+    const hand = [
+      { bg: '#14243a', edge: '#3a6aa8', op: 1 }, { bg: '#2a1620', edge: '#8a3040', op: 0 }, { bg: '#2a1620', edge: '#8a3040', op: 1 },
+      { bg: '#122a2a', edge: '#3c9c98', op: 1 }, { bg: '#1e2a46', edge: '#8fb6ff', op: 1 },
+    ];
+    return { grid, mini, hand };
+  }
+}
+</script>
+</body>
+</html>

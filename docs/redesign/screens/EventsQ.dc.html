@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>? 이벤트 모음</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.px{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0}
+.f2{animation:f2 .9s steps(2) infinite}@keyframes f2{to{background-position:200% 0}}
+.f4{animation:f4 .9s steps(4) infinite}@keyframes f4{to{background-position:133.333% 0}}
+.f6{animation:f6 .66s steps(6) infinite}@keyframes f6{to{background-position:120% 0}}
+.a-forge{background-image:url(/redesign/ui/events/forge.png)}
+.a-trader{background-image:url(/redesign/ui/events/trader.png)}
+.a-hotspring{background-image:url(/redesign/ui/events/hotspring.png)}
+.a-apothecary{background-image:url(/redesign/ui/events/apothecary.png)}
+.a-jar{background-image:url(/redesign/ui/events/jar.png)}
+.a-gacha{background-image:url(/redesign/ui/events/gacha.png)}
+.a-mole{background-image:url(/redesign/ui/events/mole.png)}
+.a-surgery{background-image:url(/redesign/ui/events/surgery.png)}
+.s-snake{background-image:url(/redesign/sprites/snake/idle.png);animation:f6 .72s steps(6) infinite}
+.pot0{background-image:url(/redesign/ui/events/potion-0.png)}
+.pot1{background-image:url(/redesign/ui/events/potion-1.png)}
+.pot2{background-image:url(/redesign/ui/events/potion-2.png)}
+.lock{background-image:url(/redesign/ui/events/lock.png);background-size:30px 36px;width:30px;height:36px;image-rendering:pixelated;flex-shrink:0}
+.unlock{background-image:url(/redesign/ui/events/unlock.png);background-size:33px 36px;width:33px;height:36px;image-rendering:pixelated;flex-shrink:0}
+.coin{background-image:url(/redesign/ui/map-icons/merchant.png);background-size:16px 14px;background-position:center;background-repeat:no-repeat;image-rendering:pixelated;width:16px;height:16px;flex-shrink:0}
+.rf{width:52px;height:52px;background-image:url(/redesign/ui/relics/atlas-full.png);background-size:520px 520px;image-rendering:pixelated;flex-shrink:0}
+.rf78{width:78px;height:78px;background-image:url(/redesign/ui/relics/atlas-full.png);background-size:780px 780px;image-rendering:pixelated;flex-shrink:0}
+.tab{padding:6px 12px;font:inherit;font-size:14px;background:rgba(18,15,26,0.9);border:2px solid #4a4058;color:#c9c2d6;cursor:pointer}
+.tab-on{background:#f4d470;border-color:#f4d470;color:#1d1408}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 16px;box-sizing:border-box;background:#1a1626;border:2px solid #4a4058;color:#efe9f5;font:inherit;text-align:left;cursor:pointer}
+.opt:hover{border-color:#f4d470;background:#221c30}
+.opt-lock{cursor:not-allowed;background:repeating-linear-gradient(45deg,#16121f 0 8px,#1a1626 8px 16px);border-style:dashed;color:#6a6478}
+.opt-lock:hover{border-color:#4a4058;background:repeating-linear-gradient(45deg,#16121f 0 8px,#1a1626 8px 16px)}
+.opt-hidden{border-color:#ffd24a;box-shadow:0 0 0 2px #2a1c10,0 0 18px rgba(255,210,74,0.35);background:#241c10}
+.opt-off{opacity:.4;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:3px 9px;font-family:'Silkscreen','Noto Sans KR',monospace;white-space:nowrap}
+.go{height:50px;padding:0 24px;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:23px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.ghost{height:44px;padding:0 16px;background:rgba(18,15,26,0.9);border:2px solid #4a4058;color:#c9c2d6;font:inherit;font-size:14px;cursor:pointer}
+.fbtn{height:28px;padding:0 10px;background:#1a1626;border:2px solid #4a4058;color:#c9c2d6;font:inherit;font-size:12px;cursor:pointer}
+.fbtn-on{border-color:#f4d470;color:#f4d470}
+.pick{display:flex;flex-direction:column;align-items:center;gap:6px;width:120px;padding:10px;box-sizing:border-box;background:#1a1626;border:2px solid #4a4058;color:#efe9f5;font:inherit;cursor:pointer}
+.pick:hover{border-color:#f4d470;transform:translateY(-3px)}
+.rise{animation:rise .35s ease-out 1}
+@keyframes rise{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.shake{animation:shake .4s ease-in-out 1}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.bob{animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-wall" aria-hidden="true"></div>
+  <div class="layer l-floor" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,6,12,0.72)"></div>
+
+  <header style="position: absolute; left: 32px; right: 32px; top: 16px; display: flex; justify-content: space-between; align-items: center">
+    <div style="display: flex; gap: 12px; align-items: baseline"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">? 칸 · 이벤트</h1><span style="font-size: 13px; color: #c9c4ee">위 탭으로 이벤트를 바꿔 본다 — 실제 게임에선 ? 칸에서 하나가 뽑힌다</span></div>
+    <div style="display: flex; gap: 8px; align-items: center">
+      <span style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #2a1c10; border: 2px solid #c9952f"><span class="coin" aria-hidden="true"></span><span style="font-family: 'Silkscreen', monospace; font-size: 16px; color: #ffd86a">{{gold}}</span></span>
+      <span style="padding: 7px 12px; background: rgba(18,15,26,0.9); border: 2px solid #4a4058; font-family: 'Silkscreen', monospace; font-size: 14px; color: #ffb0b0">HP {{hp}}/{{maxHp}}</span>
+      <button type="button" class="fbtn" onClick="{{resetAll}}">처음부터</button>
+    </div>
+  </header>
+  <nav style="position: absolute; left: 32px; right: 32px; top: 64px; display: flex; gap: 6px; flex-wrap: wrap">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><button type="button" class="tab {{t.cls}}" onClick="{{t.onTap}}">{{t.label}}</button></sc-for>
+  </nav>
+
+  <div style="position: absolute; left: 60px; top: 120px; width: 380px; height: 470px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; background: radial-gradient(ellipse at 50% 72%, {{glow}} 0%, rgba(12,10,18,0) 66%); border: 2px solid #3a3150">
+    <div class="px {{ev.artCls}} {{ev.anim}} {{artFx}}" role="img" aria-label="{{ev.name}}" style="width: {{ev.aw}}px; height: {{ev.ah}}px; background-size: {{ev.abs}}"></div>
+    <span style="position: absolute; left: 14px; top: 12px; font-family: 'Silkscreen', monospace; font-size: 11px; letter-spacing: 3px; color: #6a6478">{{ev.code}}</span>
+  </div>
+
+  <section style="position: absolute; left: 480px; top: 130px; width: 740px; display: flex; flex-direction: column; gap: 12px">
+    <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{ev.tagCol}}">EVENT · {{ev.kindTxt}}</span>
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 42px; color: #fff6dc">{{ev.name}}</h2>
+    <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{ev.text}}</p>
+
+    <sc-if value="{{showChoices}}" hint-placeholder-val="{{true}}">
+      <div class="rise" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+        <sc-for list="{{choices}}" as="c" hint-placeholder-count="3">
+          <button type="button" class="opt {{c.cls}}" onClick="{{c.onTap}}" aria-disabled="{{c.off}}">
+            <span class="lock" aria-hidden="true" style="display: {{c.lockD}}"></span>
+            <span class="unlock" aria-hidden="true" style="display: {{c.unlockD}}"></span>
+            <span class="px {{c.icon}}" aria-hidden="true" style="display: {{c.iconD}}; width: 36px; height: 48px; background-size: 36px 48px"></span>
+            <span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+              <span style="font-family: 'Do Hyeon', sans-serif; font-size: 23px; color: {{c.fg}}">{{c.label}}</span>
+              <span style="display: {{c.subD}}; font-size: 12px; color: {{c.subFg}}">{{c.sub}}</span>
+            </span>
+            <sc-for list="{{c.chips}}" as="k" hint-placeholder-count="1"><span class="chip" style="background: {{k.bg}}; color: {{k.fg}}; border: 1px solid {{k.edge}}"><span class="coin" aria-hidden="true" style="display: {{k.coinD}}"></span>{{k.t}}</span></sc-for>
+          </button>
+        </sc-for>
+      </div>
+      <span style="font-size: 12px; color: #8a849a">선택지에는 <b style="color: #c9c2d6">대가만</b> 보인다 — 고르면 무슨 일이 생기는지는 고른 뒤에 안다.</span>
+    </sc-if>
+
+    <sc-if value="{{showPicker}}" hint-placeholder-val="{{false}}">
+      <div class="rise" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #ffd86a">{{pickTitle}}</span>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap">
+          <sc-for list="{{pickItems}}" as="p" hint-placeholder-count="4">
+            <button type="button" class="pick" onClick="{{p.onTap}}">
+              <span class="rf" style="display: {{p.rfD}}; background-position: {{p.pos}}"></span>
+              <span style="display: {{p.cardD}}; width: 52px; height: 52px; background: {{p.bg}}; border: 2px solid {{p.edge}}; box-sizing: border-box; font-family: 'Silkscreen', monospace; font-size: 11px; align-items: center; justify-content: center; color: #ff9a9a">{{p.dm}}</span>
+              <span style="font-family: 'Do Hyeon', sans-serif; font-size: 16px; text-align: center">{{p.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <button type="button" class="ghost" onClick="{{cancelPick}}" style="align-self: flex-start">← 다시 고르기</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showBattle}}" hint-placeholder-val="{{false}}">
+      <div class="rise" style="display: flex; gap: 18px; align-items: center; padding: 16px 18px; margin-top: 8px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #e0485a">
+        <div class="px s-snake" role="img" aria-label="동굴 뱀" style="width: 216px; height: 120px; background-size: 1296px 120px; flex-shrink: 0"></div>
+        <div style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1">
+          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 3px; color: #ff8a7a">AMBUSH</span>
+          <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 28px">항아리에서 뱀이 튀어나왔다!</b>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap">
+            <span class="chip" style="background: #1a2a14; color: #b6ea6a; border: 1px solid #6ab83a">☠ 나는 중독 상태로 시작</span>
+            <span class="chip" style="background: #3a1016; color: #ff9a9a; border: 1px solid #e0485a">동굴 뱀 · HP 34</span>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 4px">
+            <button type="button" class="go" style="background: #e0485a; color: #fff6dc; box-shadow: 0 5px 0 #7a1a28">전투 시작 ▶</button>
+            <button type="button" class="ghost" onClick="{{winSnake}}">이겼다고 치고 보기(시안)</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showResult}}" hint-placeholder-val="{{false}}">
+      <div class="rise" style="display: flex; gap: 18px; align-items: center; padding: 18px 20px; margin-top: 8px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px {{res.edge}}">
+        <span class="rf78" style="display: {{res.relicD}}; background-position: {{res.pos}}"></span>
+        <span style="display: {{res.bigD}}; min-width: 110px; justify-content: center; font-family: 'Silkscreen', monospace; font-size: 34px; color: {{res.bigFg}}">{{res.big}}</span>
+        <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1">
+          <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #fff6dc">{{res.title}}</b>
+          <span style="font-size: 14px; line-height: 1.6; color: #e4def0">{{res.body}}</span>
+          <span style="display: {{res.relicD}}; font-size: 12px; color: #c9c2d6">{{res.relicDesc}}</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center">
+        <button type="button" class="ghost" onClick="{{again}}" style="display: {{againD}}">{{againLabel}}</button>
+        <span style="flex-grow: 1; font-size: 13px; color: #8a849a">{{exitNote}}</span>
+        <a href="{{exitHref}}" class="go" style="display: {{exitD}}">{{exitLabel}}</a>
+      </div>
+    </sc-if>
+  </section>
+
+  <aside style="position: absolute; left: 60px; top: 606px; width: 380px; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 11px; color: #8a849a">시안 조작</span>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap">
+      <sc-for list="{{demo}}" as="d" hint-placeholder-count="2"><button type="button" class="fbtn {{d.cls}}" onClick="{{d.onTap}}">{{d.t}}</button></sc-for>
+    </div>
+    <span style="font-size: 11px; color: #6a6478">{{demoNote}}</span>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.fresh('forge');
+  }
+  fresh(ev) {
+    // 약방: 약 세 병의 효과는 방문마다 섞인다(고르기 전엔 모른다)
+    const fx = ['heal', 'hurt', 'none'];
+    for (let i = fx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [fx[i], fx[j]] = [fx[j], fx[i]]; }
+    return { ev, phase: 'choose', hp: 70, maxHp: 103, gold: 300, iron: this.state ? this.state.iron : false, res: null, pickFor: null,
+      gachaTries: 0, gachaGot: [], moleTries: 0, potFx: fx, fx: '', exit: null, exitNow: false, forceJar: null, forceGacha: false, forceMole: false };
+  }
+  renderVals() {
+    const st = this.state;
+    // ---------------------------------------------------------------- 유물 풀 (atlas col,row)
+    const RELIC = {
+      coldiron: ['차가운 쇠', 2, 2, '상태이상에 걸린 상대에게 주는 피해 +3.'],
+      plating: ['두꺼운 판금', 3, 0, '받는 피해 -3.'], ironshoes: ['무쇠 신발', 8, 0, '무너진 칸에서 받는 피해 -4.'], buckler: ['단단한 손잡이', 4, 2, '수비 카드의 흡수량 +35%.'],
+      ironwill: ['강철 의지', 5, 2, '받는 피해 -5.'], towershield: ['탑 방패', 2, 5, '수비 카드의 흡수량 +60%.'], bulwark: ['가시 방패', 1, 5, '매 라운드 보호막 +4, 피격 시 3 반사.'], thorns: ['가시 갑옷', 3, 2, '피해를 입으면 공격자에게 4 반사.'],
+      venomflask: ['독약 플라스크', 4, 1, '공격으로 피해를 주면 중독 1라운드.'], toxinvial: ['맹독 병', 0, 4, '피해를 주면 중독 2라운드.'], witchbrew: ['마녀의 탕약', 8, 6, '내가 거는 중독·화상 위력 +65%.'],
+      heart: ['심장 강화', 6, 1, '최대 체력 +15.'], oxheart: ['황소 심장', 2, 4, '최대 체력 +19.'], titanheart: ['거인의 심장', 5, 6, '최대 체력 +30.'], emberheart: ['잿불 심장', 4, 3, '체력 절반 이하면 공격 피해 +25%, 매 라운드 체력 +2.'],
+      frostbite: ['동상의 손', 9, 1, '전투당 두 번, 피해를 주면 상대를 빙결.'], punisher: ['처벌자의 손', 8, 3, '전투당 두 번, 피해를 주면 기절. 받는 피해 -2.'], midastouch: ['황금손', 7, 2, '전투 승리 골드 +55%.'], chainshock: ['연쇄 벼락', 2, 6, '전투당 세 번, 피해를 주면 기절.'],
+      anchorstone: ['고정 말뚝', 0, 3, '무너진 칸 피해 -7, 최대 체력 +8.'], skywalk: ['허공 걸음', 5, 5, '무너진 칸 피해 -12. 무너진 판을 딛고 선다.'],
+      fang: ['송곳니', 2, 1, '피해를 주면 체력 3 회복.'], rage: ['분노의 인장', 8, 4, '내 공격 피해 +3.'], luckycharm: ['행운의 편자', 1, 3, '보상 선택지 +1.'],
+    };
+    const POOL = {
+      iron: ['plating', 'ironshoes', 'buckler', 'ironwill', 'towershield', 'bulwark', 'thorns'],
+      poison: ['venomflask', 'toxinvial', 'witchbrew'],
+      heart: ['heart', 'oxheart', 'titanheart', 'emberheart'],
+      hand: ['frostbite', 'punisher', 'midastouch', 'chainshock'],
+      foot: ['ironshoes', 'anchorstone', 'skywalk'],
+      any: ['fang', 'rage', 'luckycharm', 'plating', 'heart', 'toxinvial'],
+    };
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    // 받침에 맞는 조사 — "X을(를)" 같은 표기를 실제 조사로 바꾼다
+    const fin = (w) => { const ch = w.charCodeAt(w.length - 1) - 0xac00; return ch >= 0 && ch <= 11171 ? ch % 28 : 0; };
+    const jo = (t) => t.replace(/([가-힣A-Za-z0-9]+)(을\(를\)|이\(가\)|\(으\)로)/g, (m, w, p) => {
+      const f = fin(w);
+      if (p === '을(를)') return w + (f ? '을' : '를');
+      if (p === '이(가)') return w + (f ? '이' : '가');
+      return w + (f && f !== 8 ? '으로' : '로');
+    });
+    const relicRes = (id, title, body, edge = '#ffd86a') => {
+      const [name, c, r, desc] = RELIC[id];
+      return { relicD: 'block', bigD: 'none', pos: `${-c * 78}px ${-r * 78}px`, title: jo(title.replace('{r}', name)), body: jo(body), relicDesc: `${name} — ${desc}`, edge, big: '', bigFg: '' };
+    };
+    const bigRes = (big, bigFg, title, body, edge) => ({ relicD: 'none', bigD: 'flex', pos: '0 0', big, bigFg, title: jo(title), body: jo(body), relicDesc: '', edge });
+    const healBy = (n) => Math.min(st.maxHp, st.hp + n) - st.hp;
+
+    // 칩: 대가만 보여 준다 (결과는 숨김)
+    const gold = (n) => ({ t: String(n), bg: '#2a1c08', fg: '#ffd86a', edge: '#c9952f', coinD: 'inline-block' });
+    const hpc = (n) => ({ t: `HP -${n}`, bg: '#3a1016', fg: '#ff9a9a', edge: '#e0485a', coinD: 'none' });
+    const mhp = (n) => ({ t: `최대 HP -${n}`, bg: '#3a0a20', fg: '#ff8ab0', edge: '#c0305a', coinD: 'none' });
+    const tag = (t) => ({ t, bg: '#1a1626', fg: '#b9b1c9', edge: '#4a4058', coinD: 'none' });
+
+    const set = (o) => this.setState(o);
+    const done = (res, extra = {}) => set(Object.assign({ phase: 'result', res }, extra));
+
+    const CARDS = [['파쇄 베기', 'DM13', '#2a1620', '#8a3040'], ['방패 밀치기', 'DM14', '#2a1620', '#8a3040'], ['가드', 'BLOCK', '#122a2a', '#3c9c98'], ['수혈', 'HP+', '#18281a', '#6ab83a']];
+    const OFFER_CARDS = ['응보의 일격', '대지 가르기', '방패 돌진', '서약의 파쇄', '독니 화살'];
+    const MY_RELICS = ['fang', 'plating', 'heart'].concat(st.iron ? ['coldiron'] : []);
+
+    // ---------------------------------------------------------------- 이벤트 정의
+    const E = {
+      forge: {
+        name: '빈 대장간', code: 'EV-FORGE', kindTxt: '한 번', tagCol: '#ff8a5a', glow: 'rgba(255,138,58,0.32)',
+        text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
+        art: ['a-forge', 'f6', 64, 52, 6],
+        choices: [
+          { label: '카드라도 두들긴다', chips: [], onTap: () => done(bigRes('▲', '#ffd86a', '불 앞에 카드를 올렸다', '카드 강화 화면으로 넘어간다 — 룰렛으로 수치나 범위를 올린다.', '#ffd86a'), { exit: 'upgrade' }) },
+          { label: '주변에 쇠라도 챙긴다', chips: [], onTap: () => done(relicRes('coldiron', '{r}를 주웠다', '불이 이렇게 뜨거운데도 이상하게 차갑다.'), { iron: true }) },
+          { hidden: true, need: st.iron, label: '쇠를 두들긴다', lockText: '잠겨 있다 — 무언가 필요해 보인다', sub: '히든 · 차가운 쇠가 있어서 열렸다', chips: [],
+            onTap: () => { const id = pick(POOL.iron); done(relicRes(id, '차가운 쇠가 {r}(으)로 다시 태어났다', '차가운 쇠를 잃었다. 두들긴 쇠는 쓸모 있는 모양이 되었다.'), { iron: false }); } },
+        ],
+      },
+      trade: {
+        name: '거래', code: 'EV-TRADE', kindTxt: '한 번', tagCol: '#c48aff', glow: 'rgba(196,138,255,0.25)',
+        text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.',
+        art: ['a-trader', 'bob', 52, 60, 1],
+        choices: [
+          { label: '내 카드 한 장 ↔ 다른 카드', chips: [tag('카드 1장')], onTap: () => set({ phase: 'pick', pickFor: 'card2card' }) },
+          { label: '내 카드 한 장 ↔ 유물', chips: [tag('카드 1장')], onTap: () => set({ phase: 'pick', pickFor: 'card2relic' }) },
+          { label: '내 유물 하나 ↔ 다른 유물', chips: [tag('유물 1개')], onTap: () => set({ phase: 'pick', pickFor: 'relic2relic' }) },
+        ],
+      },
+      spring: {
+        name: '온천', code: 'EV-SPRING', kindTxt: '한 번', tagCol: '#6ae0e0', glow: 'rgba(106,224,224,0.25)',
+        text: '김이 모락모락 나는 아주 뜨끈한 온천을 발견했다.\n당장 쉬고 싶어진다.',
+        art: ['a-hotspring', 'f4', 76, 48, 4],
+        choices: [
+          { label: '휴식', chips: [], onTap: () => { const n = healBy(Math.round(st.maxHp * 0.3)); done(bigRes(`+${n}`, '#b6ea6a', '몸이 사르르 녹는다', `체력이 ${n} 회복됐다.`, '#6ae0e0'), { hp: st.hp + n }); } },
+        ],
+      },
+      apothecary: {
+        name: '약방', code: 'EV-APOTHECARY', kindTxt: '반복', tagCol: '#8a6ae0', glow: 'rgba(138,106,224,0.25)',
+        text: '엄청나게 많은 약들이 있는 약방에 들어섰다.\n의문의 남자가 약 3가지를 보여 준다.',
+        art: ['a-apothecary', '', 72, 60, 1],
+        repeat: true,
+        choices: [0, 1, 2].map((i) => ({
+          label: '약', icon: 'pot' + i, chips: [gold(50)], off: st.gold < 50,
+          onTap: () => {
+            if (st.gold < 50) return;
+            const f = st.potFx[i];
+            if (f === 'heal') { const n = healBy(20); done(bigRes(`+${n}`, '#b6ea6a', '몸이 가벼워졌다', `체력이 ${n} 회복됐다. 같은 약을 또 살 수 있다.`, '#6ab83a'), { gold: st.gold - 50, hp: st.hp + n }); }
+            else if (f === 'hurt') { done(bigRes('-10', '#ff6a6a', '속이 뒤집힌다…', '체력이 10 줄었다. 같은 약을 또 살 수 있다.', '#e0485a'), { gold: st.gold - 50, hp: Math.max(1, st.hp - 10), fx: 'shake' }); }
+            else done(bigRes('…', '#b9b1c9', '아무 일도 일어나지 않았다', '맹물이었나? 같은 약을 또 살 수 있다.', '#8a849a'), { gold: st.gold - 50 });
+          },
+        })).concat([{ label: '나간다', chips: [], onTap: () => done(bigRes('', '', '약방을 나왔다', '의문의 남자가 고개를 끄덕였다.', '#4a4058'), { exitNow: true }) }]),
+      },
+      jar: {
+        name: '항아리', code: 'EV-JAR', kindTxt: '한 번 · 전투 가능', tagCol: '#b6ea6a', glow: 'rgba(106,184,58,0.22)',
+        text: '어둡고 매우 습한 동굴에 들어왔다.\n눈앞에 항아리 하나가 떡하니 있다. 열어 보겠습니까?',
+        art: ['a-jar', '', 48, 52, 1],
+        choices: [
+          { label: '연다', chips: [], onTap: () => {
+            if (st.forceJar === 'snake' || (st.forceJar !== 'empty' && Math.random() < 0.5)) set({ phase: 'battle', fx: 'shake' });
+            else done(bigRes('…', '#b9b1c9', '텅 비어 있다', '눅눅한 냄새만 난다.', '#8a849a'));
+          } },
+          { label: '건드리지 않는다', chips: [], onTap: () => done(bigRes('', '', '가던 길을 간다', '아무 일도 일어나지 않았다.', '#4a4058')) },
+        ],
+      },
+      gacha: {
+        name: '반짝이는 가게', code: 'EV-GACHA', kindTxt: '반복', tagCol: '#ff8ab0', glow: 'rgba(255,138,176,0.25)',
+        text: '반짝반짝 거리는 가게에 들어서니, 돈을 넣으면 무언가를 집을 수 있을 것 같은 기계가 있다.\n해 보겠습니까?',
+        art: ['a-gacha', 'f2', 52, 68, 2],
+        repeat: true,
+        choices: [
+          { label: '돈 넣기', chips: [gold(50)], sub: `넣은 횟수 ${st.gachaTries} · 남은 상품 ${2 - st.gachaGot.length}개`, off: st.gold < 50, onTap: () => {
+            if (st.gold < 50) return;
+            const chance = 0.1 + 0.1 * st.gachaTries; // 실패할 때마다 +10% (화면엔 안 보인다)
+            const win = st.forceGacha || Math.random() < chance;
+            if (!win) return done(bigRes('✕', '#b9b1c9', '집게가 미끄러졌다', '아깝다… 기계가 조금 헐거워진 것 같기도 하다.', '#8a849a'), { gold: st.gold - 50, gachaTries: st.gachaTries + 1 });
+            const left = ['heal', 'relic'].filter((x) => !st.gachaGot.includes(x));
+            const prize = pick(left);
+            const got = st.gachaGot.concat([prize]);
+            const all = got.length === 2;
+            const tail = all ? ' 다 뽑은 것 같다…' : '';
+            if (prize === 'heal') { const n = healBy(25); done(bigRes(`+${n}`, '#b6ea6a', '하트 공을 뽑았다!', `체력이 ${n} 회복됐다.${tail}`, '#ff8ab0'), { gold: st.gold - 50, hp: st.hp + n, gachaTries: 0, gachaGot: got, exitNow: all }); }
+            else { const id = pick(POOL.any); done(relicRes(id, '{r}을(를) 뽑았다!', `상자 안에 유물이 들어 있었다.${tail}`, '#ff8ab0'), { gold: st.gold - 50, gachaTries: 0, gachaGot: got, exitNow: all }); }
+          } },
+          { label: '나가기', chips: [], onTap: () => done(bigRes('', '', '가게를 나왔다', '반짝이는 불빛이 등 뒤에서 깜빡인다.', '#4a4058'), { exitNow: true }) },
+        ],
+      },
+      mole: {
+        name: '두더지', code: 'EV-MOLE', kindTxt: '반복', tagCol: '#6ae0ff', glow: 'rgba(106,224,255,0.2)',
+        text: '반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?',
+        art: ['a-mole', 'f4', 64, 44, 4],
+        repeat: true,
+        choices: [
+          { label: '땅 파기', chips: [hpc(10 + 3 * st.moleTries)], sub: st.moleTries ? `${st.moleTries}번 팠다 — 팔수록 더 힘들다` : '', onTap: () => {
+            const cost = 10 + 3 * st.moleTries;
+            const chance = 0.3 + 0.1 * st.moleTries;
+            const hp = Math.max(1, st.hp - cost);
+            if (st.forceMole || Math.random() < chance) { const id = pick(POOL.any); done(relicRes(id, '두더지가 {r}을(를) 떨어뜨렸다!', `체력을 ${cost} 쓰고 마침내 잡았다.`, '#6ae0ff'), { hp, moleTries: 0, exitNow: true }); }
+            else done(bigRes(`-${cost}`, '#ff6a6a', '두더지가 더 깊이 숨었다', '흙투성이가 됐다. 다시 파면 더 힘들다.', '#8a849a'), { hp, moleTries: st.moleTries + 1, fx: 'shake' });
+          } },
+          { label: '가던 길 가기', chips: [], onTap: () => done(bigRes('', '', '두더지를 놓아줬다', '반짝이는 건 땅속으로 사라졌다.', '#4a4058'), { exitNow: true }) },
+        ],
+      },
+      surgery: {
+        name: '수술실', code: 'EV-SURGERY', kindTxt: '한 번', tagCol: '#fff6dc', glow: 'rgba(255,246,220,0.18)',
+        text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?',
+        art: ['a-surgery', '', 72, 56, 1],
+        choices: [
+          { label: '심장', chips: [mhp(10)], onTap: () => { const id = pick(POOL.heart); done(relicRes(id, '새 심장: {r}', '최대 체력이 10 줄었다.', '#e0485a'), { maxHp: st.maxHp - 10, hp: Math.min(st.hp, st.maxHp - 10) }); } },
+          { label: '손', chips: [hpc(15)], onTap: () => { const id = pick(POOL.hand); done(relicRes(id, '새 손: {r}', '체력이 15 줄었다.', '#e8b080'), { hp: Math.max(1, st.hp - 15) }); } },
+          { label: '발', chips: [hpc(15)], onTap: () => { const id = pick(POOL.foot); done(relicRes(id, '새 발: {r}', '체력이 15 줄었다.', '#e8b080'), { hp: Math.max(1, st.hp - 15) }); } },
+        ],
+      },
+    };
+    const ORDER = [['forge', '대장장이'], ['trade', '거래'], ['spring', '온천'], ['apothecary', '약방'], ['jar', '항아리'], ['gacha', '갓챠'], ['mole', '두더지'], ['surgery', '수술실']];
+    const ev = E[st.ev];
+    const [artCls, anim, aw, ah, nf] = ev.art;
+    const S4 = 4;
+
+    const choices = ev.choices.map((c) => {
+      const locked = c.hidden && !c.need, open = c.hidden && c.need;
+      const chips = locked ? [] : c.chips;
+      return {
+        cls: locked ? 'opt-lock' : open ? 'opt-hidden' : c.off ? 'opt-off' : '',
+        label: locked ? '???' : c.label, fg: locked ? '#6a6478' : open ? '#ffd86a' : '#efe9f5',
+        sub: locked ? c.lockText : open ? c.sub : c.sub || '', subD: locked || open || c.sub ? 'block' : 'none', subFg: open ? '#ffd86a' : '#8a849a',
+        lockD: locked ? 'block' : 'none', unlockD: open ? 'block' : 'none',
+        icon: c.icon || '', iconD: c.icon ? 'block' : 'none', chips, off: locked || !!c.off,
+        onTap: () => { if (!locked && !c.off) c.onTap(); },
+      };
+    });
+
+    // 거래: 내 카드/유물 고르기 → 받을 것은 고른 뒤 공개
+    let pickTitle = '', pickItems = [];
+    if (st.phase === 'pick') {
+      if (st.pickFor === 'relic2relic') {
+        pickTitle = '내놓을 유물을 고르자';
+        pickItems = MY_RELICS.map((id) => ({ name: RELIC[id][0], rfD: 'block', cardD: 'none', pos: `${-RELIC[id][1] * 52}px ${-RELIC[id][2] * 52}px`, bg: '', edge: '', dm: '',
+          onTap: () => { let g = pick(POOL.any.filter((x) => x !== id)); done(relicRes(g, '{r}을(를) 받았다', `${RELIC[id][0]}을(를) 건넸다. "좋은 거래였습니다."`, '#c48aff'), { iron: id === 'coldiron' ? false : st.iron }); } }));
+      } else {
+        pickTitle = '내놓을 카드를 고르자';
+        pickItems = CARDS.map(([name, dm, bg, edge]) => ({ name, dm, bg, edge, rfD: 'none', cardD: 'flex', pos: '0 0',
+          onTap: () => {
+            if (st.pickFor === 'card2relic') { const g = pick(POOL.any); done(relicRes(g, '{r}을(를) 받았다', `${name} 카드를 건넸다. "좋은 거래였습니다."`, '#c48aff')); }
+            else { const g = pick(OFFER_CARDS); done(bigRes('🂠', '#ffd86a', `${g} 카드를 받았다`, `${name} 카드를 건넸다. 덱에 ${g}이(가) 들어왔다.`, '#c48aff')); }
+          } }));
+      }
+    }
+
+    const res = st.res || bigRes('', '', '', '', '#4a4058');
+    const repeatOpen = ev.repeat && !st.exitNow;
+    const tabs = ORDER.map(([k, label]) => ({ label, cls: st.ev === k ? 'tab-on' : '', onTap: () => this.setState(Object.assign(this.fresh(k), { iron: st.iron })) }));
+    const demo = st.ev === 'forge' ? [
+      { t: st.iron ? '차가운 쇠 있음 ✓' : '차가운 쇠 없음', cls: st.iron ? 'fbtn-on' : '', onTap: () => set({ iron: !st.iron, phase: 'choose', res: null }) },
+    ] : st.ev === 'jar' ? [
+      { t: '무작위 50%', cls: !st.forceJar ? 'fbtn-on' : '', onTap: () => set({ forceJar: null }) },
+      { t: '뱀 나오기', cls: st.forceJar === 'snake' ? 'fbtn-on' : '', onTap: () => set({ forceJar: 'snake' }) },
+      { t: '빈 항아리', cls: st.forceJar === 'empty' ? 'fbtn-on' : '', onTap: () => set({ forceJar: 'empty' }) },
+    ] : st.ev === 'gacha' ? [{ t: st.forceGacha ? '다음은 당첨 ✓' : '확률대로', cls: st.forceGacha ? 'fbtn-on' : '', onTap: () => set({ forceGacha: !st.forceGacha }) }]
+      : st.ev === 'mole' ? [{ t: st.forceMole ? '다음은 성공 ✓' : '확률대로', cls: st.forceMole ? 'fbtn-on' : '', onTap: () => set({ forceMole: !st.forceMole }) }] : [];
+    const demoNote = { forge: '차가운 쇠를 가지고 있으면 잠긴 선택지가 열린다. "주변에 쇠라도 챙긴다"를 고르면 실제로 생긴다.', jar: '항아리를 열면 50%로 뱀과 전투(중독 상태로 시작), 아니면 빈 항아리.', gacha: '당첨 확률 10%에서 시작, 실패할 때마다 +10%. 상품 2개(회복 · 유물)를 다 뽑으면 나간다.', mole: '성공 30%에서 시작, 실패할 때마다 +10%. 팔 때마다 체력 소모가 3씩 는다.', apothecary: '약 세 병의 효과(회복 · 피해 · 아무 일 없음)는 방문마다 섞인다. 같은 약을 또 살 수 있다.', trade: '고른 뒤에야 무엇을 받는지 보인다.', spring: '휴식 = 최대 체력의 30% 회복.', surgery: '부위마다 관련 유물 중 하나.' }[st.ev];
+
+    return {
+      gold: String(st.gold), hp: String(st.hp), maxHp: String(st.maxHp), tabs,
+      ev: { name: ev.name, code: ev.code, kindTxt: ev.kindTxt, tagCol: ev.tagCol, text: ev.text, artCls, anim, aw: aw * S4, ah: ah * S4, abs: `${aw * S4 * nf}px ${ah * S4}px` },
+      glow: ev.glow, artFx: st.fx || '',
+      showChoices: st.phase === 'choose', choices,
+      showPicker: st.phase === 'pick', pickTitle, pickItems, cancelPick: () => set({ phase: 'choose', pickFor: null }),
+      showBattle: st.phase === 'battle',
+      winSnake: () => { const id = pick(POOL.poison); done(relicRes(id, '뱀을 쓰러뜨렸다 — {r}', '항아리 바닥에 독 냄새가 밴 유물이 있었다.', '#6ab83a')); },
+      showResult: st.phase === 'result', res,
+      againD: repeatOpen ? 'inline-flex' : 'none', againLabel: '계속하기', again: () => set({ phase: 'choose', res: null, fx: '' }),
+      exitNote: repeatOpen ? '계속 고를 수 있다 — 그만두려면 선택지의 나가기' : '', exitD: repeatOpen ? 'none' : 'inline-flex',
+      exitHref: st.exit === 'upgrade' ? 'Upgrade.dc.html' : 'RunMap.dc.html', exitLabel: st.exit === 'upgrade' ? '강화하러 ▶' : '지도로 ▶',
+      demo, demoNote,
+      resetAll: () => this.setState(Object.assign(this.fresh(st.ev), { iron: false })),
+    };
+  }
+}
+</script>
+</body>
+</html>

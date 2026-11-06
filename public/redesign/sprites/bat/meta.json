@@ -1,0 +1,40 @@
+{
+ "id": "bat",
+ "frameW": 64,
+ "frameH": 52,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 6,
+   "frameMs": 80,
+   "loop": true
+  },
+  "run": {
+   "frames": 6,
+   "frameMs": 60,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 65,
+   "loop": false,
+   "impactFrame": 3
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 90,
+   "loop": false
+  },
+  "death": {
+   "frames": 6,
+   "frameMs": 95,
+   "loop": false
+  }
+ },
+ "footY": 35,
+ "anchorX": 26,
+ "kind": "monster",
+ "region": "dungeon",
+ "replaces": "bat"
+}

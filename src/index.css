@@ -1,50 +1,53 @@
 /* ---------------------------------------------------------------------------
-   테마 = **다크 판타지**(2026-07-31 리스킨). 그을린 돌·재 배경 위에 횃불 금과
-   핏빛, 글자는 낡은 양피지색.
+   테마 = **픽셀 판타지**(2026-11 리디자인). 밤색 판 위에 금·크림, 각진 테두리와
+   딱딱한 그림자. 원본은 디자인 아티팩트 "GridBrawl 리디자인".
    ⚠ `--neon-*` **변수 이름은 일부러 남겨 뒀다** — ui.css 200곳 이상이 참조해서,
-   이름을 바꾸면 리스킨이 색 교체가 아니라 전면 수정이 된다. **값만** 갈았고
-   각 색의 역할(위험=빨강, 회복=초록, 기력=노랑)은 그대로다.
+   이름을 바꾸면 색 교체가 전면 수정이 된다. 각 색의 역할은 그대로다.
    --------------------------------------------------------------------------- */
 :root {
-  /* Surfaces — 그을린 돌과 재 */
-  --bg-0: #06050a;
-  --bg-1: #0c0a11;
-  --bg-2: #17131d;
-  --panel: rgba(26, 21, 31, 0.84);
-  --panel-edge: rgba(184, 150, 90, 0.26); /* 낡은 황동 테두리 */
-  --grid-line: rgba(156, 124, 72, 0.11); /* 바닥에 새긴 룬 격자 */
+  /* Surfaces */
+  --bg-0: #0c0a12;
+  --bg-1: #120f1a;
+  --bg-2: #1a1626;
+  --panel: #1a1626;
+  --panel-edge: #3a3150;
+  --edge-hi: #4a4058; /* 버튼 테두리 */
+  --edge-black: #0a0810; /* 판 바깥 굵은 선 */
+  --hud: rgba(18, 15, 26, 0.9);
+  --grid-line: rgba(232, 220, 192, 0.1);
 
   /* Palette (per-character accents live in data) */
-  --neon-cyan: #c9a86a; /* 횃불 금 — 기본 강조 */
-  --neon-magenta: #9b6bbf; /* 마법 보라 */
-  --neon-yellow: #f0c94c; /* 호박 — 기력 */
-  --neon-green: #6faf7d; /* 이끼 초록 — 회복 */
-  --neon-red: #c8483f; /* 핏빛 — 위험 */
-  --neon-blue: #6d8ac4; /* 차가운 강철 */
-  --neon-orange: #d9793a; /* 잉걸불 */
+  --neon-cyan: #f4d470; /* 금 — 기본 강조 */
+  --neon-magenta: #c9a6ff; /* 보라 */
+  --neon-yellow: #ffd86a; /* 호박 */
+  --neon-green: #b6ea6a; /* 풀빛 — 회복 */
+  --neon-red: #e0485a; /* 체력·위험 */
+  --neon-blue: #4a9aff; /* 기력 */
+  --neon-orange: #ff8a3a; /* 잉걸불 */
+  --gold-deep: #7a5418; /* 금 버튼 아래 그림자 */
+  --gold-edge: #2a1c10; /* 금 버튼 테두리 */
 
-  /* Text — 낡은 양피지 */
-  --text: #ece2cf;
-  --text-dim: #9c9080;
-  --text-faint: #61594a;
+  /* Text */
+  --text: #efe9f5;
+  --cream: #fff6dc; /* 제목 */
+  --text-dim: #c9c2d6;
+  --text-faint: #8a849a;
 
-  /* 밝은 칩(강조색 배경) 위에 얹는 어두운 글자. 예전엔 남색(#07090f)을 리터럴로
-     박아 둬서 팔레트를 갈아도 글자만 차갑게 남았다. */
-  --ink: #120d0a;
-  /* 게이지·바의 **불투명 테두리**. --panel-edge는 반투명이라 바 위에서는 묻힌다. */
-  --frame: #3b3026;
+  /* 밝은 칩(강조색 배경) 위에 얹는 어두운 글자. */
+  --ink: #1d1408;
+  /* 게이지·바의 **불투명 테두리**. */
+  --frame: #3a3150;
 
   --accent: var(--neon-cyan);
   --danger: var(--neon-red);
-  /* 카드 강화 표식(2026-08-08). **강조색과 따로 둔다** — `--accent`는 카드 종류·
-     캐릭터마다 달라야 하는 값이라, 강화 여부를 거기 실으면 마법사의 보라 카드와
-     궁수의 초록 카드에서 표식이 서로 다른 색이 되어 "강화됨"으로 안 읽힌다. */
-  --up: #f0c94c;
+  /* 카드 강화 표식. **강조색과 따로 둔다** — `--accent`는 카드 종류·캐릭터마다 달라야
+     하는 값이라, 강화 여부를 거기 실으면 "강화됨"으로 안 읽힌다. */
+  --up: #ffd86a;
 
-  /* 라틴 대문자는 Cinzel(로만 캐피털), 한글 제목은 명조. 본문은 가독성 우선으로
-     고운돋움(산세리프) — HUD 수치가 12px까지 내려가 명조는 뭉갠다. */
-  --font-display: 'Cinzel', 'Nanum Myeongjo', 'Gowun Batang', serif;
-  --font-body: 'Gowun Dodum', system-ui, sans-serif;
+  /* 영문 수치·표제는 Silkscreen, 한글 제목은 도현, 본문은 Noto Sans KR. */
+  --font-px: 'Silkscreen', ui-monospace, monospace;
+  --font-display: 'Do Hyeon', 'Noto Sans KR', sans-serif;
+  --font-body: 'Noto Sans KR', system-ui, sans-serif;
 }
 
 * {
@@ -83,7 +86,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  letter-spacing: 0.04em;
+  font-weight: 400;
   margin: 0;
 }
 
@@ -97,22 +100,6 @@ h3 {
   justify-content: center;
   overflow: hidden;
   background: var(--bg-0);
-  /* 무대 밖 레터박스. 안쪽(.grid-bg)과 같은 돌 언어로 잇되 더 어둡게 — 시선이
-     무대 밖으로 새면 안 되므로 여기서는 광원을 빼고 이음매만 남긴다. */
-  background-image:
-    repeating-linear-gradient(
-      180deg,
-      transparent 0 78px,
-      var(--grid-line) 78px 79px,
-      transparent 79px 157px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 111px,
-      var(--grid-line) 111px 112px,
-      transparent 112px 190px
-    );
-  background-attachment: fixed; /* 무대와 이음매가 어긋나 보이지 않게 */
 }
 
 .stage {
@@ -129,115 +116,79 @@ h3 {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  isolation: isolate; /* 배경(`.grid-bg`)을 z-index -1로 내려도 무대 뒤로 안 빠지게 */
 }
 
 /* ---------------------------------------------------------------------------
-   공용 배경 — 18개 화면이 전부 이 한 겹을 깐다(`<div className="grid-bg" />`).
-   ⚠ **클래스 이름은 일부러 남겼다** — 화면마다 붙어 있어서, 이름을 바꾸면
-   배경 교체가 전면 수정이 된다(`--neon-*` 변수와 같은 이유).
-
-   2026-08-01: 리스킨 때 **색만** 황동으로 갈고 형태는 그대로 뒀더니, 균일한
-   44px 격자가 계속 컴퓨터 HUD로 읽혔다. 색이 아니라 **형태가 SF 신호**였다.
-   그래서 격자를 걷어내고 전장(`battlefx.css`)과 같은 언어로 맞춘다:
-     ① 그을린 돌 — 불규칙한 세로 이음매 + 가로 층(반복 주기를 서로 어긋내
-        규칙성이 눈에 안 띄게)
-     ② 아래 횃불(따뜻함) + 위 달빛(차가움)
-     ③ 가장자리 비네트 — 무대 밖으로 시선이 새지 않게
-   전부 그라디언트라 이미지 파일은 여전히 0개다.
+   공용 배경 — 화면마다 이 한 겹을 깐다(`<div className="grid-bg" />`).
+   던전 벽을 어둡게 눌러 깔고 그 위에 불투명 패널을 올린다(디자인의 영웅 선택 화면).
+   ⚠ **클래스 이름은 일부러 남겼다** — 화면마다 붙어 있어서 바꾸면 전면 수정이 된다.
+   ⚠ 원본 320×180의 정수 4배(1280×720) 고정 — `pixelated`와 짝이다.
    --------------------------------------------------------------------------- */
 .grid-bg {
   position: absolute;
   inset: 0;
+  z-index: -1;
   pointer-events: none;
-  /* ⚠ 이 두 기본값이 없으면 `var()`가 무효가 되어 **배경 전체가 사라진다**. */
-  --scrim: none;
-  --scene: none;
-  background-image:
-    /* ③ 비네트 */
-    radial-gradient(125% 95% at 50% 42%, transparent 45%, rgba(0, 0, 0, 0.72) 100%),
-    /* ② 위 달빛 */
-    radial-gradient(
-      95% 55% at 50% -10%,
-      color-mix(in srgb, var(--neon-blue) 7%, transparent),
-      transparent 72%
-    ),
-    /* ② 아래 횃불 */
-    radial-gradient(
-      110% 62% at 50% 108%,
-      color-mix(in srgb, var(--neon-orange) 9%, transparent),
-      transparent 74%
-    ),
-    /* ① 가로 층 — 돌을 쌓아 올린 단 */
-    repeating-linear-gradient(
-      180deg,
-      transparent 0 78px,
-      var(--grid-line) 78px 79px,
-      transparent 79px 157px
-    ),
-    /* ① 세로 이음매 — 가로 주기(157)와 서로소인 폭으로 어긋내 격자로 안 보이게 */
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 111px,
-      var(--grid-line) 111px 112px,
-      transparent 112px 190px
-    ),
-    /* ⓪ 그려진 배경 — 기본은 없음(`none`도 한 층을 차지한다). 아래 `--hall` 참고 */
-    var(--scrim), var(--scene);
-  /* ⚠ 층이 7개로 고정이라 아래 세 목록도 **항상 7개**여야 한다. CSS는 짧은 목록을
-     돌려 쓰기 때문에 하나만 빠뜨려도 엉뚱한 층에 값이 붙는다. */
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat, repeat-x;
-  background-size: auto, auto, auto, auto, auto, auto, auto 608px;
-  background-position: center, center, center, 0 0, 0 0, center, center bottom;
-  opacity: 0.85;
+  background:
+    linear-gradient(rgba(10, 8, 16, 0.72), rgba(10, 8, 16, 0.72)),
+    url('/redesign/bg/dungeon/floor.png') 0 0 / 1280px 720px repeat-x,
+    url('/redesign/bg/dungeon/torchlight.png') 0 0 / 1280px 720px repeat-x,
+    url('/redesign/bg/dungeon/wall.png') 0 0 / 1280px 720px repeat-x;
+  image-rendering: pixelated;
 }
-
-/* ---------------------------------------------------------------------------
-   `--hall` — 그려진 배경(고성 내부)을 까는 변종.
-   2026-08-03: 그라디언트만으로는 화면이 계속 "빈 방"이라 실제 그림을 넣었다.
-   에셋은 Gothicvania(ansimuz) — 출처·라이선스는 public/bg/README.md.
-
-   ⚠ **전 화면에 깔면 안 된다.** 도감·덱 빌더·상점처럼 패널이 반투명하고 글자가
-   빽빽한 화면에서는 벽 무늬가 글자 뒤로 비쳐 가독성이 무너진다(실측). 그래서
-   기본 `.grid-bg`는 그대로 두고, **글자가 적은 화면에만** 이 클래스를 더한다.
-   --------------------------------------------------------------------------- */
+/* 글자가 적은 화면(결과·런 종료)은 덜 누른다. */
 .grid-bg--hall {
-  --scrim: linear-gradient(rgba(6, 5, 10, 0.74), rgba(6, 5, 10, 0.74));
-  --scene: url('/bg/dark-castle/wall.png');
-  image-rendering: pixelated; /* 608px = 원본 304px의 정확히 2배 — 소수 배율 금지 */
+  background:
+    linear-gradient(rgba(10, 8, 16, 0.5), rgba(10, 8, 16, 0.5)),
+    url('/redesign/bg/dungeon/floor.png') 0 0 / 1280px 720px repeat-x,
+    url('/redesign/bg/dungeon/torchlight.png') 0 0 / 1280px 720px repeat-x,
+    url('/redesign/bg/dungeon/wall.png') 0 0 / 1280px 720px repeat-x;
 }
 
-/* Generic neon button ---------------------------------------------------- */
+/* 버튼 — 기본은 금판(주 동작), `--ghost`는 어두운 판(보조). */
 .btn {
   appearance: none;
-  border: 1px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--text);
-  padding: 14px 28px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  border-radius: 4px;
-  transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease;
+  border: 3px solid var(--gold-edge);
+  background: var(--neon-cyan);
+  color: var(--ink);
+  padding: 10px 24px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  border-radius: 0;
+  box-shadow: 0 5px 0 var(--gold-deep);
+  transition: transform 0.06s ease, background 0.12s ease;
 }
 
 .btn:hover {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  background: #ffe48a;
 }
 
 .btn:active {
-  transform: translateY(1px) scale(0.99);
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--gold-deep);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .btn--ghost {
-  border-color: var(--panel-edge);
-  background: transparent;
-  color: var(--text-dim);
+  border: 2px solid var(--edge-hi);
+  background: rgba(29, 24, 40, 0.92);
+  color: var(--text);
+  box-shadow: none;
+  font-size: 20px;
 }
 
 .btn--ghost:hover {
-  color: var(--text);
-  border-color: var(--accent);
+  background: #2a2438;
+  border-color: var(--neon-cyan);
+}
+
+.btn--ghost:active {
+  box-shadow: none;
 }
 
 .neon-text {

@@ -12,6 +12,7 @@ import {
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
+import { RelicIcon } from '../RelicIcon'
 import { RunBar } from '../RunBar'
 
 /** 강화형 선택지인가 — 카드 목록을 "강화 가능한 것만"으로 좁히는 기준. */
@@ -69,7 +70,7 @@ export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: Run
               <CardFace card={upped} accent={cardAccent(upped, char.accent)} />
             </div>
           ) : (
-            <div className="event__icon">{relic ? relic.icon : '✓'}</div>
+            <div className="event__icon">{relic ? <RelicIcon id={relic.id} size={78} /> : '✓'}</div>
           )}
           <div className="event__result-text">
             {upped ? (

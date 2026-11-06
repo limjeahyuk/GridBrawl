@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>난이도 선택</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}
+.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+@keyframes f6{to{background-position:120% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.tier{display:grid;grid-template-columns:64px 1fr 150px;gap:16px;align-items:center;width:100%;padding:12px 16px;box-sizing:border-box;background:#1a1626;border:2px solid #3a3150;color:#efe9f5;font:inherit;text-align:left;cursor:pointer}
+.tier:hover{border-color:#f4d470}
+.tier:disabled{cursor:not-allowed}
+.tier-on{border-color:#f4d470;box-shadow:inset 0 0 0 2px #f4d470,0 0 0 2px #2a1c10;background:#221c30}
+.go{display:flex;align-items:center;height:56px;padding:0 30px;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:26px;text-decoration:none}
+.go:hover{background:#ffe48a;color:#1d1408}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-wall" aria-hidden="true"></div>
+  <div class="layer l-light" aria-hidden="true"></div>
+  <div class="layer l-floor" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(10,8,16,0.66)"></div>
+
+  <nav aria-label="출발 준비 단계" style="position: absolute; left: 64px; top: 30px; display: flex; align-items: center; gap: 10px; font-size: 15px">
+    <a href="Select.dc.html" style="display: flex; gap: 8px; align-items: center; text-decoration: none; color: #b6ea6a"><span style="font-family: 'Silkscreen', monospace; padding: 2px 7px; background: #2a3a1e; border: 2px solid #6ab83a">✓</span>영웅</a>
+    <span aria-hidden="true" style="width: 36px; height: 2px; background: #4a4058"></span>
+    <span style="display: flex; gap: 8px; align-items: center; color: #fff6dc"><span style="font-family: 'Silkscreen', monospace; padding: 2px 8px; background: #f4d470; color: #1d1408">2</span>난이도</span>
+    <span aria-hidden="true" style="width: 36px; height: 2px; background: #4a4058"></span>
+    <span style="display: flex; gap: 8px; align-items: center; color: #b9b1c9"><span style="font-family: 'Silkscreen', monospace; padding: 2px 8px; border: 2px solid #4a4058">3</span>출발</span>
+  </nav>
+
+  <aside style="position: absolute; left: 64px; top: 92px; width: 330px; height: 560px; box-sizing: border-box; background: #1a1626; border: 3px solid #3c9c98; box-shadow: 0 10px 0 #0a0810; display: flex; flex-direction: column">
+    <div style="position: relative; height: 260px; background: linear-gradient(180deg, #123a40 0%, #0d2a30 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
+      <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 22px; width: 170px; height: 18px; margin-left: -85px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
+      <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="position: absolute; left: 50%; bottom: 18px; margin-left: -108px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+    </div>
+    <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 28px; color: #fff6dc">CAIRN</h2><a href="Select.dc.html" style="font-size: 13px">영웅 바꾸기</a></div>
+      <span style="font-size: 13px; color: #b9b1c9">전사 · Oathbound Warden · HP 103</span>
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #120f1a; border: 2px solid #2a2438">
+        <span style="font-size: 12px; color: #b9b1c9">이 영웅의 기록</span>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px">{{record}}</span>
+      </div>
+    </div>
+  </aside>
+
+  <main style="position: absolute; left: 424px; top: 86px; right: 64px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">난이도</h1>
+      <span style="font-size: 13px; color: #b9b1c9">달라지는 건 하나 — 적이 내 카드를 얼마나 읽는가</span>
+    </div>
+    <sc-for list="{{tiers}}" as="t" hint-placeholder-count="4">
+      <button type="button" class="tier {{t.on}}" disabled="{{t.locked}}" onClick="{{t.pick}}" style="opacity: {{t.op}}">
+        <span style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: {{t.bg}}; border: 3px solid {{t.color}}; font-family: 'Silkscreen', monospace; font-size: 22px; color: {{t.color}}">{{t.num}}</span>
+        <span style="display: flex; flex-direction: column; gap: 4px">
+          <span style="display: flex; gap: 10px; align-items: baseline"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 26px; color: {{t.color}}">{{t.name}}</span><span style="font-size: 12px; color: {{t.tagc}}">{{t.tag}}</span></span>
+          <span style="font-size: 13px; line-height: 1.5; color: #e4def0">{{t.desc}}</span>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end">
+          <span style="font-size: 11px; color: #b9b1c9">적이 읽는 내 카드</span>
+          <span style="display: flex; gap: 4px">
+            <sc-for list="{{t.slots}}" as="s" hint-placeholder-count="3"><span style="width: 30px; height: 40px; display: flex; align-items: center; justify-content: center; background: {{s.bg}}; border: 2px solid {{s.edge}}; font-family: 'Silkscreen', monospace; font-size: 13px; color: #0a0810">{{s.mark}}</span></sc-for>
+          </span>
+          <span style="font-size: 11px; color: #ff9a8a; min-height: 14px">{{t.react}}</span>
+        </span>
+      </button>
+    </sc-for>
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 18px; margin-top: 6px">
+      <span style="font-size: 13px; color: #b9b1c9">{{hint}}</span>
+      <a href="RunMap.dc.html" class="go">{{cta}}</a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 1 };
+  }
+  renderVals() {
+    const T = [
+      { name: '초급', num: 'I', color: '#8ad05a', bg: '#1e3014', desc: '적이 내 움직임을 거의 못 읽는다. 규칙과 카드를 익히는 단계.', read: 0, react: false },
+      { name: '중급', num: 'II', color: '#6ab8ff', bg: '#14243a', desc: '적이 내 첫 카드를 읽는다. 라운드 초반의 헛손질이 사라진다.', read: 1, react: false },
+      { name: '고급', num: 'III', color: '#ffa24a', bg: '#3a2010', desc: '적이 내 3장을 전부 보고 자리를 짚는다. 헛치는 일이 거의 없어진다.', read: 3, react: false },
+      { name: '최고급', num: 'IV', color: '#ff6a6a', bg: '#3a1016', desc: '고급에 더해, 제일 아픈 한 장을 막거나 피한다. 미끼를 던져야 통한다.', read: 3, react: true },
+    ];
+    const cleared = [true, false, false, false];
+    const sel = this.state.sel;
+    const tiers = T.map((t, i) => {
+      const unlocked = i === 0 || cleared[i - 1];
+      const tag = cleared[i] ? '클리어 ✓' : unlocked ? (i === sel ? '선택됨' : '도전 가능') : T[i - 1].name + '을 클리어하면 열림';
+      return Object.assign({}, t, {
+        on: i === sel ? 'tier-on' : '', locked: !unlocked, op: unlocked ? 1 : 0.5,
+        tag, tagc: cleared[i] ? '#b6ea6a' : unlocked ? '#c9c2d6' : '#8a849a',
+        pick: unlocked ? () => this.setState({ sel: i }) : undefined,
+        react: t.react ? '+ 아픈 한 장을 막거나 피함' : '',
+        slots: [0, 1, 2].map((k) => (k < t.read ? { bg: t.color, edge: t.color, mark: '◉' } : { bg: '#2a2438', edge: '#4a4058', mark: '' })),
+      });
+    });
+    return {
+      tiers,
+      cta: T[sel].name + '으로 출발 ▶',
+      hint: '처음이면 초급, 한 번 깼다면 다음 단계를 추천',
+      record: '초급 클리어 · 최고 14층',
+    };
+  }
+}
+</script>
+</body>
+</html>

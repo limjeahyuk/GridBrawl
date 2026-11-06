@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>GridBrawl 타이틀</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.px{image-rendering:pixelated}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-clouds{background-image:url(/redesign/bg/grassland/clouds.png);animation:drift 90s linear infinite}
+.l-mountains{background-image:url(/redesign/bg/grassland/mountains.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+@keyframes drift{to{background-position:-1280px 0}}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-sable-idle{background-image:url(/redesign/sprites/sable/idle.png)}
+.s-dirge-idle{background-image:url(/redesign/sprites/dirge/idle.png)}
+.s-slime-idle{background-image:url(/redesign/sprites/slime/idle.png)}
+.menu a{display:flex;align-items:center;gap:14px;text-decoration:none}
+.menu a:hover{transform:translateX(4px)}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #5fb4ec; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-sky" aria-hidden="true"></div>
+  <div class="layer l-clouds" aria-hidden="true"></div>
+  <div class="layer l-mountains" aria-hidden="true"></div>
+  <div class="layer l-hills" aria-hidden="true"></div>
+  <div class="layer l-meadow" aria-hidden="true"></div>
+
+  <div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 640px; height: 720px; background: linear-gradient(90deg, rgba(18,15,26,0.78) 0%, rgba(18,15,26,0.55) 70%, rgba(18,15,26,0) 100%)"></div>
+
+  <div style="position: absolute; left: 80px; top: 88px; display: flex; flex-direction: column; gap: 10px">
+    <p style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 18px; letter-spacing: 6px; color: #f4d470">TACTICAL CARD BRAWLER</p>
+    <h1 style="margin: 0; font-family: 'Silkscreen', monospace; font-weight: 700; font-size: 104px; line-height: 0.92; color: #fff6dc; text-shadow: 0 6px 0 #7a5418, 0 12px 0 #2a1c10">GRID<br>BRAWL</h1>
+    <p style="margin: 10px 0 0; font-family: 'Do Hyeon', sans-serif; font-size: 28px; color: #efe9f5">카드 세 장, 한 칸의 승부</p>
+  </div>
+
+  <nav class="menu" aria-label="메인 메뉴" style="position: absolute; left: 80px; top: 404px; display: flex; flex-direction: column; gap: 8px; width: 360px">
+    <a href="Select.dc.html" style="height: 56px; padding: 0 22px; background: #f4d470; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 28px">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 16px">▶</span>모험 시작
+    </a>
+    <a href="BattleField.dc.html" style="height: 48px; padding: 0 22px; background: rgba(29,24,40,0.92); color: #efe9f5; border: 2px solid #4a4058; font-family: 'Do Hyeon', sans-serif; font-size: 24px">대전 (온라인 · 봇전)</a>
+    <a href="Monsters.dc.html" style="height: 48px; padding: 0 22px; background: rgba(29,24,40,0.92); color: #efe9f5; border: 2px solid #4a4058; font-family: 'Do Hyeon', sans-serif; font-size: 24px">도감</a>
+  </nav>
+
+  <div aria-hidden="true" style="position: absolute; left: 676px; top: 630px; width: 520px; height: 26px; border-radius: 50%; background: rgba(20,40,20,0.28)"></div>
+  <div class="spr n6 s-slime-idle" aria-hidden="true" style="position: absolute; left: 1100px; top: 520px; width: 128px; height: 88px; background-size: 768px 88px; animation-duration: 780ms; transform: scaleX(-1)"></div>
+  <div class="spr n6 s-cairn-idle" aria-hidden="true" style="position: absolute; left: 640px; top: 456px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+  <div class="spr n6 s-sable-idle" aria-hidden="true" style="position: absolute; left: 780px; top: 468px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 750ms"></div>
+  <div class="spr n8 s-dirge-idle" aria-hidden="true" style="position: absolute; left: 905px; top: 456px; width: 288px; height: 192px; background-size: 2304px 192px; animation-duration: 960ms"></div>
+
+  <div style="position: absolute; left: 80px; bottom: 28px; display: flex; gap: 18px; align-items: center; font-family: 'Silkscreen', monospace; font-size: 13px; color: #c9c2d6">
+    <span>V0.2 REDESIGN</span>
+    <span style="width: 4px; height: 4px; background: #c9c2d6"></span>
+    <span style="font-family: 'Noto Sans KR', sans-serif; font-size: 13px">지역: 초원 → 던전</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

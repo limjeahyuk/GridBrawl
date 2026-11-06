@@ -1,0 +1,46 @@
+{
+ "id": "ogre",
+ "frameW": 120,
+ "frameH": 92,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 6,
+   "frameMs": 140,
+   "loop": true
+  },
+  "run": {
+   "frames": 8,
+   "frameMs": 90,
+   "loop": true
+  },
+  "attack1": {
+   "frames": 6,
+   "frameMs": 75,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "attack2": {
+   "frames": 6,
+   "frameMs": 85,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "hurt": {
+   "frames": 3,
+   "frameMs": 100,
+   "loop": false
+  },
+  "death": {
+   "frames": 8,
+   "frameMs": 110,
+   "loop": false
+  }
+ },
+ "footY": 92,
+ "anchorX": 48,
+ "kind": "monster",
+ "region": "grassland",
+ "replaces": "ogre"
+}

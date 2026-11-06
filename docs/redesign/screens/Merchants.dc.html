@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상점 캐릭터 스프라이트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n3{animation-name:f3;animation-timing-function:steps(3)}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+.n9{animation-name:f9;animation-timing-function:steps(9)}
+@keyframes f3{to{background-position:150% 0}}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+@keyframes f9{to{background-position:112.5% 0}}
+.gp-idle{background-image:url(/redesign/sprites/goblin-poor/idle.png)}
+.gp-run{background-image:url(/redesign/sprites/goblin-poor/run.png)}
+.gp-back{background-image:url(/redesign/sprites/goblin-poor/back.png)}
+.gp-attack1{background-image:url(/redesign/sprites/goblin-poor/attack1.png)}
+.gp-attack2{background-image:url(/redesign/sprites/goblin-poor/attack2.png)}
+.gp-hurt{background-image:url(/redesign/sprites/goblin-poor/hurt.png)}
+.gp-death{background-image:url(/redesign/sprites/goblin-poor/death.png)}
+.gp-haggle{background-image:url(/redesign/sprites/goblin-poor/haggle.png)}
+.gp-cheer{background-image:url(/redesign/sprites/goblin-poor/cheer.png)}
+.gm-idle{background-image:url(/redesign/sprites/goblin-mid/idle.png)}
+.gm-run{background-image:url(/redesign/sprites/goblin-mid/run.png)}
+.gm-back{background-image:url(/redesign/sprites/goblin-mid/back.png)}
+.gm-attack1{background-image:url(/redesign/sprites/goblin-mid/attack1.png)}
+.gm-attack2{background-image:url(/redesign/sprites/goblin-mid/attack2.png)}
+.gm-hurt{background-image:url(/redesign/sprites/goblin-mid/hurt.png)}
+.gm-death{background-image:url(/redesign/sprites/goblin-mid/death.png)}
+.gm-haggle{background-image:url(/redesign/sprites/goblin-mid/haggle.png)}
+.gm-cheer{background-image:url(/redesign/sprites/goblin-mid/cheer.png)}
+.gr-idle{background-image:url(/redesign/sprites/goblin-rich/idle.png)}
+.gr-run{background-image:url(/redesign/sprites/goblin-rich/run.png)}
+.gr-back{background-image:url(/redesign/sprites/goblin-rich/back.png)}
+.gr-attack1{background-image:url(/redesign/sprites/goblin-rich/attack1.png)}
+.gr-attack2{background-image:url(/redesign/sprites/goblin-rich/attack2.png)}
+.gr-hurt{background-image:url(/redesign/sprites/goblin-rich/hurt.png)}
+.gr-death{background-image:url(/redesign/sprites/goblin-rich/death.png)}
+.gr-haggle{background-image:url(/redesign/sprites/goblin-rich/haggle.png)}
+.gr-cheer{background-image:url(/redesign/sprites/goblin-rich/cheer.png)}
+.tr-idle{background-image:url(/redesign/sprites/trader/idle.png)}
+.tr-talk{background-image:url(/redesign/sprites/trader/talk.png)}
+.tr-offer{background-image:url(/redesign/sprites/trader/offer.png)}
+.tr-bow{background-image:url(/redesign/sprites/trader/bow.png)}
+.cell{display:flex;flex-direction:column;align-items:center;gap:6px}
+.stage{position:relative;background:#1e2a1a;border:2px solid #2a3a24;box-shadow:inset 0 -14px 0 rgba(0,0,0,0.25)}
+.lab{font-family:'Silkscreen',monospace;font-size:12px;color:#efe9f5}
+.sub{font-size:11px;color:#b9b1c9}
+.panel{background:#1a1626;border:3px solid #0a0810;box-shadow:inset 0 0 0 2px #3a3150;box-sizing:border-box}
+</style>
+</helmet>
+<div style="position: relative; width: 1960px; height: 1340px; overflow: hidden; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; padding: 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+  <header>
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">상점 캐릭터 — 떠돌이 상인 마렌 · 고블린 장사꾼 3단계</h1>
+    <p style="margin: 6px 0 0; font-size: 15px; color: #c9c2d6">마렌은 상점 칸 전용(전투 없음). 고블린은 ? 칸에서 나오며 <b style="color: #ffd86a">이번 런에 고블린에게 쓴 돈</b>으로 가난 → 중간 → 부자로 자라고, 덮치면 그 단계 그대로 싸운다. 전부 <code>public/redesign/sprites/</code>의 실제 PNG.</p>
+  </header>
+
+  <section class="panel" style="padding: 18px 22px; display: flex; gap: 28px; align-items: flex-end">
+    <div style="width: 250px; align-self: stretch; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 3px; color: #7fd6c8">SHOP NPC</span>
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">떠돌이 상인 마렌</b>
+      <span style="font-size: 13px; line-height: 1.6; color: #e4def0">넓은 챙 모자 · 붉은 숄 · 앞치마. 등에 짐 틀(말린 카펫 · 냄비 · 등불). 진열대(오른쪽)를 바라본다.</span>
+      <span class="sub">trader · 64×76 · ×3 = 192×228 · 상점 화면 왼쪽</span>
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #c9c2d6">
+        <span><b style="color: #f4d470">idle</b> 들어오면 · 고르는 동안</span>
+        <span><b style="color: #f4d470">talk</b> 대사가 뜰 때</span>
+        <span><b style="color: #f4d470">offer</b> 물건에 커서를 올리면(물약 내밀며 윙크)</span>
+        <span><b style="color: #f4d470">bow</b> 사고 나면 한 번</span>
+      </div>
+    </div>
+    <sc-for list="{{trader}}" as="c" hint-placeholder-count="4">
+      <div class="cell">
+        <div class="stage" style="width: 220px; height: 244px; display: flex; align-items: flex-end; justify-content: center">
+          <div class="spr n6 {{c.cls}}" style="width: 192px; height: 228px; background-size: 1152px 228px; animation-duration: {{c.dur}}"></div>
+        </div>
+        <span class="lab">{{c.name}}</span><span class="sub">{{c.meta}}</span>
+      </div>
+    </sc-for>
+  </section>
+
+  <sc-for list="{{gobs}}" as="g" hint-placeholder-count="3">
+    <section class="panel" style="padding: 14px 18px; display: flex; gap: 10px; align-items: flex-end; box-shadow: inset 0 0 0 2px {{g.edge}}">
+      <div style="width: 230px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; gap: 6px">
+        <span style="display: flex; gap: 8px; align-items: center"><b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #fff6dc">{{g.name}}</b><span style="font-family: 'Silkscreen', monospace; font-size: 11px; padding: 1px 7px; background: {{g.tagBg}}; color: {{g.tagFg}}">{{g.tag}}</span></span>
+        <span style="font-size: 12px; line-height: 1.55; color: #e4def0">{{g.look}}</span>
+        <span style="font-size: 12px; color: #ffd86a">{{g.when}}</span>
+        <span style="margin-top: auto; font-size: 12px; color: #ff9a9a">전투 HP {{g.hp}} · {{g.stars}}</span>
+        <span class="sub">goblin-{{g.id}} · 84×58 · ×3(게임) / ×2(여기)</span>
+      </div>
+      <sc-for list="{{g.clips}}" as="c" hint-placeholder-count="9">
+        <div class="cell">
+          <div class="stage" style="width: 168px; height: 120px; display: flex; align-items: flex-end; justify-content: center; background: {{c.bg}}">
+            <div class="spr {{c.cls}}" style="width: 168px; height: 116px; background-size: {{c.bs}}; animation-duration: {{c.dur}}"></div>
+          </div>
+          <span class="lab" style="color: {{c.lc}}">{{c.name}}</span><span class="sub">{{c.meta}}</span>
+        </div>
+      </sc-for>
+    </section>
+  </sc-for>
+
+  <section class="panel" style="padding: 16px 22px; display: flex; gap: 22px; align-items: center">
+    <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px; width: 230px">클립 쓰는 곳</b>
+    <span style="font-size: 13px; line-height: 1.7; color: #e4def0"><b style="color: #f4d470">haggle</b>(손 비비기) = 고블린 상점 기본 · <b style="color: #f4d470">cheer</b>(펄쩍 + 금화) = 살 때마다 한 번, 단계가 오르면 번쩍이며 다음 단계 그림으로 교체 · <b style="color: #ff9a9a">idle ~ death</b> = 덮쳤을 때 일반 몬스터와 똑같이 전투(공격 2종 · 피격 · 쓰러짐 · 후퇴). 가난 = 국자 내려치기 / 돌팔매, 중간 = 언월도 베기 / 찌르기, 부자 = 지팡이 후려치기 / 금화 뿌리기.</span>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1960,"height":1340}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const trader = [['idle', 160, '들어오면 · 숨쉬기 + 깜빡'], ['talk', 120, '대사'], ['offer', 110, '물약 내밀기 + 윙크'], ['bow', 120, '구매 감사']].map(([n, ms, d]) => ({ name: n, cls: 'tr-' + n, dur: ms * 6 + 'ms', meta: `6f · ${ms}ms · ${d}` }));
+    const CL = [['idle', 6, 110], ['run', 8, 65], ['back', 6, 80], ['attack1', 6, 60], ['attack2', 6, 70], ['hurt', 3, 90], ['death', 9, 100], ['haggle', 6, 120], ['cheer', 6, 110]];
+    const RICH = { idle: 130, run: 80, attack1: 70 };
+    const T = [
+      { id: 'poor', k: 'p', name: '가난한 고블린', tag: 'POOR', tagBg: '#4e3420', tagFg: '#e8d0a0', edge: '#6a4a2a', look: '해진 두건 · 맨발 · 보따리 · 냄비 국자', when: '처음 만날 때 · 쓴 돈 0~79', hp: 28, stars: '★☆☆' },
+      { id: 'mid', k: 'm', name: '중간 고블린', tag: 'TRADER', tagBg: '#3e5a6a', tagFg: '#e4f0f8', edge: '#3e5a6a', look: '깃털 가죽 모자 · 금귀걸이 · 조끼 · 큰 배낭 · 언월도', when: '쓴 돈 80~199', hp: 52, stars: '★★☆' },
+      { id: 'rich', k: 'r', name: '부자 고블린', tag: 'TYCOON', tagBg: '#c9952f', tagFg: '#1d1408', edge: '#c9952f', look: '실크햇 · 외알 안경 · 금니 · 벨벳 코트 · 금사슬 · 금화 자루 · 보석 지팡이', when: '쓴 돈 200 이상', hp: 88, stars: '★★★' },
+    ];
+    const gobs = T.map((t) => Object.assign({}, t, {
+      clips: CL.map(([n, f, ms]) => {
+        const m = t.id === 'rich' && RICH[n] ? RICH[n] : ms;
+        const shop = n === 'haggle' || n === 'cheer';
+        return { name: n, cls: `n${f} g${t.k}-${n}`, bs: `${f * 168}px 116px`, dur: f * m + 'ms', meta: `${f}f · ${m}ms`, bg: shop ? '#2a2214' : '#1e2a1a', lc: shop ? '#ffd86a' : '#efe9f5' };
+      }),
+    }));
+    return { trader, gobs };
+  }
+}
+</script>
+</body>
+</html>

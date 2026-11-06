@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>? 칸과 이벤트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.px{background-repeat:no-repeat;image-rendering:pixelated;background-position:center}
+.i-enemy{background-image:url(/redesign/ui/map-icons/enemy.png)}
+.i-rest{background-image:url(/redesign/ui/map-icons/rest.png)}
+.i-merchant{background-image:url(/redesign/ui/map-icons/merchant.png)}
+.i-unknown{background-image:url(/redesign/ui/map-icons/unknown.png)}
+.altar{background-image:url(/redesign/ui/event-altar.png);background-size:204px 174px}
+.rf3{width:78px;height:78px;background-image:url(/redesign/ui/relics/atlas-full.png);background-size:780px 780px}
+.fate{width:180px;height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border:3px solid #4a4058;background:#1a1626;font-family:'Do Hyeon',sans-serif;font-size:24px;transition:transform .2s}
+.fate-on{border-color:#f4d470;transform:translateY(-12px) scale(1.06);box-shadow:0 0 0 3px #2a1c10,0 0 30px rgba(244,212,112,0.5);background:#2a2214}
+.fate-off{opacity:0.35}
+.back{background:repeating-linear-gradient(45deg,#2a2438 0 8px,#221c30 8px 16px)}
+.opt{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;box-sizing:border-box;background:#1a1626;border:2px solid #4a4058;color:#efe9f5;font:inherit;text-align:left;cursor:pointer}
+.opt:hover{border-color:#f4d470;background:#221c30}
+.chip{font-size:12px;padding:2px 8px;font-family:'Silkscreen',monospace}
+.go{height:52px;padding:0 26px;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:24px;cursor:pointer}
+.rise{animation:rise .8s ease-out 1}
+@keyframes rise{0%{transform:translateY(16px);opacity:0}100%{transform:translateY(0);opacity:1}}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="layer l-wall" aria-hidden="true"></div>
+  <div class="layer l-floor" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,6,12,0.7)"></div>
+
+  <header style="position: absolute; left: 32px; right: 32px; top: 22px; display: flex; justify-content: space-between; align-items: center">
+    <div style="display: flex; gap: 12px; align-items: baseline"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 36px; color: #fff6dc">? 칸</h1><span style="font-size: 14px; color: #c9c4ee">던전 · 13층</span></div>
+    <div style="display: flex; gap: 6px">
+      <sc-for list="{{crumbs}}" as="c" hint-placeholder-count="3"><span style="padding: 5px 12px; font-size: 13px; background: {{c.bg}}; color: {{c.fg}}; border: 2px solid {{c.edge}}">{{c.label}}</span></sc-for>
+    </div>
+    <span style="padding: 8px 14px; background: rgba(18,15,26,0.9); border: 2px solid #4a4058; font-family: 'Silkscreen', monospace; font-size: 14px; color: #ffb0b0">HP {{hp}}/103</span>
+  </header>
+
+  <sc-if value="{{p0}}" hint-placeholder-val="{{true}}">
+    <section style="position: absolute; left: 0; right: 0; top: 130px; display: flex; flex-direction: column; align-items: center; gap: 26px">
+      <p style="margin: 0; font-size: 16px; color: #e4def0">이 칸에 무엇이 있는지는 들어가 봐야 안다 — 넷 중 하나</p>
+      <div style="display: flex; gap: 20px">
+        <sc-for list="{{fates}}" as="f" hint-placeholder-count="4">
+          <div class="fate {{f.cls}}">
+            <div class="px {{f.icon}}" aria-hidden="true" style="width: 84px; height: 72px; background-size: 84px 72px"></div>
+            <span>{{f.label}}</span>
+            <span style="font-size: 13px; font-family: 'Noto Sans KR', sans-serif; color: #b9b1c9">{{f.sub}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <button type="button" class="go" onClick="{{toEvent}}">들어간다 ▶</button>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{p1}}" hint-placeholder-val="{{false}}">
+    <section class="rise" style="position: absolute; left: 80px; right: 80px; top: 110px; display: grid; grid-template-columns: 360px 1fr; gap: 36px">
+      <div style="height: 480px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; background: radial-gradient(ellipse at 50% 70%, rgba(224,72,90,0.25) 0%, rgba(12,10,18,0) 65%); border: 2px solid #3a3150">
+        <div class="px altar" role="img" aria-label="저주받은 제단" style="width: 204px; height: 174px"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px; padding-top: 30px">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #ff8a7a">EVENT</span>
+        <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 44px; color: #fff6dc">저주받은 제단</h2>
+        <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0">검붉은 제단이 피를 원한다. 바치면 힘을 준다는데…</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 18px">
+          <button type="button" class="opt" onClick="{{choose}}">
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; flex-grow: 1">피를 바친다</span>
+            <span class="chip" style="background: #3a1016; color: #ff9a9a; border: 1px solid #e0485a">HP -25</span>
+            <span class="chip" style="background: #2a1c08; color: #ffd86a; border: 1px solid #c9952f">유물 +1</span>
+          </button>
+          <a href="RunMap.dc.html" class="opt" style="text-decoration: none">
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; flex-grow: 1">그냥 지나간다</span>
+            <span class="chip" style="background: #1a1626; color: #b9b1c9; border: 1px solid #4a4058">아무 일 없음</span>
+          </a>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #b9b1c9">선택지마다 대가와 보상을 숫자로 먼저 보여준다 — 고르기 전에 결과를 알 수 있게.</p>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{p2}}" hint-placeholder-val="{{false}}">
+    <section class="rise" style="position: absolute; left: 50%; top: 150px; width: 560px; margin-left: -280px; padding: 28px; box-sizing: border-box; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #ffd86a; display: flex; flex-direction: column; align-items: center; gap: 16px">
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #e4def0">제단이 피를 마시고 무언가를 토해 냈다</span>
+      <div style="display: flex; gap: 22px; align-items: center">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 30px; color: #ff6a6a">HP -25</span>
+        <span style="font-family: 'Silkscreen', monospace; font-size: 24px; color: #6a6478">→</span>
+        <span class="px rf3" role="img" aria-label="잿불 심장" style="background-position: -312px -234px"></span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 26px">잿불 심장</span><span style="font-size: 11px; padding: 1px 7px; background: #6ab8ff; color: #0c1e34">희귀</span><span style="font-size: 11px; padding: 1px 7px; background: #f4d470; color: #1d1408">NEW · 도감 등록</span></div>
+      <p style="margin: 0; font-size: 14px; color: #e4def0">체력이 절반 이하면 내 공격 피해 +25%, 매 라운드 체력 +2.</p>
+      <div style="display: flex; gap: 12px; margin-top: 8px">
+        <button type="button" onClick="{{reset}}" style="height: 46px; padding: 0 16px; background: none; border: 2px solid #4a4058; color: #c9c2d6; font: inherit; cursor: pointer">처음부터 다시 보기</button>
+        <a href="RunMap.dc.html" class="go" style="display: flex; align-items: center; text-decoration: none">지도로 ▶</a>
+      </div>
+    </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { phase: 0 };
+  }
+  renderVals() {
+    const p = this.state.phase;
+    const F = [['i-enemy', '전투', '일반 적이 숨어 있다'], ['i-rest', '휴식', '모닥불에서 회복'], ['i-merchant', '고블린 상점', '사거나 · 덮치거나'], ['i-unknown', '이벤트', '대화와 선택']];
+    const fates = F.map(([icon, label, sub], i) => ({ icon, label, sub, cls: p === 0 ? (i === 3 ? 'fate-on' : '') : '' }));
+    const steps = ['? 칸 정체', '이벤트', '결과'];
+    const crumbs = steps.map((label, i) => ({ label: (i < p ? '✓ ' : '') + label, bg: i === p ? '#f4d470' : '#1a1626', fg: i === p ? '#1d1408' : '#c9c2d6', edge: i === p ? '#f4d470' : '#4a4058' }));
+    return {
+      p0: p === 0, p1: p === 1, p2: p === 2, fates, crumbs, hp: p === 2 ? 45 : 70,
+      toEvent: () => this.setState({ phase: 1 }), choose: () => this.setState({ phase: 2 }), reset: () => this.setState({ phase: 0 }),
+    };
+  }
+}
+</script>
+</body>
+</html>

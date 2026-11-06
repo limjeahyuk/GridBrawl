@@ -28,27 +28,30 @@ export function PortraitSvg({
     // 스트립에서 첫 프레임만 보이게 잘라 낸다. `background-size`를 프레임 수만큼
     // 키우고 위치를 0으로 두면 1프레임짜리 정지 이미지가 된다.
     const frames = sheet.clips.idle?.frames ?? 1
+    const ratio = sheet.frameW / sheet.frameH
     return (
+      // 칸 크기는 화면마다 다르다. 어느 칸에 들어가도 비율이 안 찌그러지도록 칸을
+      // 컨테이너로 두고 안쪽 그림을 몸통 기준점으로 세운다(프레임 폭은 검기까지 담아 치우쳐 있다).
       <div
         className={className}
-        style={{
-          ...style,
-          // 프레임 비율을 유지한 채 부모 칸에 맞춘다(초상 칸 크기는 화면마다 다르다)
-          aspectRatio: `${sheet.frameW} / ${sheet.frameH}`,
-          backgroundImage: `url(${clipUrl(sheet, 'idle')})`,
-          backgroundSize: `${frames * 100}% 100%`,
-          backgroundPosition: '0 0',
-          backgroundRepeat: 'no-repeat',
-          imageRendering: 'pixelated',
-          /**
-           * 초상은 **오른쪽을 보게 통일**한다 — 게임의 "앞 = 오른쪽" 규약과 같은
-           * 방향이고, 지금 팩이 전부 오른쪽을 보고 그려져 있어 아무도 뒤집지 않는다
-           * (뒤집으면 방패·검이 반대 손으로 가서 그 캐릭터만 어색해진다).
-           * 상대를 향해 돌아서는 것은 **전투 화면에서만** 한다(`faceToward`).
-           */
-          transform: sheet.facesRight ? undefined : 'scaleX(-1)',
-        }}
-      />
+        style={{ ...style, position: 'relative', overflow: 'hidden', containerType: 'size' }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 0,
+            width: `min(100cqw, calc(100cqh * ${ratio}))`,
+            aspectRatio: `${sheet.frameW} / ${sheet.frameH}`,
+            transform: `translateX(${(-sheet.anchorX / sheet.frameW) * 100}%)`,
+            backgroundImage: `url(${clipUrl(sheet, 'idle')})`,
+            backgroundSize: `${frames * 100}% 100%`,
+            backgroundPosition: '0 0',
+            backgroundRepeat: 'no-repeat',
+            imageRendering: 'pixelated',
+          }}
+        />
+      </div>
     )
   }
   return <div className={className} style={style} dangerouslySetInnerHTML={{ __html: html }} />

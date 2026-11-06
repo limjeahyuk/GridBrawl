@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import './ui/ui.css'
 // ui.css 뒤에 와야 한다 — 전투 연출 레이어가 같은 특이도에서 이겨야 하므로.
 import './ui/battlefx.css'
+import './ui/redesign.css'
 import { useStageScale } from './ui/useStageScale'
 import { useAuth } from './ui/useAuth'
 import { signOutUser } from './net/auth'
@@ -34,12 +35,25 @@ import {
   afterLoss,
   chooseBranch,
   currentNode,
+  regionOf,
   sceneFor,
   type RunDifficulty,
   type RunState,
 } from './game/run'
-import { markCleared } from './game/progress'
+import { markCleared, markRelicsSeen } from './game/progress'
+import { getMonster } from './game/monsters'
+import { foeAbilities } from './ui/relicFx'
 import { runFightProps } from './game/runbattle'
+
+/** 전투 HUD가 쓰는 상대 정보 — 등급 표기와 몬스터가 실제로 가진 능력. */
+function runFoeInfo(run: RunState) {
+  const node = currentNode(run)
+  const m = node.monsterId ? getMonster(node.monsterId) : null
+  return {
+    tag: node.type === 'elite' ? '엘리트' : undefined,
+    abilities: m ? foeAbilities(m.id, m.passive) : [],
+  }
+}
 
 /**
  * 밸런스 어드민 — **개발 빌드에만 존재한다**.
@@ -113,6 +127,10 @@ export default function App() {
   const [mpOutcome, setMpOutcome] = useState<Outcome>('win')
   // --- 로그라이크 런 ---
   const [run, setRun] = useState<RunState | null>(null)
+  // 얻은 유물은 도감에 등록된다 — 어느 경로(보상·상점·이벤트)로 얻었든 여기로 모인다.
+  useEffect(() => {
+    if (run) markRelicsSeen(run.relicIds)
+  }, [run])
   const [runWon, setRunWon] = useState(false)
   /** 이번 클리어로 새로 열린 난이도(결과 화면의 해금 배너). 없으면 null. */
   const [runUnlocked, setRunUnlocked] = useState<RunDifficulty | null>(null)
@@ -241,6 +259,17 @@ export default function App() {
     setPhase(next.status === 'won' ? 'run-end' : 'run-map')
   }, [])
 
+  /**
+   * 이번 층 전투의 props. **`run`이 바뀔 때만** 만든다.
+   *
+   * ⚠ 예전엔 렌더 본문에서 `runFightProps(run)`를 그냥 불렀다. 그러면 App이 리렌더될
+   *   때마다 덱 20여 장을 다시 해석하고 `Math.random()`을 세 번 굴린다 — 시작 위치
+   *   두 개와 **전투별 기분(`moodAgg`)**이다. `runbattle.ts`는 그 값을 "전투 시작 때
+   *   한 번만 굴린다"고 적어 두는데 실제로는 리렌더마다 다시 굴려지고 있었다.
+   *   전투 중엔 `run`이 안 바뀌므로 이제 정말 판당 한 번이다.
+   */
+  const runFight = useMemo(() => (run ? runFightProps(run) : null), [run])
+
   // one plan-exchange per connected match; disposed when the match changes
   const mpExchange = useMemo(
     () => (mpMatch ? createPlanExchange(mpMatch.transport, mpMatch.localSide) : null),
@@ -340,20 +369,22 @@ export default function App() {
     screen = <RunStartScreen onStart={beginRun} onBack={toTitle} />
   } else if (phase === 'run-map' && run) {
     screen = <RunMapScreen run={run} onChoose={chooseNode} onQuit={toTitle} />
-  } else if (phase === 'run-fight' && run) {
-    const fp = runFightProps(run)
+  } else if (phase === 'run-fight' && run && runFight) {
     screen = (
       <BattleScreen
-        key={`run-${run.floor}-${fp.p1CharId}`}
-        p0CharId={fp.p0CharId}
-        p1CharId={fp.p1CharId}
+        key={`run-${run.floor}-${runFight.p1CharId}`}
+        p0CharId={runFight.p0CharId}
+        p1CharId={runFight.p1CharId}
         localSide={0}
-        deck={fp.deck}
-        battleOpts={fp.battleOpts}
-        telegraph={fp.telegraph}
-        boss={fp.boss}
+        deck={runFight.deck}
+        battleOpts={runFight.battleOpts}
+        telegraph={runFight.telegraph}
+        boss={runFight.boss}
         scene={sceneFor(run)}
-        getOpponentPlan={fp.getOpponentPlan}
+        relics={run.relicIds}
+        place={`${regionOf(run.floor) === 'grassland' ? '초원' : '던전'} · ${run.floor}층`}
+        foeInfo={runFoeInfo(run)}
+        getOpponentPlan={runFight.getOpponentPlan}
         onEnd={runFightEnd}
         onQuit={toTitle}
       />

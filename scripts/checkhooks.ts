@@ -6,7 +6,7 @@
 // 실행: npm run check
 // ---------------------------------------------------------------------------
 import { CardBattle, planAffordable } from '../src/battle/engine'
-import { decideAI } from '../src/battle/ai'
+import { decideAI, THREAT_DAMAGE } from '../src/battle/ai'
 import { COMMON_CARDS, ENERGY_REGEN, deckFor } from '../src/battle/cards'
 import { SHEETS, placeSprite } from '../src/art/sprites'
 import { faceToward } from '../src/ui/screens/BattleScreen'
@@ -1730,40 +1730,88 @@ console.log('\nAI 예측 · 카드 대응')
   }
   check('easy도 다가올 자리를 조준한다(첫 자리 고정 아님)', easyAims > 0, true)
 
-  // ④ **아무것도 안 들어오는 라운드엔 가드를 들지 않는다**(대응 단계 = 최고급). 상대 계획이 전부 기력
-  //    회복이면 읽는 AI는 슬롯을 통째로 공격·이동에 쓴다(예전엔 확률로 그냥 들었다).
+  // ④ **아무것도 안 들어오는 라운드엔 가드를 들지 않는다**(대응 단계 = 최고급).
+  //    상대 계획이 전부 기력 회복이면 슬롯을 통째로 공격·이동에 쓴다.
   const GUARDY = MELEE.concat(card('c-guard'))
   const quiet = [card('c-energy'), card('c-energy'), card('c-energy')]
   let guardsWhenQuiet = 0
-  let guardsWhenHit = 0
-  // 아플 만한 한 방 — 상대(col 4)가 AI(col 3)를 확실히 때리는 계획.
-  const big = W.cards.filter((c) => c.kind === 'attack').sort((a, b) => (b.damage ?? 0) - (a.damage ?? 0))[0]
-  const scary = [card('c-energy'), big, card('c-energy')]
-  for (let i = 0; i < TRIES; i++) {
-    const react = true
-    if (
-      decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, { plan: quiet, react }).some(
-        (c) => c?.kind === 'guard',
-      )
-    )
-      guardsWhenQuiet++
-    if (
-      decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, { plan: scary, react }).some(
-        (c) => c?.kind === 'guard',
-      )
-    )
-      guardsWhenHit++
-  }
-  check('공격이 안 오는 라운드엔 가드를 안 든다', guardsWhenQuiet, 0)
-  check('아픈 한 방에는 막거나 피한다', guardsWhenHit > 0, true)
-
-  // ⑤ **대응은 라운드에 한 번뿐**이다 — 세 장을 다 막으면 플레이어가 큰 카드를 영영
-  //    못 꽂아 반대 방향으로 뻔해진다. 가드는 라운드 끝까지 남으므로 한 장이면 족하다.
-  let multi = 0
-  const barrage = [big, big, big]
   for (let i = 0; i < TRIES; i++) {
     if (
       decideAI(board(3, 4).state, 1, W, 'hard', GUARDY, undefined, {
+        plan: quiet,
+        react: true,
+      }).some((c) => c?.kind === 'guard')
+    )
+      guardsWhenQuiet++
+  }
+  check('공격이 안 오는 라운드엔 가드를 안 든다', guardsWhenQuiet, 0)
+
+  // ⑤ **대응은 "진짜 한 방"에만** — `THREAT_DAMAGE` 이상이거나 봉인기(기절·빙결·속박)
+  //    일 때만 막거나 피하고, 잔공격은 그냥 맞아 준다.
+  //
+  //    ⚠ **기대값을 손으로 적지 않는다.** 예전엔 "전사의 제일 센 카드"를 위협으로 썼는데
+  //    그게 23이고 임계값이 24로 올라가면서 **검사가 조용히 아무것도 안 재게 됐다**
+  //    (통과/실패가 무작위로 갈렸다). 이제 임계값과 카드를 둘 다 소스에서 끌어온다.
+  const facesMe = (c: CardDef) => (c.range ?? []).some((o) => o.df === 1 && o.du === 0)
+  const heavy = [...ROSTER.flatMap((c) => c.cards), ...RUN_CARDS]
+    .filter((c) => c.kind === 'attack' && facesMe(c) && (c.damage ?? 0) >= THREAT_DAMAGE)
+    .sort((a, b) => (b.damage ?? 0) - (a.damage ?? 0))[0]
+  check('임계값을 넘는 공격 카드가 실제로 존재한다', !!heavy, true)
+  check(
+    '직업 기본기는 임계값 아래이고 봉인도 없다',
+    (hit.damage ?? 0) < THREAT_DAMAGE && !hit.stun && !hit.freeze && !hit.bind,
+    true,
+  )
+
+  //    ⓐ 피할 길이 없으면(이동 카드 없음) 반드시 **막는다** — 확률이 안 끼어 결정적이다.
+  const BLOCK_ONLY = [...W.basics, card('c-guard')]
+  const scary = [card('c-energy'), heavy, card('c-energy')] // 제일 아픈 건 슬롯 1
+  let blocked = 0
+  for (let i = 0; i < TRIES; i++) {
+    const p = decideAI(board(3, 4).state, 1, W, 'hard', BLOCK_ONLY, undefined, {
+      plan: scary,
+      react: true,
+    })
+    // ⚠ 슬롯을 못 박지 않는다 — 보호막은 **라운드 끝까지** 남으므로 6%쯤은 슬롯 0의
+    //   확률적 가드가 먼저 서고, 그러면 슬롯 1의 대응은 (이미 막았으니) 건너뛴다.
+    //   재는 것은 "그 라운드에 보호막이 서는가"다.
+    if (p.some((c) => c?.kind === 'guard')) blocked++
+  }
+  check('아픈 한 방은 반드시 막는다(피할 길이 없을 때)', blocked, TRIES)
+
+  //    ⓑ 막을 길이 없으면(가드 카드 없음) **피한다**. 이동은 prio 0이라 같은 슬롯의
+  //       공격보다 먼저 해소되므로 그 슬롯 안에서 실제로 빗나가게 만든다.
+  const EVADE_ONLY = [...W.basics, ...COMMON_CARDS.filter((c) => c.kind === 'move')]
+  let evaded = 0
+  for (let i = 0; i < TRIES; i++) {
+    const p = decideAI(board(3, 4).state, 1, W, 'hard', EVADE_ONLY, undefined, {
+      plan: scary,
+      react: true,
+    })
+    if (p[1]?.kind === 'move') evaded++
+  }
+  check('막을 수 없으면 피한다', evaded, TRIES)
+
+  //    ⓒ **잔공격에는 반응하지 않는다.** 같은 자리에 기본기를 두면 그 슬롯은 대응이
+  //       아니라 평소대로 공격이 나가야 한다(가드가 나오는 건 확률적 헛가드뿐이다).
+  const chip = [card('c-energy'), hit, card('c-energy')]
+  let chipBlocked = 0
+  for (let i = 0; i < TRIES; i++) {
+    const p = decideAI(board(3, 4).state, 1, W, 'hard', BLOCK_ONLY, undefined, {
+      plan: chip,
+      react: true,
+    })
+    if (p[1]?.kind === 'guard') chipBlocked++
+  }
+  check('잔공격에는 대응하지 않는다', chipBlocked / TRIES < 0.25, true)
+
+  // ⑥ **대응은 라운드에 한 번뿐**이다 — 세 장을 다 막으면 플레이어가 큰 카드를 영영
+  //    못 꽂아 반대 방향으로 뻔해진다. 가드는 라운드 끝까지 남으므로 한 장이면 족하다.
+  let multi = 0
+  const barrage = [heavy, heavy, heavy]
+  for (let i = 0; i < TRIES; i++) {
+    if (
+      decideAI(board(3, 4).state, 1, W, 'hard', BLOCK_ONLY, undefined, {
         plan: barrage,
         react: true,
       }).filter((c) => c?.kind === 'guard').length > 1

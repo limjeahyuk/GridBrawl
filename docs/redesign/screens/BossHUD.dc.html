@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>보스 능력 공개</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}
+.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.l-fg{background-image:url(/redesign/bg/dungeon/foreground.png)}
+.board{background-image:url(/redesign/terrain/dungeon-tile.png);background-size:64px 64px;image-rendering:pixelated}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.s-dirge-idle{background-image:url(/redesign/sprites/dirge/idle.png)}
+.s-overlord-idle{background-image:url(/redesign/sprites/overlord/idle.png)}
+.rl{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-mini.png);background-size:320px 320px;background-repeat:no-repeat;image-rendering:pixelated}
+.fm{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-foe-mini.png);background-size:608px 32px;background-repeat:no-repeat;image-rendering:pixelated}
+.ff3{width:78px;height:78px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-foe-full.png);background-size:1482px 78px;background-repeat:no-repeat;image-rendering:pixelated}
+.q{animation:qpulse 1.4s ease-in-out infinite}
+@keyframes qpulse{0%,100%{box-shadow:0 0 0 1px rgba(255,74,58,0.2)}50%{box-shadow:0 0 0 2px rgba(255,74,58,0.8)}}
+.flip{animation:flip 3.2s infinite}
+@keyframes flip{0%,18%{transform:scaleX(1);background-position:-576px 0;filter:none}26%{transform:scaleX(0.05);background-position:-576px 0}26.01%{background-position:-256px 0}34%{transform:scaleX(1.25);background-position:-256px 0;filter:brightness(2.4)}42%{transform:scaleX(1);filter:brightness(1.2)}60%,100%{transform:scaleX(1);background-position:-256px 0;filter:none}}
+.burst{position:absolute;left:-16px;top:-16px;width:64px;height:64px;pointer-events:none;background-image:url(/redesign/ui/relics/proc-boss.png);background-size:384px 64px;background-repeat:no-repeat;image-rendering:pixelated;animation:burst 3.2s step-end infinite}
+@keyframes burst{0%,26%{background-position:0 0;opacity:0}28%{background-position:0 0;opacity:1}30%{background-position:-64px 0}32%{background-position:-128px 0}34%{background-position:-192px 0}36%{background-position:-256px 0}38%{background-position:-320px 0}40%,100%{opacity:0}}
+.ribbon{animation:ribbon 3.2s infinite;transform-origin:100% 50%}
+@keyframes ribbon{0%,26%{transform:scaleX(0);opacity:0}32%{transform:scaleX(1.03);opacity:1}36%{transform:scaleX(1)}84%{opacity:1}94%,100%{opacity:0}}
+.rise{animation:rise 3.2s infinite}
+@keyframes rise{0%,30%{opacity:0;transform:translateY(8px)}36%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(-14px)}80%,100%{opacity:0}}
+</style>
+</helmet>
+<div style="width: 1280px; height: 940px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; position: relative">
+  <section aria-label="보스전 화면" style="position: absolute; left: 0; top: 0; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12">
+    <div class="layer l-wall" aria-hidden="true"></div>
+    <div class="layer l-light" aria-hidden="true"></div>
+    <div class="layer l-floor" aria-hidden="true"></div>
+
+    <header style="position: absolute; left: 24px; right: 24px; top: 16px; height: 84px; display: grid; grid-template-columns: 1fr 220px 1fr; gap: 16px">
+      <div style="display: flex; gap: 12px; padding: 10px 14px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #8d6fd0">
+        <div aria-hidden="true" style="width: 58px; height: 58px; background: #1e1436; border: 2px solid #8d6fd0; overflow: hidden; position: relative">
+          <div class="spr n8 s-dirge-idle" style="position: absolute; left: -46px; top: -26px; width: 192px; height: 128px; background-size: 1536px 128px; animation-duration: 960ms"></div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between"><span style="font-family: 'Silkscreen', monospace; font-size: 18px; color: #fff6dc">DIRGE</span><span style="font-size: 12px; color: #e0d0ff">보호막 4</span></div>
+          <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 64%; height: 100%; background: #e0485a"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">50/78</span></div>
+          <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #7fc8ff">EN</span><div style="flex-grow: 1; height: 8px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 70%; height: 100%; background: #4a9aff"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">35</span></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 26px; color: #f4d470">ROUND 3</span>
+        <span style="font-size: 13px; color: #d8b8ff">던전 · 14층 · 최종 보스</span>
+      </div>
+      <div style="display: flex; gap: 12px; padding: 10px 14px; background: rgba(26,8,14,0.94); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #ff4a3a; flex-direction: row-reverse">
+        <div aria-hidden="true" style="width: 58px; height: 58px; background: #2a0a12; border: 2px solid #ff4a3a; overflow: hidden; position: relative">
+          <div class="spr n8 s-overlord-idle" style="position: absolute; left: -64px; top: -16px; width: 176px; height: 128px; background-size: 1408px 128px; animation-duration: 960ms; transform: scaleX(-1)"></div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; flex-direction: row-reverse; align-items: center"><span style="display: flex; gap: 8px; align-items: center"><span style="font-family: 'Silkscreen', monospace; font-size: 10px; padding: 2px 6px; background: #ff4a3a; color: #160408">BOSS</span><span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #fff6dc">오버로드</span></span><span style="font-size: 12px; color: #ffb0a0">1페이즈</span></div>
+          <div style="position: relative; display: flex; align-items: center; gap: 8px; flex-direction: row-reverse"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="position: relative; flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: 72%; height: 100%; background: #e0485a"></div><span aria-hidden="true" style="position: absolute; left: 60%; top: -4px; width: 2px; height: 20px; background: #fff6dc"></span></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px">101/140</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-direction: row-reverse"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #7fc8ff">EN</span><div style="flex-grow: 1; height: 8px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: 80%; height: 100%; background: #4a9aff"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px">40</span></div>
+        </div>
+      </div>
+    </header>
+
+    <div aria-label="DIRGE의 유물" style="position: absolute; left: 24px; top: 106px; display: flex; gap: 6px; padding: 6px 8px; background: rgba(18,15,26,0.86); border: 2px solid #0a0810">
+      <div class="rl" role="img" aria-label="혼백의 등불" style="background-position: -64px 0"></div>
+      <div class="rl" role="img" aria-label="수정 방벽" style="background-position: -160px -32px"></div>
+      <div class="rl" role="img" aria-label="잿불 인장" style="background-position: -288px -96px"></div>
+      <div class="rl" role="img" aria-label="종말의 모래시계" style="background-position: -64px -256px"></div>
+    </div>
+
+    <div aria-label="오버로드의 보스 유물" style="position: absolute; right: 24px; top: 106px; display: flex; gap: 6px; align-items: center; padding: 6px 8px; background: rgba(26,8,14,0.9); border: 2px solid #0a0810; box-shadow: inset 0 0 0 1px #5a1a24">
+      <span style="font-size: 11px; color: #ffb0a0; margin-right: 2px">보스 유물</span>
+      <div class="fm" role="img" aria-label="마왕의 관 — 공개됨" style="background-position: -192px 0"></div>
+      <div class="fm" role="img" aria-label="심연의 장막 — 공개됨" style="background-position: -224px 0"></div>
+      <div class="fm flip" role="img" aria-label="검은 비늘 — 지금 공개" style="background-position: -576px 0"><div class="burst" aria-hidden="true"></div></div>
+      <div class="fm q" role="img" aria-label="아직 드러나지 않은 보스 능력" style="background-position: -576px 0"></div>
+    </div>
+
+    <div class="ribbon" style="position: absolute; right: 24px; top: 152px; width: 520px; height: 96px; display: flex; align-items: center; gap: 16px; padding: 0 22px; box-sizing: border-box; background: linear-gradient(270deg, rgba(58,10,18,0) 0%, #3a0a12 10%, #3a0a12 100%); border-top: 2px solid #ff4a3a; border-bottom: 2px solid #ff4a3a; flex-direction: row-reverse">
+      <div class="ff3" role="img" aria-label="검은 비늘" style="background-position: -624px 0"></div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #ff8a7a; letter-spacing: 2px">BOSS RELIC REVEALED</span>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 28px; color: #fff6dc">검은 비늘</span>
+        <span style="font-size: 13px; color: #ffb0a0">받는 피해 -3 · 지금 막 처음 발동했다</span>
+      </div>
+    </div>
+
+    <div class="board" aria-hidden="true" style="position: absolute; left: 160px; top: 320px; width: 960px; height: 272px; border: 4px solid #0a0810; box-shadow: 0 0 0 2px #4a4566, 0 10px 0 #15131c; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, 68px)">
+      <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div style="border-right: 1px solid rgba(0,0,0,0.4); border-bottom: 1px solid rgba(0,0,0,0.4)"></div></sc-for>
+    </div>
+    <div class="spr n8 s-dirge-idle" role="img" aria-label="DIRGE" style="position: absolute; left: 326px; top: 390px; width: 192px; height: 128px; background-size: 1536px 128px; animation-duration: 960ms"></div>
+    <div class="spr n8 s-overlord-idle" role="img" aria-label="오버로드" style="position: absolute; left: 670px; top: 258px; width: 352px; height: 256px; background-size: 2816px 256px; animation-duration: 960ms; transform: scaleX(-1)"></div>
+    <div class="rise" aria-hidden="true" style="position: absolute; left: 820px; top: 300px; display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; background: rgba(26,8,14,0.92); border: 2px solid #ff4a3a">
+      <div class="fm" style="background-position: -256px 0"></div>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 17px">검은 비늘</span>
+      <span style="font-family: 'Silkscreen', monospace; font-size: 13px; color: #ffb0a0">-3</span>
+    </div>
+    <div class="layer l-fg" aria-hidden="true"></div>
+  </section>
+
+  <section style="position: absolute; left: 24px; top: 744px; right: 24px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+    <div style="padding: 12px 14px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; gap: 6px; align-items: center"><div class="fm" style="background-position: -576px 0"></div><div class="fm" style="background-position: -576px 0"></div><div class="fm" style="background-position: -576px 0"></div><div class="fm" style="background-position: -576px 0"></div></div>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">① 시작 — 개수만 보인다</span>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #c9c2d6">보스가 가진 능력 수만큼 붉은 ? 칸. 무엇인지는 모른다.</p>
+    </div>
+    <div style="padding: 12px 14px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; gap: 6px; align-items: center"><div class="fm" style="background-position: -192px 0"></div><div class="fm" style="background-position: -224px 0"></div><div class="fm" style="background-position: -576px 0"></div><div class="fm" style="background-position: -576px 0"></div></div>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">② 처음 작동하는 순간 공개</span>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #c9c2d6">라운드 시작 기력·보호막처럼 바로 쓰는 능력은 1라운드에 바로 뒤집힌다. ? 칸이 뒤집히며 번쩍 → 붉은 띠.</p>
+    </div>
+    <div style="padding: 12px 14px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; gap: 6px; align-items: center"><div class="fm" style="background-position: -192px 0"></div><div class="fm" style="background-position: -224px 0"></div><div class="fm" style="background-position: -256px 0"></div><div class="fm q" style="background-position: -576px 0"></div></div>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">③ 숨은 한 수</span>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #c9c2d6">부활처럼 늦게 터지는 능력은 끝까지 ?로 남아 긴장을 준다. 쓰러뜨렸을 때 「두 번째 형상」이 드러난다.</p>
+    </div>
+    <div style="padding: 12px 14px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; gap: 6px; align-items: center"><div class="fm" style="background-position: -416px 0"></div><div class="fm" style="background-position: -480px 0"></div><span style="font-size: 12px; color: #c9c2d6">일반 적</span></div>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">일반 · 엘리트도 같은 규칙</span>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #c9c2d6">일반 적은 갈색 테두리 능력(흉포 · 재생 · 분열…), 보스는 붉은 보스 유물. 한 번 본 능력은 다음에 만나도 처음부터 보인다.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { cells: Array.from({ length: 24 }, (_, i) => ({ i })) };
+  }
+}
+</script>
+</body>
+</html>

@@ -20,7 +20,7 @@ export function ModeSelectScreen({
       <div className="grid-bg" />
       <div className="deckmgr__bar">
         <button className="btn btn--ghost" onClick={onBack}>
-          ◀ 뒤로
+          ← 돌아가기
         </button>
         <h2 className="neon-text">모드 선택</h2>
         <div style={{ width: 90 }} />

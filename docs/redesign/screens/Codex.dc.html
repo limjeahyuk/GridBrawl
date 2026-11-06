@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>도감</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.m-cairn{background-image:url(/redesign/sprites/cairn/idle.png)}
+.m-sable{background-image:url(/redesign/sprites/sable/idle.png)}
+.m-dirge{background-image:url(/redesign/sprites/dirge/idle.png)}
+.m-slime{background-image:url(/redesign/sprites/slime/idle.png)}
+.m-goblin{background-image:url(/redesign/sprites/goblin/idle.png)}
+.m-ogre{background-image:url(/redesign/sprites/ogre/idle.png)}
+.m-bat{background-image:url(/redesign/sprites/bat/idle.png)}
+.m-golem{background-image:url(/redesign/sprites/golem/idle.png)}
+.m-witch{background-image:url(/redesign/sprites/witch/idle.png)}
+.m-warden{background-image:url(/redesign/sprites/warden/idle.png)}
+.m-pyrelord{background-image:url(/redesign/sprites/pyrelord/idle.png)}
+.m-overlord{background-image:url(/redesign/sprites/overlord/idle.png)}
+.sil{filter:brightness(0) drop-shadow(0 0 1px #4a4458)}
+.fm{width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-foe-mini.png);background-size:608px 32px;background-repeat:no-repeat;image-rendering:pixelated}
+.rl{width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-mini.png);background-size:320px 320px;background-repeat:no-repeat;image-rendering:pixelated}
+.rs{width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-silhouette-mini.png);background-size:320px 320px;background-repeat:no-repeat;image-rendering:pixelated}
+.tab{height:46px;padding:0 22px;background:#1a1626;border:2px solid #3a3150;border-bottom:none;color:#c9c2d6;font:inherit;font-family:'Do Hyeon',sans-serif;font-size:21px;cursor:pointer}
+.tab:hover{color:#fff6dc}
+.tab-on{background:#221c30;color:#fff6dc;border-color:#f4d470;box-shadow:inset 0 3px 0 #f4d470}
+.tile{position:relative;height:118px;background:#1a1626;border:2px solid #2a2438;overflow:hidden;cursor:pointer;padding:0;font:inherit;color:inherit}
+.tile:hover{border-color:#f4d470}
+.tile-on{border-color:#f4d470;box-shadow:inset 0 0 0 2px #f4d470}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; box-sizing: border-box; padding: 26px 40px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 0">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px">
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 36px; color: #fff6dc">도감</h1>
+    <a href="Main.dc.html" style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; text-decoration: none; padding: 8px 16px; border: 2px solid #4a4058; color: #efe9f5">← 돌아가기</a>
+  </div>
+  <div role="tablist" style="display: flex; gap: 6px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" class="tab {{t.cls}}" onClick="{{t.pick}}">{{t.label}} <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #b9b1c9">{{t.count}}</span></button></sc-for>
+  </div>
+  <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 360px; gap: 18px; padding: 18px; background: #221c30; border: 2px solid #3a3150">
+
+    <sc-if value="{{isHero}}" hint-placeholder-val="{{true}}">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-content: start">
+        <sc-for list="{{heroes}}" as="m" hint-placeholder-count="3">
+          <button type="button" class="tile {{m.on}}" onClick="{{m.pick}}" style="height: 230px">
+            <div class="spr {{m.cls}} {{m.n}}" aria-hidden="true" style="position: absolute; left: 50%; bottom: 40px; margin-left: -108px; width: 288px; height: 192px; background-size: {{m.bw}}px 192px; animation-duration: {{m.d}}ms"></div>
+            <span style="position: absolute; left: 0; right: 0; bottom: 0; padding: 8px; background: rgba(12,10,18,0.85); font-family: 'Silkscreen', monospace; font-size: 16px">{{m.name}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isMon}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{regions}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 17px; color: {{g.color}}">{{g.label}}</span>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+              <sc-for list="{{g.items}}" as="m" hint-placeholder-count="3">
+                <button type="button" class="tile {{m.on}}" onClick="{{m.pick}}" aria-label="{{m.name}}" style="height: 112px">
+                  <div class="spr {{m.cls}} {{m.n}} {{m.sil}}" aria-hidden="true" style="position: absolute; left: 50%; bottom: 22px; width: {{m.w}}px; height: {{m.h}}px; margin-left: {{m.ml}}px; background-size: {{m.bw}}px {{m.h}}px; animation-duration: {{m.d}}ms; transform: scale({{m.sc}}); transform-origin: 50% 100%"></div>
+                  <span style="position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px; background: rgba(12,10,18,0.85); font-size: 13px; color: {{m.nc}}">{{m.label}}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isRelic}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: repeat(14, 32px); gap: 8px 9px">
+          <sc-for list="{{relics}}" as="r" hint-placeholder-count="100"><div class="{{r.cls}}" role="img" aria-label="{{r.name}}" style="background-position: {{r.bp}}"></div></sc-for>
+        </div>
+        <a href="Relics.dc.html" style="font-size: 14px; margin-top: 6px">유물 도감 크게 보기 — 등급별 · 설명 →</a>
+      </div>
+    </sc-if>
+
+    <aside style="background: #1a1626; border: 2px solid #3a3150; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="position: relative; height: 170px; background: #120f1a; border: 2px solid #2a2438; overflow: hidden">
+        <div class="spr {{d.cls}} {{d.n}} {{d.sil}}" aria-hidden="true" style="position: absolute; left: 50%; bottom: 10px; width: {{d.w}}px; height: {{d.h}}px; margin-left: {{d.ml}}px; background-size: {{d.bw}}px {{d.h}}px; animation-duration: {{d.d}}ms; transform: scale({{d.sc}}); transform-origin: 50% 100%"></div>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: baseline"><h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px">{{d.name}}</h2><span style="font-size: 12px; color: {{d.tc}}">{{d.tag}}</span></div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #e4def0">{{d.note}}</p>
+      <sc-if value="{{d.hasAb}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; color: #b9b1c9">능력 · 전투에서 드러난 것만</span>
+          <div style="display: flex; gap: 6px"><sc-for list="{{d.ab}}" as="a" hint-placeholder-count="3"><div class="fm" role="img" aria-label="{{a.name}}" style="background-position: {{a.bp}}"></div></sc-for></div>
+        </div>
+      </sc-if>
+      <span style="margin-top: auto; font-size: 12px; color: #b9b1c9">{{d.stat}}</span>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'mon', sel: 'golem' };
+  }
+  renderVals() {
+    const tab = this.state.tab, sel = this.state.sel;
+    const M = {
+      cairn: { w: 96, h: 64, f: 6, ms: 120, name: 'CAIRN', note: '불침의 서약 — 받는 공격 피해 -3, 매 라운드 체력 +2.', tag: '전사 · HP 103', stat: '최고 기록: 초급 클리어', seen: true },
+      sable: { w: 96, h: 64, f: 6, ms: 125, name: 'SABLE', note: '독니 — 내 공격 피해 +3, 피해를 주면 중독 1라운드를 묻힌다.', tag: '궁수 · HP 81', stat: '최고 기록: 9층', seen: true },
+      dirge: { w: 96, h: 64, f: 8, ms: 120, name: 'DIRGE', note: '혼백의 등불 — 매 라운드 기력 +6, 보호막 +4.', tag: '마법사 · HP 78', stat: '아직 출발하지 않음', seen: true },
+      slime: { w: 64, h: 44, f: 6, ms: 130, name: '슬라임', note: '분열: 쓰러지면 작은 몸으로 한 번 되살아난다.', ab: [16], seen: true, kills: 23 },
+      goblin: { w: 72, h: 48, f: 6, ms: 110, name: '고블린', note: '재빠른 잡졸. 붙어서 찔러댄다.', ab: [], seen: true, kills: 17 },
+      ogre: { w: 120, h: 92, f: 6, ms: 140, name: '오우거', note: '느리지만 한 방이 무겁고, 넉백으로 떼어낸다.', ab: [12], seen: true, kills: 3 },
+      bat: { w: 64, h: 52, f: 6, ms: 80, name: '박쥐 떼', note: '흩어져 쏘는 약한 무리. 물량으로 갉는다.', ab: [10], seen: true, kills: 8 },
+      golem: { w: 120, h: 92, f: 6, ms: 150, name: '골렘', note: '거대한 바위 몸. 딜을 뚫기 전엔 꿈쩍도 안 한다.', ab: [12, 11], seen: true, kills: 1, hide: [1] },
+      witch: { w: 96, h: 64, f: 8, ms: 120, name: '마녀', note: '화면 끝에서 광역 폭발을 퍼붓는다. 쏜 직후가 빈틈이다.', ab: [10], seen: false },
+      warden: { w: 160, h: 112, f: 6, ms: 140, name: '수호기사', note: '엘리트 — 방벽을 올렸다 열며 보호막째 부순다.', ab: [0, 1, 2], seen: true, kills: 1, boss: true },
+      pyrelord: { w: 160, h: 112, f: 8, ms: 110, name: '화염군주', note: '엘리트 — 불씨를 모을수록 무거워진다. 길게 끌면 인페르노가 터진다.', ab: [3, 4, 5], seen: false, boss: true },
+      overlord: { w: 176, h: 128, f: 8, ms: 120, name: '오버로드', note: '보스 — 도망쳐도 끌어당겨 삼킨다. 보호막이 통하지 않는다.', ab: [6, 7, 8, 9], seen: false, boss: true },
+    };
+    const ABN = ['수호의 방벽', '흑철 판금', '서약의 맥동', '용암 주먹', '재 속의 핵', '불씨 모으기', '마왕의 관', '심연의 장막', '검은 비늘', '두 번째 형상', '기력 충전', '방벽', '단단한 몸', '흉포', '흡혈', '재생', '분열 · 부활'];
+    const tileOf = (id, s) => {
+      const m = M[id];
+      const sc = Math.min(1.6, 96 / m.h, 130 / m.w) * (s || 1);
+      return { cls: 'm-' + id, n: 'n' + m.f, w: m.w, h: m.h, ml: -m.w / 2, bw: m.w * m.f, d: m.f * m.ms, sc: sc.toFixed(2), sil: m.seen ? '' : 'sil' };
+    };
+    const mk = (id) => Object.assign(tileOf(id), { label: M[id].seen ? M[id].name : '???', name: M[id].seen ? M[id].name : '미발견 몬스터', nc: M[id].seen ? '#efe9f5' : '#8a849a', on: sel === id ? 'tile-on' : '', pick: () => this.setState({ sel: id }) });
+    const regions = [
+      { label: '초원', color: '#b6ea6a', items: ['slime', 'goblin', 'ogre'].map(mk) },
+      { label: '던전', color: '#c9c4ee', items: ['bat', 'golem', 'witch'].map(mk) },
+      { label: '보스', color: '#ff8a7a', items: ['warden', 'pyrelord', 'overlord'].map(mk) },
+    ];
+    const heroes = ['cairn', 'sable', 'dirge'].map((id) => ({ cls: 'm-' + id, n: 'n' + M[id].f, bw: 288 * M[id].f, d: M[id].f * M[id].ms, name: M[id].name, on: sel === id ? 'tile-on' : '', pick: () => this.setState({ sel: id }) }));
+    const relics = Array.from({ length: 100 }, (_, i) => {
+      const f = ((i * 37 + 11) % 100) < 46;
+      return { cls: f ? 'rl' : 'rs', name: f ? '유물' : '미발견 유물', bp: (-(i % 10) * 32) + 'px ' + (-Math.floor(i / 10) * 32) + 'px' };
+    });
+    const m = M[sel] || M.golem;
+    const t = tileOf(sel in M ? sel : 'golem', 1.25);
+    const isHero = sel === 'cairn' || sel === 'sable' || sel === 'dirge';
+    const hidden = m.hide || [];
+    const d = Object.assign({}, t, {
+      sc: (Math.min(2, 140 / m.h, 300 / m.w)).toFixed(2),
+      name: m.seen ? m.name : '???',
+      tag: isHero ? m.tag : m.seen ? (m.boss ? '보스 · 처치 ' + m.kills + '회' : '처치 ' + m.kills + '회') : '미발견',
+      tc: m.boss ? '#ff8a7a' : '#b9b1c9',
+      note: m.seen ? m.note : '아직 만나지 못한 적. 런에서 마주치면 모습이 드러난다.',
+      hasAb: !isHero && m.seen && (m.ab || []).length > 0,
+      ab: (m.ab || []).map((k, j) => (hidden.includes(j) ? { name: '아직 드러나지 않은 능력', bp: '-576px 0' } : { name: ABN[k], bp: (-k * 32) + 'px 0' })),
+      stat: isHero ? m.stat : m.seen ? '만난 지역 · ' + (['slime', 'goblin', 'ogre', 'warden'].includes(sel) ? '초원' : '던전') : '',
+    });
+    const tabs = [['hero', '영웅', '3', 'cairn'], ['mon', '몬스터', '9종 중 6', 'golem'], ['relic', '유물', '100종 중 46', 'golem']].map(([k, label, count, def]) => ({ label, count, cls: tab === k ? 'tab-on' : '', pick: () => this.setState({ tab: k, sel: k === 'hero' ? 'cairn' : sel === 'cairn' || sel === 'sable' || sel === 'dirge' ? def : sel }) }));
+    return { tabs, isHero: tab === 'hero', isMon: tab === 'mon', isRelic: tab === 'relic', regions, heroes, relics, d };
+  }
+}
+</script>
+</body>
+</html>

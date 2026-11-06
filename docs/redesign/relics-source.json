@@ -1,0 +1,2050 @@
+[
+ {
+  "id": "sig-warrior",
+  "name": "서약의 돌무덤",
+  "rarity": "rare",
+  "desc": "서약의 돌무덤: 최대 체력 +107, 받는 공격 피해 -2, 매 라운드 체력 +2, 피격 시 2 반사.",
+  "emoji": "🪦",
+  "effect": {
+   "damageReduction": 2,
+   "regen": 2,
+   "thorns": 2,
+   "maxHpBonus": 107
+  },
+  "mods": {}
+ },
+ {
+  "id": "sig-archer",
+  "name": "독니 화살통",
+  "rarity": "rare",
+  "desc": "독니 화살통: 최대 체력 +16, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 체력 2 흡수 + 중독 2라운드.",
+  "emoji": "🏹",
+  "effect": {
+   "attackBonus": 5,
+   "poisonOnHit": 2,
+   "damageReduction": 2,
+   "maxHpBonus": 16,
+   "lifesteal": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "sig-mage",
+  "name": "혼백의 등불",
+  "rarity": "rare",
+  "desc": "혼백의 등불: 최대 체력 +80, 받는 피해 -2. 매 라운드 기력 +5·보호막 +3, 피해를 주면 화상 2라운드를 묻힌다.",
+  "emoji": "🕯",
+  "effect": {
+   "turnEnergy": 5,
+   "turnShield": 3,
+   "burnOnHit": 2,
+   "damageReduction": 2,
+   "maxHpBonus": 80
+  },
+  "mods": {}
+ },
+ {
+  "id": "fang",
+  "name": "송곳니",
+  "rarity": "common",
+  "desc": "공격으로 피해를 주면 체력 3 회복.",
+  "emoji": "🦷",
+  "effect": {
+   "lifesteal": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "feather",
+  "name": "불꽃 깃털",
+  "rarity": "epic",
+  "desc": "전투당 한 번, 체력 20으로 되살아난다.",
+  "emoji": "🪶",
+  "effect": {
+   "revive": 20
+  },
+  "mods": {}
+ },
+ {
+  "id": "thorns",
+  "name": "가시 갑옷",
+  "rarity": "common",
+  "desc": "피해를 입으면 공격자에게 4 반사.",
+  "emoji": "🌵",
+  "effect": {
+   "thorns": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "heart",
+  "name": "심장 강화",
+  "rarity": "common",
+  "desc": "최대 체력 +15.",
+  "emoji": "❤️",
+  "effect": {
+   "maxHpBonus": 15
+  },
+  "mods": {}
+ },
+ {
+  "id": "battery",
+  "name": "예비 배터리",
+  "rarity": "common",
+  "desc": "매 라운드 기력 +4. 어느 세계에서 굴러떨어진 쇳덩이. 정체는 아무도 모른다.",
+  "emoji": "🔋",
+  "effect": {
+   "turnEnergy": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "nanobot",
+  "name": "치유의 이끼",
+  "rarity": "rare",
+  "desc": "매 라운드 체력 +3.",
+  "emoji": "🌿",
+  "effect": {
+   "regen": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "rage",
+  "name": "분노의 인장",
+  "rarity": "rare",
+  "desc": "내 공격 피해 +3.",
+  "emoji": "😤",
+  "effect": {
+   "attackBonus": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "plating",
+  "name": "두꺼운 판금",
+  "rarity": "common",
+  "desc": "받는 피해 -3.",
+  "emoji": "🪨",
+  "effect": {
+   "damageReduction": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "crystal",
+  "name": "수정 방벽",
+  "rarity": "common",
+  "desc": "매 라운드 보호막 +6.",
+  "emoji": "💠",
+  "effect": {
+   "turnShield": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "breaker",
+  "name": "파쇄 날",
+  "rarity": "rare",
+  "desc": "공격이 적중하면 상대 보호막을 전부 없앤다.",
+  "emoji": "🪚",
+  "effect": {
+   "shieldBreak": true
+  },
+  "mods": {}
+ },
+ {
+  "id": "leech-rune",
+  "name": "흡성의 룬",
+  "rarity": "rare",
+  "desc": "공격으로 피해를 주면 체력 5 회복.",
+  "emoji": "🔮",
+  "effect": {
+   "lifesteal": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "bulwark",
+  "name": "가시 방패",
+  "rarity": "rare",
+  "desc": "매 라운드 보호막 +4, 피격 시 3 반사.",
+  "emoji": "🛡",
+  "effect": {
+   "turnShield": 4,
+   "thorns": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "reactor",
+  "name": "작은 화로",
+  "rarity": "common",
+  "desc": "매 라운드 기력 +3, 보호막 +3.",
+  "emoji": "⚗️",
+  "effect": {
+   "turnEnergy": 3,
+   "turnShield": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "titanheart",
+  "name": "거인의 심장",
+  "rarity": "epic",
+  "desc": "최대 체력 +30.",
+  "emoji": "🫀",
+  "effect": {
+   "maxHpBonus": 30
+  },
+  "mods": {}
+ },
+ {
+  "id": "berserk",
+  "name": "광기의 낙인",
+  "rarity": "epic",
+  "desc": "내 공격 피해 +6, 최대 체력 -10.",
+  "emoji": "🩸",
+  "effect": {
+   "attackBonus": 6,
+   "maxHpBonus": -10
+  },
+  "mods": {}
+ },
+ {
+  "id": "phoenix2",
+  "name": "재의 부적",
+  "rarity": "epic",
+  "desc": "전투당 한 번, 체력 15으로 되살아난다.",
+  "emoji": "🕯",
+  "effect": {
+   "revive": 15
+  },
+  "mods": {}
+ },
+ {
+  "id": "aegis-core",
+  "name": "수호의 원석",
+  "rarity": "rare",
+  "desc": "매 라운드 보호막 +9.",
+  "emoji": "💎",
+  "effect": {
+   "turnShield": 9
+  },
+  "mods": {}
+ },
+ {
+  "id": "overdrive",
+  "name": "광휘의 각성",
+  "rarity": "rare",
+  "desc": "매 라운드 기력 +8.",
+  "emoji": "🌟",
+  "effect": {
+   "turnEnergy": 8
+  },
+  "mods": {}
+ },
+ {
+  "id": "ironwill",
+  "name": "강철 의지",
+  "rarity": "rare",
+  "desc": "받는 피해 -5.",
+  "emoji": "🪛",
+  "effect": {
+   "damageReduction": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "vitality",
+  "name": "활력의 정수",
+  "rarity": "epic",
+  "desc": "최대 체력 +23, 매 라운드 체력 +2.",
+  "emoji": "🌿",
+  "effect": {
+   "maxHpBonus": 23,
+   "regen": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "spark-chip",
+  "name": "불티 부적",
+  "rarity": "common",
+  "desc": "매 라운드 기력 +6.",
+  "emoji": "✨",
+  "effect": {
+   "turnEnergy": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "aegis-plate",
+  "name": "방벽판",
+  "rarity": "rare",
+  "desc": "매 라운드 보호막 +10.",
+  "emoji": "🔰",
+  "effect": {
+   "turnShield": 10
+  },
+  "mods": {}
+ },
+ {
+  "id": "greatfang",
+  "name": "대송곳니",
+  "rarity": "epic",
+  "desc": "공격으로 피해를 주면 체력 6 회복.",
+  "emoji": "🧛",
+  "effect": {
+   "lifesteal": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "spikes",
+  "name": "대못 갑옷",
+  "rarity": "rare",
+  "desc": "피해를 입으면 공격자에게 6 반사.",
+  "emoji": "🦔",
+  "effect": {
+   "thorns": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "eternal-ember",
+  "name": "영원의 불씨",
+  "rarity": "epic",
+  "desc": "전투당 한 번, 체력 30으로 되살아난다.",
+  "emoji": "🔆",
+  "effect": {
+   "revive": 30
+  },
+  "mods": {}
+ },
+ {
+  "id": "brute",
+  "name": "괴력의 장갑",
+  "rarity": "rare",
+  "desc": "내 공격 피해 +5.",
+  "emoji": "💪",
+  "effect": {
+   "attackBonus": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "regen-core",
+  "name": "재생의 씨앗",
+  "rarity": "rare",
+  "desc": "매 라운드 체력 +4.",
+  "emoji": "🌱",
+  "effect": {
+   "regen": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "glasscannon",
+  "name": "유리 심장",
+  "rarity": "epic",
+  "desc": "내 공격 피해 +9, 최대 체력 -20.",
+  "emoji": "🔻",
+  "effect": {
+   "attackBonus": 9,
+   "maxHpBonus": -20
+  },
+  "mods": {}
+ },
+ {
+  "id": "balance",
+  "name": "균형의 저울",
+  "rarity": "rare",
+  "desc": "매 라운드 기력 +3, 보호막 +3, 체력 +1.",
+  "emoji": "⚖️",
+  "effect": {
+   "turnEnergy": 3,
+   "turnShield": 3,
+   "regen": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "fortress",
+  "name": "성채의 주춧돌",
+  "rarity": "epic",
+  "desc": "최대 체력 +20, 받는 피해 -3.",
+  "emoji": "🏰",
+  "effect": {
+   "maxHpBonus": 20,
+   "damageReduction": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "quickcharge",
+  "name": "성급한 각성",
+  "rarity": "common",
+  "desc": "매 라운드 기력 +5, 내 공격 피해 +2.",
+  "emoji": "🌠",
+  "effect": {
+   "turnEnergy": 5,
+   "attackBonus": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "lifebloom",
+  "name": "생명꽃",
+  "rarity": "rare",
+  "desc": "최대 체력 +10, 매 라운드 체력 +3.",
+  "emoji": "🌸",
+  "effect": {
+   "maxHpBonus": 10,
+   "regen": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "razor",
+  "name": "면도날 파편",
+  "rarity": "rare",
+  "desc": "내 공격 피해 +3, 적중 시 상대 보호막 제거.",
+  "emoji": "🔪",
+  "effect": {
+   "attackBonus": 3,
+   "shieldBreak": true
+  },
+  "mods": {}
+ },
+ {
+  "id": "juggernaut",
+  "name": "파성추",
+  "rarity": "epic",
+  "desc": "최대 체력 +15, 내 공격 피해 +4.",
+  "emoji": "🐂",
+  "effect": {
+   "maxHpBonus": 15,
+   "attackBonus": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "sanctuary",
+  "name": "성역의 문장",
+  "rarity": "epic",
+  "desc": "매 라운드 보호막 +7, 체력 +3.",
+  "emoji": "⛩",
+  "effect": {
+   "turnShield": 7,
+   "regen": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "capacitor",
+  "name": "넘치는 술잔",
+  "rarity": "epic",
+  "desc": "기력을 100 쓸 때마다 상대를 그 라운드 기절시킨다.",
+  "emoji": "🍷",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 100,
+     "stun": 1,
+     "label": "술잔 범람"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "coil",
+  "name": "뇌운의 고리",
+  "rarity": "legend",
+  "desc": "기력을 60 쓸 때마다 상대를 그 라운드 기절시키고 13 고정 피해를 준다.",
+  "emoji": "⚡",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 60,
+     "stun": 1,
+     "damage": 13,
+     "label": "뇌격"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "circuit",
+  "name": "순환의 매듭",
+  "rarity": "rare",
+  "desc": "기력을 50 쓸 때마다 체력을 13 회복한다.",
+  "emoji": "🔗",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 50,
+     "heal": 13,
+     "label": "순환"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "condenser",
+  "name": "응결의 수정",
+  "rarity": "rare",
+  "desc": "기력을 40 쓸 때마다 보호막 +15.",
+  "emoji": "🔆",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 40,
+     "shield": 15,
+     "label": "응결"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "flywheel",
+  "name": "쉼 없는 물레",
+  "rarity": "epic",
+  "desc": "기력을 45 쓸 때마다 기력 +23. 큰 카드를 계속 쏘게 해준다.",
+  "emoji": "🌀",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 45,
+     "energy": 23,
+     "label": "물레 회전"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "reservoir",
+  "name": "심층 저수조",
+  "rarity": "legend",
+  "desc": "기력을 30 쓸 때마다 체력 +6, 보호막 +6, 기력 +10.",
+  "emoji": "🛢",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 30,
+     "heal": 6,
+     "shield": 6,
+     "energy": 10,
+     "label": "저수조 방출"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "lastditch",
+  "name": "벼랑의 각오",
+  "rarity": "epic",
+  "desc": "체력이 절반 이하면 내 공격 피해 +50%.",
+  "emoji": "🔥",
+  "effect": {
+   "lowHpBonusPct": 50
+  },
+  "mods": {}
+ },
+ {
+  "id": "deathwish",
+  "name": "사경의 광기",
+  "rarity": "legend",
+  "desc": "체력이 절반 이하면 내 공격 피해 +100%. 최대 체력 -12.",
+  "emoji": "💀",
+  "effect": {
+   "lowHpBonusPct": 100,
+   "maxHpBonus": -12
+  },
+  "mods": {}
+ },
+ {
+  "id": "emberheart",
+  "name": "잿불 심장",
+  "rarity": "rare",
+  "desc": "체력이 절반 이하면 내 공격 피해 +25%, 매 라운드 체력 +2.",
+  "emoji": "🫀",
+  "effect": {
+   "lowHpBonusPct": 25,
+   "regen": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "voidedge",
+  "name": "공허의 날",
+  "rarity": "legend",
+  "desc": "내 모든 공격이 상대 보호막을 무시하고 관통한다.",
+  "emoji": "🗡",
+  "effect": {
+   "alwaysPierce": true
+  },
+  "mods": {}
+ },
+ {
+  "id": "concussor",
+  "name": "강타의 인장",
+  "rarity": "epic",
+  "desc": "전투당 두 번, 내 공격이 피해를 주면 상대를 그 라운드 기절시킨다.",
+  "emoji": "💥",
+  "effect": {
+   "stunOnHit": 1,
+   "stunCap": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "firstguard",
+  "name": "선제 방벽",
+  "rarity": "common",
+  "desc": "전투 첫 라운드에 보호막 +20.",
+  "emoji": "🚧",
+  "effect": {
+   "openingShield": 40
+  },
+  "mods": {}
+ },
+ {
+  "id": "warmup",
+  "name": "불씨 지피기",
+  "rarity": "common",
+  "desc": "전투 첫 라운드에 보호막 +10, 매 라운드 기력 +3.",
+  "emoji": "🔥",
+  "effect": {
+   "openingShield": 20,
+   "turnEnergy": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "taser",
+  "name": "마비의 가시",
+  "rarity": "rare",
+  "desc": "기력을 75 쓸 때마다 상대를 그 라운드 기절시킨다.",
+  "emoji": "🦂",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 75,
+     "stun": 1,
+     "label": "마비"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "dischargelens",
+  "name": "집광 수정",
+  "rarity": "epic",
+  "desc": "기력을 55 쓸 때마다 상대에게 18 고정 피해(보호막 무시).",
+  "emoji": "🔮",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 55,
+     "damage": 18,
+     "label": "집광"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "thorncrown",
+  "name": "가시 왕관",
+  "rarity": "epic",
+  "desc": "피해를 입으면 공격자에게 8 반사.",
+  "emoji": "👑",
+  "effect": {
+   "thorns": 8
+  },
+  "mods": {}
+ },
+ {
+  "id": "hedgehog",
+  "name": "고슴도치 갑주",
+  "rarity": "rare",
+  "desc": "받는 피해 -3, 피격 시 공격자에게 4 반사.",
+  "emoji": "🦔",
+  "effect": {
+   "damageReduction": 3,
+   "thorns": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "sanctum",
+  "name": "재생의 성소",
+  "rarity": "epic",
+  "desc": "매 라운드 체력 +6.",
+  "emoji": "🌿",
+  "effect": {
+   "regen": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "reaperscythe",
+  "name": "수확자의 낫",
+  "rarity": "rare",
+  "desc": "공격으로 피해를 주면 체력 3 회복. 내 공격 피해 +3.",
+  "emoji": "🌾",
+  "effect": {
+   "lifesteal": 3,
+   "attackBonus": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "lastresort",
+  "name": "배수진",
+  "rarity": "epic",
+  "desc": "체력이 절반 이하면 내 공격 피해 +40%. 피격 시 공격자에게 4 반사.",
+  "emoji": "🩸",
+  "effect": {
+   "lowHpBonusPct": 40,
+   "thorns": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "piercecore",
+  "name": "꿰뚫는 송곳",
+  "rarity": "epic",
+  "desc": "내 모든 공격이 상대 보호막을 관통한다. 최대 체력 -12.",
+  "emoji": "🪡",
+  "effect": {
+   "alwaysPierce": true,
+   "maxHpBonus": -12
+  },
+  "mods": {}
+ },
+ {
+  "id": "chainshock",
+  "name": "연쇄 벼락",
+  "rarity": "epic",
+  "desc": "전투당 세 번, 내 공격이 피해를 주면 상대를 그 라운드 기절시킨다.",
+  "emoji": "⛈",
+  "effect": {
+   "stunOnHit": 1,
+   "stunCap": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "vanguard",
+  "name": "선봉대장",
+  "rarity": "rare",
+  "desc": "전투 첫 라운드에 보호막 +15. 내 공격 피해 +3.",
+  "emoji": "🎖",
+  "effect": {
+   "openingShield": 30,
+   "attackBonus": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "meditation",
+  "name": "명상의 룬",
+  "rarity": "common",
+  "desc": "매 라운드 체력 +3, 보호막 +3.",
+  "emoji": "🧘",
+  "effect": {
+   "regen": 3,
+   "turnShield": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "giantserum",
+  "name": "거인 혈청",
+  "rarity": "legend",
+  "desc": "최대 체력 +43.",
+  "emoji": "🧪",
+  "effect": {
+   "maxHpBonus": 43
+  },
+  "mods": {}
+ },
+ {
+  "id": "tinder",
+  "name": "불씨 심지",
+  "rarity": "rare",
+  "desc": "전투당 한 번 체력 13로 되살아난다. 매 라운드 체력 +2.",
+  "emoji": "🪔",
+  "effect": {
+   "revive": 13,
+   "regen": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "bloodpact-relic",
+  "name": "피의 계약",
+  "rarity": "legend",
+  "desc": "내 공격 피해 +6. 공격으로 피해를 주면 체력 4 회복. 최대 체력 -7.",
+  "emoji": "🩸",
+  "effect": {
+   "attackBonus": 6,
+   "lifesteal": 4,
+   "maxHpBonus": -7
+  },
+  "mods": {}
+ },
+ {
+  "id": "coupon",
+  "name": "상인의 인증패",
+  "rarity": "common",
+  "desc": "상점 가격 20% 할인.",
+  "emoji": "🏷",
+  "effect": {},
+  "mods": {
+   "shopDiscountPct": 20
+  }
+ },
+ {
+  "id": "blackcard",
+  "name": "암시장 카드",
+  "rarity": "epic",
+  "desc": "상점 가격 40% 할인, 골드 획득 +20%.",
+  "emoji": "💳",
+  "effect": {},
+  "mods": {
+   "shopDiscountPct": 40,
+   "goldBonusPct": 20
+  }
+ },
+ {
+  "id": "purse",
+  "name": "두툼한 지갑",
+  "rarity": "common",
+  "desc": "전투 승리 골드 +35%.",
+  "emoji": "💰",
+  "effect": {},
+  "mods": {
+   "goldBonusPct": 35
+  }
+ },
+ {
+  "id": "compass",
+  "name": "탐색가의 나침반",
+  "rarity": "rare",
+  "desc": "승리 보상 선택지 +1칸.",
+  "emoji": "🧭",
+  "effect": {},
+  "mods": {
+   "rewardOptions": 1
+  }
+ },
+ {
+  "id": "divining",
+  "name": "점술 수정구",
+  "rarity": "legend",
+  "desc": "승리 보상 선택지 +2칸, 일반 전투 보상에 유물이 섞일 확률 +12%p.",
+  "emoji": "🔮",
+  "effect": {},
+  "mods": {
+   "rewardOptions": 2,
+   "relicChanceBonus": 0.12
+  }
+ },
+ {
+  "id": "satchel",
+  "name": "확장 가방",
+  "rarity": "common",
+  "desc": "덱 상한 +4장.",
+  "emoji": "🎒",
+  "effect": {},
+  "mods": {
+   "deckCapBonus": 4
+  }
+ },
+ {
+  "id": "balm",
+  "name": "치유 향유",
+  "rarity": "rare",
+  "desc": "모든 회복 효과 +50%(보상 포기·이벤트·상점).",
+  "emoji": "🧴",
+  "effect": {},
+  "mods": {
+   "healBonusPct": 50
+  }
+ },
+ {
+  "id": "midastouch",
+  "name": "황금손",
+  "rarity": "rare",
+  "desc": "전투 승리 골드 +55%.",
+  "emoji": "🖐",
+  "effect": {},
+  "mods": {
+   "goldBonusPct": 55
+  }
+ },
+ {
+  "id": "luckycharm",
+  "name": "행운의 편자",
+  "rarity": "rare",
+  "desc": "일반 전투 보상에 유물이 섞일 확률 +8%p.",
+  "emoji": "🍀",
+  "effect": {},
+  "mods": {
+   "relicChanceBonus": 0.08
+  }
+ },
+ {
+  "id": "lockpick",
+  "name": "만능 열쇠",
+  "rarity": "epic",
+  "desc": "상점 가격 30% 할인, 덱 상한 +3장.",
+  "emoji": "🗝",
+  "effect": {},
+  "mods": {
+   "shopDiscountPct": 30,
+   "deckCapBonus": 3
+  }
+ },
+ {
+  "id": "venomflask",
+  "name": "독약 플라스크",
+  "rarity": "common",
+  "desc": "공격으로 피해를 주면 중독 1라운드를 묻힌다.",
+  "emoji": "🧪",
+  "effect": {
+   "poisonOnHit": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "emberbrand",
+  "name": "잉걸 낙인",
+  "rarity": "common",
+  "desc": "공격으로 피해를 주면 화상 1라운드를 묻힌다.",
+  "emoji": "🔥",
+  "effect": {
+   "burnOnHit": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "coldiron",
+  "name": "차가운 쇠",
+  "rarity": "common",
+  "desc": "상태이상에 걸린 상대에게 주는 피해 +3.",
+  "emoji": "❄️",
+  "effect": {
+   "bonusVsAfflicted": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "wickedmortar",
+  "name": "사악한 절구",
+  "rarity": "rare",
+  "desc": "내가 거는 중독·화상 위력 +40%.",
+  "emoji": "⚗️",
+  "effect": {
+   "statusPowerPct": 40
+  },
+  "mods": {}
+ },
+ {
+  "id": "plaguebearer",
+  "name": "역병 운반자",
+  "rarity": "rare",
+  "desc": "피해를 주면 중독 2라운드를 묻히고, 내 중독·화상 위력 +20%.",
+  "emoji": "🐀",
+  "effect": {
+   "poisonOnHit": 2,
+   "statusPowerPct": 20
+  },
+  "mods": {}
+ },
+ {
+  "id": "pyremark",
+  "name": "화형의 표식",
+  "rarity": "epic",
+  "desc": "피해를 주면 화상 2라운드를 묻히고, 상태이상에 걸린 상대에게 피해 +4.",
+  "emoji": "🕯",
+  "effect": {
+   "burnOnHit": 2,
+   "bonusVsAfflicted": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "hunterspite",
+  "name": "사냥꾼의 앙심",
+  "rarity": "epic",
+  "desc": "상태이상에 걸린 상대에게 피해 +7. 보호막을 무시한다.",
+  "emoji": "🎯",
+  "effect": {
+   "bonusVsAfflicted": 7,
+   "alwaysPierce": true
+  },
+  "mods": {}
+ },
+ {
+  "id": "rotcrown",
+  "name": "부패의 왕관",
+  "rarity": "legend",
+  "desc": "피해를 주면 중독 2라운드·화상 2라운드를 함께 묻히고, 중독·화상 위력 +50%, 상태이상 상대에게 피해 +5.",
+  "emoji": "👑",
+  "effect": {
+   "poisonOnHit": 2,
+   "burnOnHit": 2,
+   "statusPowerPct": 50,
+   "bonusVsAfflicted": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "frostbite",
+  "name": "동상의 손",
+  "rarity": "common",
+  "desc": "전투당 두 번, 피해를 주면 상대를 그 라운드 빙결.",
+  "emoji": "🧊",
+  "effect": {
+   "freezeOnHit": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "glacier",
+  "name": "빙하의 파편",
+  "rarity": "rare",
+  "desc": "전투당 세 번, 피해를 주면 상대를 그 라운드 빙결. 받는 피해 -2.",
+  "emoji": "❄️",
+  "effect": {
+   "freezeOnHit": 1,
+   "freezeCap": 3,
+   "damageReduction": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "permafrost",
+  "name": "만년설",
+  "rarity": "epic",
+  "desc": "전투당 네 번, 피해를 주면 상대를 그 라운드 빙결. 내 공격 피해 +3.",
+  "emoji": "🏔",
+  "effect": {
+   "freezeOnHit": 1,
+   "freezeCap": 4,
+   "attackBonus": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "rimeheart",
+  "name": "서릿발 심장",
+  "rarity": "legend",
+  "desc": "전투당 여섯 번, 피해를 주면 상대를 그 라운드 빙결. 상태이상 상대에게 피해 +6.",
+  "emoji": "💙",
+  "effect": {
+   "freezeOnHit": 1,
+   "freezeCap": 6,
+   "bonusVsAfflicted": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "coldsnap",
+  "name": "한파",
+  "rarity": "rare",
+  "desc": "전투당 두 번 빙결을 걸고, 내가 거는 중독·화상 위력 +25%.",
+  "emoji": "🌨",
+  "effect": {
+   "freezeOnHit": 1,
+   "statusPowerPct": 25
+  },
+  "mods": {}
+ },
+ {
+  "id": "buckler",
+  "name": "단단한 손잡이",
+  "rarity": "common",
+  "desc": "수비 카드의 흡수량 +35%.",
+  "emoji": "🛡",
+  "effect": {
+   "guardPowerPct": 35
+  },
+  "mods": {}
+ },
+ {
+  "id": "towershield",
+  "name": "탑 방패",
+  "rarity": "rare",
+  "desc": "수비 카드의 흡수량 +60%.",
+  "emoji": "🗼",
+  "effect": {
+   "guardPowerPct": 60
+  },
+  "mods": {}
+ },
+ {
+  "id": "rampart",
+  "name": "성벽의 맹세",
+  "rarity": "epic",
+  "desc": "수비 카드의 흡수량 +80%, 최대 체력 +13.",
+  "emoji": "🧱",
+  "effect": {
+   "guardPowerPct": 80,
+   "maxHpBonus": 13
+  },
+  "mods": {}
+ },
+ {
+  "id": "aegisoath",
+  "name": "불괴의 서약",
+  "rarity": "legend",
+  "desc": "수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.",
+  "emoji": "⚜️",
+  "effect": {
+   "guardPowerPct": 120,
+   "openingShield": 40,
+   "damageReduction": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "spiked-boss",
+  "name": "가시 방패심",
+  "rarity": "rare",
+  "desc": "수비 카드의 흡수량 +40%, 피격 시 5 반사.",
+  "emoji": "🔩",
+  "effect": {
+   "guardPowerPct": 40,
+   "thorns": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "poultice",
+  "name": "약초 습포",
+  "rarity": "common",
+  "desc": "회복 카드와 매 라운드 체력 회복 +40%.",
+  "emoji": "🌾",
+  "effect": {
+   "healPowerPct": 40
+  },
+  "mods": {}
+ },
+ {
+  "id": "elixir",
+  "name": "비약",
+  "rarity": "rare",
+  "desc": "회복량 +70%, 매 라운드 체력 +2.",
+  "emoji": "⚗️",
+  "effect": {
+   "healPowerPct": 70,
+   "regen": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "lifewell",
+  "name": "생명의 우물",
+  "rarity": "epic",
+  "desc": "회복량 +100%, 매 라운드 체력 +3.",
+  "emoji": "🕳",
+  "effect": {
+   "healPowerPct": 100,
+   "regen": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "worldtree",
+  "name": "세계수 가지",
+  "rarity": "legend",
+  "desc": "회복량 +140%, 매 라운드 체력 +4, 최대 체력 +15.",
+  "emoji": "🌳",
+  "effect": {
+   "healPowerPct": 140,
+   "regen": 4,
+   "maxHpBonus": 15
+  },
+  "mods": {}
+ },
+ {
+  "id": "bloodleaf",
+  "name": "피의 잎사귀",
+  "rarity": "rare",
+  "desc": "회복량 +50%, 피해를 주면 체력 3 회복.",
+  "emoji": "🍁",
+  "effect": {
+   "healPowerPct": 50,
+   "lifesteal": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "primer",
+  "name": "점화약",
+  "rarity": "common",
+  "desc": "전투 시작 기력 +13.",
+  "emoji": "🧨",
+  "effect": {
+   "startEnergyBonus": 13
+  },
+  "mods": {}
+ },
+ {
+  "id": "kindling",
+  "name": "마른 장작",
+  "rarity": "common",
+  "desc": "전투 시작 기력 +8, 첫 라운드 보호막 +8.",
+  "emoji": "🪵",
+  "effect": {
+   "startEnergyBonus": 8,
+   "openingShield": 15
+  },
+  "mods": {}
+ },
+ {
+  "id": "jumpstart",
+  "name": "출진의 북",
+  "rarity": "rare",
+  "desc": "전투 시작 기력 +20.",
+  "emoji": "🥁",
+  "effect": {
+   "startEnergyBonus": 20
+  },
+  "mods": {}
+ },
+ {
+  "id": "bigbang",
+  "name": "개전의 봉화",
+  "rarity": "epic",
+  "desc": "전투 시작 기력 +28, 내 공격 피해 +3.",
+  "emoji": "🧨",
+  "effect": {
+   "startEnergyBonus": 28,
+   "attackBonus": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "firstlight",
+  "name": "여명의 불꽃",
+  "rarity": "legend",
+  "desc": "전투 시작 기력 +35, 첫 라운드 보호막 +23, 매 라운드 기력 +4.",
+  "emoji": "🌅",
+  "effect": {
+   "startEnergyBonus": 35,
+   "openingShield": 45,
+   "turnEnergy": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "finisher",
+  "name": "마무리 칼",
+  "rarity": "common",
+  "desc": "상대 체력이 절반 이하면 내 공격 피해 +25%.",
+  "emoji": "🔪",
+  "effect": {
+   "executeBonusPct": 25
+  },
+  "mods": {}
+ },
+ {
+  "id": "headsman",
+  "name": "망나니의 도끼",
+  "rarity": "rare",
+  "desc": "상대 체력이 절반 이하면 내 공격 피해 +45%.",
+  "emoji": "🪓",
+  "effect": {
+   "executeBonusPct": 45
+  },
+  "mods": {}
+ },
+ {
+  "id": "guillotine",
+  "name": "단두대",
+  "rarity": "epic",
+  "desc": "상대 체력이 절반 이하면 내 공격 피해 +70%.",
+  "emoji": "⚰️",
+  "effect": {
+   "executeBonusPct": 70
+  },
+  "mods": {}
+ },
+ {
+  "id": "reaperveil",
+  "name": "사신의 장막",
+  "rarity": "legend",
+  "desc": "상대 체력이 절반 이하면 내 공격 피해 +100%. 보호막을 무시한다.",
+  "emoji": "☠️",
+  "effect": {
+   "executeBonusPct": 100,
+   "alwaysPierce": true
+  },
+  "mods": {}
+ },
+ {
+  "id": "vulture",
+  "name": "독수리 눈",
+  "rarity": "rare",
+  "desc": "상대가 반피 이하면 피해 +30%, 피해를 주면 체력 3 회복.",
+  "emoji": "🦅",
+  "effect": {
+   "executeBonusPct": 30,
+   "lifesteal": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "closer",
+  "name": "숨통",
+  "rarity": "epic",
+  "desc": "상대가 반피 이하면 피해 +40%, 내가 반피 이하면 피해 +40%.",
+  "emoji": "🫁",
+  "effect": {
+   "executeBonusPct": 40,
+   "lowHpBonusPct": 40
+  },
+  "mods": {}
+ },
+ {
+  "id": "ironshoes",
+  "name": "무쇠 신발",
+  "rarity": "common",
+  "desc": "무너진 칸에서 받는 피해 -4.",
+  "emoji": "🥾",
+  "effect": {
+   "collapseResist": 8
+  },
+  "mods": {}
+ },
+ {
+  "id": "anchorstone",
+  "name": "고정 말뚝",
+  "rarity": "rare",
+  "desc": "무너진 칸에서 받는 피해 -7, 최대 체력 +8.",
+  "emoji": "⚓",
+  "effect": {
+   "collapseResist": 14,
+   "maxHpBonus": 8
+  },
+  "mods": {}
+ },
+ {
+  "id": "skywalk",
+  "name": "허공 걸음",
+  "rarity": "epic",
+  "desc": "무너진 칸에서 받는 피해 -12. 무너진 판을 그냥 딛고 선다.",
+  "emoji": "☁️",
+  "effect": {
+   "collapseResist": 24
+  },
+  "mods": {}
+ },
+ {
+  "id": "worldpillar",
+  "name": "세계의 기둥",
+  "rarity": "legend",
+  "desc": "무너진 칸 피해를 완전히 무시하고, 매 라운드 보호막 +6.",
+  "emoji": "🏛",
+  "effect": {
+   "collapseResist": 99,
+   "turnShield": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "gravepact",
+  "name": "무덤의 약조",
+  "rarity": "rare",
+  "desc": "전투당 한 번 체력 18로 되살아난다. 받는 피해 -2.",
+  "emoji": "⚱️",
+  "effect": {
+   "revive": 18,
+   "damageReduction": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "secondwind",
+  "name": "두 번째 숨",
+  "rarity": "epic",
+  "desc": "전투당 한 번 체력 23로 되살아나고, 되살아날 힘으로 매 라운드 체력 +3.",
+  "emoji": "🌬",
+  "effect": {
+   "revive": 23,
+   "regen": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "stoneskin",
+  "name": "돌갗",
+  "rarity": "epic",
+  "desc": "받는 피해 -7.",
+  "emoji": "🗿",
+  "effect": {
+   "damageReduction": 7
+  },
+  "mods": {}
+ },
+ {
+  "id": "adamant",
+  "name": "금강석 갑주",
+  "rarity": "legend",
+  "desc": "받는 피해 -9, 최대 체력 +13.",
+  "emoji": "💎",
+  "effect": {
+   "damageReduction": 9,
+   "maxHpBonus": 13
+  },
+  "mods": {}
+ },
+ {
+  "id": "warhorn",
+  "name": "전쟁 나팔",
+  "rarity": "common",
+  "desc": "내 공격 피해 +2, 첫 라운드 보호막 +9.",
+  "emoji": "📯",
+  "effect": {
+   "attackBonus": 2,
+   "openingShield": 18
+  },
+  "mods": {}
+ },
+ {
+  "id": "duelist",
+  "name": "결투가의 검",
+  "rarity": "epic",
+  "desc": "내 공격 피해 +8.",
+  "emoji": "🤺",
+  "effect": {
+   "attackBonus": 8
+  },
+  "mods": {}
+ },
+ {
+  "id": "godslayer",
+  "name": "신살자의 창",
+  "rarity": "legend",
+  "desc": "내 공격 피해 +10, 보호막을 무시한다. 최대 체력 -10.",
+  "emoji": "🔱",
+  "effect": {
+   "attackBonus": 10,
+   "alwaysPierce": true,
+   "maxHpBonus": -10
+  },
+  "mods": {}
+ },
+ {
+  "id": "gluttony",
+  "name": "탐식의 이빨",
+  "rarity": "legend",
+  "desc": "피해를 주면 체력 8 회복. 최대 체력 -10.",
+  "emoji": "😋",
+  "effect": {
+   "lifesteal": 8,
+   "maxHpBonus": -10
+  },
+  "mods": {}
+ },
+ {
+  "id": "moonwell",
+  "name": "달빛 샘",
+  "rarity": "rare",
+  "desc": "매 라운드 체력 +2, 보호막 +5.",
+  "emoji": "🌙",
+  "effect": {
+   "regen": 2,
+   "turnShield": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "dynamo",
+  "name": "마력의 샘",
+  "rarity": "rare",
+  "desc": "매 라운드 기력 +6, 시작 기력 +10.",
+  "emoji": "💧",
+  "effect": {
+   "turnEnergy": 6,
+   "startEnergyBonus": 10
+  },
+  "mods": {}
+ },
+ {
+  "id": "stormcell",
+  "name": "폭풍의 정수",
+  "rarity": "epic",
+  "desc": "매 라운드 기력 +9, 시작 기력 +13.",
+  "emoji": "🌩",
+  "effect": {
+   "turnEnergy": 9,
+   "startEnergyBonus": 13
+  },
+  "mods": {}
+ },
+ {
+  "id": "perpetual",
+  "name": "영원의 수레바퀴",
+  "rarity": "legend",
+  "desc": "매 라운드 기력 +12, 보호막 +5.",
+  "emoji": "☸️",
+  "effect": {
+   "turnEnergy": 12,
+   "turnShield": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "barbwire",
+  "name": "가시철선",
+  "rarity": "common",
+  "desc": "피격 시 공격자에게 3 반사.",
+  "emoji": "🪢",
+  "effect": {
+   "thorns": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "retribution",
+  "name": "응보의 문장",
+  "rarity": "legend",
+  "desc": "피격 시 11 반사, 받는 피해 -2.",
+  "emoji": "⚖️",
+  "effect": {
+   "thorns": 11,
+   "damageReduction": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "oxheart",
+  "name": "황소 심장",
+  "rarity": "rare",
+  "desc": "최대 체력 +19.",
+  "emoji": "🐂",
+  "effect": {
+   "maxHpBonus": 19
+  },
+  "mods": {}
+ },
+ {
+  "id": "colossus",
+  "name": "거상의 뼈",
+  "rarity": "legend",
+  "desc": "최대 체력 +35, 받는 피해 -3. 대신 내 공격 피해 -2.",
+  "emoji": "🦴",
+  "effect": {
+   "maxHpBonus": 35,
+   "damageReduction": 3,
+   "attackBonus": -2
+  },
+  "mods": {}
+ },
+ {
+  "id": "martyr",
+  "name": "순교자의 못",
+  "rarity": "epic",
+  "desc": "최대 체력 -17, 받는 피해 -6, 피격 시 5 반사.",
+  "emoji": "🩻",
+  "effect": {
+   "maxHpBonus": -17,
+   "damageReduction": 6,
+   "thorns": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "hollowking",
+  "name": "공허의 왕관",
+  "rarity": "legend",
+  "desc": "보호막을 무시하고, 상대가 반피 이하면 피해 +55%.",
+  "emoji": "👑",
+  "effect": {
+   "alwaysPierce": true,
+   "executeBonusPct": 55
+  },
+  "mods": {}
+ },
+ {
+  "id": "shatterfang",
+  "name": "파쇄 송곳니",
+  "rarity": "epic",
+  "desc": "적중 시 상대 보호막을 없애고, 피해를 주면 체력 4 회복.",
+  "emoji": "🦈",
+  "effect": {
+   "shieldBreak": true,
+   "lifesteal": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "punisher",
+  "name": "처벌자의 손",
+  "rarity": "rare",
+  "desc": "전투당 두 번, 피해를 주면 상대를 그 라운드 기절시킨다. 받는 피해 -2.",
+  "emoji": "✊",
+  "effect": {
+   "stunOnHit": 1,
+   "stunCap": 2,
+   "damageReduction": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "oblivion",
+  "name": "망각의 종",
+  "rarity": "legend",
+  "desc": "전투당 다섯 번, 피해를 주면 상대를 그 라운드 기절시킨다.",
+  "emoji": "🔔",
+  "effect": {
+   "stunOnHit": 1,
+   "stunCap": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "sparkplug",
+  "name": "부싯돌",
+  "rarity": "common",
+  "desc": "기력을 70 쓸 때마다 보호막 +13.",
+  "emoji": "🪨",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 70,
+     "shield": 13,
+     "label": "불붙이기"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "siphonring",
+  "name": "흡혈의 반지",
+  "rarity": "rare",
+  "desc": "기력을 65 쓸 때마다 체력 +15.",
+  "emoji": "💍",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 65,
+     "heal": 15,
+     "label": "반지의 갈증"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "turbine",
+  "name": "질풍의 고동",
+  "rarity": "rare",
+  "desc": "기력을 60 쓸 때마다 기력 +25.",
+  "emoji": "🌬",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 60,
+     "energy": 25,
+     "label": "질풍"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "sunforge",
+  "name": "태양의 화로",
+  "rarity": "epic",
+  "desc": "기력을 50 쓸 때마다 상대에게 15 고정 피해, 내 보호막 +8.",
+  "emoji": "☀️",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 50,
+     "damage": 15,
+     "shield": 8,
+     "label": "화로 폭발"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "doomclock",
+  "name": "종말의 모래시계",
+  "rarity": "legend",
+  "desc": "기력을 38 쓸 때마다 상대에게 20 고정 피해.",
+  "emoji": "⏳",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 38,
+     "damage": 20,
+     "label": "모래 한 알"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "gearbox",
+  "name": "운명의 톱니",
+  "rarity": "epic",
+  "desc": "기력을 43 쓸 때마다 기력 +15, 체력 +8.",
+  "emoji": "⚙️",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 43,
+     "energy": 15,
+     "heal": 8,
+     "label": "톱니 맞물림"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "coldengine",
+  "name": "동토의 숨결",
+  "rarity": "epic",
+  "desc": "기력을 48 쓸 때마다 상대를 그 라운드 기절시키고 내 보호막 +10.",
+  "emoji": "🧊",
+  "effect": {
+   "energyTriggers": [
+    {
+     "per": 48,
+     "stun": 1,
+     "shield": 10,
+     "label": "동토의 한기"
+    }
+   ]
+  },
+  "mods": {}
+ },
+ {
+  "id": "cornered",
+  "name": "궁지의 이빨",
+  "rarity": "common",
+  "desc": "체력이 절반 이하면 내 공격 피해 +20%.",
+  "emoji": "🐺",
+  "effect": {
+   "lowHpBonusPct": 20
+  },
+  "mods": {}
+ },
+ {
+  "id": "painengine",
+  "name": "고통의 제단",
+  "rarity": "rare",
+  "desc": "체력이 절반 이하면 피해 +35%, 매 라운드 기력 +3.",
+  "emoji": "🖤",
+  "effect": {
+   "lowHpBonusPct": 35,
+   "turnEnergy": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "ragebrand",
+  "name": "격노의 낙인",
+  "rarity": "epic",
+  "desc": "체력이 절반 이하면 피해 +60%, 피해를 주면 체력 3 회복.",
+  "emoji": "🥵",
+  "effect": {
+   "lowHpBonusPct": 60,
+   "lifesteal": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "phoenixrage",
+  "name": "잿불의 격정",
+  "rarity": "legend",
+  "desc": "체력이 절반 이하면 피해 +80%. 전투당 한 번 체력 15으로 되살아난다.",
+  "emoji": "🔥",
+  "effect": {
+   "lowHpBonusPct": 80,
+   "revive": 15
+  },
+  "mods": {}
+ },
+ {
+  "id": "toxinvial",
+  "name": "맹독 병",
+  "rarity": "rare",
+  "desc": "피해를 주면 중독 2라운드를 묻힌다.",
+  "emoji": "🧫",
+  "effect": {
+   "poisonOnHit": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "cinderbrand",
+  "name": "잿불 인장",
+  "rarity": "rare",
+  "desc": "피해를 주면 화상 2라운드를 묻힌다.",
+  "emoji": "🕯",
+  "effect": {
+   "burnOnHit": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "witchbrew",
+  "name": "마녀의 탕약",
+  "rarity": "epic",
+  "desc": "내가 거는 중독·화상 위력 +65%.",
+  "emoji": "🍯",
+  "effect": {
+   "statusPowerPct": 65
+  },
+  "mods": {}
+ },
+ {
+  "id": "bonepicker",
+  "name": "뼈 발라내기",
+  "rarity": "rare",
+  "desc": "상태이상에 걸린 상대에게 피해 +5.",
+  "emoji": "🦴",
+  "effect": {
+   "bonusVsAfflicted": 5
+  },
+  "mods": {}
+ },
+ {
+  "id": "blightlord",
+  "name": "역병군주의 인장",
+  "rarity": "legend",
+  "desc": "피해를 주면 중독 2라운드를 묻히고, 상태이상 상대에게 피해 +7, 중독·화상 위력 +30%.",
+  "emoji": "🪱",
+  "effect": {
+   "poisonOnHit": 2,
+   "bonusVsAfflicted": 7,
+   "statusPowerPct": 30
+  },
+  "mods": {}
+ },
+ {
+  "id": "ashlung",
+  "name": "재의 폐",
+  "rarity": "epic",
+  "desc": "피해를 주면 화상 2라운드·중독 1라운드를 함께 묻힌다.",
+  "emoji": "🌫",
+  "effect": {
+   "burnOnHit": 2,
+   "poisonOnHit": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "freezerot",
+  "name": "동사의 저주",
+  "rarity": "legend",
+  "desc": "전투당 세 번 빙결을 걸고, 피해를 주면 중독 2라운드·화상 2라운드를 묻힌다.",
+  "emoji": "🥶",
+  "effect": {
+   "freezeOnHit": 1,
+   "freezeCap": 3,
+   "poisonOnHit": 2,
+   "burnOnHit": 2
+  },
+  "mods": {}
+ },
+ {
+  "id": "hourglass",
+  "name": "썩어드는 모래시계",
+  "rarity": "legend",
+  "desc": "내가 거는 중독이 1라운드 더 간다. 중독·화상 위력 +25%.",
+  "emoji": "⏳",
+  "effect": {
+   "poisonRoundBonus": 1,
+   "statusPowerPct": 25
+  },
+  "mods": {}
+ },
+ {
+  "id": "everember",
+  "name": "꺼지지 않는 잉걸",
+  "rarity": "legend",
+  "desc": "내가 거는 화상이 1라운드 더 간다. 상태이상에 걸린 상대에게 피해 +6.",
+  "emoji": "🔥",
+  "effect": {
+   "burnRoundBonus": 1,
+   "bonusVsAfflicted": 6
+  },
+  "mods": {}
+ },
+ {
+  "id": "sabbath",
+  "name": "마녀의 안식일",
+  "rarity": "legend",
+  "desc": "내가 거는 중독·화상이 각각 1라운드 더 간다.",
+  "emoji": "🌙",
+  "effect": {
+   "poisonRoundBonus": 1,
+   "burnRoundBonus": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "silentbell",
+  "name": "침묵의 종",
+  "rarity": "legend",
+  "desc": "내가 거는 기절이 다음 라운드까지 이어진다. 단, 기절 중에는 다시 걸리지 않아 그다음 라운드엔 깨어난다.",
+  "emoji": "🔕",
+  "effect": {
+   "stunRoundBonus": 1
+  },
+  "mods": {}
+ },
+ {
+  "id": "glacialtomb",
+  "name": "빙하의 관",
+  "rarity": "legend",
+  "desc": "내가 거는 빙결이 다음 라운드까지 이어진다. 전투당 네 번까지 빙결을 건다. (맞으면 깨지는 건 그대로)",
+  "emoji": "🧊",
+  "effect": {
+   "freezeRoundBonus": 1,
+   "freezeOnHit": 1,
+   "freezeCap": 4
+  },
+  "mods": {}
+ },
+ {
+  "id": "grasproot",
+  "name": "얽매는 뿌리",
+  "rarity": "legend",
+  "desc": "내가 거는 속박이 다음 라운드까지 이어진다. 받는 피해 -3.",
+  "emoji": "🕸",
+  "effect": {
+   "bindRoundBonus": 1,
+   "damageReduction": 3
+  },
+  "mods": {}
+ },
+ {
+  "id": "ledger",
+  "name": "상인의 장부",
+  "rarity": "common",
+  "desc": "상점 가격 12% 할인, 골드 +15%.",
+  "emoji": "📒",
+  "effect": {},
+  "mods": {
+   "shopDiscountPct": 12,
+   "goldBonusPct": 15
+  }
+ },
+ {
+  "id": "caravan",
+  "name": "행상 마차",
+  "rarity": "rare",
+  "desc": "상점 진열 +2칸.",
+  "emoji": "🛒",
+  "effect": {},
+  "mods": {
+   "shopExtraItems": 2
+  }
+ },
+ {
+  "id": "bazaar",
+  "name": "암시장 통로",
+  "rarity": "epic",
+  "desc": "상점 진열 +3칸, 가격 25% 할인.",
+  "emoji": "🏮",
+  "effect": {},
+  "mods": {
+   "shopExtraItems": 3,
+   "shopDiscountPct": 25
+  }
+ },
+ {
+  "id": "saddlebag",
+  "name": "안장 가방",
+  "rarity": "common",
+  "desc": "덱 상한 +2장.",
+  "emoji": "👜",
+  "effect": {},
+  "mods": {
+   "deckCapBonus": 2
+  }
+ },
+ {
+  "id": "librarian",
+  "name": "사서의 색인",
+  "rarity": "rare",
+  "desc": "승리 보상 선택지 +1칸, 덱 상한 +2장.",
+  "emoji": "📚",
+  "effect": {},
+  "mods": {
+   "rewardOptions": 1,
+   "deckCapBonus": 2
+  }
+ },
+ {
+  "id": "saltpouch",
+  "name": "소금 주머니",
+  "rarity": "common",
+  "desc": "모든 회복 효과 +25%.",
+  "emoji": "🧂",
+  "effect": {},
+  "mods": {
+   "healBonusPct": 25
+  }
+ },
+ {
+  "id": "grailshard",
+  "name": "성배 조각",
+  "rarity": "epic",
+  "desc": "모든 회복 효과 +80%, 회복 카드 회복량 +30%.",
+  "emoji": "🏆",
+  "effect": {
+   "healPowerPct": 30
+  },
+  "mods": {
+   "healBonusPct": 80
+  }
+ },
+ {
+  "id": "ravenomen",
+  "name": "까마귀의 전조",
+  "rarity": "epic",
+  "desc": "일반 전투 보상에 유물이 섞일 확률 +18%p.",
+  "emoji": "🐦‍⬛",
+  "effect": {},
+  "mods": {
+   "relicChanceBonus": 0.18
+  }
+ },
+ {
+  "id": "kingsseal",
+  "name": "왕의 봉인",
+  "rarity": "legend",
+  "desc": "승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.",
+  "emoji": "📜",
+  "effect": {},
+  "mods": {
+   "rewardOptions": 2,
+   "goldBonusPct": 60,
+   "shopExtraItems": 2
+  }
+ }
+]

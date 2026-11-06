@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>결과와 런 종료</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
+.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}
+@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-cairn-death{background-image:url(/redesign/sprites/cairn/death.png)}
+.s-golem-idle{background-image:url(/redesign/sprites/golem/idle.png)}
+.rl{width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-mini.png);background-size:320px 320px;background-repeat:no-repeat;image-rendering:pixelated}
+.fm{width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-foe-mini.png);background-size:608px 32px;background-repeat:no-repeat;image-rendering:pixelated}
+.seg{height:36px;padding:0 14px;background:rgba(18,15,26,0.9);border:2px solid #3a3150;color:#c9c2d6;font:inherit;font-size:13px;cursor:pointer}
+.seg-on{background:#f4d470;color:#1d1408;border-color:#f4d470}
+.go{display:flex;align-items:center;height:54px;padding:0 26px;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:24px;text-decoration:none}
+.go2{display:flex;align-items:center;height:48px;padding:0 20px;background:rgba(18,15,26,0.9);border:2px solid #4a4058;color:#efe9f5;font-family:'Do Hyeon',sans-serif;font-size:20px;text-decoration:none}
+.stamp{animation:stamp .6s cubic-bezier(.2,1.6,.5,1) 1}
+@keyframes stamp{from{transform:scale(1.8);opacity:0}to{transform:scale(1);opacity:1}}
+.stat{padding:12px 14px;background:#120f1a;border:2px solid #2a2438;display:flex;flex-direction:column;gap:4px}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <sc-if value="{{bright}}" hint-placeholder-val="{{true}}">
+    <div class="layer l-sky" aria-hidden="true"></div><div class="layer l-hills" aria-hidden="true"></div><div class="layer l-meadow" aria-hidden="true"></div>
+  </sc-if>
+  <sc-if value="{{dark}}" hint-placeholder-val="{{false}}">
+    <div class="layer l-wall" aria-hidden="true" style="filter: grayscale(0.7)"></div><div class="layer l-floor" aria-hidden="true" style="filter: grayscale(0.7)"></div>
+  </sc-if>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: {{veil}}"></div>
+
+  <div style="position: absolute; right: 24px; top: 20px; display: flex; gap: 6px; z-index: 3">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button type="button" class="seg {{t.cls}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for>
+  </div>
+
+  <sc-if value="{{isWin}}" hint-placeholder-val="{{true}}">
+    <section style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding-top: 70px; gap: 18px">
+      <span class="stamp" style="font-family: 'Silkscreen', monospace; font-weight: 700; font-size: 86px; color: #fff6dc; text-shadow: 0 6px 0 #7a5418, 0 12px 0 #2a1c10">VICTORY</span>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 24px">고블린 우두머리를 쓰러뜨렸다 · 초원 6층</span>
+      <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+      <div style="display: grid; grid-template-columns: repeat(4, 150px); gap: 10px">
+        <div class="stat"><span style="font-size: 12px; color: #b9b1c9">라운드</span><span style="font-family: 'Silkscreen', monospace; font-size: 24px">4</span></div>
+        <div class="stat"><span style="font-size: 12px; color: #b9b1c9">준 피해</span><span style="font-family: 'Silkscreen', monospace; font-size: 24px; color: #ff9a9a">56</span></div>
+        <div class="stat"><span style="font-size: 12px; color: #b9b1c9">받은 피해</span><span style="font-family: 'Silkscreen', monospace; font-size: 24px; color: #8ad0ff">15</span></div>
+        <div class="stat"><span style="font-size: 12px; color: #b9b1c9">유물 발동</span><span style="font-family: 'Silkscreen', monospace; font-size: 24px; color: #ffd86a">7</span></div>
+      </div>
+      <a href="Reward.dc.html" class="go" style="margin-top: 6px">보상 받기 ▶</a>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{isClear}}" hint-placeholder-val="{{false}}">
+    <section style="position: absolute; left: 70px; right: 70px; top: 70px; display: grid; grid-template-columns: 380px 1fr; gap: 34px">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
+        <span class="stamp" style="font-family: 'Silkscreen', monospace; font-size: 16px; letter-spacing: 6px; color: #f4d470">RUN CLEAR</span>
+        <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 56px; color: #fff6dc; text-shadow: 0 4px 0 #2a1c10">던전 정복</h1>
+        <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
+        <div class="stamp" style="width: 100%; box-sizing: border-box; padding: 12px 16px; background: #2a1c08; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #ffd86a; display: flex; gap: 12px; align-items: center">
+          <span style="font-family: 'Silkscreen', monospace; font-size: 22px; padding: 4px 10px; border: 3px solid #ffa24a; color: #ffa24a">III</span>
+          <span style="display: flex; flex-direction: column"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #fff6dc">새 난이도 열림 — 고급</span><span style="font-size: 12px; color: #e8d8b0">적이 내 3장을 전부 보고 자리를 짚는다</span></span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3a3150">
+        <span style="font-size: 14px; color: #c9c2d6">중급 · CAIRN · 14층까지</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">전투</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px">11</span></div>
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">유물</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px; color: #ffd86a">9</span></div>
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">골드</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px; color: #ffd86a">212</span></div>
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">덱</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px">15장</span></div>
+        </div>
+        <span style="font-size: 13px; color: #b9b1c9">함께한 유물</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <div class="rl" style="background-position: 0 0"></div><div class="rl" style="background-position: -64px -32px"></div><div class="rl" style="background-position: -96px -64px"></div><div class="rl" style="background-position: -160px -32px"></div><div class="rl" style="background-position: -256px -128px"></div><div class="rl" style="background-position: -32px -256px"></div><div class="rl" style="background-position: -32px -192px"></div><div class="rl" style="background-position: -256px -96px"></div><div class="rl" style="background-position: -256px -160px"></div>
+        </div>
+        <span style="font-size: 13px; color: #b9b1c9">쓰러뜨린 보스</span>
+        <div style="display: flex; gap: 14px; align-items: center">
+          <span style="display: flex; gap: 6px; align-items: center"><div class="fm" style="background-position: 0 0"></div><span style="font-size: 14px">수호기사</span></span>
+          <span style="display: flex; gap: 6px; align-items: center"><div class="fm" style="background-position: -192px 0"></div><span style="font-size: 14px">오버로드</span></span>
+        </div>
+        <span style="font-size: 13px; color: #b9b1c9">가장 많이 쓴 카드 · <b style="color: #efe9f5">파쇄 베기 31회</b> · 가장 큰 한 방 · <b style="color: #ff9a9a">서약의 파쇄 38</b></span>
+        <div style="margin-top: auto; display: flex; justify-content: flex-end; gap: 10px">
+          <a href="Main.dc.html" class="go2">타이틀로</a>
+          <a href="Difficulty.dc.html" class="go">고급 도전 ▶</a>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{isDead}}" hint-placeholder-val="{{false}}">
+    <section style="position: absolute; left: 70px; right: 70px; top: 70px; display: grid; grid-template-columns: 380px 1fr; gap: 34px">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 16px; letter-spacing: 6px; color: #ff8a7a">RUN OVER</span>
+        <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 52px; color: #e4def0">쓰러졌다</h1>
+        <div class="spr s-cairn-death" role="img" aria-label="CAIRN 쓰러짐" style="width: 288px; height: 192px; background-size: 2304px 192px; background-position: -2016px 0; filter: grayscale(0.5)"></div>
+        <span style="font-size: 14px; color: #c9c2d6">던전 11층 · 9라운드</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3a3150">
+        <div style="display: flex; gap: 16px; align-items: center; padding: 10px 14px; background: #1a0c10; border: 2px solid #5a1a24">
+          <div style="width: 120px; height: 92px; position: relative; overflow: hidden"><div class="spr n6 s-golem-idle" aria-hidden="true" style="width: 120px; height: 92px; background-size: 720px 92px; animation-duration: 900ms; transform: scaleX(-1)"></div></div>
+          <span style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; color: #ff9a8a">쓰러뜨린 적</span><span style="font-family: 'Do Hyeon', sans-serif; font-size: 26px">골렘 · 엘리트</span><span style="font-size: 13px; color: #c9c2d6">마지막 일격 — 대지 분쇄 18</span></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">도달</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px">11F</span></div>
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">최고 기록</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px; color: #b6ea6a">14F</span></div>
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">유물</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px; color: #ffd86a">6</span></div>
+          <div class="stat"><span style="font-size: 12px; color: #b9b1c9">새로 본 것</span><span style="font-family: 'Silkscreen', monospace; font-size: 22px; color: #c9a6ff">+4</span></div>
+        </div>
+        <div style="padding: 12px 14px; background: #120f1a; border: 2px dashed #4a4058; font-size: 14px; line-height: 1.6; color: #e4def0"><b style="color: #f4d470">다음엔</b> — 골렘은 받는 피해 -5. 관통(보호막 무시) 카드나 「파쇄 날」 같은 유물이 잘 듣는다.</div>
+        <span style="font-size: 13px; color: #b9b1c9">이번 런에서 도감에 새로 등록된 것: 골렘 · 마녀 · 유물 2개</span>
+        <div style="margin-top: auto; display: flex; justify-content: flex-end; gap: 10px">
+          <a href="Main.dc.html" class="go2">타이틀로</a>
+          <a href="Select.dc.html" class="go">다시 도전 ▶</a>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { v: 'win' };
+  }
+  renderVals() {
+    const v = this.state.v;
+    const tabs = [['win', '전투 승리'], ['clear', '런 클리어'], ['dead', '런 실패']].map(([k, label]) => ({ label, cls: v === k ? 'seg-on' : '', pick: () => this.setState({ v: k }) }));
+    return {
+      tabs, isWin: v === 'win', isClear: v === 'clear', isDead: v === 'dead',
+      bright: v !== 'dead', dark: v === 'dead',
+      veil: v === 'win' ? 'rgba(12,10,18,0.55)' : v === 'clear' ? 'rgba(12,10,18,0.62)' : 'rgba(8,6,10,0.72)',
+    };
+  }
+}
+</script>
+</body>
+</html>

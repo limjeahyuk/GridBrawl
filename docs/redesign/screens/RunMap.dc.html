@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모험 지도 — 갈림길</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.mapbg{background-image:url(/redesign/bg/grassland/preview.png);background-size:1280px 720px;background-position:-240px 0;image-rendering:pixelated}
+.ic{image-rendering:pixelated;background-repeat:no-repeat;background-position:center;background-size:42px 42px}
+.ic-unknown{background-image:url(/redesign/ui/map-icons/unknown.png)}
+.ic-merchant{background-image:url(/redesign/ui/map-icons/merchant.png)}
+.ic-treasure{background-image:url(/redesign/ui/map-icons/treasure.png)}
+.ic-rest{background-image:url(/redesign/ui/map-icons/rest.png)}
+.ic-enemy{background-image:url(/redesign/ui/map-icons/enemy.png)}
+.ic-elite{background-image:url(/redesign/ui/map-icons/elite.png)}
+.ic-boss{background-image:url(/redesign/ui/map-icons/boss.png)}
+.sm{background-size:28px 28px}
+.node{position:absolute;box-sizing:border-box;border-radius:50%;padding:0;font:inherit;color:inherit}
+.node:disabled{cursor:default}
+.st-reach{cursor:pointer;animation:pulse 1.1s ease-in-out infinite}
+.st-reach:hover{transform:scale(1.12)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px #0a0810,0 0 0 6px rgba(244,212,112,0.9)}50%{box-shadow:0 0 0 3px #0a0810,0 0 0 11px rgba(244,212,112,0.25)}}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+@keyframes f6{to{background-position:120% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-warden-idle{background-image:url(/redesign/sprites/warden/idle.png)}
+.hero{animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{0%,100%{margin-top:0}50%{margin-top:-4px}}
+.pick{display:flex;align-items:center;gap:10px;width:100%;padding:6px 10px;background:#1d1828;border:2px solid #4a4058;color:#efe9f5;font:inherit;text-align:left;cursor:pointer}
+.pick:hover{border-color:#f4d470;background:#2a2438}
+.reset{background:none;border:2px solid #4a4058;color:#c9c2d6;font:inherit;font-size:13px;padding:4px 10px;cursor:pointer}
+.reset:hover{border-color:#f4d470;color:#fff6dc}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+
+  <section aria-label="초원 지도" style="position: absolute; left: 28px; top: 20px; width: 836px; height: 680px; border: 3px solid #0a0810; box-shadow: 0 0 0 3px #3a4a2a; overflow: hidden; background: #1a1d16">
+    <div class="mapbg" aria-hidden="true" style="position: absolute; inset: 0; opacity: 0.22"></div>
+    <div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 55%, rgba(26,29,22,0) 40%, rgba(12,10,18,0.85) 100%)"></div>
+
+    <div style="position: absolute; left: 18px; top: 14px; display: flex; align-items: baseline; gap: 12px">
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 32px; color: #fff6dc">모험 지도</h1>
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #b6ea6a">초원</span>
+      <span style="font-family: 'Silkscreen', monospace; font-size: 13px; padding: 3px 8px; background: #2a3a1e; color: #b6ea6a; border: 2px solid #6ab83a">{{floorLabel}}</span>
+    </div>
+    <button type="button" class="reset" onClick="{{reset}}" style="position: absolute; right: 16px; top: 18px">처음부터 다시</button>
+
+    <sc-for list="{{edges}}" as="e" hint-placeholder-count="30">
+      <div aria-hidden="true" style="position: absolute; left: {{e.x}}px; top: {{e.y}}px; width: {{e.len}}px; height: 0; border-top: {{e.w}}px {{e.kind}} {{e.col}}; transform-origin: 0 0; transform: rotate({{e.deg}}deg); margin-top: {{e.mt}}px"></div>
+    </sc-for>
+
+    <sc-for list="{{nodes}}" as="n" hint-placeholder-count="22">
+      <button type="button" class="node ic {{n.icon}} {{n.st}}" disabled="{{n.disabled}}" onClick="{{n.pick}}" aria-label="{{n.aria}}" style="left: {{n.l}}px; top: {{n.t}}px; width: {{n.size}}px; height: {{n.size}}px; background-color: {{n.bg}}; border: 3px solid {{n.edge}}; opacity: {{n.op}}"></button>
+    </sc-for>
+
+    <div aria-hidden="true" style="position: absolute; left: 372px; top: 62px; width: 92px; height: 92px; border-radius: 50%; overflow: hidden; pointer-events: none; opacity: {{bossOp}}">
+      <div class="spr n6 s-warden-idle" style="position: absolute; left: -30px; top: -6px; width: 160px; height: 112px; background-size: 960px 112px; animation-duration: 840ms; transform: scaleX(-1)"></div>
+    </div>
+    <span style="position: absolute; left: 418px; top: 158px; transform: translateX(-50%); font-family: 'Do Hyeon', sans-serif; font-size: 17px; padding: 2px 10px; background: rgba(12,10,18,0.85); color: #ff8a7a; white-space: nowrap">7층 보스 · 수호기사</span>
+
+    <div class="hero" aria-label="현재 위치" style="position: absolute; left: {{heroL}}px; top: {{heroT}}px; width: 96px; height: 64px; pointer-events: none">
+      <div class="spr n6 s-cairn-idle" style="width: 96px; height: 64px; background-size: 576px 64px; animation-duration: 720ms"></div>
+    </div>
+    <sc-if value="{{atStart}}" hint-placeholder-val="{{false}}">
+      <span style="position: absolute; left: 112px; top: 630px; font-family: 'Do Hyeon', sans-serif; font-size: 16px; padding: 2px 8px; background: rgba(12,10,18,0.85); color: #fff6dc">출발 — 1층 칸을 고르세요</span>
+    </sc-if>
+  </section>
+
+  <aside style="position: absolute; left: 892px; top: 20px; width: 360px; height: 680px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+      <div style="padding: 8px 12px; background: #2a3a1e; border: 2px solid #6ab83a; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #b6ea6a">초원</span>
+        <span style="font-family: 'Silkscreen', monospace; font-size: 11px; color: #c9c2d6">1–7F · 진행 중</span>
+      </div>
+      <div style="padding: 8px 12px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 2px; opacity: 0.7">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #c9c4ee">던전</span>
+        <span style="font-size: 11px; color: #c9c2d6">수호기사 처치 후 열림</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: #1a1626; border: 2px solid #3c9c98">
+      <div aria-hidden="true" style="width: 48px; height: 48px; overflow: hidden; position: relative; background: #0f2a30; border: 2px solid #3c9c98">
+        <div class="spr n6 s-cairn-idle" style="position: absolute; left: -22px; top: -12px; width: 96px; height: 64px; background-size: 576px 64px; animation-duration: 720ms"></div>
+      </div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; justify-content: space-between"><span style="font-family: 'Silkscreen', monospace; font-size: 15px">CAIRN</span><span style="font-size: 12px; color: #c9c2d6">골드 64 · 유물 2</span></div>
+        <div style="height: 10px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 85%; height: 100%; background: #e0485a"></div></div>
+        <span style="font-family: 'Silkscreen', monospace; font-size: 11px; color: #ffb0b0">HP 88/103</span>
+      </div>
+    </div>
+
+    <div style="padding: 12px; background: #1a1626; border: 2px solid #f4d470; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #f4d470">{{choiceTitle}}</span>
+      <sc-for list="{{choices}}" as="c" hint-placeholder-count="2">
+        <button type="button" class="pick" onClick="{{c.pick}}">
+          <span class="ic sm {{c.icon}}" aria-hidden="true" style="width: 32px; height: 32px; flex-shrink: 0"></span>
+          <span style="display: flex; flex-direction: column; gap: 1px">
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 17px">{{c.label}}</span>
+            <span style="font-size: 12px; color: #c9c2d6">{{c.desc}}</span>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="margin-top: auto; padding: 12px 16px; background: #e8dcc0; color: #2a1c14; border: 3px solid #0a0810; box-shadow: 0 6px 0 #0a0810">
+      <h2 style="margin: 0 0 8px; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px; text-align: center">범례</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px">
+        <sc-for list="{{legend}}" as="g" hint-placeholder-count="7">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span class="ic sm {{g.icon}}" aria-hidden="true" style="width: 30px; height: 30px"></span>
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px">{{g.label}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { path: ['b', 'e'] };
+  }
+  renderVals() {
+    const TYPES = {
+      enemy: { label: '적', desc: '일반 전투 · 카드 보상' },
+      elite: { label: '엘리트', desc: '강한 적 · 지형 바위 · 유물 보상' },
+      unknown: { label: '미지', desc: '이벤트 · 전투 · 상인 중 하나' },
+      merchant: { label: '상인', desc: '카드 · 유물 구매, 카드 제거' },
+      treasure: { label: '보물', desc: '유물 상자 하나' },
+      rest: { label: '휴식', desc: '체력 회복 또는 카드 강화' },
+      boss: { label: '보스', desc: '수호기사 · 처치하면 던전으로' },
+    };
+    const N = [
+      ['a', 1, 0.18, 'enemy'], ['b', 1, 0.5, 'enemy'], ['c', 1, 0.82, 'enemy'],
+      ['d', 2, 0.08, 'unknown'], ['e', 2, 0.36, 'enemy'], ['f', 2, 0.64, 'merchant'], ['g', 2, 0.92, 'enemy'],
+      ['h', 3, 0.22, 'elite'], ['i', 3, 0.5, 'unknown'], ['j', 3, 0.8, 'treasure'],
+      ['k', 4, 0.1, 'rest'], ['l', 4, 0.38, 'enemy'], ['m', 4, 0.64, 'enemy'], ['n', 4, 0.9, 'unknown'],
+      ['o', 5, 0.26, 'merchant'], ['p', 5, 0.56, 'elite'], ['q', 5, 0.86, 'rest'],
+      ['r', 6, 0.18, 'rest'], ['s', 6, 0.5, 'unknown'], ['t', 6, 0.82, 'rest'],
+      ['z', 7, 0.5, 'boss'],
+    ];
+    const E = {
+      a: ['d', 'e'], b: ['e', 'f'], c: ['f', 'g'],
+      d: ['h'], e: ['h', 'i'], f: ['i', 'j'], g: ['j'],
+      h: ['k', 'l'], i: ['l', 'm'], j: ['m', 'n'],
+      k: ['o'], l: ['o', 'p'], m: ['p'], n: ['q'],
+      o: ['r', 's'], p: ['s', 't'], q: ['t'],
+      r: ['z'], s: ['z'], t: ['z'],
+    };
+    const path = this.state.path;
+    const cur = path.length ? path[path.length - 1] : null;
+    const reach = cur ? (E[cur] || []) : ['a', 'b', 'c'];
+    const pos = {};
+    N.forEach(([id, f, x]) => { pos[id] = { x: 110 + x * 616, y: 624 - (f - 1) * 84 }; });
+    pos.z.y = 108;
+    const go = (id) => () => this.setState({ path: path.concat([id]) });
+    const curFloor = cur ? N.find((n) => n[0] === cur)[1] : 0;
+    const nodes = N.map(([id, f, x, type]) => {
+      const visited = path.includes(id);
+      const isCur = id === cur;
+      const canGo = reach.includes(id);
+      const size = type === 'boss' ? 96 : 54;
+      let st = 'st-locked', bg = '#2a2638', edge = '#4a4058', op = 1;
+      if (visited) { bg = '#5a4a24'; edge = '#f4d470'; op = isCur ? 1 : 0.85; st = 'st-visited'; }
+      else if (canGo) { bg = '#3a3220'; edge = '#fff6dc'; st = 'st-reach'; }
+      else if (f <= curFloor) { op = 0.32; }
+      else { op = 0.78; }
+      if (type === 'boss') { bg = '#2a0a12'; edge = canGo ? '#fff6dc' : '#ff4a3a'; }
+      return {
+        icon: type === 'boss' ? '' : 'ic-' + type, st, bg, edge, op, size,
+        l: pos[id].x - size / 2, t: pos[id].y - size / 2,
+        disabled: !canGo, pick: canGo ? go(id) : undefined,
+        aria: f + '층 ' + TYPES[type].label + (canGo ? ' — 선택 가능' : ''),
+      };
+    });
+    const edges = [];
+    Object.keys(E).forEach((a) => E[a].forEach((b) => {
+      const p = pos[a], q = pos[b];
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const ia = path.indexOf(a);
+      const walked = ia >= 0 && path[ia + 1] === b;
+      const live = a === cur;
+      edges.push({
+        x: p.x, y: p.y, len: Math.hypot(dx, dy), deg: Math.atan2(dy, dx) * 180 / Math.PI,
+        kind: walked ? 'solid' : 'dashed', w: walked ? 5 : 3, mt: walked ? -2.5 : -1.5,
+        col: walked ? '#f4d470' : live ? '#fff6dc' : 'rgba(232,220,192,0.35)',
+      });
+    }));
+    const hp = cur ? pos[cur] : { x: 66, y: 664 };
+    const choices = reach.map((id) => {
+      const n = N.find((m) => m[0] === id);
+      const t = TYPES[n[3]];
+      return { icon: 'ic-' + n[3], label: n[1] + '층 · ' + t.label, desc: t.desc, pick: go(id) };
+    });
+    const legend = ['unknown', 'merchant', 'treasure', 'rest', 'enemy', 'elite', 'boss'].map((k) => ({ icon: 'ic-' + k, label: TYPES[k].label }));
+    return {
+      nodes, edges, choices, legend,
+      heroL: hp.x - 36, heroT: hp.y - (cur ? 86 : 58),
+      atStart: !cur, bossOp: cur === 'z' ? 1 : 0.9,
+      floorLabel: (cur ? curFloor : 0) + ' / 7F',
+      choiceTitle: cur === 'z' ? '초원 클리어 — 던전이 열렸다' : '다음 갈 곳 고르기',
+      reset: () => this.setState({ path: [] }),
+    };
+  }
+}
+</script>
+</body>
+</html>

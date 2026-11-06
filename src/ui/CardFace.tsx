@@ -1,5 +1,6 @@
 import type { CardDef } from '../battle/types'
-import { abilityList, cardCost, primaryStat } from './cardAbility'
+import { MOVE_DELTA } from '../battle/types'
+import { abilityList, cardCost } from './cardAbility'
 
 /** Accent colour for a card by kind (attacks keep their signature accent). */
 export function cardAccent(c: CardDef, fallback: string): string {
@@ -49,6 +50,11 @@ export function RangeChart({ card }: { card: CardDef }) {
   const rows = [1, 0, -1] // up..down
   const hit = (df: number, du: number) =>
     (card.range ?? []).some((o) => o.df === df && o.du === du)
+  // 이동 카드는 도착 칸을 같은 격자에 찍는다(화면 위 = du +1).
+  const delta = card.kind === 'move' ? MOVE_DELTA[card.dir ?? 'right'] : null
+  const steps = card.steps ?? 1
+  const goes = (df: number, du: number) =>
+    !!delta && df === delta[0] * steps && du === -delta[1] * steps
   return (
     <div className="rangechart">
       {rows.map((du) =>
@@ -61,13 +67,33 @@ export function RangeChart({ card }: { card: CardDef }) {
           return (
             <span
               key={`${df},${du}`}
-              className={`rc ${self ? 'rc--self' : on ? 'rc--on' : ''}${pb ? ' rc--pb' : ''}`}
+              className={`rc ${self ? 'rc--self' : on ? 'rc--on' : goes(df, du) ? 'rc--go' : ''}${pb ? ' rc--pb' : ''}`}
             />
           )
         }),
       )}
     </div>
   )
+}
+
+/** 압축 카드 머리의 수치 표기. 픽셀 글꼴이라 영문 약어로 쓴다(디자인: DM·EN·BLOCK). */
+function statTag(c: CardDef): string {
+  switch (c.kind) {
+    case 'attack':
+      return `DM${c.damage ?? 0}`
+    case 'guard':
+      return `BL${c.block ?? 0}`
+    case 'energy':
+      return `EN+${c.gain ?? 0}`
+    case 'heal':
+      return `HP+${c.healHp ?? 0}`
+    case 'buff':
+      return c.buff === 'freeCast'
+        ? `FREE${c.buffRounds ?? 1}`
+        : `${c.buff === 'defUp' ? 'DF' : 'AT'}+${c.buffPower ?? 0}`
+    default:
+      return 'MOVE'
+  }
 }
 
 /** 종류 아이콘 — 카드가 무엇인지 한 글자로. */
@@ -104,50 +130,36 @@ export function CardFace({
   accent: string
   compact?: boolean
 }) {
-  const icon = kindIcon(card)
   const tags = abilityTags(card)
 
   // ---- 전투용 압축 카드 ----------------------------------------------------
   if (compact) {
-    const stat = primaryStat(card)
     const cost = cardCost(card)
     const abils = abilityList(card)
     return (
       <div
         className={`cardface cardface--compact cardface--${card.kind} ${
-          card.upgraded ? 'cardface--upgraded' : ''
-        }`}
+          card.signature ? 'cardface--sig' : ''
+        } ${card.upgraded ? 'cardface--upgraded' : ''}`}
         style={{ ['--accent' as string]: accent }}
       >
-        <div className="cf__head">
-          <span className="cf__kind">{icon}</span>
-          <span className="cf__name">{card.name}</span>
-          {card.signature && <span className="cf__sig">SP</span>}
+        <div className="cf__top">
+          <span className="cf__dm">{statTag(card)}</span>
+          <span className="cf__en">EN{cost}</span>
         </div>
-        {card.kind === 'move' ? (
-          <div className="cf__moveart">{icon}</div>
-        ) : (
-          stat && (
-            <div className="cf__stat">
-              <b>{stat.value}</b>
-              <span>{stat.unit}</span>
-            </div>
-          )
+        <RangeChart card={card} />
+        {/* 능력은 **아이콘만**. 뜻은 꾹 눌러 읽는다 — 글자를 넣으면 카드가 다시 빽빽해진다. */}
+        {(abils.length > 0 || (card.cooldown ?? 0) > 0) && (
+          <div className="cf__abils">
+            {(card.cooldown ?? 0) > 0 && <span className="cf__cd">쿨{card.cooldown}</span>}
+            {abils.map((a) => (
+              <i key={a.label} className={a.bad ? 'is-bad' : ''}>
+                {a.icon}
+              </i>
+            ))}
+          </div>
         )}
-        {card.kind === 'attack' && <RangeChart card={card} />}
-        <div className="cf__foot">
-          {cost > 0 && <span className="cf__cost">⚡{cost}</span>}
-          {(card.cooldown ?? 0) > 0 && <span className="cf__cd">쿨{card.cooldown}</span>}
-          {abils.length > 0 && (
-            <span className="cf__abils">
-              {abils.map((a) => (
-                <i key={a.label} className={a.bad ? 'is-bad' : ''}>
-                  {a.icon}
-                </i>
-              ))}
-            </span>
-          )}
-        </div>
+        <span className="cf__name">{card.name}</span>
       </div>
     )
   }
@@ -161,7 +173,7 @@ export function CardFace({
       style={{ ['--accent' as string]: accent }}
     >
       <div className="cardface__top">
-        <span className="cardface__icon">{icon}</span>
+        <span className="cardface__icon">{kindIcon(card)}</span>
         {card.signature && <span className="cardface__sig">SP</span>}
         {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>

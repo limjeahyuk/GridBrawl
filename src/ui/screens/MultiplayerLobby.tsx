@@ -184,7 +184,7 @@ export function MultiplayerLobby({
       <div className="grid-bg" />
       <div className="mp__header">
         <button className="btn btn--ghost" onClick={onBack}>
-          ◀ 뒤로
+          ← 돌아가기
         </button>
         <h2 className="neon-text">온라인 대전</h2>
         <div className="mp__me" style={{ ['--accent' as string]: me.accent }}>

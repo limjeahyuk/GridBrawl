@@ -1,0 +1,154 @@
+[
+ {
+  "id": "boss-w-wall",
+  "name": "수호의 방벽",
+  "rarity": "boss",
+  "desc": "매 라운드 보호막 +6.",
+  "boss": "수호기사",
+  "col": 0
+ },
+ {
+  "id": "boss-w-plate",
+  "name": "흑철 판금",
+  "rarity": "boss",
+  "desc": "받는 피해 -4.",
+  "boss": "수호기사",
+  "col": 1
+ },
+ {
+  "id": "boss-w-pulse",
+  "name": "서약의 맥동",
+  "rarity": "boss",
+  "desc": "매 라운드 기력 +4.",
+  "boss": "수호기사",
+  "col": 2
+ },
+ {
+  "id": "boss-p-fist",
+  "name": "용암 주먹",
+  "rarity": "boss",
+  "desc": "공격 피해 +4.",
+  "boss": "화염군주",
+  "col": 3
+ },
+ {
+  "id": "boss-p-core",
+  "name": "재 속의 핵",
+  "rarity": "boss",
+  "desc": "전투당 한 번, 체력 25로 되살아난다.",
+  "boss": "화염군주",
+  "col": 4
+ },
+ {
+  "id": "boss-p-ember",
+  "name": "불씨 모으기",
+  "rarity": "boss",
+  "desc": "매 라운드 기력 +5.",
+  "boss": "화염군주",
+  "col": 5
+ },
+ {
+  "id": "boss-o-crown",
+  "name": "마왕의 관",
+  "rarity": "boss",
+  "desc": "매 라운드 기력 +8.",
+  "boss": "오버로드",
+  "col": 6
+ },
+ {
+  "id": "boss-o-veil",
+  "name": "심연의 장막",
+  "rarity": "boss",
+  "desc": "매 라운드 보호막 +5.",
+  "boss": "오버로드",
+  "col": 7
+ },
+ {
+  "id": "boss-o-scale",
+  "name": "검은 비늘",
+  "rarity": "boss",
+  "desc": "받는 피해 -3.",
+  "boss": "오버로드",
+  "col": 8
+ },
+ {
+  "id": "boss-o-second",
+  "name": "두 번째 형상",
+  "rarity": "boss",
+  "desc": "전투당 한 번, 체력 30으로 되살아나 2페이즈.",
+  "boss": "오버로드",
+  "col": 9
+ },
+ {
+  "id": "enemy-turnEnergy",
+  "name": "기력 충전",
+  "rarity": "enemy",
+  "desc": "매 라운드 기력 +N.",
+  "boss": null,
+  "col": 10
+ },
+ {
+  "id": "enemy-turnShield",
+  "name": "방벽",
+  "rarity": "enemy",
+  "desc": "매 라운드 보호막 +N.",
+  "boss": null,
+  "col": 11
+ },
+ {
+  "id": "enemy-damageReduction",
+  "name": "단단한 몸",
+  "rarity": "enemy",
+  "desc": "받는 피해 -N.",
+  "boss": null,
+  "col": 12
+ },
+ {
+  "id": "enemy-attackBonus",
+  "name": "흉포",
+  "rarity": "enemy",
+  "desc": "공격 피해 +N.",
+  "boss": null,
+  "col": 13
+ },
+ {
+  "id": "enemy-lifesteal",
+  "name": "흡혈",
+  "rarity": "enemy",
+  "desc": "피해를 주면 체력 N 회복.",
+  "boss": null,
+  "col": 14
+ },
+ {
+  "id": "enemy-regen",
+  "name": "재생",
+  "rarity": "enemy",
+  "desc": "매 라운드 체력 +N.",
+  "boss": null,
+  "col": 15
+ },
+ {
+  "id": "enemy-revive",
+  "name": "분열 · 부활",
+  "rarity": "enemy",
+  "desc": "쓰러지면 체력 N으로 한 번 되살아난다.",
+  "boss": null,
+  "col": 16
+ },
+ {
+  "id": "unknown",
+  "name": "???",
+  "rarity": "void",
+  "desc": "아직 드러나지 않은 능력",
+  "boss": null,
+  "col": 17
+ },
+ {
+  "id": "unknown-foe",
+  "name": "???",
+  "rarity": "enemy",
+  "desc": "아직 드러나지 않은 적 능력",
+  "boss": null,
+  "col": 18
+ }
+]

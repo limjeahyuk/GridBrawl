@@ -1,0 +1,849 @@
+{
+ "cairn": {
+  "id": "cairn",
+  "frameW": 96,
+  "frameH": 64,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 75,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 95,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 62,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 64,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack3": {
+    "frames": 8,
+    "frameMs": 66,
+    "loop": false,
+    "impactFrame": 4
+   },
+   "block": {
+    "frames": 4,
+    "frameMs": 80,
+    "loop": false
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 95,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 100,
+    "loop": false
+   }
+  },
+  "footY": 62,
+  "anchorX": 36,
+  "kind": "hero",
+  "region": null,
+  "replaces": "warrior"
+ },
+ "sable": {
+  "id": "sable",
+  "frameW": 96,
+  "frameH": 64,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 125,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 72,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 95,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 7,
+    "frameMs": 60,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "attack2": {
+    "frames": 8,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 4
+   },
+   "attack3": {
+    "frames": 7,
+    "frameMs": 66,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 95,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 100,
+    "loop": false
+   }
+  },
+  "footY": 62,
+  "anchorX": 35,
+  "kind": "hero",
+  "region": null,
+  "replaces": "archer"
+ },
+ "dirge": {
+  "id": "dirge",
+  "frameW": 96,
+  "frameH": 64,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 8,
+    "frameMs": 120,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 78,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 100,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 8,
+    "frameMs": 75,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "attack3": {
+    "frames": 7,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 95,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 105,
+    "loop": false
+   }
+  },
+  "footY": 62,
+  "anchorX": 37,
+  "kind": "hero",
+  "region": null,
+  "replaces": "mage"
+ },
+ "slime": {
+  "id": "slime",
+  "frameW": 64,
+  "frameH": 44,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 130,
+    "loop": true
+   },
+   "run": {
+    "frames": 6,
+    "frameMs": 85,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 95,
+    "loop": false
+   },
+   "death": {
+    "frames": 6,
+    "frameMs": 100,
+    "loop": false
+   }
+  },
+  "footY": 43,
+  "anchorX": 26,
+  "kind": "monster",
+  "region": "grassland",
+  "replaces": "slime"
+ },
+ "goblin": {
+  "id": "goblin",
+  "frameW": 72,
+  "frameH": 48,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 65,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 60,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 65,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 90,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 100,
+    "loop": false
+   }
+  },
+  "footY": 45,
+  "anchorX": 30,
+  "kind": "monster",
+  "region": "grassland",
+  "replaces": "goblin"
+ },
+ "ogre": {
+  "id": "ogre",
+  "frameW": 120,
+  "frameH": 92,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 140,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 90,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 75,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 85,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 100,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 92,
+  "anchorX": 48,
+  "kind": "monster",
+  "region": "grassland",
+  "replaces": "ogre"
+ },
+ "bat": {
+  "id": "bat",
+  "frameW": 64,
+  "frameH": 52,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": true
+   },
+   "run": {
+    "frames": 6,
+    "frameMs": 60,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 65,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 90,
+    "loop": false
+   },
+   "death": {
+    "frames": 6,
+    "frameMs": 95,
+    "loop": false
+   }
+  },
+  "footY": 35,
+  "anchorX": 26,
+  "kind": "monster",
+  "region": "dungeon",
+  "replaces": "bat"
+ },
+ "golem": {
+  "id": "golem",
+  "frameW": 120,
+  "frameH": 92,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 150,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 95,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 90,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 100,
+    "loop": false
+   },
+   "death": {
+    "frames": 9,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 92,
+  "anchorX": 48,
+  "kind": "monster",
+  "region": "dungeon",
+  "replaces": "golem"
+ },
+ "witch": {
+  "id": "witch",
+  "frameW": 96,
+  "frameH": 64,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 8,
+    "frameMs": 120,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 78,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 8,
+    "frameMs": 75,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 95,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 105,
+    "loop": false
+   }
+  },
+  "footY": 62,
+  "anchorX": 36,
+  "kind": "monster",
+  "region": "dungeon",
+  "replaces": "witch"
+ },
+ "warden": {
+  "id": "warden",
+  "frameW": 160,
+  "frameH": 112,
+  "scale": 2,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 140,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 85,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 75,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 100,
+    "loop": false
+   },
+   "death": {
+    "frames": 10,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 112,
+  "anchorX": 61,
+  "kind": "boss",
+  "region": "grassland",
+  "replaces": "warden"
+ },
+ "pyrelord": {
+  "id": "pyrelord",
+  "frameW": 160,
+  "frameH": 112,
+  "scale": 2,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 8,
+    "frameMs": 110,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 85,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 100,
+    "loop": false
+   },
+   "death": {
+    "frames": 10,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 112,
+  "anchorX": 62,
+  "kind": "boss",
+  "region": "dungeon",
+  "replaces": "pyrelord"
+ },
+ "overlord": {
+  "id": "overlord",
+  "frameW": 176,
+  "frameH": 128,
+  "scale": 2,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 8,
+    "frameMs": 120,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 90,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 75,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 85,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 100,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 115,
+    "loop": false
+   }
+  },
+  "footY": 128,
+  "anchorX": 71,
+  "kind": "boss",
+  "region": "dungeon",
+  "replaces": "overlord"
+ },
+ "trader": {
+  "id": "trader",
+  "frameW": 64,
+  "frameH": 76,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 160,
+    "loop": true
+   },
+   "talk": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "offer": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "bow": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": false
+   }
+  },
+  "footY": 75,
+  "anchorX": 27,
+  "kind": "npc",
+  "region": null,
+  "replaces": null
+ },
+ "goblin-poor": {
+  "id": "goblin-poor",
+  "frameW": 84,
+  "frameH": 58,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 65,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 60,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 90,
+    "loop": false
+   },
+   "death": {
+    "frames": 9,
+    "frameMs": 100,
+    "loop": false
+   },
+   "haggle": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "cheer": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 55,
+  "anchorX": 38,
+  "kind": "merchant",
+  "region": null,
+  "replaces": null
+ },
+ "goblin-mid": {
+  "id": "goblin-mid",
+  "frameW": 84,
+  "frameH": 58,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 65,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 60,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 90,
+    "loop": false
+   },
+   "death": {
+    "frames": 9,
+    "frameMs": 100,
+    "loop": false
+   },
+   "haggle": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "cheer": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 55,
+  "anchorX": 37,
+  "kind": "merchant",
+  "region": null,
+  "replaces": null
+ },
+ "goblin-rich": {
+  "id": "goblin-rich",
+  "frameW": 84,
+  "frameH": 58,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 130,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 80,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 70,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 90,
+    "loop": false
+   },
+   "death": {
+    "frames": 9,
+    "frameMs": 100,
+    "loop": false
+   },
+   "haggle": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "cheer": {
+    "frames": 6,
+    "frameMs": 110,
+    "loop": false
+   }
+  },
+  "footY": 55,
+  "anchorX": 37,
+  "kind": "merchant",
+  "region": null,
+  "replaces": null
+ },
+ "snake": {
+  "id": "snake",
+  "frameW": 72,
+  "frameH": 40,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "run": {
+    "frames": 6,
+    "frameMs": 80,
+    "loop": true
+   },
+   "back": {
+    "frames": 6,
+    "frameMs": 90,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 65,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 75,
+    "loop": false,
+    "impactFrame": 3
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 90,
+    "loop": false
+   },
+   "death": {
+    "frames": 7,
+    "frameMs": 100,
+    "loop": false
+   }
+  },
+  "footY": 40,
+  "anchorX": 34,
+  "kind": "monster",
+  "region": "dungeon",
+  "replaces": null
+ }
+}

@@ -282,8 +282,8 @@ export const ROSTER: CharacterDef[] = [
     id: 'warrior',
     name: 'CAIRN',
     title: 'Oathbound Warden',
-    accent: '#6d8ac4',
-    accent2: '#a7b8d4',
+    accent: '#7fd6c8',
+    accent2: '#3c9c98',
     description:
       '무너진 성채에 홀로 남은 파수꾼. 느리지만 좀처럼 쓰러지지 않고, 대지를 가르는 강타로 상대의 숨통을 끊어 놓는다. 방벽을 올리고 버티다가 한 번에 갚아 주는 싸움을 한다.',
     maxHp: 103,
@@ -329,8 +329,8 @@ export const ROSTER: CharacterDef[] = [
     id: 'archer',
     name: 'SABLE',
     title: 'Ashen Fletcher',
-    accent: '#5aa06d',
-    accent2: '#3f9a90',
+    accent: '#ffa24a',
+    accent2: '#c4501c',
     description:
       '재를 뒤집어쓴 채 그림자에서 활을 겨누는 사냥꾼. 갑주가 얇아 붙으면 죽지만, 거리를 유지하는 한 독과 관통으로 확실히 갉아낸다. 밀어내며 물러서는 싸움이 본령.',
     maxHp: 81,
@@ -362,8 +362,8 @@ export const ROSTER: CharacterDef[] = [
     id: 'mage',
     name: 'DIRGE',
     title: 'Hollow Oracle',
-    accent: '#a578cf',
-    accent2: '#6fc0b0',
+    accent: '#c9a6ff',
+    accent2: '#8d6fd0',
     description:
       '만가를 읊는 원령 무녀. 한 방은 가볍지만 판을 통째로 덮는 주문으로 도망칠 자리를 지운다. 태우고 얼려 놓은 뒤 천천히 조여드는 싸움을 한다.',
     maxHp: 78,

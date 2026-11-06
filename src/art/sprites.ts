@@ -13,6 +13,8 @@
 export type ClipName =
   | 'idle'
   | 'run'
+  /** 바라보는 반대쪽으로 물러나는 걸음. 없는 시트는 `run`으로 떨어진다. */
+  | 'back'
   | 'attack1'
   | 'attack2'
   | 'attack3'
@@ -75,7 +77,7 @@ export interface SheetDef {
 }
 
 /** 플레이스홀더/기본 클립 구성 — Hero Knight 계열의 프레임 수에 맞춰 두었다. */
-const STD_CLIPS: Record<ClipName, ClipDef> = {
+const STD_CLIPS: Partial<Record<ClipName, ClipDef>> = {
   idle: { frames: 8, frameMs: 110, loop: true },
   run: { frames: 10, frameMs: 70, loop: true },
   // 임팩트 프레임: 팔이 가장 뻗는 지점. 프레임 수가 바뀌면 같이 조정한다.
@@ -108,67 +110,47 @@ const sheet = (id: string, over: Partial<SheetDef> = {}): SheetDef => ({
  * 실제 픽셀에서 측정해 출력한 값이다. 에셋을 갈아끼우면 다시 돌려서 옮긴다.
  */
 export const SHEETS: Record<string, SheetDef> = {
-  // --- 플레이어 직업 --------------------------------------------------------
-  // Hero Knight (Sven Thole)
-  warrior: sheet('hero-knight', {
-    frameW: 90, frameH: 50, footY: 50, anchorX: 29, scale: 3, facesRight: true,
-    clips: {
-      ...STD_CLIPS,
-      // 원본 프레임을 눈으로 확인한 값 — 검이 가장 뻗는 프레임에서 피해가 터진다
-      attack1: { frames: 6, frameMs: 62, loop: false, impactFrame: 2 },
-      attack2: { frames: 6, frameMs: 62, loop: false, impactFrame: 2 },
-      attack3: { frames: 8, frameMs: 58, loop: false, impactFrame: 3 },
-      death: { frames: 10, frameMs: 95, loop: false },
-    },
-  }),
-  // Huntress (LuizMelo) — 창을 든 사냥꾼. 궁수의 "거리를 지킨다"와 맞는다.
-  archer: sheet('huntress', {
-    frameW: 91, frameH: 66, footY: 66, anchorX: 42, scale: 2, facesRight: true,
-    clips: {
-      idle: { frames: 8, frameMs: 120, loop: true },
-      run: { frames: 8, frameMs: 75, loop: true },
-      attack1: { frames: 5, frameMs: 70, loop: false, impactFrame: 2 },
-      attack2: { frames: 5, frameMs: 70, loop: false, impactFrame: 2 },
-      attack3: { frames: 7, frameMs: 65, loop: false, impactFrame: 3 },
-      hurt: { frames: 3, frameMs: 90, loop: false },
-      death: { frames: 8, frameMs: 100, loop: false },
-    },
-  }),
-  // Wizard Pack (LuizMelo) — 원본이 고해상도라 scale 1로 둔다(정수 배율 규칙).
-  mage: sheet('wizard', {
-    frameW: 186, frameH: 136, footY: 136, anchorX: 66, scale: 1, facesRight: true,
-    clips: {
-      idle: { frames: 6, frameMs: 130, loop: true },
-      run: { frames: 8, frameMs: 80, loop: true },
-      attack1: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
-      attack2: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
-      hurt: { frames: 4, frameMs: 90, loop: false },
-      death: { frames: 7, frameMs: 110, loop: false },
-    },
-  }),
+  // --- 2026-11 리디자인 시트 — `public/redesign/sprites/<id>/` --------------------
+  // 값은 `docs/redesign/sprites-v2.ts`(meta.json에서 자동 생성)를 옮겨 왔다.
+  // hero — 대체 대상: warrior
+  warrior: { id: 'redesign/sprites/cairn', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 36, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 75, loop: true }, back: { frames: 6, frameMs: 95, loop: true }, attack1: { frames: 6, frameMs: 62, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 64, loop: false, impactFrame: 2 }, attack3: { frames: 8, frameMs: 66, loop: false, impactFrame: 4 }, block: { frames: 4, frameMs: 80, loop: false }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 100, loop: false } } },
+  // hero — 대체 대상: archer
+  archer: { id: 'redesign/sprites/sable', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 35, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 125, loop: true }, run: { frames: 8, frameMs: 72, loop: true }, back: { frames: 6, frameMs: 95, loop: true }, attack1: { frames: 7, frameMs: 60, loop: false, impactFrame: 3 }, attack2: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 }, attack3: { frames: 7, frameMs: 66, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 100, loop: false } } },
+  // hero — 대체 대상: mage
+  mage: { id: 'redesign/sprites/dirge', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 37, facesRight: true,
+    clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 78, loop: true }, back: { frames: 6, frameMs: 100, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 8, frameMs: 75, loop: false, impactFrame: 3 }, attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 105, loop: false } } },
+  // monster · grassland — 대체 대상: slime
+  slime: { id: 'redesign/sprites/slime', frameW: 64, frameH: 44, scale: 3, footY: 43, anchorX: 26, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 130, loop: true }, run: { frames: 6, frameMs: 85, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 6, frameMs: 100, loop: false } } },
+  // monster · grassland — 대체 대상: goblin
+  goblin: { id: 'redesign/sprites/goblin', frameW: 72, frameH: 48, scale: 3, footY: 45, anchorX: 30, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 65, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 8, frameMs: 100, loop: false } } },
+  // monster · grassland — 대체 대상: ogre
+  ogre: { id: 'redesign/sprites/ogre', frameW: 120, frameH: 92, scale: 3, footY: 92, anchorX: 48, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 140, loop: true }, run: { frames: 8, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 75, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 85, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 100, loop: false }, death: { frames: 8, frameMs: 110, loop: false } } },
+  // monster · dungeon — 대체 대상: bat
+  bat: { id: 'redesign/sprites/bat', frameW: 64, frameH: 52, scale: 3, footY: 35, anchorX: 26, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 80, loop: true }, run: { frames: 6, frameMs: 60, loop: true }, attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 6, frameMs: 95, loop: false } } },
+  // monster · dungeon — 대체 대상: golem
+  golem: { id: 'redesign/sprites/golem', frameW: 120, frameH: 92, scale: 3, footY: 92, anchorX: 48, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 150, loop: true }, run: { frames: 8, frameMs: 95, loop: true }, attack1: { frames: 6, frameMs: 80, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 90, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 100, loop: false }, death: { frames: 9, frameMs: 110, loop: false } } },
+  // monster · dungeon — 대체 대상: witch
+  witch: { id: 'redesign/sprites/witch', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 36, facesRight: true,
+    clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 78, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 8, frameMs: 75, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 105, loop: false } } },
+  // boss · grassland — 대체 대상: warden
+  warden: { id: 'redesign/sprites/warden', frameW: 160, frameH: 112, scale: 2, footY: 112, anchorX: 61, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 140, loop: true }, run: { frames: 8, frameMs: 85, loop: true }, attack1: { frames: 6, frameMs: 75, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 80, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 100, loop: false }, death: { frames: 10, frameMs: 110, loop: false } } },
+  // boss · dungeon — 대체 대상: pyrelord
+  pyrelord: { id: 'redesign/sprites/pyrelord', frameW: 160, frameH: 112, scale: 2, footY: 112, anchorX: 62, facesRight: true,
+    clips: { idle: { frames: 8, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 85, loop: true }, attack1: { frames: 6, frameMs: 80, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 80, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 100, loop: false }, death: { frames: 10, frameMs: 110, loop: false } } },
+  // boss · dungeon — 대체 대상: overlord
+  overlord: { id: 'redesign/sprites/overlord', frameW: 176, frameH: 128, scale: 2, footY: 128, anchorX: 71, facesRight: true,
+    clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 75, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 85, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 100, loop: false }, death: { frames: 8, frameMs: 115, loop: false } } },
+
 
   // --- 몬스터 --------------------------------------------------------------
-  // 20종이 직업 시트를 돌려쓰던 걸 갈라 낸다. `MonsterDef.spriteId`로 고른다.
-  slime: sheet('slime', {
-    frameW: 111, frameH: 35, footY: 35, anchorX: 34, scale: 3, facesRight: true,
-    clips: {
-      idle: { frames: 14, frameMs: 110, loop: true },
-      run: { frames: 6, frameMs: 110, loop: true },
-      attack1: { frames: 19, frameMs: 55, loop: false, impactFrame: 9 },
-      hurt: { frames: 3, frameMs: 90, loop: false },
-      death: { frames: 11, frameMs: 95, loop: false },
-    },
-  }),
-  bat: sheet('bat', {
-    frameW: 72, frameH: 55, footY: 44, anchorX: 34, scale: 2, facesRight: true,
-    clips: {
-      idle: { frames: 11, frameMs: 70, loop: true },
-      run: { frames: 11, frameMs: 60, loop: true },
-      attack1: { frames: 11, frameMs: 55, loop: false, impactFrame: 5 },
-      hurt: { frames: 3, frameMs: 90, loop: false },
-      death: { frames: 4, frameMs: 110, loop: false },
-    },
-  }),
   // ⚠ **지금 이 시트를 쓰는 몬스터는 없다**(2026-08-08). 도끼병·고블린이 빌려 쓰던
   //   자리였고 둘 다 제 그림을 받아 갔다. 쥐 몬스터를 넣게 되면 바로 쓸 수 있게
   //   남겨 둔다 — 원본 팩(Monsters Creatures Fantasy 2)이 `assets-raw`에 없어서
@@ -181,24 +163,6 @@ export const SHEETS: Record<string, SheetDef> = {
       attack1: { frames: 12, frameMs: 55, loop: false, impactFrame: 6 },
       hurt: { frames: 3, frameMs: 90, loop: false },
       death: { frames: 6, frameMs: 100, loop: false },
-    },
-  }),
-  // 고블린 — 2026-08-08까지 도끼병과 함께 **쥐 시트를 빌려 쓰고 있었다**.
-  // 원본이 세 버전에 흩어져 있다(패커 주석 참고).
-  // ⚠ attack2가 **구르며 파고드는 찌르기**다. 고블린이 든 카드(`c-jab`·`c-strike`)가
-  //   둘 다 `fx: 'punch'`라 실제로 제일 자주 보이는 게 이 클립인데, "재빠른 잡졸"이라는
-  //   설명과 맞아떨어져 그대로 뒀다. attack3(폭탄 투척)은 지금 덱으로는 안 나온다 —
-  //   엔진이 투사체를 그리지 않으므로 폭탄을 쓰는 카드를 물릴 땐 연출을 먼저 봐야 한다.
-  goblin: sheet('goblin', {
-    frameW: 112, frameH: 46, footY: 46, anchorX: 43, scale: 2, facesRight: true,
-    clips: {
-      idle: { frames: 4, frameMs: 140, loop: true },
-      run: { frames: 8, frameMs: 75, loop: true },
-      attack1: { frames: 8, frameMs: 65, loop: false, impactFrame: 6 },
-      attack2: { frames: 8, frameMs: 60, loop: false, impactFrame: 6 },
-      attack3: { frames: 12, frameMs: 60, loop: false, impactFrame: 10 },
-      hurt: { frames: 4, frameMs: 90, loop: false },
-      death: { frames: 4, frameMs: 110, loop: false },
     },
   }),
   // 철퇴병(id `grunt`) — 옛 '도끼병'. 팩에 도끼가 없어(레이피어·대검·창·철퇴)
@@ -228,16 +192,6 @@ export const SHEETS: Record<string, SheetDef> = {
       death: { frames: 6, frameMs: 110, loop: false },
     },
   }),
-  'evil-wizard': sheet('evil-wizard', {
-    frameW: 88, frameH: 66, footY: 66, anchorX: 25, scale: 2, facesRight: true,
-    clips: {
-      idle: { frames: 10, frameMs: 120, loop: true },
-      run: { frames: 8, frameMs: 80, loop: true },
-      attack1: { frames: 13, frameMs: 60, loop: false, impactFrame: 6 },
-      hurt: { frames: 3, frameMs: 90, loop: false },
-      death: { frames: 18, frameMs: 80, loop: false },
-    },
-  }),
   'martial-hero': sheet('martial-hero', {
     frameW: 125, frameH: 80, footY: 80, anchorX: 68, scale: 2, facesRight: true,
     clips: {
@@ -252,18 +206,6 @@ export const SHEETS: Record<string, SheetDef> = {
   }),
 
   // --- Gothicvania 계열 (ansimuz) — 배경과 같은 팩에서 나왔다 ------------------
-  // ⚠ 이 팩들은 **hurt·death 클립이 없다.** `clipOrFallback`이 attack1 → idle로
-  //   대신하므로 게임은 정상 동작하고, 피격·사망 때 대기 자세가 나온다.
-  //   원본이 팔레트 PNG라 패커에 팔레트 디코딩을 넣어야 구워진다(packsprites.mjs).
-  ogre: sheet('ogre', {
-    frameW: 105, frameH: 76, footY: 76, anchorX: 60, scale: 2, facesRight: true,
-    clips: {
-      idle: { frames: 4, frameMs: 150, loop: true },
-      run: { frames: 6, frameMs: 110, loop: true },
-      // 곤봉이 가장 내려간 프레임 — 원본을 눈으로 보고 정했다
-      attack1: { frames: 7, frameMs: 80, loop: false, impactFrame: 4 },
-    },
-  }),
   // 감시안(id `sentry`) — 떠 있는 눈. 원본에 애니메이션이 하나뿐이라 세 클립이 같은 프레임이다.
   // `footY`가 프레임 높이보다 작다(27 < 30) — 공중에 떠 있어 발이 바닥에 안 닿는다.
   'flying-eye': sheet('flying-eye', {
@@ -284,61 +226,6 @@ export const SHEETS: Record<string, SheetDef> = {
       attack1: { frames: 3, frameMs: 90, loop: false, impactFrame: 1 },
     },
   }),
-  // --- 보스 3종 (Gothicvania) ------------------------------------------------
-  // tier4 셋이 일반 몬스터와 같은 시트를 돌려 쓰고 있었다. 보스는 첫인상이 전부라
-  // 갈라 냈다. 셋 다 원본 캔버스가 커서 scale이 작다 — 정수 배율 규칙은 그대로다.
-  // 수호기사 — 이 팩엔 드물게 Hurt까지 있다.
-  'terrible-knight': sheet('terrible-knight', {
-    frameW: 84, frameH: 48, footY: 48, anchorX: 33, scale: 3, facesRight: true,
-    clips: {
-      idle: { frames: 4, frameMs: 150, loop: true },
-      run: { frames: 12, frameMs: 65, loop: true },
-      attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 3 },
-      attack2: { frames: 6, frameMs: 65, loop: false, impactFrame: 3 },
-      attack3: { frames: 4, frameMs: 70, loop: false, impactFrame: 2 },
-      block: { frames: 2, frameMs: 120, loop: false },
-      hurt: { frames: 3, frameMs: 90, loop: false },
-    },
-  }),
-  // 오버로드(최종 보스) — 원본이 커서 scale 1이어도 157px로 가장 크게 선다.
-  demon: sheet('demon', {
-    frameW: 221, frameH: 170, footY: 157, anchorX: 120, scale: 1, facesRight: true,
-    clips: {
-      idle: { frames: 6, frameMs: 140, loop: true },
-      run: { frames: 6, frameMs: 120, loop: true }, // 걷는 동작이 없다
-      attack1: { frames: 18, frameMs: 55, loop: false, impactFrame: 9 },
-      attack2: { frames: 18, frameMs: 55, loop: false, impactFrame: 10 },
-    },
-  }),
-  // 화염군주 — 붉은 용. 꼬리치기(attack1) + 브레스(attack2).
-  dragon: sheet('dragon', {
-    frameW: 120, frameH: 55, footY: 55, anchorX: 80, scale: 3, facesRight: true,
-    clips: {
-      idle: { frames: 6, frameMs: 140, loop: true },
-      run: { frames: 6, frameMs: 120, loop: true }, // 걷는 동작이 없다
-      attack1: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 },
-      attack2: { frames: 7, frameMs: 75, loop: false, impactFrame: 4 },
-    },
-  }),
-
-  // --- Mecha-stone Golem (Kronovi) -----------------------------------------
-  // 마지막까지 직업 시트를 빌려 쓰던 자리. 공격 3종 + **block까지 있는** 몇 안 되는
-  // 시트라 보호막이 올라왔을 때 실제로 몸을 마는 동작이 나온다.
-  // ⚠ `footY`(46)가 `frameH`(71)보다 한참 위다 — 공통 bbox가 원거리 공격의 뻗은
-  //   팔과 파괴 잔해까지 품어 아래로 늘어났기 때문이다. 대기 자세 기준이라 맞다.
-  golem: sheet('golem', {
-    frameW: 71, frameH: 71, footY: 46, anchorX: 25, scale: 3, facesRight: true,
-    clips: {
-      idle: { frames: 4, frameMs: 160, loop: true },
-      run: { frames: 4, frameMs: 130, loop: true }, // 원본에 걷기가 없어 대기를 돌려 쓴다
-      attack1: { frames: 7, frameMs: 70, loop: false, impactFrame: 4 },
-      attack2: { frames: 9, frameMs: 65, loop: false, impactFrame: 5 },
-      attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 4 },
-      block: { frames: 8, frameMs: 80, loop: false },
-      death: { frames: 14, frameMs: 85, loop: false },
-    },
-  }),
-
   // 성당의 마법사 — 시전 동작(Fire)이 따로 있는 몇 안 되는 Gothicvania 팩.
   'church-wizard': sheet('church-wizard', {
     frameW: 64, frameH: 53, footY: 53, anchorX: 36, scale: 2, facesRight: true,
@@ -360,7 +247,9 @@ export function clipOrFallback(sheet: SheetDef, want: ClipName): [ClipName, Clip
   const chain: ClipName[] =
     want === 'attack3' || want === 'attack2'
       ? [want, 'attack1', 'idle']
-      : [want, 'idle']
+      : want === 'back'
+        ? ['back', 'run', 'idle']
+        : [want, 'idle']
   for (const c of chain) {
     const def = sheet.clips[c]
     if (def) return [c, def]
@@ -415,7 +304,8 @@ export function impactDelayOf(sheet: SheetDef | undefined, fx: string | undefine
   return clip.impactFrame * clip.frameMs
 }
 
-export const clipUrl = (sheet: SheetDef, clip: ClipName) => `/sprites/${sheet.id}/${clip}.png`
+export const clipUrl = (sheet: SheetDef, clip: ClipName) =>
+  `/${sheet.id.startsWith('redesign/') ? '' : 'sprites/'}${sheet.id}/${clip}.png`
 
 /**
  * 시트의 모든 클립을 미리 받아 둔다. 안 하면 첫 공격에서 PNG를 받는 동안

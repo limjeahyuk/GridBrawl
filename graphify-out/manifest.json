@@ -1,0 +1,578 @@
+{
+  ".claude/launch.json": {
+    "mtime": 1782953269.8482823,
+    "seen": 1789628212.862248,
+    "ast_hash": "95a28e8559295f2e247e904565694ece",
+    "semantic_hash": "95a28e8559295f2e247e904565694ece"
+  },
+  "android/app/build.gradle": {
+    "mtime": 1785315973.53151,
+    "seen": 1789628212.862251,
+    "ast_hash": "655bd5bced98268d6b6016b02665aa91",
+    "semantic_hash": "655bd5bced98268d6b6016b02665aa91"
+  },
+  "android/app/capacitor.build.gradle": {
+    "mtime": 1785806044.0010602,
+    "seen": 1789628212.862253,
+    "ast_hash": "80be4877bbd0fae6c7b53d99f1346192",
+    "semantic_hash": "80be4877bbd0fae6c7b53d99f1346192"
+  },
+  "android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862253,
+    "ast_hash": "fbaf7cc870c663eb52dcf218531c439d",
+    "semantic_hash": "fbaf7cc870c663eb52dcf218531c439d"
+  },
+  "android/app/src/main/java/com/imjaehyeog/GridBrawl/MainActivity.java": {
+    "mtime": 1785315973.5322065,
+    "seen": 1789628212.8622541,
+    "ast_hash": "9b813cbd50b78b645d1f54e7b9d85f6a",
+    "semantic_hash": "9b813cbd50b78b645d1f54e7b9d85f6a"
+  },
+  "android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862255,
+    "ast_hash": "e91b4501c14da821682fa5c26a16d616",
+    "semantic_hash": "e91b4501c14da821682fa5c26a16d616"
+  },
+  "android/build.gradle": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862256,
+    "ast_hash": "682315a426653617c6a74fc12bef55b6",
+    "semantic_hash": "682315a426653617c6a74fc12bef55b6"
+  },
+  "android/capacitor.settings.gradle": {
+    "mtime": 1785806044.0008976,
+    "seen": 1789628212.862257,
+    "ast_hash": "debe20d3a37085db80910111c2fbc5e9",
+    "semantic_hash": "debe20d3a37085db80910111c2fbc5e9"
+  },
+  "android/gradlew": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862258,
+    "ast_hash": "794669d78aef1dd5c7d889ef618b311a",
+    "semantic_hash": "794669d78aef1dd5c7d889ef618b311a"
+  },
+  "android/settings.gradle": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862258,
+    "ast_hash": "f6cd925b3f859e23c3d819fe2459e0e4",
+    "semantic_hash": "f6cd925b3f859e23c3d819fe2459e0e4"
+  },
+  "android/variables.gradle": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862259,
+    "ast_hash": "4b3fce8ea2a515a9d2e47e74757172ec",
+    "semantic_hash": "4b3fce8ea2a515a9d2e47e74757172ec"
+  },
+  "capacitor.config.ts": {
+    "mtime": 1785315973.5336208,
+    "seen": 1789628212.8622599,
+    "ast_hash": "c82899c0e95f0ce86a27ae6b2c286ee4",
+    "semantic_hash": "c82899c0e95f0ce86a27ae6b2c286ee4"
+  },
+  "database.rules.json": {
+    "mtime": 1785831747.443847,
+    "seen": 1789628212.862261,
+    "ast_hash": "3e93c033b9f8cc189cd116b5882227e3",
+    "semantic_hash": "3e93c033b9f8cc189cd116b5882227e3"
+  },
+  "firebase.json": {
+    "mtime": 1784525827.805003,
+    "seen": 1789628212.862262,
+    "ast_hash": "912d0c290544f2dddf50f3fff71bf67c",
+    "semantic_hash": "912d0c290544f2dddf50f3fff71bf67c"
+  },
+  "ios/App/App/AppDelegate.swift": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862262,
+    "ast_hash": "b2865a48d0e54c1613fa58272418bf98",
+    "semantic_hash": "b2865a48d0e54c1613fa58272418bf98"
+  },
+  "ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862263,
+    "ast_hash": "7453c3002126811a57c38b2740f990cf",
+    "semantic_hash": "7453c3002126811a57c38b2740f990cf"
+  },
+  "ios/App/App/Assets.xcassets/Contents.json": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.8622642,
+    "ast_hash": "31cc68f34934a99c0b0c1bebde56309c",
+    "semantic_hash": "31cc68f34934a99c0b0c1bebde56309c"
+  },
+  "ios/App/App/Assets.xcassets/Splash.imageset/Contents.json": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862265,
+    "ast_hash": "1162e1cddd7ea769bcacdd1aa7b4ac72",
+    "semantic_hash": "1162e1cddd7ea769bcacdd1aa7b4ac72"
+  },
+  "ios/App/CapApp-SPM/Package.swift": {
+    "mtime": 1785887912.6874816,
+    "seen": 1789628212.862265,
+    "ast_hash": "0b2620fd8d56e4f46f37fac6503631d4",
+    "semantic_hash": "0b2620fd8d56e4f46f37fac6503631d4"
+  },
+  "ios/App/CapApp-SPM/Sources/CapApp-SPM/CapApp-SPM.swift": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.862266,
+    "ast_hash": "0d92cb44a62bc3f2d73464a2e4f9a890",
+    "semantic_hash": "0d92cb44a62bc3f2d73464a2e4f9a890"
+  },
+  "package.json": {
+    "mtime": 1786082341.769383,
+    "seen": 1789628212.8622668,
+    "ast_hash": "dab20ce16519999e79d69b0b8bd55a0a",
+    "semantic_hash": "dab20ce16519999e79d69b0b8bd55a0a"
+  },
+  "scripts/checkhooks.ts": {
+    "mtime": 1787199996.5723429,
+    "seen": 1789628212.8622668,
+    "ast_hash": "b05bb929e77c401a395679f81ba72cbd",
+    "semantic_hash": "b05bb929e77c401a395679f81ba72cbd"
+  },
+  "scripts/makeicon.mjs": {
+    "mtime": 1785890264.003029,
+    "seen": 1789628212.862268,
+    "ast_hash": "680ebd0811165194dc5f14173f4b984f",
+    "semantic_hash": "680ebd0811165194dc5f14173f4b984f"
+  },
+  "scripts/packrocks.mjs": {
+    "mtime": 1786082333.868779,
+    "seen": 1789628212.862269,
+    "ast_hash": "fb9835558072e2646911f177d4b101bc",
+    "semantic_hash": "fb9835558072e2646911f177d4b101bc"
+  },
+  "scripts/packsprites.mjs": {
+    "mtime": 1786407152.1578484,
+    "seen": 1789628212.8622699,
+    "ast_hash": "1019a65c8fb1fb57768c54af05812049",
+    "semantic_hash": "1019a65c8fb1fb57768c54af05812049"
+  },
+  "scripts/png.mjs": {
+    "mtime": 1785805432.9147172,
+    "seen": 1789628212.862271,
+    "ast_hash": "f4e4df892791a9aa8f179669f2392e6a",
+    "semantic_hash": "f4e4df892791a9aa8f179669f2392e6a"
+  },
+  "scripts/simrun.ts": {
+    "mtime": 1786407730.647411,
+    "seen": 1789628212.862271,
+    "ast_hash": "bef43ed311221c798203e5671768bfa3",
+    "semantic_hash": "bef43ed311221c798203e5671768bfa3"
+  },
+  "scripts/simulate.ts": {
+    "mtime": 1786061643.919927,
+    "seen": 1789628212.862272,
+    "ast_hash": "139ea3a09df60424049156ef1c1eea35",
+    "semantic_hash": "139ea3a09df60424049156ef1c1eea35"
+  },
+  "src/App.tsx": {
+    "mtime": 1789627051.201976,
+    "seen": 1789628212.862273,
+    "ast_hash": "b9bd7bd636c912bf85c641298ee74f98",
+    "semantic_hash": "b9bd7bd636c912bf85c641298ee74f98"
+  },
+  "src/art/art.ts": {
+    "mtime": 1785486217.6774867,
+    "seen": 1789628212.862274,
+    "ast_hash": "1c707731b32338cd2858fc464a9e7af0",
+    "semantic_hash": "1c707731b32338cd2858fc464a9e7af0"
+  },
+  "src/art/sprites.ts": {
+    "mtime": 1786407152.1601005,
+    "seen": 1789628212.862274,
+    "ast_hash": "3608f6bebd245153f2d70b29dc773c7a",
+    "semantic_hash": "3608f6bebd245153f2d70b29dc773c7a"
+  },
+  "src/battle/ai.ts": {
+    "mtime": 1787199928.588587,
+    "seen": 1789628212.8622751,
+    "ast_hash": "5a778a34cf06bc4ccc9f97afd3ba69a1",
+    "semantic_hash": "5a778a34cf06bc4ccc9f97afd3ba69a1"
+  },
+  "src/battle/cards.ts": {
+    "mtime": 1786061634.3315682,
+    "seen": 1789628212.862276,
+    "ast_hash": "eafa18da672b25ef2722ecf42986f707",
+    "semantic_hash": "eafa18da672b25ef2722ecf42986f707"
+  },
+  "src/battle/engine.ts": {
+    "mtime": 1786407152.1610332,
+    "seen": 1789628212.862277,
+    "ast_hash": "9eec1e229c28a868cc3115bc0a8210a5",
+    "semantic_hash": "9eec1e229c28a868cc3115bc0a8210a5"
+  },
+  "src/battle/types.ts": {
+    "mtime": 1786407152.1618414,
+    "seen": 1789628212.862277,
+    "ast_hash": "95f7f4ec2648d390e833c5be12984443",
+    "semantic_hash": "95f7f4ec2648d390e833c5be12984443"
+  },
+  "src/data/roster.ts": {
+    "mtime": 1786083468.218734,
+    "seen": 1789628212.862278,
+    "ast_hash": "5a94b17c77ab6d9c8b2e8c525c428984",
+    "semantic_hash": "5a94b17c77ab6d9c8b2e8c525c428984"
+  },
+  "src/game/admin.ts": {
+    "mtime": 1786407152.1621752,
+    "seen": 1789628212.862279,
+    "ast_hash": "034be9980421dce33836589f18c7cddf",
+    "semantic_hash": "034be9980421dce33836589f18c7cddf"
+  },
+  "src/game/bosscards.ts": {
+    "mtime": 1786062487.3336143,
+    "seen": 1789628212.86228,
+    "ast_hash": "3c386d677a7f5afaf8ee5bb770bae685",
+    "semantic_hash": "3c386d677a7f5afaf8ee5bb770bae685"
+  },
+  "src/game/bosses.ts": {
+    "mtime": 1786063389.562163,
+    "seen": 1789628212.86228,
+    "ast_hash": "e9089e0701b45cd87af9f5b47b7e8f0b",
+    "semantic_hash": "e9089e0701b45cd87af9f5b47b7e8f0b"
+  },
+  "src/game/deckSync.ts": {
+    "mtime": 1785831790.712057,
+    "seen": 1789628212.8622808,
+    "ast_hash": "0179184b4e00ce7b910cfd5dfd677dfa",
+    "semantic_hash": "0179184b4e00ce7b910cfd5dfd677dfa"
+  },
+  "src/game/decks.ts": {
+    "mtime": 1785801442.711916,
+    "seen": 1789628212.862282,
+    "ast_hash": "16735c4c787e7713c1a6222d537c1e86",
+    "semantic_hash": "16735c4c787e7713c1a6222d537c1e86"
+  },
+  "src/game/monsters.ts": {
+    "mtime": 1786407152.1630273,
+    "seen": 1789628212.862283,
+    "ast_hash": "4da27a3610baca1f01a220179c14e505",
+    "semantic_hash": "4da27a3610baca1f01a220179c14e505"
+  },
+  "src/game/progress.ts": {
+    "mtime": 1786407613.4969628,
+    "seen": 1789628212.862283,
+    "ast_hash": "23b92f9194713c757702481fd621b86e",
+    "semantic_hash": "23b92f9194713c757702481fd621b86e"
+  },
+  "src/game/relics.ts": {
+    "mtime": 1786407308.5390463,
+    "seen": 1789628212.862284,
+    "ast_hash": "93a3734f9659d791c952a3521e4dbefb",
+    "semantic_hash": "93a3734f9659d791c952a3521e4dbefb"
+  },
+  "src/game/run.ts": {
+    "mtime": 1786408193.346906,
+    "seen": 1789628212.8622851,
+    "ast_hash": "899ae9d60eb04f1260c4edeca44ae4e8",
+    "semantic_hash": "899ae9d60eb04f1260c4edeca44ae4e8"
+  },
+  "src/game/runbattle.ts": {
+    "mtime": 1786408193.3480701,
+    "seen": 1789628212.862286,
+    "ast_hash": "c6ac47eb779514880987555b42756eeb",
+    "semantic_hash": "c6ac47eb779514880987555b42756eeb"
+  },
+  "src/game/runcards.ts": {
+    "mtime": 1786407152.1646867,
+    "seen": 1789628212.862287,
+    "ast_hash": "e42171533d3d0dc7a810e0261a95eb54",
+    "semantic_hash": "e42171533d3d0dc7a810e0261a95eb54"
+  },
+  "src/game/upgrades.ts": {
+    "mtime": 1786407152.1649811,
+    "seen": 1789628212.862287,
+    "ast_hash": "02f11782128d55719af1d42327102441",
+    "semantic_hash": "02f11782128d55719af1d42327102441"
+  },
+  "src/main.tsx": {
+    "mtime": 1785461258.2462015,
+    "seen": 1789628212.8622878,
+    "ast_hash": "a734e3a148795d5087059785790b5d58",
+    "semantic_hash": "a734e3a148795d5087059785790b5d58"
+  },
+  "src/net/auth.ts": {
+    "mtime": 1785832193.0754285,
+    "seen": 1789628212.862289,
+    "ast_hash": "7b523c693e61ac6d1edb52142cc5b16a",
+    "semantic_hash": "7b523c693e61ac6d1edb52142cc5b16a"
+  },
+  "src/net/firebase.ts": {
+    "mtime": 1784092275.5620685,
+    "seen": 1789628212.86229,
+    "ast_hash": "c2d8838211bf77b7fac98feb47960ab9",
+    "semantic_hash": "c2d8838211bf77b7fac98feb47960ab9"
+  },
+  "src/net/matchmaking.ts": {
+    "mtime": 1785831763.1675792,
+    "seen": 1789628212.86229,
+    "ast_hash": "881ed5406205e0f8f3fe1361e82c20f8",
+    "semantic_hash": "881ed5406205e0f8f3fe1361e82c20f8"
+  },
+  "src/net/protocol.ts": {
+    "mtime": 1785831704.9355078,
+    "seen": 1789628212.8622909,
+    "ast_hash": "ee0b9f74884a128f728706ac21c6605a",
+    "semantic_hash": "ee0b9f74884a128f728706ac21c6605a"
+  },
+  "src/net/session.ts": {
+    "mtime": 1786061643.9130485,
+    "seen": 1789628212.862292,
+    "ast_hash": "abf7711deda9c316f916a26de828a520",
+    "semantic_hash": "abf7711deda9c316f916a26de828a520"
+  },
+  "src/net/webrtc.ts": {
+    "mtime": 1783927940.2389822,
+    "seen": 1789628212.862292,
+    "ast_hash": "8cf5ddbe9991231059f8d9ba8fbb3cb0",
+    "semantic_hash": "8cf5ddbe9991231059f8d9ba8fbb3cb0"
+  },
+  "src/ui/CardDetail.tsx": {
+    "mtime": 1786063389.561166,
+    "seen": 1789628212.862293,
+    "ast_hash": "9106871c3bedb56786509e5ccc32d6c3",
+    "semantic_hash": "9106871c3bedb56786509e5ccc32d6c3"
+  },
+  "src/ui/CardFace.tsx": {
+    "mtime": 1786407152.1660464,
+    "seen": 1789628212.862294,
+    "ast_hash": "14e943395c8582045af1d66abce0030d",
+    "semantic_hash": "14e943395c8582045af1d66abce0030d"
+  },
+  "src/ui/DeckPicker.tsx": {
+    "mtime": 1786407152.1665516,
+    "seen": 1789628212.8622952,
+    "ast_hash": "5f45644c2698389cc073bff19861e446",
+    "semantic_hash": "5f45644c2698389cc073bff19861e446"
+  },
+  "src/ui/PortraitSvg.tsx": {
+    "mtime": 1785730624.9622831,
+    "seen": 1789628212.8622952,
+    "ast_hash": "c12ce201dcc34ae249a093caacfa778b",
+    "semantic_hash": "c12ce201dcc34ae249a093caacfa778b"
+  },
+  "src/ui/RunBar.tsx": {
+    "mtime": 1785307188.0225556,
+    "seen": 1789628212.862296,
+    "ast_hash": "dfe6d573429afb1156db2eecae9f143e",
+    "semantic_hash": "dfe6d573429afb1156db2eecae9f143e"
+  },
+  "src/ui/cardAbility.ts": {
+    "mtime": 1786082749.1340153,
+    "seen": 1789628212.862297,
+    "ast_hash": "0c9a7c88ae572954979c198ace501026",
+    "semantic_hash": "0c9a7c88ae572954979c198ace501026"
+  },
+  "src/ui/screens/AdminScreen.tsx": {
+    "mtime": 1789627570.6046038,
+    "seen": 1789628212.862298,
+    "ast_hash": "61ddf8e6c0f9ca2062ad725fab997d10",
+    "semantic_hash": "61ddf8e6c0f9ca2062ad725fab997d10"
+  },
+  "src/ui/screens/BattleScreen.tsx": {
+    "mtime": 1789627051.201621,
+    "seen": 1789628212.862298,
+    "ast_hash": "fd74e255d34d3292fa0059d96e7ab32e",
+    "semantic_hash": "fd74e255d34d3292fa0059d96e7ab32e"
+  },
+  "src/ui/screens/CodexScreen.tsx": {
+    "mtime": 1785887789.240536,
+    "seen": 1789628212.862299,
+    "ast_hash": "2929b34b2c8f77dbfbb8cfd4e3297f61",
+    "semantic_hash": "2929b34b2c8f77dbfbb8cfd4e3297f61"
+  },
+  "src/ui/screens/DeckBuilderScreen.tsx": {
+    "mtime": 1785887789.2409565,
+    "seen": 1789628212.8623,
+    "ast_hash": "b2203297399e9b0704ef2bd1d34c8ecf",
+    "semantic_hash": "b2203297399e9b0704ef2bd1d34c8ecf"
+  },
+  "src/ui/screens/DeckManagerScreen.tsx": {
+    "mtime": 1785887789.2421572,
+    "seen": 1789628212.8623009,
+    "ast_hash": "133fd0e847193b6fdd0ea40ad67e6b36",
+    "semantic_hash": "133fd0e847193b6fdd0ea40ad67e6b36"
+  },
+  "src/ui/screens/DeckSelectScreen.tsx": {
+    "mtime": 1785887789.2426867,
+    "seen": 1789628212.8623009,
+    "ast_hash": "70e1e4c6ba61247456da08d299cb6b9d",
+    "semantic_hash": "70e1e4c6ba61247456da08d299cb6b9d"
+  },
+  "src/ui/screens/EventScreen.tsx": {
+    "mtime": 1786407152.1682367,
+    "seen": 1789628212.862302,
+    "ast_hash": "013f24d4d54a6ce732bb8b32555e688a",
+    "semantic_hash": "013f24d4d54a6ce732bb8b32555e688a"
+  },
+  "src/ui/screens/LoginScreen.tsx": {
+    "mtime": 1785887789.2447236,
+    "seen": 1789628212.862303,
+    "ast_hash": "b2df54b26b6a787d1f5b1496b482140a",
+    "semantic_hash": "b2df54b26b6a787d1f5b1496b482140a"
+  },
+  "src/ui/screens/ModeSelectScreen.tsx": {
+    "mtime": 1785887789.2456088,
+    "seen": 1789628212.862304,
+    "ast_hash": "217873800e45cb3b749d6c2b4d416eb3",
+    "semantic_hash": "217873800e45cb3b749d6c2b4d416eb3"
+  },
+  "src/ui/screens/MultiplayerLobby.tsx": {
+    "mtime": 1785887789.2461884,
+    "seen": 1789628212.862304,
+    "ast_hash": "b8d81654dceb40e75c1552d8d03bd9f8",
+    "semantic_hash": "b8d81654dceb40e75c1552d8d03bd9f8"
+  },
+  "src/ui/screens/ResultScreen.tsx": {
+    "mtime": 1785887789.2469513,
+    "seen": 1789628212.862305,
+    "ast_hash": "ac43edbff05667b7086e231500e97575",
+    "semantic_hash": "ac43edbff05667b7086e231500e97575"
+  },
+  "src/ui/screens/RewardScreen.tsx": {
+    "mtime": 1786407152.168885,
+    "seen": 1789628212.862306,
+    "ast_hash": "e50a2f1aebbbfa15bfa55cc41a294f57",
+    "semantic_hash": "e50a2f1aebbbfa15bfa55cc41a294f57"
+  },
+  "src/ui/screens/RunEndScreen.tsx": {
+    "mtime": 1786407658.1451488,
+    "seen": 1789628212.862307,
+    "ast_hash": "b0388aeeea8c8b1f9ee85abfd489a648",
+    "semantic_hash": "b0388aeeea8c8b1f9ee85abfd489a648"
+  },
+  "src/ui/screens/RunMapScreen.tsx": {
+    "mtime": 1785887789.2488081,
+    "seen": 1789628212.862307,
+    "ast_hash": "33fb082e885afb5442d0155411bcda8a",
+    "semantic_hash": "33fb082e885afb5442d0155411bcda8a"
+  },
+  "src/ui/screens/RunStartScreen.tsx": {
+    "mtime": 1786408515.7602327,
+    "seen": 1789628212.862308,
+    "ast_hash": "e79fd120c727890ec7699c9d4c438712",
+    "semantic_hash": "e79fd120c727890ec7699c9d4c438712"
+  },
+  "src/ui/screens/ShopScreen.tsx": {
+    "mtime": 1786407152.1695318,
+    "seen": 1789628212.8623092,
+    "ast_hash": "31fa7d0c0fc3a7fe3ec6d1c28e8251b5",
+    "semantic_hash": "31fa7d0c0fc3a7fe3ec6d1c28e8251b5"
+  },
+  "src/ui/screens/TitleScreen.tsx": {
+    "mtime": 1786407317.361197,
+    "seen": 1789628212.86231,
+    "ast_hash": "b86cb9c6973734abe2bbbdbea553d748",
+    "semantic_hash": "b86cb9c6973734abe2bbbdbea553d748"
+  },
+  "src/ui/screens/TutorialScreen.tsx": {
+    "mtime": 1785801948.4520779,
+    "seen": 1789628212.86231,
+    "ast_hash": "b5f89de0e1d6c9a0d640e8285dd1bae1",
+    "semantic_hash": "b5f89de0e1d6c9a0d640e8285dd1bae1"
+  },
+  "src/ui/screens/adminCss.ts": {
+    "mtime": 1789627594.4185436,
+    "seen": 1789628212.862311,
+    "ast_hash": "a193023f8c835dc82b9332d7688b6c33",
+    "semantic_hash": "a193023f8c835dc82b9332d7688b6c33"
+  },
+  "src/ui/sfx.ts": {
+    "mtime": 1786407152.170727,
+    "seen": 1789628212.8623118,
+    "ast_hash": "8be6468b7e774b82b7635e3a4e47b92f",
+    "semantic_hash": "8be6468b7e774b82b7635e3a4e47b92f"
+  },
+  "src/ui/statBars.ts": {
+    "mtime": 1785887789.2528715,
+    "seen": 1789628212.862313,
+    "ast_hash": "5169af21b0c88568dc4e2e1ec23371ee",
+    "semantic_hash": "5169af21b0c88568dc4e2e1ec23371ee"
+  },
+  "src/ui/useAuth.ts": {
+    "mtime": 1782563322.7398455,
+    "seen": 1789628212.862313,
+    "ast_hash": "741cd89188307579ba9828c1b5d30412",
+    "semantic_hash": "741cd89188307579ba9828c1b5d30412"
+  },
+  "src/ui/useStageScale.ts": {
+    "mtime": 1787199470.8038478,
+    "seen": 1789628212.862314,
+    "ast_hash": "8b64bfa39cb89f2fc8295244eaa7bfed",
+    "semantic_hash": "8b64bfa39cb89f2fc8295244eaa7bfed"
+  },
+  "src/vite-env.d.ts": {
+    "mtime": 1783927956.7051983,
+    "seen": 1789628212.862315,
+    "ast_hash": "de507279c0eeaed9e20a3275e0b6a94d",
+    "semantic_hash": "de507279c0eeaed9e20a3275e0b6a94d"
+  },
+  "tsconfig.json": {
+    "mtime": 1781490471.4729428,
+    "seen": 1789628212.8623161,
+    "ast_hash": "6f8246e253f102264cf0ee4d0515a543",
+    "semantic_hash": "6f8246e253f102264cf0ee4d0515a543"
+  },
+  "vite.config.ts": {
+    "mtime": 1782953268.9003594,
+    "seen": 1789628212.862317,
+    "ast_hash": "a6a299f4c1ffbe49597c21a66e928fe4",
+    "semantic_hash": "a6a299f4c1ffbe49597c21a66e928fe4"
+  },
+  "CLAUDE.md": {
+    "mtime": 1787200052.8316782,
+    "seen": 1789628212.862318,
+    "ast_hash": "16d63053ac733a90f6db6da3bd3975a3",
+    "semantic_hash": "16d63053ac733a90f6db6da3bd3975a3"
+  },
+  "README.md": {
+    "mtime": 1781509647.863694,
+    "seen": 1789628212.862319,
+    "ast_hash": "f8f02e7c7f656146cdadb82175cae55b",
+    "semantic_hash": "f8f02e7c7f656146cdadb82175cae55b"
+  },
+  "docs/GAME_DESIGN.md": {
+    "mtime": 1786083617.5084953,
+    "seen": 1789628212.862319,
+    "ast_hash": "4b56411482889d201c75df1d8d6b993c",
+    "semantic_hash": "4b56411482889d201c75df1d8d6b993c"
+  },
+  "docs/ROGUELIKE.md": {
+    "mtime": 1787200073.0924,
+    "seen": 1789628212.8623202,
+    "ast_hash": "02d4507b4c91d1dc5158a9b53c64db70",
+    "semantic_hash": "02d4507b4c91d1dc5158a9b53c64db70"
+  },
+  "index.html": {
+    "mtime": 1785466087.657089,
+    "seen": 1789628212.862321,
+    "ast_hash": "72e89d7f8d96bca775850b6757b928ef",
+    "semantic_hash": "72e89d7f8d96bca775850b6757b928ef"
+  },
+  "ios/App/CapApp-SPM/README.md": {
+    "mtime": 1781859670.0,
+    "seen": 1789628212.8623219,
+    "ast_hash": "d256f6b5922d4249607779141357d565",
+    "semantic_hash": "d256f6b5922d4249607779141357d565"
+  },
+  "public/bg/README.md": {
+    "mtime": 1785887789.2225776,
+    "seen": 1789628212.8623219,
+    "ast_hash": "ccd4600c7c95a7bfee9eaddaf22dd0a1",
+    "semantic_hash": "ccd4600c7c95a7bfee9eaddaf22dd0a1"
+  },
+  "public/sprites/README.md": {
+    "mtime": 1786407152.1445637,
+    "seen": 1789628212.862323,
+    "ast_hash": "230992a14ab8d1b0530aee05e0c00eb1",
+    "semantic_hash": "230992a14ab8d1b0530aee05e0c00eb1"
+  },
+  "public/terrain/README.md": {
+    "mtime": 1786082359.4062998,
+    "seen": 1789628212.862324,
+    "ast_hash": "b29e51612d0157b0fe0ab88b9ed66bd7",
+    "semantic_hash": "b29e51612d0157b0fe0ab88b9ed66bd7"
+  }
+}

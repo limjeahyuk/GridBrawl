@@ -1,0 +1,35 @@
+{
+ "id": "trader",
+ "frameW": 64,
+ "frameH": 76,
+ "scale": 3,
+ "facesRight": true,
+ "clips": {
+  "idle": {
+   "frames": 6,
+   "frameMs": 160,
+   "loop": true
+  },
+  "talk": {
+   "frames": 6,
+   "frameMs": 120,
+   "loop": true
+  },
+  "offer": {
+   "frames": 6,
+   "frameMs": 110,
+   "loop": false,
+   "impactFrame": 2
+  },
+  "bow": {
+   "frames": 6,
+   "frameMs": 120,
+   "loop": false
+  }
+ },
+ "footY": 75,
+ "anchorX": 27,
+ "kind": "npc",
+ "region": null,
+ "replaces": null
+}

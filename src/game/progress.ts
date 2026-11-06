@@ -50,3 +50,33 @@ export function markCleared(id: RunDifficulty): RunDifficulty | null {
   const next = i >= 0 ? RUN_DIFFICULTIES[i + 1] : undefined
   return next ? next.id : null
 }
+
+// --- 도감 발견 기록(2026-11) ---------------------------------------------------
+// 얻은 유물 · 드러난 적 능력. 해금과 같은 판단으로 기기 단위 저장이고 던지지 않는다.
+const readSet = (key: string): Set<string> => {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '[]')
+    return new Set(Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+const addToSet = (key: string, ids: string[]) => {
+  const set = readSet(key)
+  const before = set.size
+  ids.forEach((id) => set.add(id))
+  if (set.size === before) return
+  try {
+    localStorage.setItem(key, JSON.stringify([...set]))
+  } catch {
+    // 저장이 막힌 환경 — 도감이 비어 보일 뿐 게임은 그대로다.
+  }
+}
+
+const RELIC_KEY = 'gb-relics-seen'
+const FOE_KEY = 'gb-foe-seen'
+export const seenRelics = () => readSet(RELIC_KEY)
+export const markRelicsSeen = (ids: string[]) => addToSet(RELIC_KEY, ids)
+/** 한 번 본 적 능력은 다음에 만나도 처음부터 보인다. 키는 `<몬스터 id>:<훅 이름>`. */
+export const seenFoeAbilities = () => readSet(FOE_KEY)
+export const markFoeAbilitySeen = (keys: string[]) => addToSet(FOE_KEY, keys)
