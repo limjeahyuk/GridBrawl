@@ -218,6 +218,31 @@ export interface FogTile {
   rounds: number
 }
 
+/**
+ * 판 위 함정(2026-11 리디자인 · 시안 `Hazards` — **런 전용**). `BattleOpts.hazards`로만 들어오고
+ * PvP·봇전은 안 넘기므로 규칙이 통째로 no-op이다 → `RULES_VERSION` 무관(바위가 처음 들어왔을 때와 같은 근거).
+ *   fire     불길 — 들어서거나 라운드 끝에 서 있으면 화상 1라운드. `rounds`가 지나면 꺼진다. 붙은 덩굴을 태운다.
+ *   spikes   가시덫 — 숨음 → 경고 → 솟음을 되풀이(`spikeStateAt`). 솟은 라운드에 들어서면 속박.
+ *   bramble  가시덩굴 — 들어서면 속박(늘 켜져 있다). 불길에 닿으면 탄다.
+ *   ice      빙판 — 들어선 방향으로 한 칸 더 미끄러진다(바위·벽·상대 앞에선 멈춘다).
+ */
+export type HazardKind = 'fire' | 'spikes' | 'bramble' | 'ice'
+export interface Hazard {
+  kind: HazardKind
+  cell: Cell
+  /** 불길 — 남은 라운드(0이면 꺼진다). 나머지는 안 쓴다. */
+  rounds?: number
+  /** 가시덫 — 주기 위상(0~2). 칸마다 달라 한꺼번에 솟지 않는다. */
+  phase?: number
+}
+export const FIRE_ROUNDS = 3
+export type SpikeState = 'hidden' | 'warn' | 'up'
+/** 가시덫의 그 라운드 상태 — 3라운드 주기(숨음 → 경고 → 솟음). 랜덤 없음 → 락스텝 안전. */
+export const spikeStateAt = (h: Hazard, round: number): SpikeState =>
+  (['hidden', 'warn', 'up'] as const)[(round + (h.phase ?? 0)) % 3]
+export const hazardAt = (list: readonly Hazard[], c: Cell): Hazard | undefined =>
+  list.find((h) => h.cell.col === c.col && h.cell.row === c.row)
+
 /** 이 칸에 깔린 독안개(없으면 undefined). */
 export const fogAt = (fog: readonly FogTile[], c: Cell): FogTile | undefined =>
   fog.find((f) => f.rounds > 0 && f.cell.col === c.col && f.cell.row === c.row)
@@ -555,6 +580,9 @@ export interface BattleSnapshot {
   obstacles: Obstacle[]
   /** 이 시점에 깔려 있는 독안개. 바위와 같은 이유로 스냅샷에 싣는다. */
   fog: FogTile[]
+  /** 이 시점의 함정과 그때의 라운드(가시덫 상태를 그리려면 라운드가 필요하다). */
+  hazards: Hazard[]
+  round: number
 }
 
 export type ActionResult =

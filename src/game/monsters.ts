@@ -68,6 +68,29 @@ const resolveCards = (ids: string[]): CardDef[] =>
   ids.map(cardById).filter((c): c is CardDef => !!c)
 
 export const MONSTERS: MonsterDef[] = [
+  // --- 이벤트 전용(tier 0 — 지도 풀에 안 나온다) · 2026-11 리디자인 ---------------
+  // 값은 시안 임의값(`docs/redesign/EVENTS.md`·`GOBLIN_MERCHANT.md`).
+  {
+    id: 'snake', behavior: 'skirmisher', name: '동굴 뱀', baseArtId: 'archer', spriteId: 'snake',
+    tier: 0, maxHp: 34, startEnergy: 20, aiLevel: 'easy', passive: {},
+    deckCardIds: ['c-jab', 'arc-venom'], note: '항아리 속에 숨어 있다. 독침을 쏜다.',
+  },
+  {
+    id: 'goblin-poor', behavior: 'skirmisher', name: '가난한 고블린', baseArtId: 'mage', spriteId: 'goblin-poor',
+    tier: 0, maxHp: 28, startEnergy: 20, aiLevel: 'easy', passive: {},
+    deckCardIds: ['c-shot', 'c-jab'], note: '가진 게 없어 돌을 던지며 도망친다.',
+  },
+  {
+    id: 'goblin-mid', behavior: 'rusher', name: '중간 고블린', baseArtId: 'mage', spriteId: 'goblin-mid',
+    tier: 0, maxHp: 52, startEnergy: 26, aiLevel: 'normal', passive: { turnShield: 4 },
+    deckCardIds: ['war-cleave', 'c-jab', 'c-guard'], note: '단골이 강도로 돌변하면 언월도를 뽑는다.',
+  },
+  {
+    id: 'goblin-rich', behavior: 'balanced', name: '부자 고블린', baseArtId: 'mage', spriteId: 'goblin-rich',
+    tier: 0, maxHp: 88, startEnergy: 32, aiLevel: 'hard',
+    passive: { damageReduction: 3, turnEnergy: 6, attackBonus: 3 },
+    deckCardIds: ['war-bash', 'war-cleave', 'arc-shot', 'c-brace'], note: '돈으로 산 갑옷과 금화 세례. 엘리트급.',
+  },
   {
     id: 'slime',
     behavior: 'balanced',

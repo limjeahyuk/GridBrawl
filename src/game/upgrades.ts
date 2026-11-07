@@ -1,231 +1,119 @@
 // ---------------------------------------------------------------------------
-// 카드 강화 (2026-08-08) — **같은 카드를 또 얻으면 그 카드가 강해진다.**
+// 카드 강화 — 룰렛(2026-11 리디자인 · 규칙 `docs/redesign/CARD_UPGRADE.md`)
 //
-// 왜 필요했나: 덱은 카드 id 목록이고 쿨타임·"같은 공격은 한 턴에 한 번"이 전부 id로
-// 판정된다. 그래서 **중복 카드는 지금까지 완전히 낭비**였다 — 덱 칸만 먹고 아무것도
-// 안 해 줬는데, 보상 6칸에 이미 가진 카드가 태연히 섞여 나왔다. 중복을 성장으로
-// 바꾸면 그 칸이 다시 선택지가 된다.
+// 옛 "같은 카드를 또 얻으면 강화"(2026-08-08)는 **없앴다**(사용자 결정). 강화는 이제
+// 모닥불(휴식 칸)·상점·대장장이 이벤트의 룰렛 하나뿐이다.
 //
-// 설계 규칙 셋:
-//   ① **강화는 한 번뿐**(`MAX_UPGRADE = 1`, 사용자 결정). 한 장을 더 얻으면 곧바로
-//      최대 강화다 — 같은 카드를 세 장·네 장 모으는 파밍 게임이 되지 않는다.
-//   ② **피해는 늘 오르고, 그 카드가 가진 "성격" 하나가 더 좋아진다.** 아래 `IDENTITY`
-//      순서에서 **먼저 걸리는 것 하나만** 적용한다. 두세 개를 같이 얹으면 원래 센
-//      카드가 혼자 더 세지고(복합 능력 카드일수록 이득), 강화가 무엇을 하는지도
-//      한눈에 안 읽힌다.
-//   ③ **아무것도 안 바뀌면 강화가 아니다.** `isUpgradable`이 실제 결과를 원본과
-//      비교해 판정하고, `run.ts`가 그걸로 보상 풀에서 뺀다(사용자 요청 —
-//      "강화가 별로면 가지고 있는 카드는 안 나오게"). 규칙을 늘려도 이 판정은
-//      자동으로 따라온다 — 손으로 "강화 불가 카드 목록"을 적지 않는다.
+//   ① 수치 룰렛 0/+5/+10/+15/+20 — 공격=피해 · 가드=방어 · 회복=회복량 · 기력=+기력
+//   ② 범위 룰렛 0~5 — 공격 카드만. 걸린 수만큼 **붙은 칸을 직접 고른다**
+//   ③ 카드당 최대 2번(`MAX_UPGRADE`). **꽝(0)은 횟수에 안 센다**
+//   ④ 이동 카드는 강화하지 않는다
 //
-// ⚠ **런 전용이다.** 여기서 만든 CardDef는 `run.ts`/`runbattle.ts`를 거쳐서만
-// 엔진에 들어간다. PvP·봇전의 카드 풀(`cards.ts`·`roster.ts`)은 원본 그대로라
-// 락스텝·`RULES_VERSION`과 무관하다.
+// ⚠ **런 전용이다.** 여기서 만든 CardDef는 `run.ts`/`runbattle.ts`를 거쳐서만 엔진에
+// 들어간다. PvP 카드 풀은 원본 그대로라 `RULES_VERSION`과 무관하다.
 // ---------------------------------------------------------------------------
-import { GRID_COLS, STATUS_MAX_ROUNDS, type CardDef, type Offset } from '../battle/types'
+import type { CardDef, Offset } from '../battle/types'
 
-/** 강화 상한. 1 = 같은 카드를 한 장 더 얻으면 그걸로 끝(사용자 결정). */
-export const MAX_UPGRADE = 1
+export const MAX_UPGRADE = 2
 
-/** 강화된 카드 이름에 붙는 표식. `파쇄 베기` → `파쇄 베기+` */
-const MARK = '+'
+/** 카드 한 장의 강화 기록. `RunState.upgrades[cardId]`. */
+export interface CardUpgrade {
+  valueBonus: number
+  extraCells: Offset[]
+  times: number
+}
 
-const key = (o: Offset): string => `${o.df},${o.du}`
+/** 룰렛 판 — [값, %]. 확률 합 100. */
+export const ROULETTE_VALUE = [[0, 10], [5, 25], [10, 30], [15, 25], [20, 10]] as const
+export const ROULETTE_RANGE = [[0, 10], [1, 20], [2, 20], [3, 20], [4, 20], [5, 10]] as const
+export type RouletteTable = readonly (readonly [number, number])[]
+
+/** 가중 추첨. 그림(칸 배치)은 이 결과에 맞춰 돌리므로 확률과 그림이 항상 맞는다. */
+export function spinRoulette(table: RouletteTable, rng: () => number = Math.random): number {
+  let r = rng() * 100
+  for (const [v, p] of table) {
+    if (r < p) return v
+    r -= p
+  }
+  return table[table.length - 1][0]
+}
+
+/** 수치 강화가 오르는 필드. 없으면 수치 강화 불가. */
+type ValueField = 'damage' | 'block' | 'healHp' | 'gain'
+export function valueFieldOf(c: CardDef): ValueField | null {
+  if (c.kind === 'attack') return 'damage'
+  if (c.kind === 'guard') return 'block'
+  if (c.kind === 'heal') return 'healHp'
+  if (c.kind === 'energy') return 'gain'
+  return null
+}
+/** 화면 표기 — 버튼 이름과 칩. */
+export const VALUE_LABEL: Record<ValueField, { name: string; word: string; tag: string; en: string }> = {
+  damage: { name: '공격력', word: '피해', tag: 'DM', en: 'DAMAGE' },
+  block: { name: '방어량', word: '방어량', tag: 'BLOCK', en: 'GUARD' },
+  healHp: { name: '회복량', word: '회복량', tag: 'HP+', en: 'HEAL' },
+  gain: { name: '기력량', word: '기력', tag: 'EN+', en: 'ENERGY' },
+}
+
+export const canUpgradeValue = (c: CardDef): boolean => valueFieldOf(c) !== null
+export const canUpgradeRange = (c: CardDef): boolean => c.kind === 'attack' && !!c.range?.length
+
+/** 이 카드를 한 번 더 강화할 수 있는가(덱에 있든 없든). 이유도 같이. */
+export function upgradeBlock(c: CardDef, up?: CardUpgrade): string | null {
+  if (c.kind === 'move') return '강화 불가 — 이동 카드'
+  if ((up?.times ?? 0) >= MAX_UPGRADE) return `최대 강화 ${MAX_UPGRADE}/${MAX_UPGRADE}`
+  if (!canUpgradeValue(c) && !canUpgradeRange(c)) return '강화 불가 — 올릴 수치가 없다'
+  return null
+}
+
+const key = (o: Offset) => `${o.df},${o.du}`
 
 /**
- * 사거리 한 칸 확장 — 앞뒤 **가장 바깥 칸**에서 한 칸씩 더 뻗는다. 앞뒤 대칭
- * 규약(2026-08-03)을 그대로 따라가므로 대칭 카드는 대칭인 채로 넓어지고,
- * 전방 전용 카드는 앞으로만 길어진다.
- *
- * ⚠ **이미 df 4칸을 넘으면 늘리지 않는다.** 판이 6열뿐이라 df 5가 사실상 판 끝이고,
- * df 6은 어떤 배치에서도 닿는 칸이 없다 — "늘었는데 아무 일도 안 일어나는" 강화가
- * 된다. 그런 카드는 `IDENTITY`의 마지막 항목(기력 절감)으로 떨어진다.
+ * 범위 고르기 — 지금 범위 · 나(0,0) · 이미 고른 칸에 8방향으로 붙은 빈 칸.
+ * 편집 칸은 df −4…4, du −2…2(판이 6×4라 그 밖은 닿지 않는다).
  */
-function extendRange(range: Offset[] | undefined): Offset[] | null {
-  if (!range?.length) return null
-  const maxAbs = Math.max(...range.map((o) => Math.abs(o.df)))
-  if (maxAbs < 1 || maxAbs >= GRID_COLS - 2) return null
-  const seen = new Set(range.map(key))
-  const out = range.slice()
-  for (const o of range) {
-    if (Math.abs(o.df) !== maxAbs) continue
-    const next: Offset = { df: o.df + Math.sign(o.df), du: o.du }
-    if (seen.has(key(next))) continue
-    seen.add(key(next))
-    out.push(next)
-  }
-  return out.length > range.length ? out : null
+export function canPickCell(range: Offset[], picks: Offset[], c: Offset): boolean {
+  if (Math.abs(c.df) > 4 || Math.abs(c.du) > 2) return false
+  const all = [...range, ...picks]
+  if ((c.df === 0 && c.du === 0) || all.some((o) => key(o) === key(c))) return false
+  return [...all, { df: 0, du: 0 }].some((o) => Math.abs(o.df - c.df) <= 1 && Math.abs(o.du - c.du) <= 1)
 }
 
 /**
- * 비율 증가(최소·최대 폭 고정). 작은 카드가 손해 보지 않고 큰 카드가 폭주하지 않게.
- * ⚠ **min/max는 magnitude라 전투 수치 리스케일을 같이 타야 한다.** 이 파일은
- * 2026-08-05 ÷2 리스케일 뒤에 생겼다가 머지되면서 옛 폭(4~12 등)을 그대로 갖고
- * 있었고, 그 상태에서는 강화가 카드 값 대비 **두 배로 셌다**. 값을 다시 스케일할
- * 땐 여기 숫자들도 함께 본다(%·칸 수·라운드 수는 스케일 무관).
+ * 강화를 적용한 카드. 기록이 없으면 **원본을 그대로**(참조까지 같다).
+ * ⚠ 원본을 변형하지 않는다 — 원본 상수는 PvP가 같이 쓴다.
  */
-const bump = (n: number, pct: number, min: number, max: number): number =>
-  n + Math.min(max, Math.max(min, Math.round(n * pct)))
-
-/**
- * 공격 카드의 "성격" 강화 — **위에서부터 먼저 걸리는 것 하나만** 적용한다.
- * 반환값이 없으면 그 규칙은 이 카드에 해당하지 않는다는 뜻(다음 규칙으로).
- */
-const IDENTITY: ((up: CardDef, base: CardDef) => string[] | null)[] = [
-  // ① 지속피해 — 궁수의 중독, 마법사의 화상. 한 장에 둘 다 있으면 둘 다 오른다
-  //    (`mag-doom`·`r-blightwave`처럼 "묻히는 게 정체성"인 카드라 갈라 놓으면 반쪽이 된다).
-  //
-  // ⚠ **값은 피해가 아니라 지속 라운드다**(2026-08-07 상태이상 재정의). 한 겹의
-  //   위력은 `POISON_TICK_DAMAGE`·`BURN_HIT_DAMAGE` 상수로 고정이고 카드가 정하는
-  //   건 "몇 라운드 버티는 겹인가"뿐이다. 그래서 강화는 **+1 라운드**다.
-  //   ⚠ 이미 `STATUS_MAX_ROUNDS`면 늘려 봐야 엔진이 잘라내므로 **이 규칙은 해당
-  //   없음**으로 떨어뜨린다 — 그래야 아래 규칙이 대신 걸려 강화가 헛돌지 않는다.
-  (up, base) => {
-    const n: string[] = []
-    if (base.poison && base.poison < STATUS_MAX_ROUNDS) {
-      up.poison = base.poison + 1
-      n.push('중독 +1라운드')
-    }
-    if (base.burn && base.burn < STATUS_MAX_ROUNDS) {
-      up.burn = base.burn + 1
-      n.push('화상 +1라운드')
-    }
-    return n.length ? n : null
-  },
-  // ② 통제(빙결·기절·속박)는 **강화할 자리가 없다**(2026-08-07 재정의).
-  //    셋 다 "그 라운드 한정"이 되면서 카드의 값이 지속이 아니라 **걸리는가(>0)**만
-  //    뜻하게 됐다 — 숫자를 올려도 엔진이 안 본다. 예전 규칙(`+1턴`)은 화면에만
-  //    "빙결 +1턴"이라 적히고 실제로는 아무 일도 없었으므로 통째로 뺐다.
-  //    이 카드들은 아래 규칙(흡수·위치·사거리·기력)으로 떨어진다.
-  // ③ 흡수 — 흡혈·기력흡수. 지속력을 파는 카드는 지속력이 늘어야 강화답다.
-  (up, base) => {
-    const n: string[] = []
-    if (base.leech) { up.leech = bump(base.leech, 0.4, 2, 6); n.push(`흡혈 +${up.leech! - base.leech}`) }
-    if (base.drain) { up.drain = bump(base.drain, 0.4, 2, 6); n.push(`기력흡수 +${up.drain! - base.drain}`) }
-    return n.length ? n : null
-  },
-  // ④ 위치 통제 — 넉백·끌기는 칸 단위라 비율이 의미 없다. 딱 한 칸 더.
-  (up, base) => {
-    const n: string[] = []
-    if (base.push) { up.push = base.push + 1; n.push('넉백 +1') }
-    if (base.pull) { up.pull = base.pull + 1; n.push('끌기 +1') }
-    return n.length ? n : null
-  },
-  // ⑤ 자기 강화 — 각성(누적)·사용 시 보호막.
-  (up, base) => {
-    const n: string[] = []
-    if (base.empower) { up.empower = bump(base.empower, 0.4, 2, 5); n.push(`각성 +${up.empower! - base.empower}`) }
-    if (base.selfShield) { up.selfShield = bump(base.selfShield, 0.4, 3, 10); n.push(`방벽 +${up.selfShield! - base.selfShield}`) }
-    return n.length ? n : null
-  },
-  // ⑥ 반동 — 유일하게 **깎는** 강화. 자해가 정체성인 카드(`r-frenzy`)의 대가를 줄인다.
-  (up, base) => {
-    if (!base.recoil) return null
-    const cut = Math.min(5, Math.max(2, Math.round(base.recoil * 0.4)))
-    up.recoil = Math.max(0, base.recoil - cut)
-    return [`반동 -${base.recoil - up.recoil}`]
-  },
-  // ⑦ 사거리 — 붙일 능력이 없는 "순수 타격" 카드가 여기로 온다. 기본기·공용 약공이
-  //    앞뒤 2칸까지 뻗는 게 이 규칙이다.
-  (up, base) => {
-    const ext = extendRange(base.range)
-    if (!ext) return null
-    up.range = ext
-    return ['사거리 +1칸']
-  },
-  // ⑧ 최후 — 판 끝까지 닿는 장거리 카드(`r-railgun` 등)는 늘릴 사거리가 없다.
-  //    대신 값을 깎아 실제로 낼 수 있게 한다.
-  (up, base) => {
-    const cost = base.energyCost ?? 0
-    if (cost <= 2) return null
-    const cut = Math.min(4, Math.max(1, Math.round(cost * 0.15)))
-    up.energyCost = cost - cut
-    return [`기력 -${cut}`]
-  },
-]
-
-/**
- * 강화 한 단계. 바뀌는 게 없으면 `null`(= 이 카드는 더 올릴 게 없다).
- * ⚠ **원본을 변형하지 않는다.** 원본 상수(`cards.ts`·`roster.ts`·`runcards.ts`)는
- * PvP가 같이 쓰므로 항상 새 객체를 만들어 돌려준다.
- */
-function applyOnce(base: CardDef): { card: CardDef; notes: string[] } | null {
-  const up: CardDef = { ...base }
+export function upgradedCard(base: CardDef, up?: CardUpgrade): CardDef {
+  if (!up || up.times <= 0) return base
+  const c: CardDef = { ...base }
   const notes: string[] = []
-
-  if (base.kind === 'attack') {
-    const d = base.damage ?? 0
-    if (d > 0) {
-      up.damage = bump(d, 0.2, 2, 6)
-      notes.push(`피해 +${up.damage! - d}`)
-    }
-    for (const rule of IDENTITY) {
-      const n = rule(up, base)
-      if (n) { notes.push(...n); break }
-    }
-  } else if (base.kind === 'guard') {
-    const b = base.block ?? 0
-    up.block = bump(b, 0.25, 3, 12)
-    notes.push(`방어 +${up.block! - b}`)
-  } else if (base.kind === 'energy') {
-    const g = base.gain ?? 0
-    up.gain = bump(g, 0.25, 3, 10)
-    notes.push(`기력 +${up.gain! - g}`)
-  } else if (base.kind === 'heal') {
-    const h = base.healHp ?? 0
-    up.healHp = bump(h, 0.25, 3, 10)
-    notes.push(`회복 +${up.healHp! - h}`)
-  } else if (base.kind === 'buff') {
-    // 위력이 있는 버프는 위력을, 위력이라는 게 없는 버프(`freeCast`)는 지속을 올린다.
-    if (base.buffPower) {
-      up.buffPower = bump(base.buffPower, 0.25, 1, 4)
-      notes.push(`효과 +${up.buffPower! - base.buffPower}`)
-    } else {
-      up.buffRounds = (base.buffRounds ?? 1) + 1
-      notes.push('지속 +1턴')
-    }
-  } else if (base.kind === 'move') {
-    // ⚠ 이동은 걸음 수를 늘리면 카드의 정체가 바뀐다(↗ 한 칸 = 비껴 딛기 두 칸).
-    //    쿨타임만 깎고, 쿨이 없는 기본 이동은 **강화할 게 없다** — `isUpgradable`이
-    //    false가 되어 보상 풀에서 빠진다.
-    const cd = base.cooldown ?? 0
-    if (cd <= 0) return null
-    up.cooldown = cd - 1
-    notes.push('쿨타임 -1턴')
+  const f = valueFieldOf(base)
+  if (f && up.valueBonus) {
+    c[f] = (base[f] ?? 0) + up.valueBonus
+    notes.push(`${VALUE_LABEL[f].word} +${up.valueBonus}`)
   }
-  return notes.length ? { card: up, notes } : null
-}
-
-/**
- * 강화를 적용한 카드. `level <= 0`이거나 더 올릴 게 없으면 **원본을 그대로**
- * 돌려준다(참조까지 같다 — 강화가 없는 대부분의 카드에서 객체를 새로 만들지 않고,
- * `isUpgradable`이 이 동일성으로 판정한다).
- *
- * 지금은 `MAX_UPGRADE`가 1이라 한 번만 돌지만, 상한을 올리면 그만큼 누적된다.
- */
-export function upgradedCard(base: CardDef, level: number): CardDef {
-  let cur = base
-  let notes: string[] = []
-  const steps = Math.min(level, MAX_UPGRADE)
-  for (let i = 0; i < steps; i++) {
-    const next = applyOnce(cur)
-    if (!next) break
-    cur = next.card
-    notes = next.notes
+  if (up.extraCells.length && base.range) {
+    c.range = [...base.range, ...up.extraCells]
+    notes.push(`범위 +${up.extraCells.length}칸`)
   }
-  if (cur === base) return base
-  cur.name = base.name + MARK.repeat(steps)
-  cur.upgraded = steps
-  cur.upgradeNote = notes.join(' · ')
-  return cur
+  c.name = `${base.name}+${up.times}`
+  c.upgraded = up.times
+  c.upgradeNote = notes.join(' · ')
+  return c
 }
 
-/** 이 카드를 한 번 더 강화하면 실제로 무언가 바뀌는가. 풀 필터·강화 이벤트의 기준. */
-export function isUpgradable(base: CardDef, level: number): boolean {
-  return level < MAX_UPGRADE && applyOnce(upgradedCard(base, level)) !== null
-}
-
-/** 강화하면 무엇이 좋아지는지 한 줄 요약(강화 전에 보여 주는 미리보기). */
-export function upgradePreview(base: CardDef, level: number): string {
-  return upgradedCard(base, level + 1).upgradeNote ?? ''
+/** 룰렛 결과를 기록에 더한다. 0(꽝)은 아무것도 안 바뀌고 횟수도 안 센다. */
+export function addUpgrade(
+  up: CardUpgrade | undefined,
+  gain: { value?: number; cells?: Offset[] },
+): CardUpgrade | undefined {
+  const value = gain.value ?? 0
+  const cells = gain.cells ?? []
+  if (!value && !cells.length) return up
+  const cur = up ?? { valueBonus: 0, extraCells: [], times: 0 }
+  return {
+    valueBonus: cur.valueBonus + value,
+    extraCells: [...cur.extraCells, ...cells],
+    times: Math.min(MAX_UPGRADE, cur.times + 1),
+  }
 }

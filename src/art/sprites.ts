@@ -21,6 +21,9 @@ export type ClipName =
   | 'block'
   | 'hurt'
   | 'death'
+  /** 상점 NPC 전용(고블린 장사꾼) — 흥정 대기 · 살 때 한 번. */
+  | 'haggle'
+  | 'cheer'
 
 export interface ClipDef {
   frames: number
@@ -121,6 +124,21 @@ export const SHEETS: Record<string, SheetDef> = {
   // hero — 대체 대상: mage
   mage: { id: 'redesign/sprites/dirge', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 37, facesRight: true,
     clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 78, loop: true }, back: { frames: 6, frameMs: 100, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 8, frameMs: 75, loop: false, impactFrame: 3 }, attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 105, loop: false } } },
+  // NPC — 떠돌이 상인 마렌(상점 화면). 전투에 안 서는 유일한 시트다.
+  // ⚠ 받은 팩의 `talk`·`offer`·`bow`는 `ClipName`에 없는 이름이라 안 적는다 —
+  //   적어 두면 `clipUrl`이 `attack1.png`처럼 없는 파일을 찾는다. 지금 쓰는 건 대기뿐.
+  trader: { id: 'redesign/sprites/trader', frameW: 64, frameH: 76, scale: 3, footY: 75, anchorX: 27, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 160, loop: true } } },
+  // 이벤트 전용 — 항아리 뱀 · 고블린 장사꾼 3단계(`docs/redesign/sprites-v2.ts`).
+  // ⚠ 고블린의 `haggle`·`cheer`는 상점 화면 전용 클립이다.
+  snake: { id: 'redesign/sprites/snake', frameW: 72, frameH: 40, scale: 3, footY: 40, anchorX: 34, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 120, loop: true }, run: { frames: 6, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 75, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 7, frameMs: 100, loop: false } } },
+  'goblin-poor': { id: 'redesign/sprites/goblin-poor', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 38, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
+  'goblin-mid': { id: 'redesign/sprites/goblin-mid', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 37, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
+  'goblin-rich': { id: 'redesign/sprites/goblin-rich', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 37, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 130, loop: true }, run: { frames: 8, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
   // monster · grassland — 대체 대상: slime
   slime: { id: 'redesign/sprites/slime', frameW: 64, frameH: 44, scale: 3, footY: 43, anchorX: 26, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 130, loop: true }, run: { frames: 6, frameMs: 85, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 6, frameMs: 100, loop: false } } },
