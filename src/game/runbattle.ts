@@ -5,7 +5,7 @@
 import { getChar } from '../data/roster'
 import { COMMON_CARDS } from '../battle/cards'
 import { decideAI, type AIProfile } from '../battle/ai'
-import { GRID_COLS, GRID_ROWS, type Cell } from '../battle/types'
+import { GRID_COLS, GRID_ROWS, POISON_TICK_DAMAGE, type Cell } from '../battle/types'
 
 // 이동은 모든 파이터가 쓰는 보편 능력이다. 몬스터의 `deckCardIds`는 정체성(공격·가드)만
 // 담으므로, AI가 접근·회피할 수 있도록 공용 이동 카드를 풀에 주입한다. 이게 없으면
@@ -21,7 +21,7 @@ import {
   currentEnemy,
   difficultyDef,
   runCard,
-  terrainFor,
+  terrainFor, hazardsFor,
   type RunState,
 } from './run'
 
@@ -65,6 +65,12 @@ export function runFightProps(run: RunState): RunFightProps {
     startCells: [pCell, monCell],
     // 지형 — 무대마다 다른 바위 배치(`terrainFor`). 런 전용이라 PvP·봇전은 빈 판.
     obstacles: terrainFor(run),
+    // 함정(2026-11) — 일반 전투의 일부에만. 전투 시작 때 한 번 굴린다.
+    hazards: hazardsFor(run),
+    // 항아리 이벤트 — 중독 한 겹을 안고 시작한다(겹 위력은 고정값).
+    startStatus: run.special?.startPoison
+      ? [[{ kind: 'poison', rounds: run.special.startPoison, power: POISON_TICK_DAMAGE, since: 0 }], undefined]
+      : undefined,
   }
   // 전투별 기분(2026-08-05) — 같은 몬스터라도 판마다 공격성이 살짝 다르게. 성격
   // (archetype)과 함께 매 턴 decideAI로 넘긴다. 전투 시작 때 한 번만 굴린다.

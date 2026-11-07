@@ -8,8 +8,8 @@
 // ⚠ 룰이 아니라 **읽기용 화면**이다 — 엔진·AI·시뮬과 아무 관계가 없다.
 // ---------------------------------------------------------------------------
 import { useEffect, useRef, useState } from 'react'
-import type { CardDef } from '../battle/types'
-import { RangeChart, cardAccent, kindIcon } from './CardFace'
+import { GRID_COLS, GRID_ROWS, type Cell, type CardDef } from '../battle/types'
+import { RangeChart, cardAccent } from './CardFace'
 import { KIND_LABEL, abilityList, cardCost, primaryStat } from './cardAbility'
 
 /**
@@ -63,18 +63,56 @@ export function useLongPress(onLong: () => void, ms = 380) {
   }
 }
 
+const same = (a: Cell, b: Cell) => a.col === b.col && a.row === b.row
+function MiniBoard({ card, board }: { card: CardDef; board: DetailBoard }) {
+  const hit = board.hits.some((c) => same(c, board.foe))
+  return (
+    <div className="cardzoom__now">
+      <span>지금 쓰면</span>
+      <div className="cardzoom__mini">
+        {Array.from({ length: GRID_ROWS }, (_, row) =>
+          Array.from({ length: GRID_COLS }, (_, col) => {
+            const c = { col, row }
+            const me = same(c, board.me), foe = same(c, board.foe), h = board.hits.some((x) => same(x, c))
+            return (
+              <i key={`${col},${row}`} className={`${h ? 'is-hit' : ''} ${me ? 'is-me' : ''} ${foe ? 'is-foe' : ''}`}>
+                {me ? '나' : foe ? '적' : ''}
+              </i>
+            )
+          }),
+        )}
+      </div>
+      <b className={hit ? 'is-hit' : ''}>
+        {hit
+          ? `${board.foeName}이(가) 범위 안${card.push ? ` — 맞고 ${card.push}칸 밀려난다` : ''}`
+          : '이 자리에선 아직 안 닿는다'}
+      </b>
+    </div>
+  )
+}
+
 /**
  * 상세 카드. 화면 전체를 덮는 어두운 판 위에 한 장을 크게 띄운다. 아무 데나
  * 누르면 닫힌다 — 읽으려고 연 것이라 "닫기"를 찾게 만들면 안 된다.
  */
+/** 전투에서 열었을 때만 — "지금 쓰면" 미니 판(6×4, 화면 좌표 그대로). */
+export interface DetailBoard {
+  me: Cell
+  foe: Cell
+  hits: Cell[]
+  foeName: string
+}
+
 export function CardDetail({
   card,
   accent,
   onClose,
+  board,
 }: {
   card: CardDef
   accent: string
   onClose: () => void
+  board?: DetailBoard
 }) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -98,82 +136,90 @@ export function CardDetail({
 
   return (
     <div className="cardzoom" onClick={onClose} role="presentation">
+      {/* 두 칸짜리 판(디자인 `CardDetail`) — 왼쪽은 카드를 크게, 오른쪽은 수치와
+          용어. 시안은 사거리를 5×3으로 그리지만 **우리 카드는 앞뒤 3칸째까지
+          간다**(궁수 `먼 겨냥`) — 5칸으로 자르면 그 카드가 빈 칸으로 보인다. */}
       <div
         className="cardzoom__sheet"
         style={{ ['--accent' as string]: cardAccent(card, accent) }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="cardzoom__head">
-          <span className="cardzoom__kindicon">{kindIcon(card)}</span>
-          <div>
-            <div className="cardzoom__name">{card.name}</div>
-            <div className="cardzoom__kind">
-              {KIND_LABEL[card.kind]}
-              {card.signature && <em> · 시그니처</em>}
-            </div>
+        <article className={`cardzoom__card cardzoom__card--${card.kind}`}>
+          <span className="cardzoom__strip" />
+          <div className="cardzoom__chips">
+            {stat && (
+              <span className="cardzoom__chip cardzoom__chip--dm">
+                {stat.unit} {stat.value}
+              </span>
+            )}
+            {cost > 0 && <span className="cardzoom__chip cardzoom__chip--en">EN {cost}</span>}
           </div>
-        </div>
-
-        <p className="cardzoom__desc">{card.desc}</p>
-
-        <div className="cardzoom__stats">
-          {stat && (
-            <div className="cardzoom__stat">
-              <b>{stat.value}</b>
-              <span>{stat.unit}</span>
-            </div>
-          )}
-          {cost > 0 && (
-            <div className="cardzoom__stat">
-              <b>{cost}</b>
-              <span>기력</span>
-            </div>
-          )}
-          {(card.cooldown ?? 0) > 0 && (
-            <div className="cardzoom__stat">
-              <b>{card.cooldown}</b>
-              <span>라운드 쿨타임</span>
-            </div>
-          )}
-          {card.kind === 'buff' && (
-            <div className="cardzoom__stat">
-              <b>{card.buffRounds ?? 1}</b>
-              <span>라운드 지속</span>
-            </div>
-          )}
-        </div>
-
-        {card.kind === 'attack' && (
-          <div className="cardzoom__range">
-            <div className="cardzoom__label">사거리</div>
-            <RangeChart card={card} />
-            <p className="cardzoom__hint">
-              가운데가 나, 오른쪽이 상대 쪽이다.
-              {fwd && ` 앞 ${fwd}칸째`}
+          <h2 className="cardzoom__name">{card.name}</h2>
+          {card.kind === 'attack' && <RangeChart card={card} />}
+          {card.kind === 'attack' && (
+            <span className="cardzoom__rangehint">
+              가운데 = 나 · 빨강 = 맞는 칸
+              {fwd && ` · 앞 ${fwd}칸째`}
               {back && ` · 뒤 ${back}칸째`}
-              {card.pointBlank !== false ? ' · 겹쳐 있어도 맞힌다' : ' · 겹치면 못 맞힌다'}
-            </p>
-          </div>
-        )}
+            </span>
+          )}
+          <span className="cardzoom__kinds">
+            <em>{KIND_LABEL[card.kind]}</em>
+            {card.signature && <em className="is-sig">시그니처</em>}
+            {card.upgraded && <em className="is-up">강화</em>}
+          </span>
+        </article>
 
-        {abils.length > 0 && (
-          <div className="cardzoom__abils">
-            <div className="cardzoom__label">특수 능력</div>
-            {abils.map((a) => (
-              <div key={a.label} className={`cardzoom__abil ${a.bad ? 'is-bad' : ''}`}>
-                <i>{a.icon}</i>
-                <div>
-                  <b>{a.label}</b>
-                  <span>{a.meaning}</span>
-                </div>
+        <div className="cardzoom__panel">
+          <p className="cardzoom__desc">{card.desc}</p>
+          {card.upgradeNote && <p className="cardzoom__upnote">⬆ {card.upgradeNote}</p>}
+          <dl className="cardzoom__stats">
+            {stat && (
+              <div className="statbox">
+                <dt>{stat.unit}</dt>
+                <dd>{stat.value}</dd>
               </div>
-            ))}
+            )}
+            <div className="statbox">
+              <dt>기력</dt>
+              <dd>{cost > 0 ? cost : '0'}</dd>
+            </div>
+            <div className="statbox">
+              <dt>쿨타임</dt>
+              <dd>{(card.cooldown ?? 0) > 0 ? `${card.cooldown}R` : '없음'}</dd>
+            </div>
+            <div className="statbox">
+              <dt>{card.kind === 'buff' ? '지속' : '밀착'}</dt>
+              <dd>
+                {card.kind === 'buff'
+                  ? `${card.buffRounds ?? 1}R`
+                  : card.kind === 'attack'
+                    ? card.pointBlank !== false
+                      ? '가능'
+                      : '사각'
+                    : '—'}
+              </dd>
+            </div>
+          </dl>
+          {board && card.kind === 'attack' && <MiniBoard card={card} board={board} />}
+          {abils.length > 0 && (
+            <div className="cardzoom__terms">
+              <span className="cardzoom__label">용어</span>
+              {abils.map((a) => (
+                <p key={a.label} className={a.bad ? 'is-bad' : ''}>
+                  <i>{a.icon}</i>
+                  <b>{a.label}</b> — {a.meaning}
+                </p>
+              ))}
+            </div>
+          )}
+          <div className="cardzoom__foot">
+            <span>꾹 누르면 열림 · 아무 데나 누르면 닫힘</span>
+            <button className="cardzoom__close" onClick={onClose}>
+              닫기
+            </button>
           </div>
-        )}
-
-        <button className="cardzoom__close" onClick={onClose}>
-          닫기
-        </button>
+        </div>
       </div>
     </div>
   )

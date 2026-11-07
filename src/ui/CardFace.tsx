@@ -136,6 +136,22 @@ export function CardFace({
   if (compact) {
     const cost = cardCost(card)
     const abils = abilityList(card)
+    // 이동 카드는 **사거리 그림 대신 큰 화살표**다(디자인 `MoveBundleSpec`의 "순서
+    // 칸 · 동작 규칙") — 순서 칸에 담긴 이동이 공격 카드와 한눈에 갈려야 한다.
+    if (card.kind === 'move')
+      return (
+        <div
+          className="cardface cardface--compact cardface--move"
+          style={{ ['--accent' as string]: accent }}
+        >
+          <div className="cf__top">
+            <span className="cf__dm">MOVE</span>
+            <span className="cf__en">{(card.cooldown ?? 0) > 0 ? `CD${card.cooldown}` : 'EN0'}</span>
+          </div>
+          <span className="cf__glyph">{moveIcon(card.dir, card.steps ?? 1)}</span>
+          <span className="cf__name">{card.name}</span>
+        </div>
+      )
     return (
       <div
         className={`cardface cardface--compact cardface--${card.kind} ${

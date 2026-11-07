@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
 import { ROSTER, type CharacterDef } from '../../data/roster'
+import { sheetFor } from '../../art/sprites'
+import { MONSTERS, type MonsterDef } from '../../game/monsters'
+import { SpriteClip } from '../SpriteClip'
 import { COMMON_CARDS } from '../../battle/cards'
 import { FOE_ATLAS, RELIC_ATLAS } from '../../art/relicAtlas'
 import { RELICS, type Rarity } from '../../game/relics'
-import { seenFoeAbilities, seenRelics } from '../../game/progress'
+import { seenFoeAbilities, seenFoes, seenRelics } from '../../game/progress'
 import { FoeIcon, RARITY_LABEL, RelicIcon } from '../RelicIcon'
 import { RUN_CARDS } from '../../game/runcards'
 import { PortraitSvg } from '../PortraitSvg'
@@ -119,10 +122,91 @@ function RelicCodex() {
   )
 }
 
+/**
+ * 몬스터 도감(2026-11 리디자인의 세 번째 탭). **마주친 적만** 실루엣이 걷힌다
+ * (`gb-foe-met`). 보스는 맨 뒤에 따로 선다 — 층 순서로 늘어놓으면 보스가 일반
+ * 몬스터 사이에 묻힌다.
+ */
+function MonsterCodex() {
+  const met = useMemo(() => seenFoes(), [])
+  const groups: { label: string; color: string; list: MonsterDef[] }[] = [
+    { label: '초원 · 1~7층', color: '#b6ea6a', list: MONSTERS.filter((m) => m.tier <= 2) },
+    { label: '던전 · 8층~', color: '#c9c4ee', list: MONSTERS.filter((m) => m.tier === 3) },
+    { label: '보스 · 엘리트', color: '#ff8a7a', list: MONSTERS.filter((m) => m.tier >= 4) },
+  ]
+  const [sel, setSel] = useState<MonsterDef>(MONSTERS[0])
+  const known = met.has(sel.id)
+  const selSheet = sheetFor(sel.spriteId ?? sel.baseArtId)
+  return (
+    <div className="codex__body codex__body--mon">
+      <div className="mondex">
+        {groups.map((g) => (
+          <section key={g.label} className="mondex__group">
+            <span style={{ color: g.color }}>{g.label}</span>
+            <div className="mondex__grid">
+              {g.list.map((m) => {
+                const on = met.has(m.id)
+                const sheet = sheetFor(m.spriteId ?? m.baseArtId)
+                return (
+                  <button
+                    key={m.id}
+                    className={`montile ${sel.id === m.id ? 'is-on' : ''}`}
+                    onClick={() => setSel(m)}
+                    aria-label={on ? m.name : '미발견 몬스터'}
+                  >
+                    {sheet && (
+                      <span className={`montile__art ${on ? '' : 'is-sil'}`}>
+                        <SpriteClip sheet={sheet} clip="idle" scale={1} />
+                      </span>
+                    )}
+                    <span className="montile__name">{on ? m.name : '???'}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+      <aside className="mondex__detail">
+        <div className="mondex__stage">
+          {selSheet && (
+            <span className={known ? '' : 'is-sil'}>
+              <SpriteClip sheet={selSheet} clip="idle" scale={2} />
+            </span>
+          )}
+        </div>
+        <div className="mondex__name">
+          <h2>{known ? sel.name : '???'}</h2>
+          <span>{sel.tier >= 4 ? '보스 · 엘리트' : `티어 ${sel.tier}`}</span>
+        </div>
+        <p className="mondex__note">
+          {known ? sel.note : '아직 만나지 못했다. 한 번 싸우면 실루엣이 걷힌다.'}
+        </p>
+        {known && (
+          <div className="mondex__stats">
+            <div className="statbox">
+              <span>체력</span>
+              <b>{sel.maxHp}</b>
+            </div>
+            <div className="statbox">
+              <span>기력</span>
+              <b>{sel.startEnergy}</b>
+            </div>
+            <div className="statbox">
+              <span>AI</span>
+              <b>{sel.aiLevel}</b>
+            </div>
+          </div>
+        )}
+      </aside>
+    </div>
+  )
+}
+
 /** 도감: 영웅과 각 영웅의 전용 공격 카드 + 공용 카드를 열람하는 화면. */
 export function CodexScreen({ onBack }: { onBack: () => void }) {
   const [sel, setSel] = useState<CharacterDef>(ROSTER[0])
-  const [tab, setTab] = useState<'hero' | 'relic'>('hero')
+  const [tab, setTab] = useState<'hero' | 'monster' | 'relic'>('hero')
   const bars = statBars(sel)
 
   return (
@@ -133,98 +217,137 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
           ← 돌아가기
         </button>
         <h2 className="neon-text">도감</h2>
-        <div className="codex__tabs">
-          <button className={`diffseg ${tab === 'hero' ? 'is-active' : ''}`} onClick={() => setTab('hero')}>
-            영웅 · 카드
+        <div className="codex__tabs" role="tablist">
+          <button
+            className={`codextab ${tab === 'hero' ? 'is-on' : ''}`}
+            role="tab"
+            aria-selected={tab === 'hero'}
+            onClick={() => setTab('hero')}
+          >
+            영웅 · 카드 <span>{ROSTER.length}</span>
           </button>
-          <button className={`diffseg ${tab === 'relic' ? 'is-active' : ''}`} onClick={() => setTab('relic')}>
-            유물
+          <button
+            className={`codextab ${tab === 'monster' ? 'is-on' : ''}`}
+            role="tab"
+            aria-selected={tab === 'monster'}
+            onClick={() => setTab('monster')}
+          >
+            몬스터 <span>{MONSTERS.length}</span>
+          </button>
+          <button
+            className={`codextab ${tab === 'relic' ? 'is-on' : ''}`}
+            role="tab"
+            aria-selected={tab === 'relic'}
+            onClick={() => setTab('relic')}
+          >
+            유물 <span>{RELICS.length}</span>
           </button>
         </div>
       </div>
 
-      {tab === 'relic' ? <RelicCodex /> : <div className="codex__body">
-        <div className="codex__roster">
-          {ROSTER.map((c) => (
-            <button
-              key={c.id}
-              className={`avatar-card ${sel.id === c.id ? 'is-active' : ''}`}
-              style={{ ['--accent' as string]: c.accent }}
-              onClick={() => setSel(c)}
-            >
-              <PortraitSvg char={c} className="avatar-card__art" />
-              <span className="avatar-card__name">{c.name}</span>
-            </button>
-          ))}
-        </div>
+      {tab === 'relic' ? (
+        <RelicCodex />
+      ) : tab === 'monster' ? (
+        <MonsterCodex />
+      ) : (
+        <div className="codex__body codex__body--mon">
+          {/* 영웅 탭도 몬스터 탭과 같은 틀이다(디자인 `Codex`) — 왼쪽에 스프라이트
+              타일, 오른쪽에 고른 영웅의 상세. 카드 목록은 타일 아래에 이어 붙인다. */}
+          <div className="mondex">
+            <div className="herodex__row">
+              {ROSTER.map((c) => {
+                const sheet = sheetFor(c.id)
+                return (
+                  <button
+                    key={c.id}
+                    className={`montile montile--hero ${sel.id === c.id ? 'is-on' : ''}`}
+                    style={{ ['--accent' as string]: c.accent }}
+                    onClick={() => setSel(c)}
+                  >
+                    {sheet && (
+                      <span className="montile__art">
+                        <SpriteClip sheet={sheet} clip="idle" scale={2} />
+                      </span>
+                    )}
+                    <span className="montile__name montile__name--px">{c.name}</span>
+                  </button>
+                )
+              })}
+            </div>
 
-        <div className="codex__detail" style={{ ['--accent' as string]: sel.accent }}>
-          <div className="codex__hero">
-            <PortraitSvg char={sel} className="detail__portrait" />
-            <div className="detail__info">
-              <div className="detail__name neon-text">{sel.name}</div>
-              <div className="detail__title">{sel.title}</div>
-              <p className="detail__desc">{sel.description}</p>
-              <div className="detail__passive">
-                <span className="detail__passive-tag">패시브</span>
-                <span className="detail__passive-text">{sel.passive.desc}</span>
+            <div className="codex__cards" style={{ ['--accent' as string]: sel.accent }}>
+              <div className="codex__cards-title">기본 공격 (직업별)</div>
+              <div className="codex__deck">
+                {sel.basics.map((c) => (
+                  <div className="codex__card" key={c.id}>
+                    <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                    <p className="codex__card-desc">{c.desc}</p>
+                  </div>
+                ))}
               </div>
-              <div className="detail__stats">
-                {bars.map((b) => (
-                  <div className="stat" key={b.label}>
-                    <span className="stat__label">{b.label}</span>
-                    <span className="stat__track">
-                      <span className="stat__fill" style={{ width: `${b.v * 100}%` }} />
-                    </span>
+
+              <div className="codex__cards-title">전용 카드</div>
+              <div className="codex__deck">
+                {sel.cards.map((c) => (
+                  <div className="codex__card" key={c.id}>
+                    <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                    <p className="codex__card-desc">{c.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="codex__cards-title">공용 카드</div>
+              <div className="codex__deck">
+                {COMMON_CARDS.map((c) => (
+                  <div className="codex__card" key={c.id}>
+                    <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                    <p className="codex__card-desc">{c.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="codex__cards-title">로그라이크 전용 카드 (런 보상·상점)</div>
+              <div className="codex__deck">
+                {RUN_CARDS.map((c) => (
+                  <div className="codex__card" key={c.id}>
+                    <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                    <p className="codex__card-desc">{c.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="codex__cards">
-            <div className="codex__cards-title">기본 공격 (직업별)</div>
-            <div className="codex__deck">
-              {sel.basics.map((c) => (
-                <div className="codex__card" key={c.id}>
-                  <CardFace card={c} accent={cardAccent(c, sel.accent)} />
-                  <p className="codex__card-desc">{c.desc}</p>
+          <aside className="mondex__detail" style={{ ['--accent' as string]: sel.accent }}>
+            <div className="mondex__stage">
+              {sheetFor(sel.id) ? (
+                <SpriteClip sheet={sheetFor(sel.id)!} clip="idle" scale={2} />
+              ) : (
+                <PortraitSvg char={sel} className="detail__portrait" />
+              )}
+            </div>
+            <div className="mondex__name">
+              <h2>{sel.name}</h2>
+              <span>{sel.title}</span>
+            </div>
+            <p className="mondex__note">{sel.description}</p>
+            <div className="detail__passive">
+              <span className="detail__passive-tag">패시브</span>
+              <span className="detail__passive-text">{sel.passive.desc}</span>
+            </div>
+            <div className="detail__stats">
+              {bars.map((b) => (
+                <div className="stat" key={b.label}>
+                  <span className="stat__label">{b.label}</span>
+                  <span className="stat__track">
+                    <span className="stat__fill" style={{ width: `${b.v * 100}%` }} />
+                  </span>
                 </div>
               ))}
             </div>
-
-            <div className="codex__cards-title">전용 카드</div>
-            <div className="codex__deck">
-              {sel.cards.map((c) => (
-                <div className="codex__card" key={c.id}>
-                  <CardFace card={c} accent={cardAccent(c, sel.accent)} />
-                  <p className="codex__card-desc">{c.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="codex__cards-title">공용 카드</div>
-            <div className="codex__deck">
-              {COMMON_CARDS.map((c) => (
-                <div className="codex__card" key={c.id}>
-                  <CardFace card={c} accent={cardAccent(c, sel.accent)} />
-                  <p className="codex__card-desc">{c.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="codex__cards-title">로그라이크 전용 카드 (런 보상·상점)</div>
-            <div className="codex__deck">
-              {RUN_CARDS.map((c) => (
-                <div className="codex__card" key={c.id}>
-                  <CardFace card={c} accent={cardAccent(c, sel.accent)} />
-                  <p className="codex__card-desc">{c.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          </aside>
         </div>
-      </div>}
+      )}
     </div>
   )
 }

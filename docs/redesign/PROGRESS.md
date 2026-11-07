@@ -1,0 +1,81 @@
+# 리디자인 적용 진행 상황
+
+> **이 파일이 "어디까지 했나"의 기준이다.** 항목 하나를 끝낼 때마다 여기 상태를 바꾸고 날짜를 적는다.
+> 시안 = `docs/redesign/screens/*.dc.html` (대응표는 `screens/README.md`). 규칙 문서 = `EVENTS.md` · `GOBLIN_MERCHANT.md` · `CARD_UPGRADE.md`.
+>
+> 상태: ✅ 완료 · 🟡 일부 · ⬜ 안 함 · ➖ 코드 대상 아님(참고용 시트)
+
+## 1. 화면별 (시안 32장)
+
+| 시안 | 상태 | 메모 |
+| --- | --- | --- |
+| Main | ✅ | 타이틀. 2026-11-07 대조 |
+| Login | ✅ | 하단 "이용약관 · 개인정보 처리방침" 줄은 **뺐다** — 연결할 문서가 아직 없다 |
+| Select → Difficulty | ✅ | 두 단계 · 단계 표시 · 영웅 기록 |
+| RunMap | ✅ | 범례 7종 · 휴식·보물 칸(B4) |
+| BattleField / BattleDungeon | ✅ | 지역 배경·HUD·손패·순서 칸 |
+| MoveBundle / MoveBundleSpec | ✅ | 이동 묶음·발자국·라벨 |
+| OneCell / Hazards | ✅ | 바위·독안개 + 새 함정 4종(B7) — 1칸 타일 · 모서리 위험 칩 · 가시덫 경고 프레임 |
+| RelicsHUD | ✅ | 발동 추정(`ui/relicFx.ts`) |
+| BossHUD | ✅ | ? 칸 → 첫 발동 때 공개(`gb-foe-seen`) |
+| Reward | ✅ | 일반 5장 · 엘리트 4+유물1(B1) |
+| Shop | ✅ | 마렌 · 카드/유물/회복 + **강화 · 50**(B2) |
+| GoblinShop / Merchants | ✅ | 만남 · 거래(재산 게이지 · 배율 칩 · 단계 오름 토스트) · 습격 확인 · 전리품(B5) |
+| Rest / Upgrade | ✅ | 모닥불(`RestScreen`) · 룰렛 강화(`UpgradeScreen`) — 브라우저로 흐름 끝까지 확인 |
+| Event | ✅ | ? 칸 정체 공개(`QuestionScreen` — 전투·휴식·고블린·이벤트) → 이벤트 → 결과 |
+| EventsQ / EventCatalog | ✅ | 이벤트 8종(B3). EventCatalog는 개발용 표라 화면 없음 |
+| CardDetail | ✅ | 두 칸 + "지금 쓰면" 미니 판(전투에서 열 때만 — 담은 이동까지 반영) |
+| Result | ✅ | 승리 / 런 클리어 / 실패 |
+| Codex / Relics | ✅ | 영웅·몬스터·유물 탭, 실루엣 |
+| Tutorial / TutorialFlow | ✅ | 9단계 스포트라이트(B8) + 첫 만남 팁 9종(B8b) |
+| Heroes / Monsters / Bosses / Maps | ➖ | 스프라이트·배경 시트 — `SHEETS`·`sceneFor`에 이미 반영 |
+
+## 2. 남은 기능 (룰·데이터가 바뀌는 것)
+
+순서대로 진행한다. 끝나면 ✅ + 날짜 + 밸런스 측정값(`npm run sim:run 900 -- --sweep --seed=12345`).
+
+| # | 항목 | 상태 | 규칙 출처 |
+| --- | --- | --- | --- |
+| B1 | 보상: 일반 카드 5장 · 엘리트 카드 4 + 유물 1 · 건너뛰기 = 소량 회복 | ✅ 11-07 · 밴드 3.6→1.1%p | `screens/README.md` Reward 행 |
+| B2 | 룰렛 카드 강화(최대 2회) — 중복 강화 폐지 · 상점 "강화 · 50" | ✅ 11-07 | `CARD_UPGRADE.md` |
+| B3 | 이벤트 8종으로 교체(대가만 표시 · 히든 잠금 · 반복형) | ✅ 11-07 · B2+B3 후 밴드 2.2%p(16.8/16.3/14.6) | `EVENTS.md` · `events.json` |
+| B4 | 지도 칸 7종: 휴식(쉬기/강화) · 보물(유물 상자) 추가 | ✅ 11-07 · 클리어율 ~16→~20%(쉬운 쪽) · 4시드 밴드 2.0~5.0%p | `RunMap.dc.html` · `Rest.dc.html` |
+| B5 | ? 칸 정체 공개 + 고블린 장사꾼(3단계 · 덮치기 전투) | ✅ 11-07 · 밴드 1.4~5.1%p · 클리어 ~18% | `GOBLIN_MERCHANT.md` |
+| B6 | 카드 상세 "지금 쓰면" 미니 판 | ✅ 11-07 · 연출 전용 | `CardDetail.dc.html` |
+| B7 | 새 함정 4종(불길·가시덫·가시덩굴·빙판) | ✅ 11-07 · 시안 효과 그대로(사용자 승인) · 클리어 ~18→~16.6% · 밴드 0.9~2.2%p | `Hazards.dc.html` · `OneCell.dc.html` |
+| B8 | 튜토리얼 9단계 | ✅ 11-07 | `Tutorial.dc.html` · `TutorialFlow.dc.html` |
+| B8b | 튜토리얼 뒤 첫 만남 팁 9종(첫 지도 · 첫 ? 칸 · 첫 상점 · 첫 엘리트 · 6라운드 붕괴 · 첫 보스 · 기력 부족 · 길게 누르기 · 첫 상태이상) | ✅ 11-07 · 연출 전용 | `TutorialFlow.dc.html` 하단 |
+
+### 구현 메모(다음 작업자용)
+
+- **B2** 규칙은 `game/upgrades.ts` 한 곳. 상태 `RunState.upgrades[cardId] = { valueBonus, extraCells, times }`.
+  기력 카드는 `gain`(+기력)을 수치로 올린다(시안 표엔 없음 — 이동만 강화 불가 원칙을 따름). **버프 카드는 수치가 없어 강화 불가.**
+  화면 `ui/screens/UpgradeScreen.tsx`(source = rest · shop · event). 상점은 결제 후 룰렛 — 돌리기 전 취소하면 환불.
+- **B3** 로직 `game/events.ts`(화면·시뮬 공용), 화면 `EventScreen.tsx`. 옛 이벤트 11종(제단·도박꾼·강화 3종 …)은 지웠다.
+  이벤트가 여는 전투는 `RunState.special`(항아리 뱀 — B5 고블린 습격도 같은 자리). 이기면 `applySpecialWin`.
+  엔진에 `BattleOpts.startStatus`(런 전용 — 중독으로 시작) 추가. PvP는 안 넘기므로 `RULES_VERSION` 불변.
+
+- **B4** 휴식·보물은 **지원 칸끼리만** 바뀐다(`SUPPORT_NODES` — 이벤트·상점·휴식·보물). 가운데 줄 템플릿은 안 건드렸다.
+  보물 화면은 시안이 없어 이벤트 화면 틀 + 지도 아이콘(×12)으로 만들었다. ⚠ 클리어율이 올랐다 — 조일지는 사용자 판단.
+- **B5** ? 칸 정체 가중치는 시안에 없어 정했다 — 이벤트 55 · 전투 15 · 휴식 15 · 고블린 15(`run.ts` `FATE_WEIGHTS`).
+  고블린 규칙·상수는 `run.ts`(`goblinTier` · `rollGoblinShop` · `buyGoblinItem` · `GOBLIN_LOOT`), 전리품 적용은 `events.ts` `applySpecialWin`.
+  `RunState.goblinSpent`가 재산, 덮쳐 이기면 0. 습격 보상은 보상 화면이 "고블린의 짐"으로 바뀐다(가난 = 무작위 1개 자동, 중간·부자 = 고르기, 부자 = 유물 확정).
+- **B8** 실제 전투 화면 위에 스포트라이트를 얹는다(`TutorialScreen`). 강조 자리는 **DOM 셀렉터로 잰다**(좌표 하드코딩 X).
+  4~7단계는 `BattleScreen.onSlotsChange`로 "카드를 놓았다"를 알아채 자동으로 넘어간다. 슬라임 HP 24 · 부활 없음 · 내 피해감소 999(질 수 없다).
+  시안의 「가드」는 실제 카드 이름 「방패 세우기」로, 9단계 "첫 승리 → 보상"은 "안내를 닫고 마저 쓰러뜨린다"로 바꿨다(튜토리얼은 런이 아니라 보상이 없다).
+- **B7** 규칙 `battle/types.ts`(`Hazard` · `spikeStateAt`) + `engine.ts`(`enterHazard` · 라운드 끝 정산), 배치 `run.ts` `hazardsFor`.
+  **일반 전투(? 매복 포함)의 40%**에 2~3칸 — 초원 = 가시덩굴·불길, 던전 = 가시덫·빙판·불길. 엘리트(바위)·보스·고블린은 안 깐다. 끝열은 비운다.
+  불길 = 들어서거나 라운드 끝에 서 있으면 화상 1R · 3라운드 뒤 꺼짐 · 상하좌우 덩굴을 태움. 가시덫 = 숨음→경고→솟음 3라운드 주기, 솟은 라운드에 밟으면 속박.
+  가시덩굴 = 밟으면 속박. 빙판 = 들어선 방향으로 한 칸 더(바위·벽·상대 앞 정지, 넉백으로 밀려도 미끄러진다).
+  **`BattleOpts.hazards`는 런 전용 — PvP는 안 넘기므로 `RULES_VERSION` 불변.** ⚠ 봇(AI)은 함정을 모른다 — 양쪽 다 밟는다.
+  가중치·개수·지속(40% · 2~3칸 · 불길 3R)은 시안에 없어 정한 값.
+- **B8b** `ui/FirstTip.tsx`(`useFirstTip([...후보])` — 아직 안 본 첫 번째 하나만) · 기록 기기 로컬 `gb-tips-seen`(`progress.ts`).
+  붙은 곳: 지도(첫 지도) · ? 칸 공개 · 상점 · 전투(상태이상 > 보스 > 바위 > 6라운드 붕괴 > 기력 부족 > 꾹 누르기 순, 카드 고르는 중에만).
+  튜토리얼은 `BattleScreen tips={false}`로 끈다. 시안의 "첫 엘리트"는 **바위가 있는 판**으로 판정한다(지형 카드로 세운 바위도 포함).
+  다시 보려면 `localStorage.removeItem('gb-tips-seen')` — 시안의 "도감 › 도움말에서 다시 보기"는 아직 없다.
+- **검증 도우미** 개발 빌드에서 콘솔 `__gb.setRun(__gb.startRun('warrior')); __gb.setPhase('run-rest')`로 화면에 바로 뛴다(`App.tsx`).
+
+## 3. 기록
+
+- 2026-11-07 — 1·2차 대조(CLAUDE.md "2026-11 리디자인" 절). 화면 틀 전부.
+- 2026-11-07 — 전체 재점검 후 이 파일 작성. B1~B8 · B8b 완료 — 시안 32장 전부 반영(➖ 참고용 시트 제외).

@@ -1,162 +1,241 @@
-// 런 이벤트 — 대가를 치르고 보상을 얻는 선택. 카드 제거형은 버릴 카드를, 강화형은
-// 벼릴 카드를 고른다(2026-08-08).
+// ? 칸 이벤트(디자인 `EventsQ` · 규칙 `docs/redesign/EVENTS.md`). 로직은 `game/events.ts`.
+// 선택지엔 대가만 → 고른 뒤 결과 공개. 반복 이벤트는 "계속하기", 대장장이는 룰렛 강화로,
+// 항아리는 뱀 전투로 이어진다.
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
-import { upgradedCard, upgradePreview } from '../../game/upgrades'
-import { resolveRunCard } from '../../game/runcards'
 import {
-  advanceFloor, canUpgradeCard, cardLevel, resolveEventEffect, rollEvent, runCard,
-  upgradableDeckCards, type EventEffect, type RunState,
-} from '../../game/run'
+  eventChoices, eventDef, resolveEventChoice, startEvent, tradeList, type EventChoice, type EventId,
+  type EventOutcome,
+} from '../../game/events'
+import { advanceFloor, regionOf, runCard, type RunState, type SpecialFight } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
-import { DeckPicker } from '../DeckPicker'
-import { RelicIcon } from '../RelicIcon'
-import { RunBar } from '../RunBar'
+import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
+import { SceneLayers } from '../SceneLayers'
+import { SpriteClip } from '../SpriteClip'
+import { sheetFor } from '../../art/sprites'
+import { UpgradeScreen } from './UpgradeScreen'
 
-/** 강화형 선택지인가 — 카드 목록을 "강화 가능한 것만"으로 좁히는 기준. */
-const isUpgradeEffect = (e: EventEffect): boolean =>
-  e.type === 'upgradeCard' || e.type === 'loseHpUpgradeCard' || e.type === 'payGoldUpgradeCard'
-
-/**
- * 그 선택지를 지금 고를 수 있는가. 고를 수 없는 이유를 **누르기 전에** 보여 준다 —
- * 예전엔 골드가 모자란 채로 `payGoldHeal`을 누르면 아무 일도 없이 결과 화면으로
- * 넘어가서, 손해를 본 건지 아무 일도 안 일어난 건지 알 수 없었다.
- */
-function blockedReason(run: RunState, e: EventEffect): string | null {
-  if (isUpgradeEffect(e) && !upgradableDeckCards(run).length) return '강화할 카드가 없다'
-  if (e.type === 'payGoldUpgradeCard' && run.gold < e.gold) return '골드 부족'
-  if (e.type === 'payGoldHeal' && run.gold < e.gold) return '골드 부족'
-  return null
-}
-
-export function EventScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
-  const ev = useMemo(() => rollEvent(), [run])
-  const char = getChar(run.charId)
-  // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
+export function EventScreen({
+  run,
+  eventId,
+  onDone,
+  onFight,
+}: {
+  run: RunState
+  /** 정해 두면 그 이벤트(? 칸 공개 단계가 고른 것). 없으면 무작위. */
+  eventId?: EventId
+  onDone: (next: RunState) => void
+  /** 이벤트가 연 전투(항아리) — `special`이 붙은 런을 넘긴다. */
+  onFight: (next: RunState) => void
+}) {
+  const [st, setSt] = useState(() => startEvent(eventId))
+  const [cur, setCur] = useState(run)
+  const [picking, setPicking] = useState<EventChoice | null>(null)
+  const [out, setOut] = useState<EventOutcome | null>(null)
+  const [upgrading, setUpgrading] = useState(false)
+  const def = eventDef(st.id)
+  const char = getChar(cur.charId)
   const zoom = useCardZoom(char.accent)
-  const [pending, setPending] = useState<EventEffect | null>(null) // 카드 선택 대기
-  const [result, setResult] = useState<{
-    run: RunState
-    relicId?: string
-    upgradedCardId?: string
-  } | null>(null)
+  const choices = useMemo(() => eventChoices(cur, st), [cur, st])
+  const snake = sheetFor('snake')
 
-  const choose = (effect: EventEffect) => {
-    if (blockedReason(run, effect)) return
-    const res = resolveEventEffect(run, effect)
-    if (res.needsCardPick) setPending(effect)
-    else setResult({ run: res.run, relicId: res.gainedRelicId })
-  }
-  const pickCard = (id: string) => {
-    if (!pending) return
-    const res = resolveEventEffect(run, pending, id)
-    setResult({ run: res.run, relicId: res.gainedRelicId, upgradedCardId: res.upgradedCardId })
-    setPending(null)
+  const choose = (c: EventChoice, pickId?: string) => {
+    if (c.off) return
+    if (c.leave) return onDone(advanceFloor(cur))
+    if (c.pick && !pickId) return setPicking(c)
+    const o = resolveEventChoice(cur, st, c.key, pickId)
+    if (!o) return
+    setPicking(null)
+    setCur(o.run)
+    setSt(o.st)
+    if (o.upgrade) return setUpgrading(true)
+    setOut(o)
   }
 
-  if (result) {
-    const relic = result.relicId ? getRelic(result.relicId) : null
-    // 강화 결과는 **강화된 카드 앞면 그대로** 보여 준다 — "무엇이 어떻게 됐는지"를
-    // 글로 다시 설명하는 것보다 카드를 보여 주는 쪽이 짧고 정확하다.
-    const upped = result.upgradedCardId ? runCard(result.run, result.upgradedCardId) : null
-    return (
-      <div className="screen event">
-        <div className="grid-bg" />
-        <div className="event__result">
-          {upped ? (
-            <div className="event__upcard">
-              <CardFace card={upped} accent={cardAccent(upped, char.accent)} />
-            </div>
-          ) : (
-            <div className="event__icon">{relic ? <RelicIcon id={relic.id} size={78} /> : '✓'}</div>
-          )}
-          <div className="event__result-text">
-            {upped ? (
-              <>
-                <b>{upped.name}</b> 강화! <span className="event__result-desc">{upped.upgradeNote}</span>
-              </>
-            ) : relic ? (
-              <>
-                <b>{relic.name}</b> 획득! <span className="event__result-desc">{relic.desc}</span>
-              </>
-            ) : (
-              '처리되었습니다.'
-            )}
-          </div>
-          <button className="btn event__continue" onClick={() => onDone(advanceFloor(result.run))}>
-            계속 ▶
-          </button>
-        </div>
-      </div>
-    )
-  }
+  if (upgrading)
+    return <UpgradeScreen run={cur} source="event" onCancel={() => setUpgrading(false)} onDone={(next) => onDone(advanceFloor(next))} />
 
-  if (pending) {
-    const upgrading = isUpgradeEffect(pending)
-    // 강화형은 **올릴 수 있는 카드만** 늘어놓는다. 최대 강화에 도달했거나 올릴 게
-    // 없는 카드(쿨 0짜리 기본 이동)를 골라서 아무 일도 안 일어나면 대가만 날아간다.
-    const list = upgrading ? upgradableDeckCards(run) : run.deck
-    return (
-      <div className="screen event">
-        <div className="grid-bg" />
-        <h2 className="event__title">{upgrading ? '벼릴 카드를 고르세요' : '녹일 카드를 고르세요'}</h2>
-        {/* 강화형이면 고르기 **전에** 강화 후 모습을 보여 준다 — 무엇이 오르는지
-            모르고 대가를 치르게 하면 안 된다. 툴팁엔 오른 항목을 글로도 적는다. */}
-        <DeckPicker
-          charId={run.charId}
-          deck={list}
-          zoom={zoom}
-          onPick={pickCard}
-          cardOf={(id) => {
-            const base = resolveRunCard(run.charId, id)
-            if (!base) return undefined
-            return upgrading && canUpgradeCard(run, id)
-              ? upgradedCard(base, cardLevel(run, id) + 1)
-              : (runCard(run, id) ?? base)
-          }}
-          titleOf={(id) => {
-            if (!upgrading) return undefined
-            const base = resolveRunCard(run.charId, id)
-            return base ? upgradePreview(base, cardLevel(run, id)) : undefined
-          }}
-        />
-        {zoom.sheet}
-        <button className="btn btn--ghost" onClick={() => setPending(null)}>
-          취소
-        </button>
-      </div>
-    )
-  }
+  const fight = (f: SpecialFight) => onFight({ ...cur, special: f })
+  const relic = out?.relicId ? getRelic(out.relicId) : null
+  const gotCard = out?.cardId ? runCard(cur, out.cardId) : null
+  const a = def.art
 
   return (
     <div className="screen event">
-      <div className="grid-bg" />
-      <div className="event__topbar">
-        <RunBar run={run} />
-      </div>
-      <div className="event__body">
-        <div className="event__icon">{ev.icon}</div>
-        <h2 className="event__name">{ev.name}</h2>
-        <p className="event__desc">{ev.desc}</p>
-        <div className="event__options">
-          {ev.options.map((o, i) => {
-            const blocked = blockedReason(run, o.effect)
-            return (
-              <button
-                key={i}
-                className={`btn event__opt ${blocked ? 'is-disabled' : ''}`}
-                disabled={!!blocked}
-                onClick={() => choose(o.effect)}
-              >
-                {o.label}
-                {blocked && <span className="event__opt-why"> — {blocked}</span>}
-              </button>
-            )
-          })}
+      <SceneLayers scene={regionOf(cur.floor)} />
+      <div className="screenveil" />
+      <header className="event__head">
+        <div className="shop__where">
+          <h1 className="shop__title">? 칸 · 이벤트</h1>
+          <span>
+            {regionOf(cur.floor) === 'grassland' ? '초원' : '던전'} · {cur.floor}층
+          </span>
         </div>
+        <div className="shop__purse">
+          <span className="goldchip">
+            <i className="coin coin--sm" aria-hidden />
+            {cur.gold}
+          </span>
+          <span className="hpchip">
+            HP {cur.hp}/{cur.maxHp}
+          </span>
+        </div>
+      </header>
+
+      <div className="event__stage">
+        <i
+          className={`evart ${a.frames > 1 ? 'evart--anim' : ''}`}
+          role="img"
+          aria-label={def.name}
+          style={{
+            width: a.w * 3,
+            height: a.h * 3,
+            backgroundImage: `url('/redesign/ui/events/${a.file}.png')`,
+            backgroundSize: `${a.w * 3 * a.frames}px ${a.h * 3}px`,
+            ['--evw' as string]: `-${a.w * 3 * a.frames}px`,
+            animationTimingFunction: `steps(${a.frames})`,
+            animationDuration: `${a.frames * (a.frameMs ?? 150)}ms`,
+          }}
+        />
+        <span className="event__code">{def.code}</span>
       </div>
+
+      <section className="event__panel">
+        <span className="event__kicker">
+          EVENT · {def.mode === 'repeat' ? '반복' : def.mode === 'battle' ? '전투' : '한 번'}
+        </span>
+        <h2 className="event__name">{def.name}</h2>
+        <p className="event__desc">{def.text}</p>
+
+        {!out && !picking && (
+          <>
+            <div className="event__options">
+              {choices.map((c) => (
+                <button
+                  key={c.key}
+                  className={`event__opt ${c.hidden === 'locked' ? 'is-locked' : ''} ${c.hidden === 'open' ? 'is-hidden' : ''} ${c.off && c.hidden !== 'locked' ? 'is-off' : ''}`}
+                  aria-disabled={!!c.off}
+                  onClick={() => choose(c)}
+                >
+                  {c.hidden === 'locked' && <i className="event__lock" aria-hidden />}
+                  {c.hidden === 'open' && <i className="event__unlock" aria-hidden />}
+                  {c.icon && <i className="event__potion" style={{ backgroundImage: `url('/redesign/ui/events/${c.icon}.png')` }} aria-hidden />}
+                  <span className="event__opt-label">
+                    {c.label}
+                    {c.sub && <small>{c.sub}</small>}
+                  </span>
+                  {c.off && c.hidden !== 'locked' ? (
+                    <span className="chip chip--none">{c.off}</span>
+                  ) : (
+                    c.cost.map((k) => (
+                      <span key={k.text} className={`chip chip--${k.kind}`}>
+                        {k.kind === 'gold' && <i className="coin coin--sm" aria-hidden />}
+                        {k.text}
+                      </span>
+                    ))
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="event__note">
+              선택지에는 <b>대가만</b> 보인다 — 고르면 무슨 일이 생기는지는 고른 뒤에 안다.
+            </p>
+          </>
+        )}
+
+        {picking && (
+          <div className="event__picker">
+            <span className="event__picktitle">{picking.pick === 'card' ? '내줄 카드를 고르세요' : '내줄 유물을 고르세요'}</span>
+            <div className="event__picks">
+              {tradeList(cur, picking.pick!).map((id) => {
+                if (picking.pick === 'relic') {
+                  const r = getRelic(id)
+                  return (
+                    <button key={id} className="event__pick" onClick={() => choose(picking, id)} title={r?.desc}>
+                      <RelicIcon id={id} size={52} />
+                      <span>{r?.name}</span>
+                    </button>
+                  )
+                }
+                const c = runCard(cur, id)
+                if (!c) return null
+                return (
+                  <button
+                    key={id}
+                    className="event__pick event__pick--card"
+                    {...zoom.bind(c)}
+                    onClick={() => {
+                      if (zoom.consumedClick()) return
+                      choose(picking, id)
+                    }}
+                  >
+                    <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
+                  </button>
+                )
+              })}
+            </div>
+            <button className="upg__ghost" onClick={() => setPicking(null)}>
+              ← 다시 고르기
+            </button>
+          </div>
+        )}
+
+        {out?.fight && (
+          <div className="event__ambush">
+            <div className="event__snake">{snake && <SpriteClip sheet={snake} clip="idle" />}</div>
+            <div className="event__ambushbody">
+              <span className="event__kicker">AMBUSH</span>
+              <b>{out.title}</b>
+              <div className="event__chips">
+                <span className="chip chip--poison">☠ 나는 중독 상태로 시작</span>
+                <span className="chip chip--hp">동굴 뱀 · HP 34</span>
+              </div>
+              <button className="upg__go event__fight" onClick={() => fight(out.fight!)}>
+                전투 시작 ▶
+              </button>
+            </div>
+          </div>
+        )}
+
+        {out && !out.fight && (
+          <>
+            <div className={`event__res event__res--${relic ? 'relic' : out.bigKind ?? 'none'}`}>
+              {relic && <RelicIcon id={relic.id} size={78} />}
+              {gotCard && (
+                <div className="event__rescard">
+                  <CardFace card={gotCard} accent={cardAccent(gotCard, char.accent)} compact />
+                </div>
+              )}
+              {!relic && !gotCard && out.big && <span className={`event__big is-${out.bigKind}`}>{out.big}</span>}
+              <div className="event__resbody">
+                <b>{out.title}</b>
+                <span>{out.body}</span>
+                {relic && (
+                  <small>
+                    <em className={`relictip__rarity is-${relic.rarity}`}>{RARITY_LABEL[relic.rarity]}</em> {relic.desc}
+                  </small>
+                )}
+              </div>
+            </div>
+            <div className="event__resfoot">
+              {!out.done && (
+                <button className="upg__ghost" onClick={() => setOut(null)}>
+                  계속하기
+                </button>
+              )}
+              <span>{out.done ? '' : '그만두려면 선택지의 나가기를 고른다.'}</span>
+              {out.done && (
+                <button className="upg__go" onClick={() => onDone(advanceFloor(cur))}>
+                  지도로 ▶
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+      {zoom.sheet}
     </div>
   )
 }

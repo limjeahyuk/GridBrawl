@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { authConfigured, signInAsGuest, signInWithGoogle } from '../../net/auth'
+import { sheetFor } from '../../art/sprites'
 import { SceneLayers } from '../SceneLayers'
-import { TitleLogo, TitleParty } from './TitleScreen'
+import { SpriteClip } from '../SpriteClip'
 
 // 네이티브 앱(WebView)에서는 구글이 임베디드 WebView OAuth를 차단하므로
 // (disallowed_useragent) 팝업 로그인을 숨기고 게스트를 기본으로 쓴다.
@@ -38,20 +39,39 @@ export function LoginScreen() {
     }
   }
 
+  const cairn = sheetFor('warrior')
+  const dirge = sheetFor('mage')
   return (
     <div className="screen login">
       <SceneLayers scene="grassland" />
-      <div className="title__shade" aria-hidden="true" />
-      {/* ⚠ 타이틀 화면과 같은 머리글을 쓴다 — 로그인 직후 타이틀로 넘어가므로 다르면
-          글자만 바뀌어 깜빡이는 것처럼 보인다. */}
-      <TitleLogo />
-      <TitleParty />
-      <div className="login__content">
-        <div className="login__actions">
+      {/* 디자인 `Login`: 왼쪽 그늘이 아니라 **가운데를 비우는 비네트**다 — 로그인 판이
+          화면 한가운데 서기 때문. 문구는 타이틀과 같아 넘어갈 때 글자가 안 깜빡인다. */}
+      <div className="login__vignette" aria-hidden="true" />
+      <div className="login__party" aria-hidden="true">
+        {cairn && (
+          <div className="login__hero login__hero--left">
+            <SpriteClip sheet={cairn} clip="idle" />
+          </div>
+        )}
+        {dirge && (
+          <div className="login__hero login__hero--right" style={{ ['--artflip' as string]: -1 }}>
+            <SpriteClip sheet={dirge} clip="idle" />
+          </div>
+        )}
+      </div>
+      <main className="login__content">
+        <h1 className="login__logo">
+          GRID
+          <br />
+          BRAWL
+        </h1>
+        <p className="login__tag">카드 세 장, 한 칸의 승부</p>
+        <section className="login__panel" aria-label="로그인">
+          <div className="login__actions">
           {configured ? (
             <button className="btn login__google" onClick={onGoogle} disabled={busy}>
               <GoogleMark />
-              {busy ? '로그인 중…' : 'Google로 로그인'}
+              {busy ? '로그인 중…' : 'Google 계정으로 계속하기'}
             </button>
           ) : isNativeApp ? null : (
             <div className="login__setup">
@@ -73,14 +93,20 @@ export function LoginScreen() {
             onClick={signInAsGuest}
             disabled={busy}
           >
-            게스트로 시작
+            게스트로 둘러보기
           </button>
           <p className="login__guest-note">
             게스트 기록은 이 기기에 저장되어 다음 접속 시 자동으로 이어집니다.
           </p>
           {error && <p className="login__error">{error}</p>}
-        </div>
-      </div>
+          </div>
+          <ul className="login__notes">
+            <li>로그인하면 덱 · 도감 · 클리어 기록이 기기 사이에 저장된다</li>
+            <li>게스트는 이 기기에만 저장 — 나중에 Google로 옮길 수 있다</li>
+          </ul>
+        </section>
+      </main>
+      <span className="login__ver">V0.2</span>
     </div>
   )
 }
