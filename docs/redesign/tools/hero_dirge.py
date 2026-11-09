@@ -1,4 +1,6 @@
-"""DIRGE — Hollow Oracle (mage). Deep violet hood with a void face, gold stole, lantern staff."""
+"""DIRGE — Hollow Oracle (mage). v2 = matches the select illustration:
+wide blue witch hat with a gold band, long black hair, blue robe with gold trim, brown corset,
+wooden staff with a blue gem; arcane-blue magic."""
 from rig import *
 
 W, H = 96, 64
@@ -11,41 +13,46 @@ PAL = dict(
     e='#efe0ff', E='#b48cff',
     w='#e8e4f0', s='#8a8296', S='#4a4458',
     b='#4a3020', n='#7a5236',
+    j='#3aa8ff', z='#1c1c30', k='#f2dce4', K='#c8a6b8', i='#b060ff', r='#d0203c',
+    B='#141a46', u='#22307a', U='#3446a8', W='#5a70d0',
 )
 
 HOOD = sprite('''
-.vv.......
-.Vvvv.....
-..Vvvqq...
-..Vvqqqq..
-.VvqqqqQq.
-.VvqZZZZq.
-.VvZZZeZZ.
-.VvZZZZEZ.
-.VvqZZZZv.
-..VvqqqV..
-...gyyg...
+....uu..........
+...Buuu.........
+....BuUU........
+.....BUUU.......
+.....BuUUU......
+....BugyjygB....
+...BuuUUUUUU....
+BBBuuuuUUUUUWWUU
+..zOOzzkkkkk....
+..OOzzkkkkikk...
+..OOzzkkkkkkK...
+..OOzOkkkrkK....
+..OOz..kkkK.....
+..OO..ugyjgu....
 ''', PAL)
-HOOD_PV = (4, 10)
+HOOD_PV = (8, 13)
 
 TORSO = sprite('''
-...gyyg...
-..VvgyvqV.
-.VvvgqqQq.
-.VvvygqqQ.
-.VvvgqqQq.
-.VVvgyqqq.
-.VVvvgqqq.
-..VGgyggV.
-..Vvvgqqq.
+...gjg...
+..uUgUUB.
+.BuUUUUU.
+.BuUUUUW.
+.BuUUUWU.
+.Bbbnnbb.
+.BbnyynB.
+.Bbbnnbb.
+..BuUUUU.
 ''', PAL)
 TORSO_PV = (4, 8)
 
 STAFF = sprite('''
-.ggg.
-g...g
-g...g
 .g.g.
+gy.yg
+g...g
+.gyg.
 ..y..
 ..n..
 ..b..
@@ -73,25 +80,25 @@ g...g
 STAFF_PV = (2, 14)
 STAFF_ORB = (2, 2)  # local position of orb inside the crook
 
-ROBE = ramp('#1d1230', '#3a2560', '#5f42a0')
-ROBE_F = ramp('#140c22', '#281a44', '#402c6c')
+ROBE = ramp('#141a46', '#22307a', '#3446a8')
+ROBE_F = ramp('#0e1232', '#18225a', '#26347e')
 SLEEVE = ROBE
 SLEEVE_F = ROBE_F
-HAND = ramp('#6e6a80', '#b6b0c8', '#e4e0f0')
-HAND_F = ramp('#4e4a5e', '#7e7a92', '#a09cb4')
+HAND = ramp('#a888a0', '#f2dce4', '#fff2f6')
+HAND_F = ramp('#80687c', '#c4aab8', '#dcc8d2')
 BOOT = ramp('#120c18', '#261a30', '#3c2c48')
-SOUL = hx('#d6b4ff')
+SOUL = hx('#8fd8ff')
 SOUL_CORE = hx('#ffffff')
-SOUL_DARK = hx('#7a4fd0')
+SOUL_DARK = hx('#2f6ae0')
 
 
 def orb_fx(c, r=3, k=1.0):
     def f(J):
-        g = glow(W, H, c, r * 2.6 * k, hx('#b48cff'), 0.55)
+        g = glow(W, H, c, r * 2.6 * k, hx('#5ab4ff'), 0.55)
         l = Layer(W, H)
         l.ellipse(c[0] - 0.5, c[1] - 0.5, r * 0.7 * k, r * 0.7 * k, [SOUL_DARK, SOUL, SOUL_CORE])
         l.px(c[0] - 1, c[1] - 1, SOUL_CORE)
-        return blend_over(g, outline(l.a, hx('#2a1450')))
+        return blend_over(g, outline(l.a, hx('#0c1c48')))
     return f
 
 
@@ -109,6 +116,12 @@ class Dirge(Humanoid):
             lay = back if side == 'f' else body
             boot(lay, J[side + 'ank'], 90, rmp, 4, 2)
         arm(back, J, 'f', SLEEVE_F, SLEEVE_F, HAND_F, wu=3, wf=3, hand_r=1)
+        # v2: long black hair down the back to the hips
+        nk = J['neck']; hw = pose.get('wind', 0.5); hph = pose.get('cph', 0)
+        hair = [(nk[0] - 2, nk[1] - 4), (nk[0] - 6, nk[1] - 3), (nk[0] - 7 - hw * 1.5, nk[1] + 4),
+                (nk[0] - 6 - hw * 2.5 + math.sin(hph) * 0.6, hp[1] + 3), (nk[0] - 3 - hw * 1.5, hp[1] + 4),
+                (nk[0] - 2, nk[1] + 3)]
+        back.poly(hair, ramp('#06060c', '#14142a', '#2a2a48'), True, light='left')
         # robe skirt from waist to hem following the feet
         wv = pose.get('wind', 0.5); ph = pose.get('cph', 0)
         up = J['up']
@@ -156,14 +169,14 @@ class Dirge(Humanoid):
 R = Dirge()
 HY = GY - 14
 BASE = dict(hip=(AX, HY), t=2, nf=(AX + 3, GY - 3), ff=(AX - 3, GY - 3),
-            nh=(AX + 6, HY - 1), st=6, fh=(AX + 3, HY + 1), wind=0.5)
+            nh=(AX + 9, HY - 1), st=10, fh=(AX + 3, HY + 1), wind=0.5)
 
 
 def idle():
     fr = []
     for i in range(8):
         b = math.sin(i / 8 * 2 * math.pi)
-        fr.append(P(BASE, hip=(AX, HY + round(b * 0.6 + 0.4)), nh=(AX + 6, HY - 1 + round(b)),
+        fr.append(P(BASE, hip=(AX, HY + round(b * 0.6 + 0.4)), nh=(AX + 9, HY - 1 + round(b)),
                     ok=1.0 + 0.15 * b, cph=i * 0.8, fh=(AX + 3, HY + 1 + round(b * 0.6))))
     return fr
 
@@ -207,7 +220,7 @@ def bolt_fx(x, y, length, k=1.0):
             if u > 0.5:
                 l.px(x + i, yy - 1, SOUL_DARK); l.px(x + i, yy + 1, SOUL_DARK)
         hx_ = x + length
-        g = glow(W, H, (hx_, y), 6 * k, hx('#b48cff'), 0.7)
+        g = glow(W, H, (hx_, y), 6 * k, hx('#5ab4ff'), 0.7)
         h = Layer(W, H); h.ellipse(hx_, y, 2 * k, 2 * k, [SOUL_DARK, SOUL, SOUL_CORE])
         return blend_over(blend_over(g, l.a), h.a)
     return f
@@ -228,7 +241,7 @@ def rune_fx(c, r, prog, alpha=1.0):
             a = k / 6 * 2 * math.pi + prog * 2
             p = (c[0] + math.cos(a) * (r - 1.5), c[1] + math.sin(a) * (r - 1.5) * 0.3)
             l.px(p[0], p[1], SOUL_CORE)
-        g = glow(W, H, c, r * 0.9, hx('#b48cff'), 0.35 * alpha)
+        g = glow(W, H, c, r * 0.9, hx('#5ab4ff'), 0.35 * alpha)
         a = blend_over(g, l.a)
         a[..., 3] = (a[..., 3] * alpha).astype(np.uint8)
         return a
@@ -246,7 +259,7 @@ def pillar_fx(x, y0, hgt, w):
                 if (xx + yy) % 7 == 0 and d > 0.5:
                     continue
                 l.px(xx, yy, c)
-        g = glow(W, H, (x, y0 - hgt / 2), hgt * 0.6, hx('#b48cff'), 0.45)
+        g = glow(W, H, (x, y0 - hgt / 2), hgt * 0.6, hx('#5ab4ff'), 0.45)
         return blend_over(g, l.a)
     return f
 
@@ -292,7 +305,7 @@ def wave_fx(x0, x1, y, alpha=1.0, phase=0):
                 if (x * 3 + k + int(phase * 3)) % 5 == 0 and k > 2:
                     continue
                 l.px(x, y - k, c)
-        a = blend_over(glow(W, H, ((x0 + x1) / 2, y - 4), (x1 - x0) / 2, hx('#b48cff'), 0.35), l.a)
+        a = blend_over(glow(W, H, ((x0 + x1) / 2, y - 4), (x1 - x0) / 2, hx('#5ab4ff'), 0.35), l.a)
         a[..., 3] = (a[..., 3] * alpha).astype(np.uint8)
         return a
     return f
@@ -322,43 +335,25 @@ def hurt():
 
 
 def death():
-    """collapse, then the robe empties and the soul drifts up as motes"""
+    """v2: staggers, kneels, falls; a few arcane motes drift off"""
     hy = HY
     k0 = P(BASE, t=-16, hd=-12, hip=(AX - 3, hy), nh=(AX + 1, hy - 3), st=-30, ok=0.6, wind=1.6)
     k1 = P(BASE, t=10, hd=14, hip=(AX, hy + 4), nh=(AX + 8, hy + 6), st=60, ok=0.4,
            nf=(AX + 4, GY - 3), ff=(AX - 4, GY - 3))
     k2 = P(BASE, t=24, hd=24, hip=(AX + 1, hy + 7), nh=(AX + 10, hy + 9), st=80, ok=0.2, orb=False)
     frames = [R.draw(p) for p in (k0, k1, k2)]
-    base = frames[-1]
+    kneel = frames[-1]
     rng = np.random.default_rng(3)
-    ys, xs = np.nonzero(base[..., 3] > 0)
-    for k in range(1, 6):
-        fr = base.copy()
-        # crumple: lower rows stay, upper rows sink and fade
-        cut = int(ys.min() + (ys.max() - ys.min()) * (k / 6))
-        fr[:cut] = 0
-        sink = Layer(W, H)
-        top = base[: cut]
-        if k < 5:
-            sh = int(k * 1.5)
-            pad = np.zeros_like(base); pad[sh: cut + sh] = top
-            pad[..., 3] = np.where(pad[..., 3] > 0, int(255 * (1 - k / 5)), 0)
-            fr = blend_over(fr, pad)
-        # motes rising
-        l = Layer(W, H)
-        for i in range(10):
-            x = AX + rng.integers(-6, 10)
-            y = GY - 10 - k * 5 - rng.integers(0, 14)
-            l.px(x, y, SOUL if i % 3 else SOUL_CORE)
-        if k == 5:
-            fr = np.zeros_like(base)
-            # empty robe pile
-            pl = Layer(W, H)
-            pl.poly([(AX - 6, GY - 1), (AX - 3, GY - 4), (AX + 4, GY - 5), (AX + 9, GY - 2), (AX + 10, GY - 1)], ROBE)
-            pl.part(STAFF, STAFF_PV, (AX + 14, GY - 2), deg=92)
-            fr = outline(pl.a)
-        fr = blend_over(fr, l.a)
-        frames.append(fr)
+    for n, deg in enumerate((25, 55, 80, 90, 90)):
+        img, pv = rotsprite(kneel, deg, (AX + 4, GY))
+        l = Layer(W, H); l.paste(img, AX + 4 - pv[0], GY - pv[1])
+        out = l.a
+        ys = np.nonzero(out[..., 3] > 0)[0]
+        out = np.roll(out, GY - 1 - ys.max(), axis=0)
+        m = Layer(W, H)
+        for i in range(6 - n):
+            m.px(AX + rng.integers(-4, 14), GY - 8 - n * 4 - rng.integers(0, 10), SOUL if i % 2 else SOUL_CORE)
+        frames.append(blend_over(out, m.a))
     return frames
 
 

@@ -12,10 +12,10 @@
 <style>
 body{margin:0}
 a{color:#f4d470}a:hover{color:#fff1b8}
-.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
-.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
-.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}
-.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.hb-cairn{background-image:url(/redesign/heroes/bg-cairn.png)}
+.hb-sable{background-image:url(/redesign/heroes/bg-sable.png)}
+.hb-dirge{background-image:url(/redesign/heroes/bg-dirge.png)}
+.bg{position:absolute;inset:0;background-size:1280px 720px;background-repeat:no-repeat}
 .spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
 .n6{animation-name:f6;animation-timing-function:steps(6)}
 .n8{animation-name:f8;animation-timing-function:steps(8)}
@@ -24,110 +24,110 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
 .s-sable-idle{background-image:url(/redesign/sprites/sable/idle.png)}
 .s-dirge-idle{background-image:url(/redesign/sprites/dirge/idle.png)}
-.card{transition:transform .15s}
-.card:hover{transform:translateY(-4px)}
+.tab{position:relative;height:112px;padding:0;border:3px solid #3a3150;background-color:#1a1626;background-size:1536px 864px;background-repeat:no-repeat;box-shadow:0 6px 0 #0a0810;cursor:pointer;overflow:hidden;font:inherit;color:#fff6dc;text-align:left}
+.tab:hover{transform:translateY(-3px);border-color:#8a7fa0}
+.tab-on,.tab-on:hover{border-color:#f4d470;box-shadow:0 0 0 3px #2a1c10,0 6px 0 #0a0810}
+.tab-off{filter:saturate(.55) brightness(.75)}
+.p0 .fadeIn{animation:fi0 .5s ease-out both}.p1 .fadeIn{animation:fi1 .5s ease-out both}
+@keyframes fi0{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+@keyframes fi1{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+.p0 .inR{animation:ir0 .4s ease-out both}.p1 .inR{animation:ir1 .4s ease-out both}
+@keyframes ir0{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes ir1{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
 </style>
 </helmet>
-<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
-  <div class="layer l-wall" aria-hidden="true"></div>
-  <div class="layer l-light" aria-hidden="true"></div>
-  <div class="layer l-floor" aria-hidden="true"></div>
-  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(10,8,16,0.62)"></div>
+<div class="{{pk}}" style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="bg {{prevBg}}" aria-hidden="true"></div>
+  <div class="bg fadeIn {{h.bg}}" role="img" aria-label="{{h.name}} — {{h.cls}}"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,8,16,0.7) 0%, rgba(10,8,16,0) 16%)"></div>
+  <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; right: 0; width: 760px; background: linear-gradient(90deg, rgba(10,8,16,0) 0%, rgba(10,8,16,0.55) 40%)"></div>
 
-  <header style="position: absolute; left: 64px; right: 64px; top: 36px; display: flex; justify-content: space-between; align-items: flex-end">
-    <div style="display: flex; flex-direction: column; gap: 4px">
-      <p style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 14px; letter-spacing: 4px; color: #f4d470">CHOOSE YOUR HERO</p>
-      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 44px; color: #fff6dc">영웅 선택</h1>
+  <header style="position: absolute; left: 560px; right: 36px; top: 26px; display: flex; justify-content: space-between; align-items: flex-end">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <p style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #f4d470">CHOOSE YOUR HERO</p>
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc; text-shadow: 3px 3px 0 #0a0604">영웅 선택</h1>
     </div>
-    <a href="Main.dc.html" style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; text-decoration: none; padding: 10px 18px; border: 2px solid #4a4058; color: #efe9f5; background: rgba(29,24,40,0.9)">← 돌아가기</a>
+    <a href="Main.dc.html" style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; text-decoration: none; padding: 8px 16px; border: 2px solid #4a4058; color: #efe9f5; background: rgba(29,24,40,0.9)">← 돌아가기</a>
   </header>
 
-  <div style="position: absolute; left: 64px; right: 64px; top: 134px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px">
+  <!-- 영웅 고르기 -->
+  <nav style="position: absolute; left: 560px; right: 36px; top: 112px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+      <button type="button" class="tab {{t.bg}} {{t.cls}}" onClick="{{t.onTap}}" style="background-position: {{t.pos}}" aria-label="{{t.name}} 고르기">
+        <span style="position: absolute; left: 0; right: 0; bottom: 0; height: 52px; background: linear-gradient(180deg, rgba(10,8,16,0) 0%, rgba(10,8,16,0.92) 70%)"></span>
+        <span style="position: absolute; left: 10px; bottom: 7px; display: flex; gap: 8px; align-items: baseline">
+          <b style="font-family: 'Silkscreen', monospace; font-size: 18px; color: #fff6dc">{{t.name}}</b>
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 16px; color: {{t.accent}}">{{t.cls2}}</span>
+        </span>
+        <span style="display: {{t.selD}}; position: absolute; right: 6px; top: 6px; font-family: 'Silkscreen', monospace; font-size: 10px; padding: 3px 6px; background: #f4d470; color: #1d1408">SELECTED</span>
+      </button>
+    </sc-for>
+  </nav>
 
-    <article class="card" style="height: 470px; display: flex; flex-direction: column; background: #1a1626; border: 3px solid #f4d470; box-shadow: 0 0 0 3px #2a1c10, 0 10px 0 #0a0810">
-      <div style="position: relative; height: 200px; background: linear-gradient(180deg, #123a40 0%, #0d2a30 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
-        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 14px; width: 170px; height: 18px; margin-left: -85px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
-        <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN 대기 모션" style="position: absolute; left: 50%; bottom: 10px; margin-left: -108px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 720ms"></div>
-        <span style="position: absolute; left: 14px; top: 12px; font-family: 'Silkscreen', monospace; font-size: 12px; padding: 4px 8px; background: #f4d470; color: #1d1408">SELECTED</span>
+  <!-- 고른 영웅 -->
+  <section class="inR" style="position: absolute; left: 560px; right: 36px; top: 256px; height: 330px; box-sizing: border-box; padding: 20px 22px; display: flex; gap: 18px; background: rgba(20,16,30,0.9); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px {{h.edge}}, 0 8px 0 rgba(0,0,0,0.4)">
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+      <div style="display: flex; gap: 12px; align-items: baseline">
+        <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 40px; color: #fff6dc">{{h.name}}</h2>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 24px; color: {{h.accent}}">{{h.cls}}</span>
       </div>
-      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
-        <div style="display: flex; justify-content: space-between; align-items: baseline">
-          <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">CAIRN</h2>
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #7fd6c8">전사</span>
-        </div>
-        <p style="margin: -6px 0 0; font-size: 13px; color: #b9b1c9">Oathbound Warden</p>
-        <div style="display: flex; align-items: center; gap: 10px">
-          <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
-          <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 94%; height: 100%; background: #e0485a"></div></div>
-          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">103</span>
-        </div>
-        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #efe9f5"><b style="color: #7fd6c8">불침의 서약</b> — 받는 공격 피해 -3, 매 라운드 체력 +2.</p>
-        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #0f2a30; border: 2px solid #3c9c98">
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">시그니처 · 서약의 파쇄</span>
-          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #bff5ec">DM23 EN24</span>
-        </div>
+      <p style="margin: -10px 0 0; font-size: 13px; color: #b9b1c9">{{h.epithet}}</p>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
+        <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: {{h.hpPct}}%; height: 100%; background: #e0485a"></div></div>
+        <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">{{h.hp}}</span>
       </div>
-    </article>
+      <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #efe9f5"><b style="color: {{h.accent}}">{{h.passive}}</b> — {{h.passiveDesc}}</p>
+      <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: {{h.sigBg}}; border: 2px solid {{h.sigEdge}}">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px">시그니처 · {{h.sig}}</span>
+        <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: {{h.sigFg}}">{{h.sigStat}}</span>
+      </div>
+    </div>
+    <div style="width: 196px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; align-items: center">
+      <div style="position: relative; width: 196px; height: 236px; background: {{h.stageBg}}; border: 2px solid #0a0810; overflow: hidden">
+        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 16px; width: 130px; height: 14px; margin-left: -65px; border-radius: 50%; background: rgba(0,0,0,0.4)"></div>
+        <div class="spr {{h.spr}}" role="img" aria-label="{{h.name}} 대기 모션" style="position: absolute; left: 50%; bottom: 12px; margin-left: {{h.sprX}}px; width: 288px; height: 192px; background-size: {{h.sprBs}}; animation-duration: {{h.sprDur}}"></div>
+      </div>
+      <span style="font-size: 12px; color: #b9b1c9">전투에서의 모습</span>
+    </div>
+  </section>
 
-    <article class="card" style="height: 470px; display: flex; flex-direction: column; background: #1a1626; border: 3px solid #3a3150; box-shadow: 0 10px 0 #0a0810">
-      <div style="position: relative; height: 200px; background: linear-gradient(180deg, #3a1e16 0%, #24140f 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
-        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 14px; width: 150px; height: 18px; margin-left: -75px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
-        <div class="spr n6 s-sable-idle" role="img" aria-label="SABLE 대기 모션" style="position: absolute; left: 50%; bottom: 10px; margin-left: -105px; width: 288px; height: 192px; background-size: 1728px 192px; animation-duration: 750ms"></div>
-      </div>
-      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
-        <div style="display: flex; justify-content: space-between; align-items: baseline">
-          <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">SABLE</h2>
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #ffa24a">궁수</span>
-        </div>
-        <p style="margin: -6px 0 0; font-size: 13px; color: #b9b1c9">Ashen Fletcher</p>
-        <div style="display: flex; align-items: center; gap: 10px">
-          <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
-          <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 74%; height: 100%; background: #e0485a"></div></div>
-          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">81</span>
-        </div>
-        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #efe9f5"><b style="color: #ffa24a">독니</b> — 내 공격 피해 +3, 피해를 주면 중독 1라운드를 묻힌다.</p>
-        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #2a160e; border: 2px solid #c4501c">
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">시그니처 · 독의 비</span>
-          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #ffd0a0">DM20 EN23</span>
-        </div>
-      </div>
-    </article>
-
-    <article class="card" style="height: 470px; display: flex; flex-direction: column; background: #1a1626; border: 3px solid #3a3150; box-shadow: 0 10px 0 #0a0810">
-      <div style="position: relative; height: 200px; background: linear-gradient(180deg, #24183e 0%, #160f28 100%); border-bottom: 3px solid #0a0810; overflow: hidden">
-        <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 14px; width: 150px; height: 18px; margin-left: -75px; border-radius: 50%; background: rgba(0,0,0,0.35)"></div>
-        <div class="spr n8 s-dirge-idle" role="img" aria-label="DIRGE 대기 모션" style="position: absolute; left: 50%; bottom: 10px; margin-left: -111px; width: 288px; height: 192px; background-size: 2304px 192px; animation-duration: 960ms"></div>
-      </div>
-      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
-        <div style="display: flex; justify-content: space-between; align-items: baseline">
-          <h2 style="margin: 0; font-family: 'Silkscreen', monospace; font-size: 30px; color: #fff6dc">DIRGE</h2>
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #c9a6ff">마법사</span>
-        </div>
-        <p style="margin: -6px 0 0; font-size: 13px; color: #b9b1c9">Hollow Oracle</p>
-        <div style="display: flex; align-items: center; gap: 10px">
-          <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 26px; color: #ff8a8a">HP</span>
-          <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 71%; height: 100%; background: #e0485a"></div></div>
-          <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">78</span>
-        </div>
-        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #efe9f5"><b style="color: #c9a6ff">혼백의 등불</b> — 매 라운드 기력 +6, 보호막 +4.</p>
-        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #1e1436; border: 2px solid #8d6fd0">
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">시그니처 · 종언의 만가</span>
-          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: #e0d0ff">DM22 EN25</span>
-        </div>
-      </div>
-    </article>
-  </div>
-
-  <div style="position: absolute; left: 64px; right: 64px; bottom: 30px; display: flex; justify-content: flex-end; align-items: center; gap: 20px">
-    <span style="font-size: 14px; color: #b9b1c9">다음 단계에서 난이도를 고른다</span>
-    <a href="Difficulty.dc.html" style="display: flex; align-items: center; height: 52px; padding: 0 28px; background: #f4d470; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 26px; text-decoration: none">CAIRN 선택 · 다음 ▶</a>
+  <div style="position: absolute; left: 560px; right: 36px; bottom: 30px; display: flex; justify-content: flex-end; align-items: center; gap: 18px">
+    <span style="font-size: 14px; color: #c9c2d6">다음 단계에서 난이도를 고른다</span>
+    <a href="Difficulty.dc.html" style="display: flex; align-items: center; height: 52px; padding: 0 26px; background: #f4d470; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 25px; text-decoration: none">{{h.name}} 선택 · 다음 ▶</a>
   </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
 class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 'cairn', prev: 'cairn', k: 0 };
+  }
   renderVals() {
-    return {};
+    const st = this.state;
+    // 일러스트는 화면 높이(720)에 맞춰 왼쪽에, 오른쪽은 이어 그린 뒤 흐리게 (public/redesign/heroes/bg-*.png)
+    const H = {
+      cairn: { name: 'CAIRN', cls: '전사', epithet: 'Oathbound Warden', hp: 103, hpPct: 94, accent: '#7fd6c8', edge: '#3c9c98',
+        passive: '불침의 서약', passiveDesc: '받는 공격 피해 -3, 매 라운드 체력 +2.', sig: '서약의 파쇄', sigStat: 'DM23 EN24', sigBg: '#0f2a30', sigEdge: '#3c9c98', sigFg: '#bff5ec',
+        stageBg: 'linear-gradient(180deg, #123a40 0%, #0d2a30 100%)', spr: 'n6 s-cairn-idle', sprBs: '1728px 192px', sprDur: '720ms', sprX: -108, face: [240, 140] },
+      sable: { name: 'SABLE', cls: '궁수', epithet: 'Ashen Fletcher', hp: 81, hpPct: 74, accent: '#ffa24a', edge: '#c4501c',
+        passive: '독니', passiveDesc: '내 공격 피해 +3, 피해를 주면 중독 1라운드를 묻힌다.', sig: '독의 비', sigStat: 'DM20 EN23', sigBg: '#2a160e', sigEdge: '#c4501c', sigFg: '#ffd0a0',
+        stageBg: 'linear-gradient(180deg, #3a1e16 0%, #24140f 100%)', spr: 'n6 s-sable-idle', sprBs: '1728px 192px', sprDur: '750ms', sprX: -105, face: [215, 212] },
+      dirge: { name: 'DIRGE', cls: '마법사', epithet: 'Hollow Oracle', hp: 78, hpPct: 71, accent: '#c9a6ff', edge: '#8d6fd0',
+        passive: '혼백의 등불', passiveDesc: '매 라운드 기력 +6, 보호막 +4.', sig: '종언의 만가', sigStat: 'DM22 EN25', sigBg: '#1e1436', sigEdge: '#8d6fd0', sigFg: '#e0d0ff',
+        stageBg: 'linear-gradient(180deg, #24183e 0%, #160f28 100%)', spr: 'n8 s-dirge-idle', sprBs: '2304px 192px', sprDur: '960ms', sprX: -111, face: [262, 186] },
+    };
+    const Z = 1.2;   // 탭 얼굴 확대
+    const pick = (id) => { if (id !== st.sel) this.setState({ prev: st.sel, sel: id, k: st.k + 1 }); };
+    const tabs = ['cairn', 'sable', 'dirge'].map((id) => {
+      const x = H[id];
+      return { name: x.name, cls2: x.cls, accent: x.accent, bg: 'hb-' + id,
+        pos: `${Math.round(-(x.face[0] * Z - 109))}px ${Math.round(-(x.face[1] * Z - 46))}px`,
+        cls: id === st.sel ? 'tab-on' : 'tab-off', selD: id === st.sel ? 'block' : 'none', onTap: () => pick(id) };
+    });
+    const h = Object.assign({ bg: 'hb-' + st.sel }, H[st.sel], { hp: String(H[st.sel].hp) });
+    return { pk: 'p' + (st.k % 2), h, tabs, prevBg: 'hb-' + st.prev };
   }
 }
 </script>

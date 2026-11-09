@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `Main.dc.html` | `screens/TitleScreen.tsx` | 메뉴는 모험 시작 · 대전 · 도감 (덱 관리 없음) |
 | `Login.dc.html` | `screens/LoginScreen.tsx` | Google 버튼 자리는 **Google 공식 Sign-In 버튼 에셋**으로 교체 · 게스트 버튼 |
-| `Select.dc.html` → `Difficulty.dc.html` | `screens/RunStartScreen.tsx` (+ `ModeSelectScreen.tsx`) | 영웅 선택 → **별도 단계로** 난이도 선택. 상단 단계 표시(영웅 ✓ · 난이도 · 출발). 난이도 데이터는 `game/run.ts`의 `RUN_DIFFICULTIES`, 잠금은 `progress.ts` |
+| `Select.dc.html` → `Difficulty.dc.html` | `screens/RunStartScreen.tsx` (+ `ModeSelectScreen.tsx`) | 영웅 선택: 위쪽 탭(얼굴)으로 고르면 그 영웅 일러스트가 **배경**으로 바뀐다(`public/redesign/heroes/bg-cairn|sable|dirge.png` — 원본 `heroes/art/*.png`를 화면 높이에 맞춰 왼쪽에 두고, 오른쪽은 이어 그린 뒤 흐리게. 만드는 스크립트 `docs/redesign/tools/hero-bg/build.py`). 오른쪽 패널에 체력 · 패시브 · 시그니처 · 전투 스프라이트. → **별도 단계로** 난이도 선택. 상단 단계 표시(영웅 ✓ · 난이도 · 출발). 난이도 데이터는 `game/run.ts`의 `RUN_DIFFICULTIES`, 잠금은 `progress.ts` |
 | `Tutorial.dc.html`, `TutorialFlow.dc.html` | `screens/TutorialScreen.tsx` | 9단계 스포트라이트 온보딩(4단계 이동 = **판의 노란 칸 누르기**). 단계 데이터는 `Tutorial.dc.html`의 `renderVals()` 배열 `S`, 순서·성공 조건은 `TutorialFlow` |
 | `RunMap.dc.html` | `screens/RunMapScreen.tsx`, `RunBar.tsx` | 갈림길 지도: 갈 수 있는 칸만 깜빡이고 눌러서 이동. 범례 7종(미지 · 여관 · 보물 · 대장장이 · 적 · 엘리트 · 보스). 아이콘 `public/redesign/ui/map-icons/` |
 | `BattleField.dc.html`, `BattleDungeon.dc.html` | `screens/BattleScreen.tsx`, `battlefx.css` | 지역별 배경 레이어, 상태바, 판, 손패·순서 칸 |
@@ -26,10 +26,10 @@
 | `RelicsHUD.dc.html` | `BattleScreen.tsx`(상태바 아래 유물 줄), `RunBar.tsx`(지도) | 상태 7종(상시·발동·누적·횟수·조건·첫 라운드·런) 표시 규칙과 발동 애니메이션 CSS(`pop`, `burst`, `rise`) |
 | `BossHUD.dc.html` | `BattleScreen.tsx` | 보스·적 능력은 **? 칸으로 시작 → 처음 발동 때 뒤집혀 공개**(`flip`, 붉은 띠) |
 | `Reward.dc.html` | `screens/RewardScreen.tsx` | 골드는 항상 지급. 일반 = 카드 5장 중 1, 엘리트 = 카드 4장 + 유물 1 중 1. 건너뛰기 = 회복 |
-| `Shop.dc.html` | `screens/ShopScreen.tsx` | **여관 안 상점.** 배경은 여관 그림(`public/redesign/cutscene/shopkeeper/shopkeeper.png`) 전체, 진열은 카드 3 · 유물 2(회복 · 강화 칸 없음). 위쪽 "← 여관으로" |
+| `Shop.dc.html` | `screens/ShopScreen.tsx` | **여관 안 상점.** 배경은 여관과 같은 `public/redesign/cutscene/inn/inn-bg.png`(마렌 왼쪽 · 오른쪽 흐림), 마렌의 말은 진열 위 말풍선, 진열은 카드 3 · 유물 2(회복 · 강화 칸 없음). 위쪽 "← 여관으로" |
 | `GoblinShop.dc.html`, `Merchants.dc.html` | `screens/EventScreen.tsx`(? → 상점 판정), 새 고블린 상점 화면, `monsters.ts` | **? 칸 상점 = 고블린 장사꾼**. 만남(거래 · 덮친다 · 지나간다) → 거래 / 습격. 런 동안 쓴 돈 `goblinSpent`로 가난(0) → 중간(80) → 부자(200), 덮쳐서 이기면 0 → 이후 고블린 상점은 가난부터. 값은 단계 무관 물건마다 정가 ×0.8~1.5, 단계마다 다른 건 진열 품목·전투력 — 규칙과 데이터는 `docs/redesign/GOBLIN_MERCHANT.md` |
-| `Inn.dc.html`, `Blacksmith.dc.html` | 새 여관 · 대장장이 화면, `RunMapScreen.tsx`(지도 칸 `inn` · `smith`) | **지도의 상점 · 휴식 칸 → 여관 · 대장장이.** 여관 = 휴식 50G(최대 체력 20%) · 상점 · 나가기(5%), 배경은 여관 그림을 **화면 전체**에 깔고 대사창과 선택지를 위에 올린다. 대장장이 = 카드 강화 50G · 나가기. 규칙은 `docs/redesign/INN_SMITH.md` |
-| `Upgrade.dc.html` | 새 강화 화면(대장장이에서 50G), `game/upgrades.ts` | **룰렛 카드 강화**: 카드(이동만 불가) → 수치(공격력·방어량·회복량) / 범위(공격만) → 60칸 룰렛(수치 판 0/+5/+10/+15/+20 · 범위 판 0~5) → 수치는 +값, 범위는 붙은 칸 N개를 직접 골라 저장. **카드당 최대 2번**, 같은 카드 중복 강화는 없앰(앞뒤 대칭 토글 · 되돌리기 · 판 미리보기). 규칙은 `docs/redesign/CARD_UPGRADE.md` |
+| `Inn.dc.html`, `Blacksmith.dc.html` | 새 여관 · 대장장이 화면, `RunMapScreen.tsx`(지도 칸 `inn` · `smith`) | **지도의 상점 · 휴식 칸 → 여관 · 대장장이.** 여관 = 휴식 50G(최대 체력 20%, **쉬면 방문 끝**) · 상점(다녀와도 계속) · 나가기(5%). 배경은 `public/redesign/cutscene/inn/inn-bg.png`(시안 C: 그림은 왼쪽에 그대로, 오른쪽은 이어 그리고 흐리게), 대사창과 선택지는 오른쪽. 대장장이 = 카드 강화 50G(**한 번만**, 저장하면 바로 지도로) · 나가기. 규칙은 `docs/redesign/INN_SMITH.md` |
+| `Upgrade.dc.html` | 새 강화 화면(대장장이에서 50G · 한 번 · 끝나면 지도로), `game/upgrades.ts` | **룰렛 카드 강화**: 카드(이동만 불가) → 수치(공격력·방어량·회복량) / 범위(공격만) → 60칸 룰렛(수치 판 0/+5/+10/+15/+20 · 범위 판 0~5) → 수치는 +값, 범위는 붙은 칸 N개를 직접 골라 저장. **카드당 최대 2번**, 같은 카드 중복 강화는 없앰(앞뒤 대칭 토글 · 되돌리기 · 판 미리보기). 규칙은 `docs/redesign/CARD_UPGRADE.md` |
 | `EventsQ.dc.html`, `EventCatalog.dc.html` | `screens/EventScreen.tsx`, 이벤트 데이터 | **? 이벤트 8종**(대장장이 · 거래 · 온천 · 약방 · 항아리 · 갓챠 · 두더지 · 수술실). 선택지엔 **대가만** 보이고 결과는 고른 뒤 공개, 히든 선택지는 자물쇠로 잠금. 목록·규칙은 `docs/redesign/EVENTS.md`, 데이터는 `docs/redesign/events.json` — 새 이벤트도 여기에 추가 |
 | `Event.dc.html` | `screens/EventScreen.tsx` | ? 칸 정체 공개 → 대화 → 결과 3단계. 선택지마다 대가·보상 칩을 먼저 보여준다 |
 | `CardDetail.dc.html` | `CardDetail.tsx`, `CardFace.tsx` | 길게 누르기(≈0.4초 링) → 큰 카드 + 5×3 사거리 + 수치 + 용어 + "지금 쓰면" 미니 판 |

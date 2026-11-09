@@ -1,4 +1,5 @@
-"""CAIRN — Oathbound Warden (warrior). Crested great-helm, teal tabard, kite shield, broadsword."""
+"""CAIRN — Oathbound Warden (warrior). v2 = matches the select illustration:
+bare head with messy brown hair, silver plate, red cape, ornate longsword (no shield)."""
 from rig import *
 
 W, H = 96, 64
@@ -12,39 +13,40 @@ PAL = dict(
     B='#2e1d14', b='#5e3b24', n='#8a5a36',
     R='#5c1420', r='#a82c3a', p='#e05a66',
     e='#b9fff3', E='#2bb3a3',
+    h='#4a2c18', H='#7a4c2a', j='#a8703e', k='#e6b08c', K='#b07a60', i='#4a8ad8', D='#1c1a24',
 )
 
 HELM = sprite('''
-....ppr...
-...prrrR..
-..RrrR....
-..SsslllS.
-.Sslllllws
-.Ssllllll.
-.SsOOOOOeE
-.SslllOlls
-.SSsssssS.
-..SSsssS..
-...gyyg...
+..jHHj....
+.HHjHHHj..
+HHHHjHHHj.
+HHHHHHHHHj
+hHHHkkkkH.
+hHHkkkkik.
+.hHkkkkkkK
+.hHkkkKkk.
+..hkkkKK..
+...kkkK...
+...rrrr...
 ''', PAL)
 HELM_PV = (4, 10)
 
 TORSO = sprite('''
-....SsS....
-..SslllsS..
-.SslttuulS.
-.SltttttuS.
-.SttgyyguS.
-.SttggytuS.
-.STttgtttS.
-..TtttttS..
-..TTtttTs..
-..bBgyyBb..
-..TtttutT..
-..TttTutT..
-..TtT.utT..
-..TtT.TuT..
-...T...T...
+..RrrrrR...
+.RrSsllsR..
+.RSsllllwS.
+.SslllgllS.
+.SsllgyglS.
+.SsllgglsS.
+.SSsllllsS.
+..SSsssssS.
+..BbgybbB..
+..DDDDDDD..
+..SsDDDsS..
+..SsD.DsS..
+..SsD.DsS..
+..Ss...sS..
+...S...S...
 ''', PAL)
 TORSO_PV = (5, 12)
 
@@ -94,14 +96,14 @@ gTtyytuG
 ''', PAL)
 SHIELD_PV = (4, 4)
 
-CHAIN = ramp('#262a35', '#465064', '#68748a')
-CHAIN_F = ramp('#1b1e27', '#333a4a', '#4c5568')
+CHAIN = ramp('#38435a', '#6c7f99', '#a8bacb')
+CHAIN_F = ramp('#272f40', '#4b5a70', '#73869c')
 STEEL = ramp('#38435a', '#6c7f99', '#a8bacb')
 STEEL_F = ramp('#272f40', '#4b5a70', '#73869c')
 BOOT = ramp('#1f2430', '#3d475a', '#66748a')
 BOOT_F = ramp('#161a23', '#2c3442', '#4a5568')
 
-CAPE = ramp('#08222a', '#144652', '#226b77')
+CAPE = ramp('#4a0e18', '#8a1e2c', '#c8384a')
 SLASH = [hx('#3c9c98'), hx('#bff5ec'), hx('#ffffff')]
 
 
@@ -134,7 +136,7 @@ class Cairn(Humanoid):
         body.part(TORSO, TORSO_PV, J['hip'], deg=t)
         body.part(HELM, HELM_PV, add(J['neck'], (0, 0)), deg=t + pose.get('hd', 0))
         # shield on far hand (drawn in front of torso)
-        if pose.get('shield', True):
+        if pose.get('shield', False):
             shield.part(SHIELD, SHIELD_PV, J['fhand'], deg=pose.get('sh', 0))
         # sword then near arm on top
         if pose.get('sword', True):
@@ -154,14 +156,14 @@ class Cairn(Humanoid):
 R = Cairn()
 HY = GY - 15  # idle hip height
 BASE = dict(hip=(AX, HY), t=5, nf=(AX + 4, GY - 3), ff=(AX - 4, GY - 3),
-            nh=(AX + 4, HY - 3), fh=(AX + 8, HY - 6), sw=50, sh=0, shield_front=True, wind=0.6)
+            nh=(AX + 4, HY - 3), fh=(AX + 5, HY - 2), sw=50, sh=0, shield_front=True, wind=0.6)
 
 
 def idle():
     fr = []
     for i in range(6):
         b = [0, 0, 1, 1, 1, 0][i]
-        fr.append(P(BASE, hip=(AX, HY + b), nh=(AX + 4, HY - 3 + b), fh=(AX + 8, HY - 6 + b),
+        fr.append(P(BASE, hip=(AX, HY + b), nh=(AX + 4, HY - 3 + b), fh=(AX + 5, HY - 2 + b),
                     sw=50 + b * 2, sh=b, cph=i, wind=0.6))
     return fr
 
@@ -188,7 +190,7 @@ def run():
         fr.append(P(BASE, hip=(AX + 1, HY + 1 + hb), t=14, nf=nf, ff=ff,
                     ntoe=90 if nf[1] >= GY - 3.5 else 120, ftoe=90 if ff[1] >= GY - 3.5 else 120,
                     nh=(AX + 6 - sway * 3, HY - 2 + hb), sw=60 - sway * 10,
-                    fh=(AX + 9 + sway * 1, HY - 6 + hb), sh=5, wind=2.0, cph=ph * 2))
+                    fh=(AX + 4 + sway * 3, HY - 1 + hb), sh=5, wind=2.0, cph=ph * 2))
     return fr
 
 
@@ -233,7 +235,7 @@ def burst_fx(c, r):
 
 
 def attack2():
-    """shield bash"""
+    """gauntlet bash (v2: no shield) — far fist drives forward"""
     hy = HY
     k0 = P(BASE, t=-2, hip=(AX - 1, hy + 1), fh=(AX + 1, hy - 7), sh=-6, nh=(AX + 3, hy - 3), sw=20)
     k1 = P(BASE, t=-6, hip=(AX - 3, hy + 2), fh=(AX - 2, hy - 6), sh=-10, nh=(AX + 1, hy - 2), sw=10,
@@ -287,10 +289,10 @@ def attack3():
 def block():
     hy = HY
     k = P(BASE, t=2, hip=(AX - 1, hy + 2), nf=(AX + 5, GY - 3), ff=(AX - 5, GY - 3),
-          fh=(AX + 8, hy - 9), sh=0, nh=(AX + 3, hy - 3), sw=-10, shield_front=True)
-    k0 = P(BASE, fh=(AX + 7, hy - 8), shield_front=True)
-    k2 = P(k, fx=[lambda J: glow(W, H, (AX + 13, hy - 9), 9, hx('#bff5ec'), 0.5)])
-    k3 = P(k, hip=(AX - 2, hy + 2), fh=(AX + 7, hy - 9))
+          fh=(AX + 6, hy - 5), nh=(AX + 7, hy - 6), sw=4)
+    k0 = P(BASE, fh=(AX + 6, hy - 4), nh=(AX + 6, hy - 4), sw=20)
+    k2 = P(k, fx=[lambda J: glow(W, H, (AX + 9, hy - 14), 9, hx('#bff5ec'), 0.5)])
+    k3 = P(k, hip=(AX - 2, hy + 2), nh=(AX + 6, hy - 6), fh=(AX + 5, hy - 5))
     return [k0, k, k2, k3]
 
 

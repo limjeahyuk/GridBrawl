@@ -21,13 +21,13 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .item:disabled{cursor:not-allowed;transform:none}
 .spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite;animation-name:f6;animation-timing-function:steps(6)}
 @keyframes f6{to{background-position:120% 0}}
-.bg{position:absolute;inset:0;background-image:url(/redesign/cutscene/shopkeeper/shopkeeper.png);background-size:1700px auto;background-position:-420px -443px;background-repeat:no-repeat}
+.bg{position:absolute;inset:0;background-image:url(/redesign/cutscene/inn/inn-bg.png);background-size:1280px 720px;background-repeat:no-repeat}
 .price{display:flex;align-items:center;justify-content:center;gap:6px;height:34px;margin-top:auto;background:#2a1c10;border:2px solid #c9952f;font-family:'Silkscreen',monospace;font-size:16px;color:#ffd86a}
 </style>
 </helmet>
 <div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #1a100a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
   <div class="bg" role="img" aria-label="여관 — 여관 주인 마렌"></div>
-  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,6,4,0.1) 0%, rgba(10,6,4,0.2) 38%, rgba(10,6,4,0.82) 52%, rgba(10,6,4,0.88) 100%)"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,6,4,0) 0%, rgba(10,6,4,0) 38%, rgba(10,6,4,0.8) 50%, rgba(10,6,4,0.86) 100%)"></div>
   <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,6,4,0.65) 0%, rgba(10,6,4,0) 16%)"></div>
 
   <header style="position: absolute; left: 32px; right: 32px; top: 20px; display: flex; justify-content: space-between; align-items: center">
@@ -39,12 +39,13 @@ a{color:#f4d470}a:hover{color:#fff1b8}
     </div>
   </header>
 
-  <section style="position: absolute; left: 36px; bottom: 30px; width: 520px; box-sizing: border-box; padding: 26px 22px 16px; background: rgba(16,10,8,0.9); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px #c9952f, 0 8px 0 rgba(0,0,0,0.4)">
-    <span style="position: absolute; left: 18px; top: -20px; padding: 3px 14px; background: #7a2a1a; border: 3px solid #0a0604; font-family: 'Do Hyeon', sans-serif; font-size: 21px; color: #fff6dc">마렌</span>
-    <p style="margin: 0; font-size: 17px; line-height: 1.6; color: #fff6dc">"천천히 둘러보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."</p>
+  <section style="position: absolute; left: 610px; top: 92px; right: 36px; box-sizing: border-box; padding: 10px 16px 10px 92px; background: rgba(16,10,8,0.92); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px #c9952f, 0 6px 0 rgba(0,0,0,0.4)">
+    <span aria-hidden="true" style="position: absolute; left: -22px; top: 12px; width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 20px solid #c9952f"></span>
+    <span style="position: absolute; left: 10px; top: 8px; padding: 2px 12px; background: #7a2a1a; border: 2px solid #0a0604; font-family: 'Do Hyeon', sans-serif; font-size: 19px; color: #fff6dc">마렌</span>
+    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #fff6dc">"천천히 둘러보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."</p>
   </section>
 
-  <main style="position: absolute; left: 610px; top: 104px; right: 36px; display: flex; flex-direction: column; gap: 16px">
+  <main style="position: absolute; left: 610px; top: 152px; right: 36px; display: flex; flex-direction: column; gap: 16px">
     <section aria-label="카드" style="display: flex; flex-direction: column; gap: 10px">
       <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 24px; color: #fff6dc">카드 <span style="font-size: 13px; color: #d8c8b8">· 한 장 35</span></h2>
       <div style="display: flex; gap: 14px">

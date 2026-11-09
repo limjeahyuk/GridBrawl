@@ -285,62 +285,127 @@
 }
 .login__setup { background: var(--bg-2); border: 2px solid var(--panel-edge); padding: 10px 12px; font-size: 13px; text-align: left; }
 
-/* ---- 영웅 선택 ------------------------------------------------------------ */
-.runstart { display: block; padding: 0; }
+/* ---- 영웅 선택 ------------------------------------------------------------
+   디자인 `Select`(2026-11-09). 고른 영웅의 일러스트가 화면 배경이고, 오른쪽에 얼굴 탭 · 정보 패널.
+   배경 그림은 1280×720이라 무대가 그보다 넓으면(최대 1600) 오른쪽이 비는데, 같은 그림을
+   늘려 흐린 층(`.artbg--fill`)을 밑에 깔아 그 틈을 그림의 색으로 메운다. */
+.runstart { display: block; padding: 0; overflow: hidden; background: #0c0a12; }
+.artbg { position: absolute; inset: 0; background-repeat: no-repeat; background-size: auto 100%; background-position: left top; }
+/* 무대가 1280보다 넓을 때 오른쪽 틈을 메우는 층 — 같은 그림을 늘려 흐린다. */
+.artbg--fill { inset: -20px; background-size: 100% 100%; filter: blur(18px) brightness(0.7); }
+.artbg--warrior { background-image: url('/redesign/heroes/bg-cairn.png'); }
+.artbg--archer { background-image: url('/redesign/heroes/bg-sable.png'); }
+.artbg--mage { background-image: url('/redesign/heroes/bg-dirge.png'); }
+/* 여관(상점) — 마렌은 왼쪽 그림 그대로, 오른쪽은 이어 그리고 흐리게(`docs/redesign/tools/inn-bg/build.py`). */
+.artbg--inn { background-image: url('/redesign/cutscene/inn/inn-bg.png'); }
+.artbg--in { animation: artbg-in 0.5s ease-out both; }
+@keyframes artbg-in { from { opacity: 0; transform: translateX(-24px); } }
+.artbg__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10, 8, 16, 0.7) 0%, rgba(10, 8, 16, 0) 16%),
+    linear-gradient(90deg, rgba(10, 8, 16, 0) 520px, rgba(10, 8, 16, 0.55) 824px);
+}
 .runstart__head {
   position: absolute;
-  left: 64px;
-  right: 64px;
-  top: 36px;
+  left: 560px;
+  right: 36px;
+  top: 26px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
 }
-.runstart__head h1 { font-size: 44px; color: var(--cream); line-height: 1; }
+.runstart__head h1 { font-size: 40px; color: var(--cream); line-height: 1; text-shadow: 3px 3px 0 #0a0604; }
 .runstart__kicker {
   margin: 0 0 4px;
   font-family: var(--font-px);
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 4px;
   color: var(--neon-cyan);
 }
-.runstart__chars {
+.herotabs {
   position: absolute;
-  left: 64px;
-  right: 64px;
-  top: 134px;
+  left: 560px;
+  right: 36px;
+  top: 112px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
+  gap: 14px;
 }
-.herocard {
-  height: 470px;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  text-align: left;
-  color: var(--text);
-  font-family: var(--font-body);
-  background: var(--bg-2);
-  border: 3px solid var(--panel-edge);
-  box-shadow: 0 10px 0 var(--edge-black);
-  transition: transform 0.15s;
-}
-.herocard:hover { transform: translateY(-4px); }
-.herocard.is-active {
-  border-color: var(--neon-cyan);
-  box-shadow: 0 0 0 3px var(--gold-edge), 0 10px 0 var(--edge-black);
-}
-.herocard__art {
+.herotab {
   position: relative;
-  flex: none;
-  height: 200px;
+  height: 112px;
+  padding: 0;
   overflow: hidden;
-  border-bottom: 3px solid var(--edge-black);
+  text-align: left;
+  color: var(--cream);
+  font-family: var(--font-body);
+  background: #1a1626;
+  border: 3px solid #3a3150;
+  box-shadow: 0 6px 0 var(--edge-black);
+  filter: saturate(0.55) brightness(0.75);
+  transition: transform 0.15s, filter 0.15s;
 }
-.herocard--warrior .herocard__art { background: linear-gradient(180deg, #123a40, #0d2a30); }
-.herocard--archer .herocard__art { background: linear-gradient(180deg, #3a1e16, #24140f); }
-.herocard--mage .herocard__art { background: linear-gradient(180deg, #24183e, #160f28); }
+.herotab:hover { transform: translateY(-3px); border-color: #8a7fa0; filter: none; }
+.herotab.is-active,
+.herotab.is-active:hover { border-color: var(--neon-cyan); box-shadow: 0 0 0 3px var(--gold-edge), 0 6px 0 var(--edge-black); filter: none; }
+/* 얼굴 — 배경 그림을 1.2배(1536×864)로 키워 자른다. 좌표는 RunStartScreen의 HERO_FACE. */
+.herotab__face { position: absolute; width: 1536px; height: 864px; background-size: 1536px 864px; background-repeat: no-repeat; }
+.herotab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  background: linear-gradient(180deg, rgba(10, 8, 16, 0) 0%, rgba(10, 8, 16, 0.92) 70%);
+}
+.herotab__name { position: absolute; left: 10px; bottom: 7px; z-index: 1; display: flex; gap: 8px; align-items: baseline; }
+.herotab__name b { font-family: var(--font-px); font-weight: 400; font-size: 18px; }
+.herotab__name span { font-family: var(--font-display); font-size: 16px; color: var(--accent); }
+.herotab__sel {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 1;
+  padding: 3px 6px;
+  font-family: var(--font-px);
+  font-size: 10px;
+  background: var(--neon-cyan);
+  color: var(--ink);
+}
+.heropanel {
+  position: absolute;
+  left: 560px;
+  right: 36px;
+  top: 256px;
+  height: 330px;
+  box-sizing: border-box;
+  padding: 20px 22px;
+  display: flex;
+  gap: 18px;
+  background: rgba(20, 16, 30, 0.9);
+  border: 3px solid var(--edge-black);
+  box-shadow: inset 0 0 0 2px var(--accent2), 0 8px 0 rgba(0, 0, 0, 0.4);
+  animation: heropanel-in 0.4s ease-out both;
+}
+@keyframes heropanel-in { from { opacity: 0; transform: translateX(30px); } }
+.heropanel__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.heropanel__name { display: flex; gap: 12px; align-items: baseline; }
+.heropanel__name h2 { font-family: var(--font-px); font-size: 40px; color: var(--cream); }
+.heropanel__name span { font-family: var(--font-display); font-size: 24px; color: var(--accent); }
+.heropanel__passive { margin: 0; font-size: 15px; line-height: 1.6; }
+.heropanel__passive b { color: var(--accent); }
+.heropanel__stagewrap { flex: none; width: 196px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.heropanel__stagewrap > span { font-size: 12px; color: #b9b1c9; }
+.heropanel__stage { position: relative; width: 196px; height: 236px; overflow: hidden; border: 2px solid var(--edge-black); }
+.heropanel__stage .herocard__shadow { width: 130px; height: 14px; margin-left: -65px; bottom: 16px; background: rgba(0, 0, 0, 0.4); }
+.heropanel__stage .herocard__sprite { bottom: 12px; }
+.herocard--warrior { background: linear-gradient(180deg, #123a40, #0d2a30); }
+.herocard--archer { background: linear-gradient(180deg, #3a1e16, #24140f); }
+.herocard--mage { background: linear-gradient(180deg, #24183e, #160f28); }
 .herocard__shadow {
   position: absolute;
   left: 50%;
@@ -352,68 +417,32 @@
   background: rgba(0, 0, 0, 0.35);
 }
 .herocard__sprite { position: absolute; left: 50%; bottom: 10px; }
-.herocard__sel {
-  position: absolute;
-  left: 14px;
-  top: 12px;
-  padding: 4px 8px;
-  font-family: var(--font-px);
-  font-size: 12px;
-  background: var(--neon-cyan);
-  color: var(--ink);
-}
-.herocard__body {
-  flex: 1;
-  min-height: 0;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.herocard__name { display: flex; justify-content: space-between; align-items: baseline; }
-.herocard__name h2 { font-family: var(--font-px); font-size: 30px; color: var(--cream); }
-.herocard__name span { font-family: var(--font-display); font-size: 20px; color: var(--accent); }
-.herocard__title { margin: -6px 0 0; font-size: 13px; color: #b9b1c9; }
+.herocard__title { margin: -10px 0 0; font-size: 13px; color: #b9b1c9; }
 .herocard__hp { display: flex; align-items: center; gap: 10px; }
 .herocard__hp > span { width: 26px; font-family: var(--font-px); font-size: 13px; color: #ff8a8a; }
 .herocard__hp > b { width: 34px; text-align: right; font-family: var(--font-px); font-size: 14px; font-weight: 400; }
 .herocard__hp .bar > i { box-shadow: none; }
-.herocard__passive { margin: 0; font-size: 13px; line-height: 1.5; }
-.herocard__passive b { color: var(--accent); }
 .herocard__sig {
   margin-top: auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: color-mix(in srgb, var(--accent2) 22%, var(--bg-1));
   border: 2px solid var(--accent2);
 }
-.herocard__sig span { font-family: var(--font-display); font-size: 19px; }
+.herocard__sig span { font-family: var(--font-display); font-size: 20px; }
 .herocard__sig em { font-family: var(--font-px); font-size: 12px; font-style: normal; color: var(--accent); }
 .runstart__foot {
   position: absolute;
-  left: 64px;
-  right: 64px;
+  left: 560px;
+  right: 36px;
   bottom: 30px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 20px;
 }
-.runstart__diffs { display: flex; gap: 6px; flex: none; }
-.diffseg {
-  height: 44px;
-  padding: 0 14px;
-  border: 2px solid var(--edge-hi);
-  border-radius: 0;
-  background: rgba(29, 24, 40, 0.92);
-  color: var(--text);
-  font-family: var(--font-display);
-  font-size: 19px;
-}
-.diffseg.is-active { background: var(--neon-cyan); color: var(--ink); border-color: var(--gold-edge); }
-.diffseg.is-locked { opacity: 0.55; cursor: not-allowed; }
 .runstart__note { flex: none; font-size: 14px; line-height: 1.35; color: #b9b1c9; }
 .runstart__go { flex: none; height: 52px; padding: 0 26px; font-size: 26px; }
 
@@ -1987,71 +2016,54 @@
   border: 2px solid var(--edge-hi);
 }
 .shop .shop__leave { height: 40px; padding: 0 18px; font-size: 20px; }
-.trader {
-  position: absolute;
-  left: 40px;
-  top: 96px;
-  z-index: 1;
-  width: 240px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-.trader__portrait {
-  width: 240px;
-  height: 320px;
-  box-sizing: border-box;
-  border: 3px solid var(--edge-black);
-  box-shadow: inset 0 0 0 2px #c9952f, 0 6px 0 rgba(0, 0, 0, 0.4);
-  background: #2a1610 url('/redesign/cutscene/shopkeeper/shopkeeper.png') center top / cover no-repeat;
-}
-.trader__stage {
-  position: relative;
-  width: 240px;
-  height: 236px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-}
-.trader__shadow {
-  position: absolute;
-  left: 30px;
-  right: 30px;
-  bottom: 0;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-}
+/* 마렌의 말 — 진열 위 말풍선. 꼬리는 왼쪽(그림 속 마렌 쪽)을 가리킨다. */
 .trader__say {
-  position: relative;
-  width: 100%;
-  padding: 14px 16px;
-  background: #e8dcc0;
-  color: #2a1c14;
-  border: 3px solid var(--edge-black);
+  position: absolute;
+  left: 560px;
+  right: 36px;
+  top: 92px;
+  z-index: 1;
+  box-sizing: border-box;
+  padding: 10px 16px 10px 92px;
+  background: rgba(16, 10, 8, 0.92);
+  border: 3px solid #0a0604;
+  box-shadow: inset 0 0 0 2px #c9952f, 0 6px 0 rgba(0, 0, 0, 0.4);
 }
 .trader__say::before {
   content: '';
   position: absolute;
-  left: 50%;
-  top: -11px;
-  width: 14px;
-  height: 14px;
-  margin-left: -7px;
-  background: #e8dcc0;
-  border-left: 3px solid var(--edge-black);
-  border-top: 3px solid var(--edge-black);
-  transform: rotate(45deg);
+  left: -22px;
+  top: 12px;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 20px solid #c9952f;
 }
-.trader__say b { font-family: var(--font-display); font-weight: 400; font-size: 19px; }
-.trader__say p { margin: 6px 0 0; font-size: 13px; line-height: 1.55; }
-.trader__note { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+.trader__say b {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  padding: 2px 12px;
+  background: #7a2a1a;
+  border: 2px solid #0a0604;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 19px;
+  color: var(--cream);
+}
+.trader__say p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--cream); }
+.shop__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10, 6, 4, 0.65) 0%, rgba(10, 6, 4, 0) 16%),
+    linear-gradient(90deg, rgba(10, 6, 4, 0) 38%, rgba(10, 6, 4, 0.8) 500px, rgba(10, 6, 4, 0.86) 100%);
+}
 .shop__main {
   position: absolute;
-  left: 316px;
-  top: 120px;
-  right: 40px;
+  left: 560px;
+  top: 152px;
+  right: 36px;
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -2061,7 +2073,7 @@
 .shop__sec h2 { font-family: var(--font-display); font-weight: 400; font-size: 22px; }
 .shop__sec h2 span { font-size: 13px; color: #b9b1c9; }
 .shop__row { display: flex; gap: 14px; }
-.shop__bottom { display: flex; gap: 28px; }
+.shop__bottom { display: flex; gap: 18px; }
 .item {
   position: relative;
   width: 170px;
@@ -2083,7 +2095,7 @@
 .item.is-owned:hover { transform: none; }
 .item .cardface { flex: 1; min-height: 0; }
 .item--relic {
-  width: 330px;
+  width: 300px;
   height: 150px;
   flex-direction: row;
   align-items: center;
@@ -2096,7 +2108,7 @@
 .item__relichead em { font-style: normal; }
 .item__relicdesc { font-size: 12px; line-height: 1.5; color: #e4def0; }
 .item--heal {
-  width: 160px;
+  width: 110px;
   height: 150px;
   align-items: center;
   border-color: #c9952f;
@@ -2108,7 +2120,7 @@
   background: url('/redesign/ui/events/potion-2.png') center / 36px 48px no-repeat;
   image-rendering: pixelated;
 }
-.item__healname { font-family: var(--font-display); font-size: 19px; }
+.item__healname { font-family: var(--font-display); font-size: 17px; line-height: 1.15; text-align: center; }
 .price {
   display: flex;
   align-items: center;
@@ -2883,7 +2895,7 @@
 .upg__foot--line { padding-top: 12px; border-top: 2px solid #2a2438; }
 .upg__savehint { flex-grow: 1; text-align: right; font-size: 13px; }
 /* 상점 강화 칸 — 모루 18×16의 정수 3배. */
-.item--upgrade { width: 180px; height: 150px; align-items: center; border-color: #c9952f; }
+.item--upgrade { width: 110px; height: 150px; align-items: center; border-color: #c9952f; }
 .item__anvil { width: 54px; height: 48px; background: url('/redesign/ui/rest/anvil.png') center / 54px 48px no-repeat; image-rendering: pixelated; }
 
 /* ---- 이벤트 8종(디자인 `EventsQ`) ----------------------------------------- */

@@ -488,8 +488,8 @@ class Component extends DCLogic {
     return {
       crumbs, gold: String(st.gold),
       srcLabel: '대장장이 · 50G', srcBg: '#2a1c08', srcFg: '#ffd86a', srcEdge: '#c9952f',
-      srcNote: '대장장이에게 50골드를 내고 카드 한 장을 강화한다. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다. 골드가 있으면 또 맡길 수 있다(카드당 최대 2번).',
-      leaveLabel: '← 대장간으로', exitLabel: '대장간으로 ▶',
+      srcNote: '대장장이에게 50골드를 내고 카드 한 장을 강화한다. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다. 대장간에서는 한 번만 — 강화를 마치면 바로 지도로 나간다(카드당 최대 2번).',
+      leaveLabel: '← 대장간으로', exitLabel: '지도로 ▶',
       sPick: st.step === 'pick', sPath: st.step === 'path', sSpin: st.step === 'spin', sDmg: st.step === 'dmg', sRange: st.step === 'range', sDone: st.step === 'done',
       showChip: st.step !== 'pick' && st.step !== 'done', cur, deck, chips,
       toPath: () => { if (!locked) this.setState({ step: 'path' }); }, backPick: () => this.setState({ step: 'pick' }),

@@ -1,4 +1,5 @@
-"""SABLE — Ashen Fletcher (archer). Ash hood, ember scarf, recurve longbow, quiver."""
+"""SABLE — Ashen Fletcher (archer). v2 = matches the select illustration:
+feathered green hat, green cowl + long cape, olive tunic, brown leather, longbow, quiver."""
 from rig import *
 
 W, H = 96, 64
@@ -11,42 +12,46 @@ PAL = dict(
     f='#c4501c', F='#7a2a10', y='#ffa24a',
     k='#e3aa86', K='#a8705a', H='#2a1a1e', e='#ffcf6a',
     g='#b8862e', w='#d8dde6', s='#6b7a8f',
+    m='#16301f', M='#25472f', N='#3c6646', q='#efe2c0', Q='#c9b48a',
+    a='#7a5a3a', A='#b08a5a', i='#d89a2a',
+    t='#4a5a2a', T='#323d1b', u='#66783a', v='#8a9a50', d='#2a4a36', D='#3e6650',
 )
 
 HOOD = sprite('''
-...ccx...
-..ccxxx..
-.cccxxxc.
-CccHHkkc.
-CcHHkkek.
-CcHkkkkk.
-CCcHkkK..
-.CccKkk..
-..fyfff..
-..Fffff..
+.......qQ....
+......qQ.....
+....mMMNN....
+...mMMMMNM...
+.mmmmmMMMMmm.
+..aaAkkkk....
+..aakkkikk...
+..aAkkkkkK...
+...akkKkK....
+...dkkkK.....
+..dDDDDd.....
 ''', PAL)
-HOOD_PV = (4, 9)
+HOOD_PV = (5, 10)
 
 TORSO = sprite('''
-...fyf...
-..fffyF..
-.CcFffcx.
-.Ccbbnbx.
-.Cbbbnbx.
-.CbbbbnX.
-.CCbbbbx.
-..BggyB..
-..CccccX.
-..CcccxX.
-..Cc.cxX.
-..Cc..xX.
-..C....X.
+..dDDDd..
+.dDDDDDd.
+.TtbttuT.
+.TttbtuT.
+.TtttbuT.
+.TttttbT.
+.TttttuT.
+..BbgbB..
+..TttuuT.
+..TttutT.
+..Tt.tuT.
+..T...uT.
+..T....T.
 ''', PAL)
 TORSO_PV = (4, 10)
 
 QUIVER = sprite('''
-w.w.w
-s.s.s
+q.q.q
+Q.Q.Q
 b.b.b
 bnnbB
 BbnbB
@@ -58,18 +63,18 @@ BbnbB
 ''', PAL)
 QUIVER_PV = (2, 6)
 
-SLEEVE = ramp('#24232c', '#44434f', '#6d6c7a')
-SLEEVE_F = ramp('#18171e', '#302f39', '#4c4b57')
+SLEEVE = ramp('#323d1b', '#4a5a2a', '#6a7c3c')
+SLEEVE_F = ramp('#232b13', '#36421e', '#4c5a2a')
 BRACER = ramp('#2e1f17', '#5c3f2c', '#8a6244')
 BRACER_F = ramp('#21160f', '#412d1f', '#63462f')
 SKIN = ramp('#a8705a', '#e3aa86', '#f3c9a8')
 SKIN_F = ramp('#7d5242', '#b08068', '#c99a80')
-PANTS = ramp('#211c26', '#3d3546', '#5b5166')
-PANTS_F = ramp('#17131b', '#2b2532', '#403847')
+PANTS = ramp('#3a2416', '#5e3e26', '#86603c')
+PANTS_F = ramp('#2a1a10', '#44301e', '#624630')
 BOOT = ramp('#24170f', '#4d3324', '#76503a')
 BOOT_F = ramp('#1a100a', '#382419', '#553a29')
 WOOD = ramp('#3e2616', '#8a5a34', '#c08a52')
-SCARF = ramp('#7a2a10', '#c4501c', '#ff8a3a')
+SCARF = ramp('#14261c', '#24402e', '#3a5e44')  # v2: long green cape
 STRING = hx('#e8e2d0')
 EMBER = [hx('#c4501c'), hx('#ffa24a'), hx('#fff2c0')]
 
@@ -97,13 +102,13 @@ class Sable(Humanoid):
         scarf, back, body, bow, front = [self.L_() for _ in range(5)]
         nk, hp = J['neck'], J['hip']
         wv = pose.get('wind', 1.0); ph = pose.get('cph', 0)
-        # ember scarf tail flowing back
+        # v2: long green cape from the shoulders, flowing back
         tail = []
         for i in range(7):
             u = i / 6
-            tail.append((nk[0] - 1 - u * (8 + 4 * wv), nk[1] + 2.5 + u * (4 - 2 * wv) + math.sin(ph + u * 4) * 1.2 * wv))
-        top = [(p[0], p[1] - (3.2 - 1.6 * i / 6)) for i, p in enumerate(tail)]
-        scarf.poly(top + tail[::-1], SCARF, True)
+            tail.append((nk[0] - 2 - u * (5 + 4 * wv), nk[1] + 2 + u * (16 - 3 * wv) + math.sin(ph + u * 4) * 1.0 * wv))
+        top = [(nk[0] + 1 - u * 1.5, nk[1] + 1 + i * 2.6) for i, u in enumerate([k / 6 for k in range(7)])]
+        scarf.poly(top + tail[::-1], SCARF, True, light='left')
         # quiver on the back
         qa = add(hp, J['up'], 7)
         back.part(QUIVER, QUIVER_PV, add(qa, (-3, 0)), deg=t - 28)

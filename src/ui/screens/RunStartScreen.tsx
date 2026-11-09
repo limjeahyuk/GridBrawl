@@ -38,6 +38,13 @@ const TIER_UI: Record<RunDifficulty, { no: string; color: string }> = {
   master: { no: 'IV', color: '#ff4a3a' },
 }
 
+/**
+ * 탭에 보일 얼굴 자리 — 배경 그림(1280×720) 위 좌표. 탭은 그 그림을 `FACE_ZOOM`배로
+ * 키워 이 점이 탭 가운데(위에서 46px)에 오게 자른다. 그림을 갈면 여기를 다시 맞춘다.
+ */
+const HERO_FACE: Record<string, [number, number]> = { warrior: [240, 140], archer: [215, 212], mage: [262, 186] }
+const FACE_ZOOM = 1.2
+
 /** 시작 체력 — 시그니처 유물의 최대 체력까지 반영한 실제 값(`startRun`과 같다). */
 const startHp = (charId: string) => computeMaxHp(charId, [signatureRelicId(charId)])
 
@@ -50,6 +57,8 @@ export function RunStartScreen({
 }) {
   const [step, setStep] = useState<'hero' | 'difficulty'>('hero')
   const [charId, setCharId] = useState<string>(ROSTER[0].id)
+  /** 배경을 갈아 끼울 때 새 그림이 페이드인하는 동안 밑에 깔아 둘 직전 영웅. */
+  const [prevId, setPrevId] = useState<string>(ROSTER[0].id)
   const char = ROSTER.find((c) => c.id === charId) ?? ROSTER[0]
   /**
    * 해금 상태는 화면이 뜰 때 한 번만 읽는다 — 런 도중에 바뀌지 않고, 클리어 직후엔
@@ -175,9 +184,32 @@ export function RunStartScreen({
   }
 
   // ---- 1단계: 영웅 ---------------------------------------------------------
+  // 디자인 `Select`(2026-11-09): 고른 영웅의 일러스트가 **화면 배경**이 된다(`public/redesign/heroes/
+  // bg-*.png` — 원본은 왼쪽에 그대로, 오른쪽은 이어 그리고 흐리게. 만드는 스크립트
+  // `docs/redesign/tools/hero-bg/build.py`). 위쪽 탭은 같은 그림에서 얼굴만 잘라 보여 준다.
+  const pick = (id: string) => {
+    if (id === charId) return
+    setPrevId(charId)
+    setCharId(id)
+  }
+  const relic = getRelic(signatureRelicId(char.id))
+  const sig = char.cards.find((k) => k.signature)
+  const hp = startHp(char.id)
   return (
-    <div className="screen runstart">
-      <div className="grid-bg" />
+    <div
+      className="screen runstart"
+      style={{ ['--accent' as string]: char.accent, ['--accent2' as string]: char.accent2 }}
+    >
+      <div className={`artbg artbg--fill artbg--${char.id}`} aria-hidden="true" />
+      <div className={`artbg artbg--${prevId}`} aria-hidden="true" />
+      <div
+        key={char.id}
+        className={`artbg artbg--${char.id} artbg--in`}
+        role="img"
+        aria-label={`${char.name} — ${CLASS_LABEL[char.id]}`}
+      />
+      <i className="artbg__veil" aria-hidden="true" />
+
       <header className="runstart__head">
         <div>
           <p className="runstart__kicker">CHOOSE YOUR HERO</p>
@@ -188,67 +220,73 @@ export function RunStartScreen({
         </button>
       </header>
 
-      <div className="runstart__chars">
+      <nav className="herotabs" aria-label="영웅 고르기">
         {ROSTER.map((c) => {
-          const cSheet = sheetFor(c.id)
-          const relic = getRelic(signatureRelicId(c.id))
-          const sig = c.cards.find((k) => k.signature)
-          const hp = startHp(c.id)
           const on = c.id === charId
+          const [fx, fy] = HERO_FACE[c.id] ?? [0, 0]
           return (
             <button
               key={c.id}
-              className={`herocard herocard--${c.id} ${on ? 'is-active' : ''}`}
-              style={{ ['--accent' as string]: c.accent, ['--accent2' as string]: c.accent2 }}
+              className={`herotab ${on ? 'is-active' : ''}`}
+              style={{ ['--accent' as string]: c.accent }}
               aria-pressed={on}
-              onClick={() => {
-                if (zoom.consumedClick()) return
-                setCharId(c.id)
-              }}
+              aria-label={`${c.name} 고르기`}
+              onClick={() => pick(c.id)}
             >
-              <div className="herocard__art">
-                <i className="herocard__shadow" />
-                {cSheet && (
-                  <div
-                    className="herocard__sprite"
-                    style={{ marginLeft: -cSheet.anchorX * cSheet.scale }}
-                  >
-                    <SpriteClip sheet={cSheet} clip="idle" />
-                  </div>
-                )}
-                {on && <span className="herocard__sel">SELECTED</span>}
-              </div>
-              <div className="herocard__body">
-                <div className="herocard__name">
-                  <h2>{c.name}</h2>
-                  <span>{CLASS_LABEL[c.id]}</span>
-                </div>
-                <p className="herocard__title">{c.title}</p>
-                <div className="herocard__hp">
-                  <span>HP</span>
-                  <div className="bar">
-                    <i style={{ width: `${(hp / hpTop) * 100}%` }} />
-                  </div>
-                  <b>{hp}</b>
-                </div>
-                {relic && (
-                  <p className="herocard__passive">
-                    <b>{relic.name}</b> — {relic.desc.replace(`${relic.name}: `, '')}
-                  </p>
-                )}
-                {sig && (
-                  <div className="herocard__sig" {...zoom.bind(sig)}>
-                    <span>시그니처 · {sig.name}</span>
-                    <em>
-                      DM{sig.damage} EN{sig.energyCost}
-                    </em>
-                  </div>
-                )}
-              </div>
+              <i
+                className={`herotab__face artbg--${c.id}`}
+                style={{ left: `calc(50% - ${Math.round(fx * FACE_ZOOM)}px)`, top: 46 - Math.round(fy * FACE_ZOOM) }}
+              />
+              <span className="herotab__name">
+                <b>{c.name}</b>
+                <span>{CLASS_LABEL[c.id]}</span>
+              </span>
+              {on && <span className="herotab__sel">SELECTED</span>}
             </button>
           )
         })}
-      </div>
+      </nav>
+
+      <section key={char.id} className="heropanel">
+        <div className="heropanel__body">
+          <div className="heropanel__name">
+            <h2>{char.name}</h2>
+            <span>{CLASS_LABEL[char.id]}</span>
+          </div>
+          <p className="herocard__title">{char.title}</p>
+          <div className="herocard__hp">
+            <span>HP</span>
+            <div className="bar">
+              <i style={{ width: `${(hp / hpTop) * 100}%` }} />
+            </div>
+            <b>{hp}</b>
+          </div>
+          {relic && (
+            <p className="heropanel__passive">
+              <b>{relic.name}</b> — {relic.desc.replace(`${relic.name}: `, '')}
+            </p>
+          )}
+          {sig && (
+            <div className="herocard__sig" {...zoom.bind(sig)}>
+              <span>시그니처 · {sig.name}</span>
+              <em>
+                DM{sig.damage} EN{sig.energyCost}
+              </em>
+            </div>
+          )}
+        </div>
+        <div className="heropanel__stagewrap">
+          <div className={`heropanel__stage herocard--${char.id}`}>
+            <i className="herocard__shadow" />
+            {sheet && (
+              <div className="herocard__sprite" style={{ marginLeft: -sheet.anchorX * sheet.scale }}>
+                <SpriteClip sheet={sheet} clip="idle" />
+              </div>
+            )}
+          </div>
+          <span>전투에서의 모습</span>
+        </div>
+      </section>
 
       <div className="runstart__foot">
         <span className="runstart__note">다음 단계에서 난이도를 고른다</span>

@@ -1,8 +1,8 @@
 // 상점 — 골드로 카드·유물·회복을 구매. 덱이 꽉 찬 상태의 카드 구매만 카드 선택
 // (버릴 카드)이 필요하다. ⚠ 유료 "카드 1장 제거"는 뺐다(run.ts "덱 룰" 참고).
 //
-// 화면은 디자인 `Shop` 그대로다 — 왼쪽에 **떠돌이 상인 마렌**이 서 있고, 오른쪽
-// 진열은 카드 / 유물 / 회복 세 묶음으로 나뉜다. 진열 자체는 `rollShop`(카드 3·유물
+// 화면은 디자인 `Shop` 그대로다 — 배경 여관 그림 왼쪽에 **여관 주인 마렌**이 서 있고, 오른쪽
+// 진열(마렌의 말풍선 아래)은 카드 / 유물 / 회복 / 강화 묶음으로 나뉜다. 진열 자체는 `rollShop`(카드 3·유물
 // 1·회복 2)을 그대로 쓴다.
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
@@ -14,15 +14,14 @@ import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
 import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
-import { SceneLayers } from '../SceneLayers'
 import { useFirstTip } from '../FirstTip'
 import { UpgradeScreen } from './UpgradeScreen'
 
-/** 마렌의 인사 — 체력이 깎였으면 약부터 권한다(디자인 `Shop`의 대사). */
+/** 마렌의 인사 — 체력이 깎였으면 약부터 권한다(디자인 `Shop`의 대사, 2026-11-09 여관 주인 말씨). */
 const greeting = (hpFrac: number): string =>
   hpFrac < 0.6
-    ? '"골드만 있으면 뭐든 내주지. 피 흘리는 얼굴이면 약부터 보시게."'
-    : '"골드만 있으면 뭐든 내주지. 천천히 둘러보게."'
+    ? '"어머, 많이 다치셨네요. 물약부터 보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."'
+    : '"천천히 둘러보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."'
 
 export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
   const shop = useMemo(() => rollShop(run), [run])
@@ -120,8 +119,11 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
 
   return (
     <div className="screen shop">
-      <SceneLayers scene={regionOf(cur.floor)} />
-      <div className="screenveil screenveil--light" />
+      {/* 배경 = 여관 그림 한 장(`public/redesign/cutscene/inn/inn-bg.png`) — 마렌은 왼쪽에 그대로,
+          진열은 오른쪽 흐린 쪽에 둔다. 무대가 1280보다 넓으면 흐린 층이 오른쪽 틈을 메운다. */}
+      <div className="artbg artbg--fill artbg--inn" aria-hidden="true" />
+      <div className="artbg artbg--inn" role="img" aria-label="여관 — 여관 주인 마렌" />
+      <i className="shop__veil" aria-hidden="true" />
       {tip}
 
       <header className="shop__head">
@@ -145,18 +147,10 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
         </div>
       </header>
 
-      <aside className="trader">
-        {/* 상점 주인은 **그림 한 장**이다(2026-11 시안 변경 — 받은 그림 그대로 · 배경 포함 ·
-            애니메이션 없음, `public/redesign/cutscene/shopkeeper/`). 옛 `sprites/trader` 시트는 지웠다. */}
-        <div className="trader__portrait" role="img" aria-label="상점 주인 마렌" />
-        <div className="trader__say">
-          <b>상점 주인 마렌</b>
-          <p>{greeting(cur.hp / Math.max(1, cur.maxHp))}</p>
-        </div>
-        <p className="trader__note">
-          덱이 꽉 찼으면 카드를 살 때 한 장과 바꾼다. 진열은 이 상점을 나갈 때까지 유지.
-        </p>
-      </aside>
+      <section className="trader__say">
+        <b>마렌</b>
+        <p>{greeting(cur.hp / Math.max(1, cur.maxHp))}</p>
+      </section>
 
       <main className="shop__main">
         <section className="shop__sec" aria-label="카드">

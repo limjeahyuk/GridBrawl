@@ -11,7 +11,7 @@ export const SHEETS_V2: Record<string, SheetDef> = {
   archer: { id: 'redesign/sprites/sable', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 35, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 125, loop: true }, run: { frames: 8, frameMs: 72, loop: true }, back: { frames: 6, frameMs: 95, loop: true }, attack1: { frames: 7, frameMs: 60, loop: false, impactFrame: 3 }, attack2: { frames: 8, frameMs: 70, loop: false, impactFrame: 4 }, attack3: { frames: 7, frameMs: 66, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 100, loop: false } } },
   // hero — 대체 대상: mage
-  mage: { id: 'redesign/sprites/dirge', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 37, facesRight: true,
+  mage: { id: 'redesign/sprites/dirge', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 36, facesRight: true,
     clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 78, loop: true }, back: { frames: 6, frameMs: 100, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 8, frameMs: 75, loop: false, impactFrame: 3 }, attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 105, loop: false } } },
   // monster · grassland — 대체 대상: slime
   slime: { id: 'redesign/sprites/slime', frameW: 64, frameH: 44, scale: 3, footY: 43, anchorX: 26, facesRight: true,
