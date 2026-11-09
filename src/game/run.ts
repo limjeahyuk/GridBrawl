@@ -241,9 +241,6 @@ const ELITE_ATK_BONUS = 1
  * 쌓은 플레이어가 그냥 이긴다(승률 79%). 체력 스케일은 깎고 화력을 얹어 짧고 무섭게.
  */
 const BOSS_HP_SCALE_FACTOR = 0.4
-/** 보상을 포기하고 받는 회복량. 22 → 32(2026-07-30): 15층 사다리에선 누적 소모가
- *  훨씬 커서(7층 진입 체력 49%) 22는 "카드를 포기할 이유"가 못 됐다. */
-export const SKIP_HEAL = 18
 const GOLD_BASE = 15
 const GOLD_PER_FLOOR = 4
 const GOLD_ELITE_BONUS = 40
@@ -762,9 +759,14 @@ export function goldForWin(run: RunState): number {
   const bonus = runMods(run).goldBonusPct ?? 0
   return Math.round(g * (1 + bonus / 100))
 }
-/** 승리 — 남은 체력 인계 + 골드 획득 → 보상 단계(보스면 클리어). */
+/**
+ * 전투에서 이기면 체력 10 회복(2026-11-09 사용자 지정 — 보상 건너뛰기 회복을 없앤 뒤
+ * 클리어율이 20% 아래(17.4%)로 내려가면 넣기로 정해 둔 값). 남은 체력에 더한다.
+ */
+export const WIN_HEAL = 10
+/** 승리 — 남은 체력 + `WIN_HEAL` 인계 + 골드 획득 → 보상 단계(보스면 클리어). */
 export function afterWin(run: RunState, hpLeft: number): RunState {
-  const hp = clamp(Math.round(hpLeft), 0, run.maxHp)
+  const hp = clamp(Math.round(hpLeft) + WIN_HEAL, 0, run.maxHp)
   const gold = run.gold + goldForWin(run)
   if (currentNode(run).type === 'boss') return { ...run, hp, gold, status: 'won' }
   return { ...run, hp, gold, status: 'reward' }
@@ -1163,7 +1165,10 @@ export function restAtFire(run: RunState): RunState {
 export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
   return grantRandomRelic(run)
 }
-/** 보상을 포기하고 회복 후 진행. */
-export function skipRewardForHeal(run: RunState): RunState {
-  return advanceFloor(healHp(run, SKIP_HEAL))
+/**
+ * 보상을 건너뛰고 진행 — **회복은 없다**(2026-11-09 사용자 지정). 예전엔 체력 18을 줬는데,
+ * 회복은 여관(50% / 20%)·대장간(10%)이 맡는다. 덱이 꽉 차 받고 싶은 카드가 없을 때 쓰는 버튼이다.
+ */
+export function skipReward(run: RunState): RunState {
+  return advanceFloor(run)
 }

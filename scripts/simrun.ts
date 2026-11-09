@@ -53,7 +53,7 @@ import {
   openTreasure,
   rollRewards,
   rollShop,
-  skipRewardForHeal,
+  skipReward,
   RUN_DIFFICULTIES,
   startRun,
   templateOptionIndex,
@@ -203,14 +203,12 @@ async function playFight(run: RunState): Promise<FightResult> {
 function takeReward(run: RunState): RunState {
   const rewards: Reward[] = rollRewards(run)
   if (POLICY === 'random') {
-    if (Math.random() < 0.2) return skipRewardForHeal(run)
+    if (Math.random() < 0.2) return skipReward(run)
     const r = rewards[Math.floor(Math.random() * rewards.length)]
     return advanceFloor(applyReward(run, r))
   }
   const relic = rewards.find((r): r is Extract<Reward, { kind: 'relic' }> => r.kind === 'relic')
   if (relic) return advanceFloor(applyReward(run, relic))
-  // 유물이 없고 체력이 위험하면 보상을 포기하고 회복한다.
-  if (run.hp / run.maxHp < 0.35) return skipRewardForHeal(run)
   const best = rewards
     .filter((r): r is Extract<Reward, { kind: 'card' }> => r.kind === 'card')
     .sort((a, b) => cardScore(b.cardId, run.deck, run) - cardScore(a.cardId, run.deck, run))[0]

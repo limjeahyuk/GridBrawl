@@ -369,7 +369,7 @@ export const ROSTER: CharacterDef[] = [
     maxHp: 78,
     maxEnergy: 50,
     startEnergy: 30,
-    passive: { desc: '혼백의 등불: 매 라운드 기력 +6, 보호막 +4.', turnEnergy: 6, turnShield: 4 },
+    passive: { desc: '혼백의 마법서: 매 라운드 기력 +6, 보호막 +4.', turnEnergy: 6, turnShield: 4 },
     // 기본기 — 십자·X자·세로줄로 **제일 넓다**. 대신 한 대가 가볍고 기력이 비싸다
     // (매 라운드 기력 +12 패시브가 그 비용을 감당하는 자리다).
     basics: [

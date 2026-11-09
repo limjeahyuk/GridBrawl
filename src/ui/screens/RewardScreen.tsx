@@ -9,8 +9,8 @@ import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
 import { resolveRunCard } from '../../game/runcards'
 import {
-  advanceFloor, deckCap, goblinItemName, goldForWin, grantCard, grantRelic, GOBLIN_LOOT, healHp, regionOf,
-  rollRewards, runCard, sceneFor, skipRewardForHeal, SKIP_HEAL, type Reward, type RunState,
+  advanceFloor, deckCap, goblinItemName, goldForWin, WIN_HEAL, grantCard, grantRelic, GOBLIN_LOOT, healHp, regionOf,
+  rollRewards, runCard, sceneFor, skipReward, type Reward, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
@@ -104,7 +104,7 @@ export function RewardScreen({
         <i className="coin" aria-hidden />
         <span className="goldbar__n">+{goldForWin(run) + (loot?.gold ?? 0)}</span>
         <span className="goldbar__note">
-          {loot ? '돈주머니 포함' : '골드는 늘 받는다'} · 보유 {run.gold}
+          {loot ? '돈주머니 포함' : '골드는 늘 받는다'} · 보유 {run.gold} · 승리 회복 HP +{WIN_HEAL}
         </span>
       </div>
       {/* 압축 카드에는 설명이 없다 — 어디서 읽는지 한 번은 말해 줘야 한다.
@@ -168,8 +168,8 @@ export function RewardScreen({
             지도로 ▶
           </button>
         ) : (
-          <button className="btn btn--ghost reward__skip" onClick={() => onDone(skipRewardForHeal(run))}>
-            건너뛰고 체력 회복 (+{SKIP_HEAL} HP)
+          <button className="btn btn--ghost reward__skip" onClick={() => onDone(skipReward(run))}>
+            건너뛰기
           </button>
         )}
         <span className="reward__deckcount">

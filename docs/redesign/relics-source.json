@@ -30,10 +30,10 @@
  },
  {
   "id": "sig-mage",
-  "name": "혼백의 등불",
+  "name": "혼백의 마법서",
   "rarity": "rare",
-  "desc": "혼백의 등불: 최대 체력 +80, 받는 피해 -2. 매 라운드 기력 +5·보호막 +3, 피해를 주면 화상 2라운드를 묻힌다.",
-  "emoji": "🕯",
+  "desc": "혼백의 마법서: 최대 체력 +80, 받는 피해 -2. 매 라운드 기력 +5·보호막 +3, 피해를 주면 화상 2라운드를 묻힌다.",
+  "emoji": "📖",
   "effect": {
    "turnEnergy": 5,
    "turnShield": 3,
@@ -216,7 +216,7 @@
   "name": "재의 부적",
   "rarity": "epic",
   "desc": "전투당 한 번, 체력 15으로 되살아난다.",
-  "emoji": "🕯",
+  "emoji": "📖",
   "effect": {
    "revive": 15
   },
@@ -977,7 +977,7 @@
   "name": "화형의 표식",
   "rarity": "epic",
   "desc": "피해를 주면 화상 2라운드를 묻히고, 상태이상에 걸린 상대에게 피해 +4.",
-  "emoji": "🕯",
+  "emoji": "📖",
   "effect": {
    "burnOnHit": 2,
    "bonusVsAfflicted": 4
@@ -1802,7 +1802,7 @@
   "name": "잿불 인장",
   "rarity": "rare",
   "desc": "피해를 주면 화상 2라운드를 묻힌다.",
-  "emoji": "🕯",
+  "emoji": "📖",
   "effect": {
    "burnOnHit": 2
   },

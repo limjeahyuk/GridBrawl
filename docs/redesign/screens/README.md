@@ -25,7 +25,7 @@
 | `OneCell.dc.html`, `Hazards.dc.html` | `BattleScreen.tsx`(지형 렌더), `battlefx.css`(`.rock` 등) | **1칸 함정은 `hazards-cell/`을 쓴다**: 184×96, 칸 왼쪽 위에 맞추고 `top = 칸 top − 36px`. 128px판(`hazards/`)은 예전 규격 |
 | `RelicsHUD.dc.html` | `BattleScreen.tsx`(상태바 아래 유물 줄), `RunBar.tsx`(지도) | 상태 7종(상시·발동·누적·횟수·조건·첫 라운드·런) 표시 규칙과 발동 애니메이션 CSS(`pop`, `burst`, `rise`) |
 | `BossHUD.dc.html` | `BattleScreen.tsx` | 보스·적 능력은 **? 칸으로 시작 → 처음 발동 때 뒤집혀 공개**(`flip`, 붉은 띠) |
-| `Reward.dc.html` | `screens/RewardScreen.tsx` | 골드는 항상 지급. 일반 = 카드 5장 중 1, 엘리트 = 카드 4장 + 유물 1 중 1. 건너뛰기 = 회복 |
+| `Reward.dc.html` | `screens/RewardScreen.tsx` | 골드는 항상 지급. 일반 = 카드 5장 중 1, 엘리트 = 카드 4장 + 유물 1 중 1. 건너뛰기 = 아무것도 안 받음(2026-11-09 — 회복은 승리 HP +10이 대신) |
 | `Shop.dc.html` | `screens/ShopScreen.tsx` | **여관 안 상점.** 배경은 여관과 같은 `public/redesign/cutscene/inn/inn-bg.png`(마렌 왼쪽 · 오른쪽 흐림), 마렌의 말은 진열 위 말풍선, 진열은 카드 3 · 유물 2(회복 · 강화 칸 없음). 위쪽 "← 여관으로" |
 | `GoblinShop.dc.html`, `Merchants.dc.html` | `screens/EventScreen.tsx`(? → 상점 판정), 새 고블린 상점 화면, `monsters.ts` | **? 칸 상점 = 고블린 장사꾼**. 만남(거래 · 덮친다 · 지나간다) → 거래 / 습격. 런 동안 쓴 돈 `goblinSpent`로 가난(0) → 중간(80) → 부자(200), 덮쳐서 이기면 0 → 이후 고블린 상점은 가난부터. 값은 단계 무관 물건마다 정가 ×0.8~1.5, 단계마다 다른 건 진열 품목·전투력 — 규칙과 데이터는 `docs/redesign/GOBLIN_MERCHANT.md` |
 | `Inn.dc.html`, `Blacksmith.dc.html` | 새 여관 · 대장간 화면, `RunMapScreen.tsx`(지도 칸 `inn` · `smith`) | **지도의 상점 · 휴식 칸 → 여관 · 대장간.** 여관 = 휴식 50G(최대 체력 20%, **쉬면 방문 끝**) · 상점(다녀와도 계속) · 나가기(5%). 배경은 `public/redesign/cutscene/inn/inn-bg.png`(시안 C: 그림은 왼쪽에 그대로, 오른쪽은 이어 그리고 흐리게), 대사창과 선택지는 오른쪽. 대장간 = 카드 강화 50G(**한 번만**, 저장하면 바로 지도로) · 나가기. 규칙은 `docs/redesign/INN_SMITH.md` |

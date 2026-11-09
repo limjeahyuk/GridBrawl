@@ -58,6 +58,7 @@ import {
   computeMaxHp,
   currentEnemy,
   afterWin,
+  WIN_HEAL,
   TERRAIN,
   type NodeType,
   type RunDifficulty,
@@ -1385,6 +1386,8 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
   check('뱀 전투는 중독으로 시작', new CardBattle(fp.p0CharId, fp.p1CharId, fp.battleOpts).state.status[0].map((e) => e.kind), ['poison'])
   check('뱀이 상대', currentEnemy(fightRun).id, 'snake')
   const won = applySpecialWin(afterWin(fightRun, 30))
+  check('이기면 체력 10 회복(WIN_HEAL)', afterWin({ ...fightRun, hp: 5 }, 30).hp, Math.min(fightRun.maxHp, 30 + WIN_HEAL))
+  check('승리 회복은 최대 체력을 넘지 않는다', afterWin(fightRun, fightRun.maxHp).hp, fightRun.maxHp)
   check('뱀을 이기면 독 유물', RELIC_POOLS.poison.includes(won.special?.wonRelicId as never), true)
   check('층을 넘기면 이벤트 전투가 지워진다', advanceFloor(won).special, undefined)
   check('항아리 꽝', resolveEventChoice(base, startEvent('jar'), 'open', undefined, () => 0.9)!.fight, undefined)
