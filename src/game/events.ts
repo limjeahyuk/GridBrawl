@@ -11,21 +11,42 @@
 // ---------------------------------------------------------------------------
 import { RELIC_BY_ID } from './relics'
 import {
-  GOBLIN_LOOT, cardRewardPool, grantCard, grantGoblinItem, grantRelic, healHp, isLockedCard, loseHp, loseMaxHp, loseRelic,
+  GOBLIN_LOOT, cardRewardPool, deckCap, grantCard, grantGoblinItem, grantRelic, healHp, isLockedCard, loseHp, loseMaxHp, loseRelic,
   removeCard, rollRelicId, upgradableDeckCards, type RunState, type SpecialFight,
 } from './run'
+import { WORLDTREE_CARD } from './runcards'
 
-export type EventId = 'forge' | 'trade' | 'spring' | 'apothecary' | 'jar' | 'gacha' | 'mole' | 'surgery'
+export type EventId =
+  | 'forge' | 'trade' | 'spring' | 'apothecary' | 'jar' | 'gacha' | 'mole' | 'surgery'
+  | 'spirit' | 'egg' | 'worldtree' | 'phoenix'
 
 export interface EventDef {
   id: EventId
   code: string
   name: string
-  mode: 'once' | 'repeat' | 'battle'
-  /** `public/redesign/ui/events/<file>.png` — 화면엔 ×4. */
-  art: { file: string; w: number; h: number; frames: number; frameMs?: number }
+  /** chain = 단계마다 다음 선택지가 이어지는 이벤트(타오르는 알 · 불사조). */
+  mode: 'once' | 'repeat' | 'battle' | 'chain'
+  /**
+   * `public/<file>.png`의 원본 크기 — 화면엔 `scale`배(기본 3). `file`은 `redesign/ui/events/` 기준.
+   * ⚠ 사슬 이벤트 4종은 그림이 아직 없어 지도 아이콘 `?`를 임시로 쓴다(PROGRESS 2-bis).
+   */
+  art: { file: string; w: number; h: number; frames: number; frameMs?: number; scale?: number }
   text: string
+  /** 사슬 이벤트의 단계별 본문(`step`번째). 없으면 `text`. */
+  steps?: string[]
 }
+
+/** 이벤트 사슬의 층 경계 — 기획서의 "10턴"은 지도의 **층**이다. 10층까지 / 11층부터. */
+export const EVENT_EARLY_MAX_FLOOR = 10
+const SEED = 'seed'
+const FIRE_EGG = 'fireegg'
+const NUTRIENT = 'nutrient'
+const WORLD_BRANCH = 'worldbranch'
+const PHOENIX_FEATHER = 'phoenixfeather'
+const EGG_COST = [0, 10, 15, 20] // 단계별 HP 대가(0단계는 오히려 +5)
+const EGG_WARM = 5
+const PHOENIX_CAVE_COST = 20
+const PLACEHOLDER_ART = { file: '../map-icons/unknown', w: 14, h: 14, frames: 1, scale: 8 }
 
 export const EVENT_DEFS: EventDef[] = [
   { id: 'forge', code: 'EV-FORGE', name: '낡은 대장간', mode: 'once', art: { file: 'forge', w: 64, h: 52, frames: 6, frameMs: 110 },
@@ -44,8 +65,54 @@ export const EVENT_DEFS: EventDef[] = [
     text: '반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?' },
   { id: 'surgery', code: 'EV-SURGERY', name: '수술실', mode: 'once', art: { file: 'surgery', w: 72, h: 56, frames: 1 },
     text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?' },
+  // --- 이벤트 사슬(2026-11-09 사용자 기획): 정령 → 씨앗 → 세계수 / 알 → 불사조 -----------
+  { id: 'spirit', code: 'EV-SPIRIT', name: '초록 정령', mode: 'battle', art: PLACEHOLDER_ART,
+    text: '숲속에 들어서니 초록색 정령들이 늑대들의 위협을 받고 있다.\n도와주겠습니까?' },
+  { id: 'egg', code: 'EV-EGG', name: '따뜻한 바람', mode: 'chain', art: PLACEHOLDER_ART,
+    text: '숲속에 들어서니 어울리지 않는 따뜻한 바람이 불어온다.\n가까이 다가가겠습니까?',
+    steps: [
+      '숲속에 들어서니 어울리지 않는 따뜻한 바람이 불어온다.\n가까이 다가가겠습니까?',
+      '이제는 따뜻하다 못해 뜨거워진다.\n계속 나아가겠습니까?',
+      '점점 다가갈수록 더 뜨거워진다.\n계속 나아가겠습니까?',
+      '화르르 타오르고 있는 알을 발견했다.\n가져오겠습니까?',
+    ] },
+  { id: 'worldtree', code: 'EV-WORLDTREE', name: '세계수', mode: 'chain', art: PLACEHOLDER_ART,
+    text: '어디선가 나타난 초록 정령들이 자꾸만 나를 어디론가 끌어당긴다. 마치 따라오라는 것 같다.\n따라가니 광활한 평야와 함께 너무 아름다운 풍경이 펼쳐졌다. 나도 모르게 손에는 씨앗이 들려 있다.',
+    steps: [
+      '어디선가 나타난 초록 정령들이 자꾸만 나를 어디론가 끌어당긴다. 마치 따라오라는 것 같다.\n따라가니 광활한 평야와 함께 너무 아름다운 풍경이 펼쳐졌다. 나도 모르게 손에는 씨앗이 들려 있다.',
+      '씨앗이 움트더니 눈 깜짝할 새 어린 나무가 되었다.\n가지 끝에서 빛나는 잎 한 장이 내려온다.',
+    ] },
+  { id: 'phoenix', code: 'EV-PHOENIX', name: '불사조', mode: 'chain', art: PLACEHOLDER_ART,
+    text: '화산에 오르다 숨겨져 있는 동굴을 발견했다.\n내부가 매우 뜨거워서 화상을 입을 것 같다.',
+    steps: [
+      '화산에 오르다 숨겨져 있는 동굴을 발견했다.\n내부가 매우 뜨거워서 화상을 입을 것 같다.',
+      '동굴 안에는 거대한 불이 계속 타오르고 있다.\n가까이 다가가 보니 전설의 동물 불사조가 쳐다보고 있었다.',
+    ] },
 ]
 export const eventDef = (id: EventId): EventDef => EVENT_DEFS.find((e) => e.id === id)!
+/** 지금 단계의 본문. */
+export const eventText = (st: EventState): string => {
+  const d = eventDef(st.id)
+  // 마지막 단계를 지나면(알을 얻은 뒤 등) 마지막 본문을 그대로 둔다.
+  return d.steps ? d.steps[Math.min(st.step, d.steps.length - 1)] : d.text
+}
+
+/**
+ * 이 런에서 지금 나올 수 있는가 — 사슬 이벤트만 조건이 있다(나머지 8종은 언제나).
+ * 정령·알은 10층까지, 세계수(씨앗이 있을 때)·불사조는 11층부터. 이미 끝을 본 사슬은 다시 안 나온다.
+ * ⚠ 불사조는 기획상 "화산 지형에서만"인데 지금은 화산 지역이 없어 층 조건만 건다 — 화산이 생기면 여기에 더한다.
+ */
+export function eventEligible(run: RunState, id: EventId): boolean {
+  const has = (r: string) => run.relicIds.includes(r)
+  const early = run.floor <= EVENT_EARLY_MAX_FLOOR
+  switch (id) {
+    case 'spirit': return early && !has(SEED) && !has(WORLD_BRANCH)
+    case 'egg': return early && !has(FIRE_EGG) && !has(PHOENIX_FEATHER)
+    case 'worldtree': return !early && has(SEED)
+    case 'phoenix': return !early && !has(PHOENIX_FEATHER)
+    default: return true
+  }
+}
 
 /** 이벤트가 "○○ 관련 유물"을 줄 때의 풀(이미 있는 유물에 태그를 단 것). */
 export const RELIC_POOLS = {
@@ -73,17 +140,24 @@ export interface EventState {
   tries: number
   fails: number
   prizes: ('heal' | 'relic')[]
+  /** 사슬 이벤트의 단계(0부터). */
+  step: number
 }
 
 const pickOne = <T>(a: readonly T[], rng: () => number): T => a[Math.floor(rng() * a.length)]
 
-export function startEvent(id?: EventId, rng: () => number = Math.random): EventState {
+/**
+ * 이벤트 하나를 연다. `id`가 없으면 무작위 — `run`을 넘기면 **지금 나올 수 있는 것**
+ * (`eventEligible`) 중에서, 안 넘기면 조건 없는 8종 중에서 고른다.
+ */
+export function startEvent(id?: EventId, rng: () => number = Math.random, run?: RunState): EventState {
   const fx: PotionFx[] = ['heal', 'hurt', 'none']
   for (let i = fx.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1))
     ;[fx[i], fx[j]] = [fx[j], fx[i]]
   }
-  return { id: id ?? pickOne(EVENT_DEFS, rng).id, potions: fx, tries: 0, fails: 0, prizes: ['heal', 'relic'] }
+  const pool = EVENT_DEFS.filter((e) => (run ? eventEligible(run, e.id) : !e.steps && e.id !== 'spirit'))
+  return { id: id ?? pickOne(pool, rng).id, potions: fx, tries: 0, fails: 0, prizes: ['heal', 'relic'], step: 0 }
 }
 
 /** 대가 칩 — 골드(금) · HP(빨강) · 최대 HP(분홍) · 카드/유물(회색). */
@@ -100,10 +174,11 @@ export interface EventChoice {
   hidden?: 'locked' | 'open'
   /** 지금 못 고르는 이유(골드 부족 …). */
   off?: string
-  /** 고른 뒤 고를 게 더 있다(거래). */
+  /** 고른 뒤 고를 게 더 있다(거래 · 덱이 꽉 찼을 때 카드 받기). */
   pick?: 'card' | 'relic'
   leave?: boolean
 }
+const item = (text: string): CostChip => ({ kind: 'item', text })
 
 const gold = (n: number): CostChip => ({ kind: 'gold', text: `${n}G` })
 const hp = (n: number): CostChip => ({ kind: 'hp', text: `HP -${n}` })
@@ -171,6 +246,52 @@ export function eventChoices(run: RunState, st: EventState): EventChoice[] {
         { key: 'hand', label: '손', cost: [hp(15)] },
         { key: 'foot', label: '발', cost: [hp(15)] },
       ]
+    case 'spirit':
+      return [
+        { key: 'help', label: '네 — 늑대들과 싸운다', cost: [] },
+        { key: 'leave', label: '아니요', cost: [], leave: true },
+      ]
+    case 'egg':
+      return [
+        { key: 'egg-go', label: st.step < 3 ? (st.step === 0 ? '네 — 다가간다' : '네 — 계속 나아간다') : '네 — 알을 가져온다', cost: st.step ? [hp(EGG_COST[st.step])] : [] },
+        { key: 'leave', label: '아니오', cost: [], leave: true },
+      ]
+    case 'worldtree': {
+      if (st.step === 1) {
+        // 받을지 말지는 플레이어가 고른다. 덱이 꽉 찼으면 한 장과 바꾼다.
+        const full = run.deck.length >= deckCap(run)
+        return [
+          { key: 'wt-take', label: '「세계수의 가호」를 받는다', cost: [], pick: full ? 'card' : undefined, sub: full ? '덱이 꽉 찼다 — 한 장과 바꾼다' : undefined },
+          { key: 'leave', label: '두고 간다', cost: [], leave: true },
+        ]
+      }
+      const hasNutrient = run.relicIds.includes(NUTRIENT)
+      return [
+        { key: 'wt-plant', label: '땅에 심는다', cost: [item(relicName(SEED))] },
+        hasNutrient
+          ? { key: 'wt-water', label: '땅에 심고 물을 준다', cost: [item(relicName(SEED)), item(relicName(NUTRIENT))], hidden: 'open', sub: `히든 · 「${relicName(NUTRIENT)}」이 있어서 열렸다` }
+          : { key: 'wt-water', label: '???', cost: [], hidden: 'locked', sub: '잠겨 있다 — 무언가 필요해 보인다', off: '잠김' },
+        { key: 'leave', label: '그냥 간다', cost: [], leave: true },
+      ]
+    }
+    case 'phoenix': {
+      if (st.step === 0) {
+        const immune = run.relicIds.includes(FIRE_EGG)
+        return [
+          { key: 'ph-enter', label: '들어간다', cost: immune ? [] : [hp(PHOENIX_CAVE_COST)], sub: immune ? `「${relicName(FIRE_EGG)}」이 열기를 막아 준다` : undefined },
+          { key: 'leave', label: '들어가지 않는다', cost: [], leave: true },
+        ]
+      }
+      const hasEgg = run.relicIds.includes(FIRE_EGG)
+      return [
+        hasEgg
+          ? { key: 'ph-give', label: '타오르는 알을 건넨다', cost: [item(relicName(FIRE_EGG))], hidden: 'open', sub: `히든 · 「${relicName(FIRE_EGG)}」이 있어서 열렸다` }
+          : { key: 'ph-give', label: '???', cost: [], hidden: 'locked', sub: '잠겨 있다 — 무언가 필요해 보인다', off: '잠김' },
+        // 불사조 보스는 추후 개발(사용자 기획) — 그때까지 자리만 보여 준다.
+        { key: 'ph-fight', label: '불사조와 싸운다', cost: [], off: '아직 열리지 않았다' },
+        { key: 'leave', label: '돌아 나온다', cost: [], leave: true },
+      ]
+    }
   }
 }
 
@@ -298,6 +419,41 @@ export function resolveEventChoice(
       return gainRelic(loseHp(run, 15), st, 'hand', '수술 끝', true, rng)
     case 'foot':
       return gainRelic(loseHp(run, 15), st, 'foot', '수술 끝', true, rng)
+    // --- 초록 정령 — 엘리트 늑대와 싸운다. 이기면 「의문의 씨앗」(`applySpecialWin`)
+    case 'help':
+      return { run, st, title: '늑대들이 이빨을 드러낸다!', body: '정령들을 등 뒤에 두고 늑대 무리와 맞선다.', done: true,
+        fight: { kind: 'spirit', monsterId: 'wolf', elite: true } }
+    // --- 따뜻한 바람 — "네"를 누를 때마다 다음 단계. 마지막에 알
+    case 'egg-go': {
+      const next = { ...st, step: st.step + 1 }
+      if (st.step === 0) return { run: healHp(run, EGG_WARM), st: next, title: '포근하다', body: '따뜻한 바람이 몸을 감싼다.', big: `HP +${EGG_WARM}`, bigKind: 'gain', done: false }
+      const cost = EGG_COST[st.step]
+      const hurt = loseHp(run, cost)
+      if (st.step < 3) return { run: hurt, st: next, title: '살갗이 따끔거린다', body: '열기가 점점 세진다.', big: `HP -${cost}`, bigKind: 'cost', done: false }
+      return { run: grantRelic(hurt, FIRE_EGG), st: next, title: '알을 품에 안았다', body: `손이 데었지만 「${relicName(FIRE_EGG)}」을 얻었다. (HP -${cost})`, relicId: FIRE_EGG, done: true }
+    }
+    // --- 세계수
+    case 'wt-plant':
+      return { run: loseRelic(run, SEED), st: { ...st, step: 1 }, title: '씨앗을 심었다', body: '빛나는 잎이 카드가 되어 손에 내려앉으려 한다.', cardId: WORLDTREE_CARD, done: false }
+    case 'wt-take': {
+      const got = grantCard(run, WORLDTREE_CARD, pickId)
+      return { run: got.run, st, title: '세계수의 가호', body: '잎이 카드가 되어 덱에 들어왔다.', cardId: WORLDTREE_CARD, done: true }
+    }
+    case 'wt-water': {
+      const r = grantRelic(loseRelic(loseRelic(run, SEED), NUTRIENT), WORLD_BRANCH)
+      return { run: r, st, title: '세계수가 깨어났다', body: `영양가루를 먹은 나무가 하늘까지 자라 가지 하나를 내주었다. 「${relicName(WORLD_BRANCH)}」을 얻었다.`, relicId: WORLD_BRANCH, done: true }
+    }
+    // --- 불사조
+    case 'ph-enter': {
+      const immune = run.relicIds.includes(FIRE_EGG)
+      const next = { ...st, step: 1 }
+      if (immune) return { run, st: next, title: '열기가 비켜 간다', body: `품속의 「${relicName(FIRE_EGG)}」이 뜨거움을 막아 주었다.`, big: 'HP -0', bigKind: 'none', done: false }
+      return { run: loseHp(run, PHOENIX_CAVE_COST), st: next, title: '살이 익는 것 같다', body: '숨이 턱 막히는 열기 속으로 들어섰다.', big: `HP -${PHOENIX_CAVE_COST}`, bigKind: 'cost', done: false }
+    }
+    case 'ph-give': {
+      const r = grantRelic(loseRelic(run, FIRE_EGG), PHOENIX_FEATHER)
+      return { run: r, st, title: '불사조가 알을 품었다', body: `불사조가 고개를 숙이더니 깃털 하나를 떨어뜨렸다. 「${relicName(PHOENIX_FEATHER)}」을 얻었다.`, relicId: PHOENIX_FEATHER, done: true }
+    }
   }
   return null
 }
@@ -309,6 +465,10 @@ export function resolveEventChoice(
  */
 export function applySpecialWin(run: RunState, rng: () => number = Math.random): RunState {
   const sp = run.special
+  if (sp?.kind === 'spirit') {
+    // 초록 정령 — 늑대를 쫓아내면 정령들이 씨앗을 건넨다.
+    return { ...grantRelic(run, SEED), special: { ...sp, wonRelicId: SEED } }
+  }
   if (sp?.kind === 'jar') {
     const id = relicFromPool(run, 'poison', rng)
     return id ? { ...grantRelic(run, id), special: { ...sp, wonRelicId: id } } : run

@@ -515,6 +515,8 @@ export class CardBattle {
       maxRounds = isRoundLock(kind) ? 1 : STATUS_MAX_ROUNDS,
     ) => {
       if (rounds <= 0) return
+      // 화상 면역(런 전용 유물 훅) — 걸리지 않으니 피격 화상 피해도 없다.
+      if (kind === 'burn' && this.passive[p].burnImmune) return
       const cap = Math.min(rounds, maxRounds)
       // ⚠ **봉인 재부여 가드**(2026-08-07 2차). 이미 걸려 있는 기절·빙결·속박은
       //   **다시 걸리지 않는다**. 지속 연장 유물이 없으면 아무것도 안 바뀌지만
@@ -657,7 +659,11 @@ export class CardBattle {
           // 보호막(`turnShield`)에는 안 붙는다 — "가드를 낸 턴"만 보상하는 훅이다.
           const boost = 1 + (this.passive[p].guardPowerPct ?? 0) / 100
           s.shield[p] += Math.round((c.block ?? 0) * boost)
-          emit(p, c, 'guard')
+          // 회복을 겸하는 가드(이벤트 카드 「세계수의 가호」 — 런 전용). 일반 가드는 healHp가 없다.
+          const before = s.hp[p]
+          if (c.healHp)
+            s.hp[p] = Math.min(this.maxHp[p], before + Math.round(c.healHp * (1 + (this.passive[p].healPowerPct ?? 0) / 100)))
+          emit(p, c, 'guard', 0, s.hp[p] - before)
           // 석벽 — 가드 카드가 판에 바위를 세운다(수호기사). 가드 스텝 **뒤에** 따로
           // 실어야 "방벽을 올리자 바닥에서 바위가 솟았다"로 순서대로 읽힌다.
           if (c.raiseRocks && raiseRocks(p, c.raiseRocks).length)

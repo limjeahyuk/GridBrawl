@@ -254,15 +254,23 @@ function eventPick(run: RunState, st: ReturnType<typeof startEvent>): string | n
     case 'gacha': return has('coin') && st.tries < 6 ? 'coin' : null
     case 'mole': return run.hp - (10 + 3 * st.tries) > run.maxHp * 0.5 ? 'dig' : null
     case 'surgery': return run.hp - 15 > run.maxHp * 0.4 ? 'hand' : 'heart'
+    // 사슬 이벤트 — 체력이 넉넉할 때만 대가를 치른다.
+    case 'spirit': return hp > 0.6 ? 'help' : null
+    case 'egg': return st.step === 0 || run.hp - [0, 10, 15, 20][st.step] > run.maxHp * 0.4 ? 'egg-go' : null
+    case 'worldtree': return st.step === 1 ? 'wt-take' : has('wt-water') ? 'wt-water' : 'wt-plant'
+    case 'phoenix':
+      if (st.step === 0) return run.relicIds.includes('fireegg') || run.hp - 20 > run.maxHp * 0.4 ? 'ph-enter' : null
+      return has('ph-give') ? 'ph-give' : null
   }
 }
 function doEvent(run: RunState): RunState {
-  let st = startEvent()
+  let st = startEvent(undefined, Math.random, run)
   let cur = run
   for (let i = 0; i < 12; i++) {
     const key = eventPick(cur, st)
     if (!key) break
-    const pick = key.startsWith('card-') ? worstCard(tradeList(cur, 'card')) : key === 'relic-relic' ? tradeList(cur, 'relic')[0] : undefined
+    const want = eventChoices(cur, st).find((c) => c.key === key)?.pick
+    const pick = want === 'card' ? worstCard(tradeList(cur, 'card')) : want === 'relic' ? tradeList(cur, 'relic')[0] : undefined
     const o: EventOutcome | null = resolveEventChoice(cur, st, key, pick)
     if (!o) break
     cur = o.run

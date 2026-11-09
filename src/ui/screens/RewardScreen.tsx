@@ -114,7 +114,7 @@ export function RewardScreen({
         {run.special?.wonRelicId && (
           <b className="reward__won">
             <RelicIcon id={run.special.wonRelicId} size={32} />
-            {goblin ? '부자 고블린의 금고' : '항아리 뱀을 물리쳤다'} — 「{getRelic(run.special.wonRelicId)?.name}」 획득 ·{' '}
+            {goblin ? '부자 고블린의 금고' : run.special.kind === 'spirit' ? '초록 정령들의 답례' : '항아리 뱀을 물리쳤다'} — 「{getRelic(run.special.wonRelicId)?.name}」 획득 ·{' '}
           </b>
         )}
         {wonItem && <b className="reward__won">짐에서 {goblinItemName(run, wonItem)}을(를) 챙겼다 · </b>}

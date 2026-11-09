@@ -5,10 +5,10 @@ import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
 import {
-  eventChoices, eventDef, resolveEventChoice, startEvent, tradeList, type EventChoice, type EventId,
+  eventChoices, eventDef, eventText, resolveEventChoice, startEvent, tradeList, type EventChoice, type EventId,
   type EventOutcome,
 } from '../../game/events'
-import { advanceFloor, regionOf, runCard, type RunState, type SpecialFight } from '../../game/run'
+import { advanceFloor, currentEnemy, regionOf, runCard, type RunState, type SpecialFight } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
@@ -30,7 +30,7 @@ export function EventScreen({
   /** 이벤트가 연 전투(항아리) — `special`이 붙은 런을 넘긴다. */
   onFight: (next: RunState) => void
 }) {
-  const [st, setSt] = useState(() => startEvent(eventId))
+  const [st, setSt] = useState(() => startEvent(eventId, Math.random, run))
   const [cur, setCur] = useState(run)
   const [picking, setPicking] = useState<EventChoice | null>(null)
   const [out, setOut] = useState<EventOutcome | null>(null)
@@ -39,7 +39,6 @@ export function EventScreen({
   const char = getChar(cur.charId)
   const zoom = useCardZoom(char.accent)
   const choices = useMemo(() => eventChoices(cur, st), [cur, st])
-  const snake = sheetFor('snake')
 
   const choose = (c: EventChoice, pickId?: string) => {
     if (c.off) return
@@ -61,6 +60,10 @@ export function EventScreen({
   const relic = out?.relicId ? getRelic(out.relicId) : null
   const gotCard = out?.cardId ? runCard(cur, out.cardId) : null
   const a = def.art
+  const k = a.scale ?? 3
+  // 이벤트가 연 전투의 상대(항아리 뱀 · 늑대 무리) — 층·엘리트 보정이 얹힌 실제 값.
+  const foe = out?.fight ? currentEnemy({ ...cur, special: out.fight }) : null
+  const foeSheet = foe ? sheetFor(foe.spriteId ?? foe.id) : null
 
   return (
     <div className="screen event">
@@ -90,11 +93,11 @@ export function EventScreen({
           role="img"
           aria-label={def.name}
           style={{
-            width: a.w * 3,
-            height: a.h * 3,
+            width: a.w * k,
+            height: a.h * k,
             backgroundImage: `url('/redesign/ui/events/${a.file}.png')`,
-            backgroundSize: `${a.w * 3 * a.frames}px ${a.h * 3}px`,
-            ['--evw' as string]: `-${a.w * 3 * a.frames}px`,
+            backgroundSize: `${a.w * k * a.frames}px ${a.h * k}px`,
+            ['--evw' as string]: `-${a.w * k * a.frames}px`,
             animationTimingFunction: `steps(${a.frames})`,
             animationDuration: `${a.frames * (a.frameMs ?? 150)}ms`,
           }}
@@ -104,10 +107,10 @@ export function EventScreen({
 
       <section className="event__panel">
         <span className="event__kicker">
-          EVENT · {def.mode === 'repeat' ? '반복' : def.mode === 'battle' ? '전투' : '한 번'}
+          EVENT · {def.mode === 'repeat' ? '반복' : def.mode === 'battle' ? '전투' : def.mode === 'chain' ? '연속' : '한 번'}
         </span>
         <h2 className="event__name">{def.name}</h2>
-        <p className="event__desc">{def.text}</p>
+        <p className="event__desc">{eventText(st)}</p>
 
         {!out && !picking && (
           <>
@@ -147,7 +150,9 @@ export function EventScreen({
 
         {picking && (
           <div className="event__picker">
-            <span className="event__picktitle">{picking.pick === 'card' ? '내줄 카드를 고르세요' : '내줄 유물을 고르세요'}</span>
+            <span className="event__picktitle">
+              {picking.key === 'wt-take' ? '덱이 꽉 찼다 — 바꿀 카드를 고르세요' : picking.pick === 'card' ? '내줄 카드를 고르세요' : '내줄 유물을 고르세요'}
+            </span>
             <div className="event__picks">
               {tradeList(cur, picking.pick!).map((id) => {
                 if (picking.pick === 'relic') {
@@ -184,13 +189,26 @@ export function EventScreen({
 
         {out?.fight && (
           <div className="event__ambush">
-            <div className="event__snake">{snake && <SpriteClip sheet={snake} clip="idle" />}</div>
+            <div className="event__snake">
+              {/* 칸(216×120)에 들어가는 가장 큰 **정수** 배율 — 뱀 ×3 · 큰 몸집(오우거 시트의 늑대)은 ×1. */}
+              {foeSheet && (
+                <SpriteClip
+                  sheet={foeSheet}
+                  clip="idle"
+                  scale={Math.max(1, Math.min(foeSheet.scale, Math.floor(Math.min(216 / foeSheet.frameW, 120 / foeSheet.frameH))))}
+                />
+              )}
+            </div>
             <div className="event__ambushbody">
-              <span className="event__kicker">AMBUSH</span>
+              <span className="event__kicker">{out.fight.elite ? 'ELITE' : 'AMBUSH'}</span>
               <b>{out.title}</b>
               <div className="event__chips">
-                <span className="chip chip--poison">☠ 나는 중독 상태로 시작</span>
-                <span className="chip chip--hp">동굴 뱀 · HP 34</span>
+                {out.fight.startPoison ? <span className="chip chip--poison">☠ 나는 중독 상태로 시작</span> : null}
+                {foe && (
+                  <span className="chip chip--hp">
+                    {foe.name} · HP {foe.maxHp}
+                  </span>
+                )}
               </div>
               <button className="upg__go event__fight" onClick={() => fight(out.fight!)}>
                 전투 시작 ▶

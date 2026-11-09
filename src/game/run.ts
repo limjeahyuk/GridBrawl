@@ -317,9 +317,11 @@ export interface RunState {
 }
 
 export interface SpecialFight {
-  /** jar = 항아리 뱀 · ambush = ? 칸의 매복 전투 · goblin = 고블린 습격. */
-  kind: 'jar' | 'ambush' | 'goblin'
+  /** jar = 항아리 뱀 · ambush = ? 칸의 매복 전투 · goblin = 고블린 습격 · spirit = 초록 정령의 늑대. */
+  kind: 'jar' | 'ambush' | 'goblin' | 'spirit'
   monsterId: string
+  /** 엘리트 보정(체력 ×·공격 +)으로 나온다. */
+  elite?: boolean
   /** 고블린 습격 — 덮친 고블린의 단계와 그때 진열(이기면 여기서 전리품을 고른다). */
   goblinTier?: GoblinTier
   goblinStock?: GoblinItem[]
@@ -687,7 +689,8 @@ export function isEliteFloor(run: RunState): boolean {
  * tier4(수호기사·화염군주)는 이미 엘리트 스탯이라 엘리트 보정을 중복 적용하지 않는다.
  */
 export function currentEnemy(run: RunState): MonsterDef {
-  if (run.special) return enemyForNode(run, { type: 'combat', monsterId: run.special.monsterId, lane: 1, next: [] })
+  if (run.special)
+    return enemyForNode(run, { type: run.special.elite ? 'elite' : 'combat', monsterId: run.special.monsterId, lane: 1, next: [] })
   return enemyForNode(run, currentNode(run))
 }
 /**

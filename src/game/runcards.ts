@@ -311,8 +311,22 @@ export const RUN_CARDS: CardDef[] = [
   },
 ]
 
+/**
+ * 이벤트에서만 얻는 카드 — 보상·상점 풀(`RUN_CARDS`)엔 없고, 해석(`RUN_CARD_BY_ID`)에만 있다.
+ * 「세계수의 가호」: 세계수 이벤트에서 씨앗을 심으면 받을지 고른다(2026-11-09).
+ */
+export const WORLDTREE_CARD = 'ev-worldtree'
+export const EVENT_CARDS: CardDef[] = [
+  {
+    // 값: 보호막 30(≈ 편향 장막 28 → 기력 6) + 회복 10(≈ 수혈 13 → 기력 7) → 기력 13 · 쿨 2.
+    id: WORLDTREE_CARD, name: '세계수의 가호', kind: 'guard', block: 30, healHp: 10, guardCost: 13, cooldown: 2, fx: 'shield',
+    accent: '#7fd66a',
+    desc: '기력 13 소모. 보호막 30을 두르고 체력 10을 회복한다. 쿨타임 2라운드.',
+  },
+]
+
 export const RUN_CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(
-  RUN_CARDS.map((c) => [c.id, c]),
+  [...RUN_CARDS, ...EVENT_CARDS].map((c) => [c.id, c]),
 )
 
 /**

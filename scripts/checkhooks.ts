@@ -66,9 +66,9 @@ import {
 } from '../src/game/run'
 import { runFightProps } from '../src/game/runbattle'
 import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
-import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, resolveEventChoice, startEvent } from '../src/game/events'
+import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, resolveEventChoice, startEvent } from '../src/game/events'
 import { RELIC_BY_ID } from '../src/game/relics'
-import { RUN_CARDS, RUN_CARD_BY_ID, resolveRunCard } from '../src/game/runcards'
+import { RUN_CARDS, RUN_CARD_BY_ID, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster, MONSTERS } from '../src/game/monsters'
@@ -1336,7 +1336,7 @@ console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드�
 // --- 이벤트 8종(2026-11 리디자인) -------------------------------------------------
 console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복형')
 {
-  check('이벤트 8종', EVENT_DEFS.map((e) => e.id).sort(), ['apothecary', 'forge', 'gacha', 'jar', 'mole', 'spring', 'surgery', 'trade'])
+  check('이벤트 12종(8 + 사슬 4)', EVENT_DEFS.map((e) => e.id).sort(), ['apothecary', 'egg', 'forge', 'gacha', 'jar', 'mole', 'phoenix', 'spirit', 'spring', 'surgery', 'trade', 'worldtree'])
   const pooled = Object.values(RELIC_POOLS).flat()
   check('유물 풀의 id가 전부 실제 유물', pooled.filter((id) => !RELIC_BY_ID[id]), [])
   check('차가운 쇠는 실제 유물', !!RELIC_BY_ID['coldiron'], true)
@@ -1401,6 +1401,82 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
   const tr = resolveEventChoice(base, startEvent('trade'), 'card-card', 'war-cleave')!
   check('카드 거래 — 한 장 나가고 한 장 들어온다', [tr.run.deck.includes('war-cleave'), tr.run.deck.length], [false, base.deck.length])
 }
+// --- 이벤트 사슬(2026-11-09 사용자 기획) — 정령 → 씨앗 → 세계수 / 알 → 불사조 ------
+console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
+{
+  const at = (floor: number, relics: string[] = []) => {
+    let r: RunState = { ...startRun('warrior'), floor, hp: 150 }
+    for (const id of relics) r = grantRelic(r, id)
+    return r
+  }
+  // 나오는 층 — "10턴"은 층이다(10층까지 / 11층부터).
+  check('정령·알은 10층까지', [eventEligible(at(10), 'spirit'), eventEligible(at(10), 'egg'), eventEligible(at(11), 'spirit'), eventEligible(at(11), 'egg')], [true, true, false, false])
+  check('세계수는 11층부터 · 씨앗이 있을 때만', [eventEligible(at(11), 'worldtree'), eventEligible(at(11, ['seed']), 'worldtree'), eventEligible(at(10, ['seed']), 'worldtree')], [false, true, false])
+  check('불사조는 11층부터', [eventEligible(at(10), 'phoenix'), eventEligible(at(11), 'phoenix')], [false, true])
+  check('씨앗을 가지면 정령은 다시 안 나온다', eventEligible(at(3, ['seed']), 'spirit'), false)
+  check('무작위로 열어도 조건 밖 이벤트는 안 나온다', Array.from({ length: 300 }, () => startEvent(undefined, Math.random, at(12)).id).some((id) => id === 'spirit' || id === 'egg' || id === 'worldtree'), false)
+  check('런 없이 열면 사슬은 안 나온다', Array.from({ length: 300 }, () => startEvent().id).some((id) => ['spirit', 'egg', 'worldtree', 'phoenix'].includes(id)), false)
+
+  // 초록 정령 — 엘리트 늑대 → 이기면 씨앗.
+  const sp = resolveEventChoice(at(4), startEvent('spirit'), 'help')!
+  check('정령 — 늑대 전투가 열린다', [sp.fight?.kind, sp.fight?.monsterId, sp.fight?.elite], ['spirit', 'wolf', true])
+  const wolfRun = { ...at(4), special: sp.fight }
+  check('늑대는 엘리트 보정으로 나온다', currentEnemy(wolfRun).maxHp > getMonster('wolf').maxHp, true)
+  check('늑대를 이기면 의문의 씨앗', applySpecialWin(wolfRun).relicIds.includes('seed'), true)
+  check('치유의 이끼는 지워졌다', !!RELIC_BY_ID['nanobot'], false)
+
+  // 따뜻한 바람 — 네 번 "네"면 +5 · -10 · -15 · -20, 마지막에 알.
+  let r = at(5)
+  let st = startEvent('egg')
+  const hps: number[] = []
+  for (let i = 0; i < 4; i++) {
+    const o = resolveEventChoice(r, st, 'egg-go')!
+    hps.push(o.run.hp - r.hp)
+    r = o.run
+    st = o.st
+    if (i === 3) check('알 — 마지막 단계에서 끝난다', o.done, true)
+  }
+  check('알 — 체력 +5 · -10 · -15 · -20', hps, [5, -10, -15, -20])
+  check('알 — 타오르는 알을 얻는다', r.relicIds.includes('fireegg'), true)
+  check('알 — 중간에 아니오면 나간다', eventChoices(at(5), { ...startEvent('egg'), step: 2 }).find((c) => c.leave)?.label, '아니오')
+
+  // 화상 면역 — 카드·유물이 거는 화상이 안 붙는다.
+  for (const immune of [false, true]) {
+    const b = battleWith({ burnOnHit: 2 }, { burnImmune: immune })
+    b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+    check(`화상 면역 ${immune ? '있음 → 화상 없음' : '없음 → 화상'}`, b.state.status[1].some((e) => e.kind === 'burn'), !immune)
+  }
+
+  // 세계수 — 심기는 카드를 고르게 하고, 물 주기는 영양가루가 있어야 열린다.
+  const wt = at(12, ['seed'])
+  check('세계수 — 영양가루가 없으면 물 주기가 잠긴다', eventChoices(wt, startEvent('worldtree')).find((c) => c.key === 'wt-water')?.hidden, 'locked')
+  const plant = resolveEventChoice(wt, startEvent('worldtree'), 'wt-plant')!
+  check('세계수 — 심으면 씨앗을 잃고 카드를 보여 준다', [plant.run.relicIds.includes('seed'), plant.cardId, plant.done], [false, WORLDTREE_CARD, false])
+  const take = resolveEventChoice(plant.run, plant.st, 'wt-take')!
+  check('세계수 — 받으면 덱에 들어간다', take.run.deck.includes(WORLDTREE_CARD), true)
+  check('세계수 — 두고 갈 수도 있다', eventChoices(plant.run, plant.st).some((c) => c.leave), true)
+  check('세계수의 가호는 보상 풀에 없다', RUN_CARDS.some((c) => c.id === WORLDTREE_CARD), false)
+  const water = resolveEventChoice(at(12, ['seed', 'nutrient']), startEvent('worldtree'), 'wt-water')!
+  check('세계수 — 물을 주면 씨앗·영양가루 → 가지', ['seed', 'nutrient', 'worldbranch'].map((id) => water.run.relicIds.includes(id)), [false, false, true])
+  check('가지·깃털은 보상 풀에 없다', REWARD_RELICS.some((x) => x.id === 'worldbranch' || x.id === 'phoenixfeather'), false)
+  check('영양가루 — 최대 기력 +10이 전투에 실린다', runFightProps(at(3, ['nutrient'])).battleOpts.chars![0].maxEnergy, getChar('warrior').maxEnergy + 10)
+  {
+    const b = battleWith({})
+    b.state.hp[0] = 50
+    b.resolveRound([RUN_CARD_BY_ID[WORLDTREE_CARD], card('c-energy'), card('c-energy')], HOLD)
+    check('세계수의 가호 — 회복 10을 겸한다', b.state.hp[0] >= 60, true)
+  }
+
+  // 불사조 — 알이 있으면 열기를 안 받고, 알을 건네면 깃털.
+  const cave = resolveEventChoice(at(12), startEvent('phoenix'), 'ph-enter')!
+  check('불사조 — 동굴 열기 HP -20', at(12).hp - cave.run.hp, 20)
+  const caveEgg = resolveEventChoice(at(12, ['fireegg']), startEvent('phoenix'), 'ph-enter')!
+  check('불사조 — 타오르는 알이 있으면 HP -0', at(12, ['fireegg']).hp - caveEgg.run.hp, 0)
+  check('불사조 — 알이 없으면 건네기가 잠긴다', eventChoices(cave.run, cave.st).find((c) => c.key === 'ph-give')?.hidden, 'locked')
+  check('불사조 — 싸우기는 아직 닫혀 있다', !!eventChoices(cave.run, cave.st).find((c) => c.key === 'ph-fight')?.off, true)
+  const give = resolveEventChoice(caveEgg.run, caveEgg.st, 'ph-give')!
+  check('불사조 — 알을 건네면 깃털', [give.run.relicIds.includes('fireegg'), give.run.relicIds.includes('phoenixfeather')], [false, true])
+}
 {
   // 여관 · 대장간 · 보물(2026-11-09) — 지도 칸이 실제로 생기고, 하는 일을 한다.
   // 상점·휴식 칸은 지도에서 사라졌다(모닥불은 ? 칸의 정체로만 남는다).
@@ -1459,7 +1535,7 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
 {
   const leaked = ROSTER.flatMap((c) => deckFor(c)).filter((c) => c.upgraded !== undefined)
   check('PvP 카드 풀에 강화 카드가 없다', leaked.map((c) => c.id), [])
-  check('이벤트 몬스터는 지도 풀에 없다', MONSTERS.filter((m) => m.tier === 0).map((m) => m.id).sort(), ['goblin-mid', 'goblin-poor', 'goblin-rich', 'snake'])
+  check('이벤트 몬스터는 지도 풀에 없다', MONSTERS.filter((m) => m.tier === 0).map((m) => m.id).sort(), ['goblin-mid', 'goblin-poor', 'goblin-rich', 'snake', 'wolf'])
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------

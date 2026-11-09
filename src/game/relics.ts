@@ -40,6 +40,8 @@ export interface Relic {
   effect: Omit<Passive, 'desc'>
   /** 전투 밖에 작용하는 효과(상점·골드·보상). */
   mods?: RunMods
+  /** 이벤트에서만 얻는다 — 보상·상점·고블린 풀에 안 나온다. */
+  eventOnly?: boolean
 }
 
 // --- 직업 패시브(런) — **유물이 아니다** ----------------------------------------
@@ -50,7 +52,6 @@ export interface Relic {
 // ⚠ `maxHpBonus`가 직업 밴드를 맞추는 손잡이라 거래·분실이 가능하면 안 된다 — 그래서 패시브다.
 // `id`(`sig-*`)는 아이콘 아틀라스 키로만 남았다.
 //
-
 // **런 보정(runEffect, 2026-07-30)**: 캐릭터 패시브를 그대로 유물화하면 런 클리어율이
 // 27~57%로 벌어진다(캐릭터별 대량 시뮬 — docs/ROGUELIKE.md ⑪). 이유는 구조적이다:
 //   ① 체력이 층 사이에 이어지는 런에선 **지속회복 > 피해감소**다(감소는 출혈을 늦추고,
@@ -144,7 +145,9 @@ const genericRelics: Relic[] = [
   // 갈았던 걸 되돌린 것이다. 세계관을 벗어난 물건이 하나쯤 굴러다니는 게 재미있다는
   // 사용자 결정. 짝은 런 카드 `r-railgun`('레일건'). **정리 대상이 아니다 — 고치지 말 것.**
   { id: 'battery', name: '예비 배터리', icon: '🔋', rarity: 'common', desc: '매 라운드 기력 +4. 어느 세계에서 굴러떨어진 쇳덩이. 정체는 아무도 모른다.', effect: { turnEnergy: 4 } },
-  { id: 'nanobot', name: '치유의 이끼', icon: '🌿', rarity: 'rare', desc: '매 라운드 체력 +3.', effect: { regen: 3 } },
+  // 「치유의 이끼」(regen 3)를 지우고 이 자리에 넣었다(2026-11-09 사용자 지정). 초록 정령 이벤트의
+  // 보상이자 세계수 이벤트의 열쇠다 — 보상·상점에서도 나온다.
+  { id: 'seed', name: '의문의 씨앗', icon: '🌱', rarity: 'rare', desc: '매 라운드 체력 +5.', effect: { regen: 5 } },
   { id: 'rage', name: '분노의 인장', icon: '😤', rarity: 'rare', desc: '내 공격 피해 +3.', effect: { attackBonus: 3 } },
   { id: 'plating', name: '두꺼운 판금', icon: '🪨', rarity: 'common', desc: '받는 피해 -3.', effect: { damageReduction: 3 } },
   { id: 'crystal', name: '수정 방벽', icon: '💠', rarity: 'common', desc: '매 라운드 보호막 +6.', effect: { turnShield: 6 } },
@@ -564,6 +567,14 @@ const genericRelics: Relic[] = [
   { id: 'grailshard', name: '성배 조각', icon: '🏆', rarity: 'epic', desc: '모든 회복 효과 +80%, 회복 카드 회복량 +30%.', effect: { healPowerPct: 30 }, mods: { healBonusPct: 80 } },
   { id: 'ravenomen', name: '까마귀의 전조', icon: '🐦‍⬛', rarity: 'epic', desc: '일반 전투 보상에 유물이 섞일 확률 +18%p.', effect: {}, mods: { relicChanceBonus: 0.18 } },
   { id: 'kingsseal', name: '왕의 봉인', icon: '📜', rarity: 'legend', desc: '승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.', effect: {}, mods: { rewardOptions: 2, goldBonusPct: 60, shopExtraItems: 2 } },
+
+  // --- 이벤트 사슬(2026-11-09 · `docs/redesign/EVENTS.md` 초록 정령 · 타오르는 알 · 세계수 · 불사조) ---
+  // 알·영양가루는 보상 풀에도 있다. 가지·깃털은 사슬의 끝이라 이벤트에서만 나온다.
+  { id: 'fireegg', name: '타오르는 알', icon: '🥚', rarity: 'epic', desc: '화상에 걸리지 않는다.', effect: { burnImmune: true } },
+  { id: 'nutrient', name: '영양가루', icon: '✨', rarity: 'rare', desc: '최대 체력 +10, 최대 기력 +10.', effect: { maxHpBonus: 10, maxEnergyBonus: 10 } },
+  // ⚠ 가지·깃털의 효과는 기획서에 없어 정한 값이다 — 사슬에 들인 것(씨앗+영양가루 / 알)보다 세게.
+  { id: 'worldbranch', name: '세계수의 가지', icon: '🌳', rarity: 'legend', eventOnly: true, desc: '매 라운드 체력 +7, 최대 체력 +20, 최대 기력 +10.', effect: { regen: 7, maxHpBonus: 20, maxEnergyBonus: 10 } },
+  { id: 'phoenixfeather', name: '불사조의 깃털', icon: '🪶', rarity: 'legend', eventOnly: true, desc: '전투당 한 번, 체력 40으로 되살아난다. 화상에 걸리지 않는다.', effect: { revive: 40, burnImmune: true } },
 ]
 
 export const RELICS: Relic[] = genericRelics
@@ -574,8 +585,8 @@ export function getRelic(id: string): Relic | undefined {
   return RELIC_BY_ID[id]
 }
 
-/** 일반 보상 후보 유물(직업 패시브는 유물이 아니라 애초에 여기 없다). */
-export const REWARD_RELICS: Relic[] = genericRelics
+/** 일반 보상 후보 유물(직업 패시브는 유물이 아니라 애초에 여기 없다 · 이벤트 전용 유물은 뺀다). */
+export const REWARD_RELICS: Relic[] = genericRelics.filter((r) => !r.eventOnly)
 
 /**
  * 장착 유물 id 목록을 하나의 실효 패시브로 합친다. 숫자 훅은 합산, 불리언은 OR.
@@ -599,7 +610,6 @@ export function mergeRelics(ids: string[], charId?: string): Passive {
   for (const effect of effects) {
     if (!effect) continue
     for (const [k, v] of Object.entries(effect)) {
-
       if (k === 'desc' || v == null) continue
       if (k === 'energyTriggers') {
         // 누적 기력 트리거는 **합치지 않고 이어 붙인다** — 주기가 다른 트리거들이

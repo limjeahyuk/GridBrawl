@@ -387,6 +387,251 @@
      }
     }
    ]
+  },
+  {
+   "id": "EV-SPIRIT",
+   "name": "초록 정령",
+   "mode": "battle",
+   "when": {
+    "maxFloor": 10,
+    "notRelic": [
+     "seed",
+     "worldbranch"
+    ]
+   },
+   "art": {
+    "src": "/redesign/ui/map-icons/unknown.png",
+    "w": 14,
+    "h": 14,
+    "frames": 1,
+    "placeholder": true
+   },
+   "text": "숲속에 들어서니 초록색 정령들이 늑대들의 위협을 받고 있다.\n도와주겠습니까?",
+   "choices": [
+    {
+     "label": "네 — 늑대들과 싸운다",
+     "cost": null,
+     "effect": {
+      "type": "fight",
+      "monster": "wolf",
+      "elite": true,
+      "win": {
+       "type": "gainRelic",
+       "id": "seed"
+      }
+     }
+    },
+    {
+     "label": "아니요",
+     "cost": null,
+     "effect": {
+      "type": "leave"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-EGG",
+   "name": "따뜻한 바람",
+   "mode": "chain",
+   "when": {
+    "maxFloor": 10,
+    "notRelic": [
+     "fireegg",
+     "phoenixfeather"
+    ]
+   },
+   "art": {
+    "src": "/redesign/ui/map-icons/unknown.png",
+    "w": 14,
+    "h": 14,
+    "frames": 1,
+    "placeholder": true
+   },
+   "steps": [
+    {
+     "text": "숲속에 들어서니 어울리지 않는 따뜻한 바람이 불어온다.\n가까이 다가가겠습니까?",
+     "yes": {
+      "label": "네 — 다가간다",
+      "cost": null,
+      "effect": {
+       "type": "heal",
+       "n": 5
+      }
+     }
+    },
+    {
+     "text": "이제는 따뜻하다 못해 뜨거워진다.\n계속 나아가겠습니까?",
+     "yes": {
+      "label": "네 — 계속 나아간다",
+      "cost": {
+       "type": "hp",
+       "n": 10
+      }
+     }
+    },
+    {
+     "text": "점점 다가갈수록 더 뜨거워진다.\n계속 나아가겠습니까?",
+     "yes": {
+      "label": "네 — 계속 나아간다",
+      "cost": {
+       "type": "hp",
+       "n": 15
+      }
+     }
+    },
+    {
+     "text": "화르르 타오르고 있는 알을 발견했다.\n가져오겠습니까?",
+     "yes": {
+      "label": "네 — 알을 가져온다",
+      "cost": {
+       "type": "hp",
+       "n": 20
+      },
+      "effect": {
+       "type": "gainRelic",
+       "id": "fireegg"
+      }
+     }
+    }
+   ],
+   "no": {
+    "label": "아니오",
+    "effect": {
+     "type": "leave"
+    }
+   }
+  },
+  {
+   "id": "EV-WORLDTREE",
+   "name": "세계수",
+   "mode": "chain",
+   "when": {
+    "minFloor": 11,
+    "needRelic": "seed"
+   },
+   "art": {
+    "src": "/redesign/ui/map-icons/unknown.png",
+    "w": 14,
+    "h": 14,
+    "frames": 1,
+    "placeholder": true
+   },
+   "text": "어디선가 나타난 초록 정령들이 자꾸만 나를 어디론가 끌어당긴다. 마치 따라오라는 것 같다.\n따라가니 광활한 평야와 함께 너무 아름다운 풍경이 펼쳐졌다. 나도 모르게 손에는 씨앗이 들려 있다.",
+   "choices": [
+    {
+     "label": "땅에 심는다",
+     "cost": {
+      "type": "relic",
+      "id": "seed"
+     },
+     "effect": {
+      "type": "offerCard",
+      "id": "ev-worldtree"
+     }
+    },
+    {
+     "label": "땅에 심고 물을 준다",
+     "hidden": {
+      "needRelic": "nutrient"
+     },
+     "cost": {
+      "type": "relic",
+      "ids": [
+       "seed",
+       "nutrient"
+      ]
+     },
+     "effect": {
+      "type": "gainRelic",
+      "id": "worldbranch"
+     }
+    },
+    {
+     "label": "그냥 간다",
+     "cost": null,
+     "effect": {
+      "type": "leave"
+     }
+    }
+   ]
+  },
+  {
+   "id": "EV-PHOENIX",
+   "name": "불사조",
+   "mode": "chain",
+   "when": {
+    "minFloor": 11,
+    "notRelic": [
+     "phoenixfeather"
+    ],
+    "todo": "화산 지형에서만"
+   },
+   "art": {
+    "src": "/redesign/ui/map-icons/unknown.png",
+    "w": 14,
+    "h": 14,
+    "frames": 1,
+    "placeholder": true
+   },
+   "steps": [
+    {
+     "text": "화산에 오르다 숨겨져 있는 동굴을 발견했다.\n내부가 매우 뜨거워서 화상을 입을 것 같다.",
+     "choices": [
+      {
+       "label": "들어간다",
+       "cost": {
+        "type": "hp",
+        "n": 20,
+        "zeroIfRelic": "fireegg"
+       }
+      },
+      {
+       "label": "들어가지 않는다",
+       "effect": {
+        "type": "leave"
+       }
+      }
+     ]
+    },
+    {
+     "text": "동굴 안에는 거대한 불이 계속 타오르고 있다.\n가까이 다가가 보니 전설의 동물 불사조가 쳐다보고 있었다.",
+     "choices": [
+      {
+       "label": "타오르는 알을 건넨다",
+       "hidden": {
+        "needRelic": "fireegg"
+       },
+       "cost": {
+        "type": "relic",
+        "id": "fireegg"
+       },
+       "effect": {
+        "type": "gainRelic",
+        "id": "phoenixfeather"
+       }
+      },
+      {
+       "label": "불사조와 싸운다",
+       "disabled": "보스 추후 개발",
+       "effect": {
+        "type": "fight",
+        "monster": "phoenix",
+        "win": {
+         "type": "gainRelic",
+         "id": "phoenixfeather"
+        }
+       }
+      },
+      {
+       "label": "돌아 나온다",
+       "effect": {
+        "type": "leave"
+       }
+      }
+     ]
+    }
+   ]
   }
  ]
 }

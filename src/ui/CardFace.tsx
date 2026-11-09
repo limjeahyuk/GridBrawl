@@ -216,6 +216,7 @@ export function CardFace({
       {card.kind === 'guard' && (
         <div className="cardface__meta">
           <span>방어 {card.block}</span>
+          {card.healHp ? <span>체력 +{card.healHp}</span> : null}
           <span>기력 {card.guardCost}</span>
         </div>
       )}

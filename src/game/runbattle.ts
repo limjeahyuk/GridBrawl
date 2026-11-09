@@ -57,9 +57,11 @@ export function runFightProps(run: RunState): RunFightProps {
   const rndRow = () => Math.floor(Math.random() * GRID_ROWS)
   const pCell: Cell = { col: 0, row: scripted ? 1 : rndRow() }
   const monCell: Cell = { col: GRID_COLS - 1, row: scripted ? 1 : rndRow() }
+  const relicPassive = mergeRelics(run.relicIds, run.charId) // 직업 패시브 + 유물
   const battleOpts: BattleOpts = {
-    chars: [pChar, eChar],
-    passives: [mergeRelics(run.relicIds, run.charId), eChar.passive], // 직업 패시브 + 유물
+    // 최대 기력 유물(`maxEnergyBonus`)은 캐릭터 값에 얹는다 — 엔진·UI가 둘 다 `chars`를 본다.
+    chars: [{ ...pChar, maxEnergy: pChar.maxEnergy + (relicPassive.maxEnergyBonus ?? 0) }, eChar],
+    passives: [relicPassive, eChar.passive],
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
     startCells: [pCell, monCell],

@@ -92,6 +92,13 @@ export const MONSTERS: MonsterDef[] = [
     deckCardIds: ['war-bash', 'war-cleave', 'arc-shot', 'c-brace'], note: '돈으로 산 갑옷과 금화 세례. 엘리트급.',
   },
   {
+    // 초록 정령 이벤트(2026-11-09) — 엘리트 보정으로 나온다(`SpecialFight.elite`).
+    // ⚠ 늑대 그림이 아직 없어 오우거 시트를 임시로 쓴다(PROGRESS 2-bis "늑대 도트").
+    id: 'wolf', behavior: 'rusher', name: '늑대 무리', baseArtId: 'warrior', spriteId: 'ogre',
+    tier: 0, maxHp: 40, startEnergy: 24, aiLevel: 'normal', passive: { lifesteal: 1 },
+    deckCardIds: ['c-strike', 'war-cleave', 'c-jab'], note: '초록 정령들을 노리던 굶주린 늑대 떼. 물어뜯으며 피를 빤다.',
+  },
+  {
     id: 'slime',
     behavior: 'balanced',
     name: '슬라임',

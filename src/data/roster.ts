@@ -126,6 +126,12 @@ export interface Passive {
   freezeRoundBonus?: number
   /** 내가 거는 **속박**의 지속 +N라운드. */
   bindRoundBonus?: number
+
+  // --- 이벤트 유물 훅(2026-11-09) — 런 전용 ---------------------------------
+  /** **화상에 걸리지 않는다**(카드·유물·불길 함정 전부). 「타오르는 알」·「불사조의 깃털」. */
+  burnImmune?: boolean
+  /** 최대 기력 +N. 엔진이 아니라 `runbattle.ts`가 캐릭터의 `maxEnergy`에 얹는다. */
+  maxEnergyBonus?: number
 }
 
 /** 누적 기력 소비 트리거 한 개. `per`만큼 쓸 때마다 아래 효과가 한 번씩 터진다. */

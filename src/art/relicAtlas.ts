@@ -74,7 +74,7 @@ export const RELIC_ATLAS: Record<string, [col: number, row: number, kind: RelicB
   "balm": [3, 4, 'u'],
   "elixir": [3, 4, 'u'],
   "bloodleaf": [3, 4, 'u'],
-  "nanobot": [4, 4, 'p'],
+  "seed": [4, 4, 'p'],
   "regen-core": [4, 4, 'p'],
   "lifebloom": [4, 4, 'p'],
   "wickedmortar": [5, 4, 's'],
