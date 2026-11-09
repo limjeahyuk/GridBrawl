@@ -27,8 +27,8 @@ import { RunStartScreen } from './ui/screens/RunStartScreen'
 import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { RewardScreen } from './ui/screens/RewardScreen'
 import { QuestionScreen } from './ui/screens/QuestionScreen'
-import { RestScreen, TreasureScreen } from './ui/screens/RestScreen'
-import { ShopScreen } from './ui/screens/ShopScreen'
+import { InnScreen, SmithScreen } from './ui/screens/InnScreen'
+import { TreasureScreen } from './ui/screens/RestScreen'
 import { RunEndScreen } from './ui/screens/RunEndScreen'
 import {
   startRun,
@@ -105,8 +105,8 @@ type Phase =
   | 'run-fight'
   | 'run-reward'
   | 'run-event'
-  | 'run-shop'
-  | 'run-rest'
+  | 'run-inn'
+  | 'run-smith'
   | 'run-treasure'
   | 'run-end'
   /** 밸런스 어드민 — 개발 빌드에서만 도달한다. */
@@ -229,7 +229,7 @@ export default function App() {
     setRunUnlocked(null)
     setPhase('run-map')
   }, [])
-  // 지도에서 갈래를 골라 그 칸으로 진입 — 타입에 따라 전투/이벤트/상점으로.
+  // 지도에서 갈래를 골라 그 칸으로 진입 — 타입에 따라 전투/이벤트/여관/대장장이/보물로.
   const chooseNode = useCallback((index: number) => {
     setRun((r) => {
       if (!r) return r
@@ -237,8 +237,8 @@ export default function App() {
       const t = currentNode(next).type
       setPhase(
         t === 'event' ? 'run-event'
-        : t === 'shop' ? 'run-shop'
-        : t === 'rest' ? 'run-rest'
+        : t === 'inn' ? 'run-inn'
+        : t === 'smith' ? 'run-smith'
         : t === 'treasure' ? 'run-treasure'
         : 'run-fight',
       )
@@ -420,10 +420,10 @@ export default function App() {
         }}
       />
     )
-  } else if (phase === 'run-shop' && run) {
-    screen = <ShopScreen run={run} onDone={runAdvanced} />
-  } else if (phase === 'run-rest' && run) {
-    screen = <RestScreen run={run} onDone={runAdvanced} />
+  } else if (phase === 'run-inn' && run) {
+    screen = <InnScreen run={run} onDone={runAdvanced} />
+  } else if (phase === 'run-smith' && run) {
+    screen = <SmithScreen run={run} onDone={runAdvanced} />
   } else if (phase === 'run-treasure' && run) {
     screen = <TreasureScreen run={run} onDone={runAdvanced} />
   } else if (phase === 'run-end' && run) {

@@ -146,7 +146,12 @@ export function shiftedAiLevel(level: Difficulty, shift: number): Difficulty {
 }
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
-export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop' | 'rest' | 'treasure'
+/**
+ * 지도 칸 종류. 2026-11-09 상점·휴식 칸을 **여관(`inn`)·대장장이(`smith`)**로 바꿨다
+ * (`docs/redesign/INN_SMITH.md`) — 상점은 여관 안으로 들어갔고 강화는 대장장이가 맡는다.
+ * 모닥불(`rest`)은 이제 지도 칸이 아니라 **? 칸의 정체 하나**로만 남는다(`QuestionFate`).
+ */
+export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'inn' | 'smith' | 'treasure'
 export interface RunNode {
   type: NodeType
   monsterId?: string // combat/elite/boss
@@ -169,8 +174,8 @@ const CENTER_LANE = 1
  * 체력 50%·유물 1개로 벽을 만나 그 층이 보스보다 어려웠다(통과 66% vs 보스 79%).
  */
 const NODE_TEMPLATE: NodeType[] = [
-  'combat', 'combat', 'event', 'combat', 'shop', 'combat', 'elite',
-  'event', 'combat', 'elite', 'shop',
+  'combat', 'combat', 'event', 'combat', 'inn', 'combat', 'elite',
+  'event', 'combat', 'elite', 'inn',
   'combat', 'combat', 'event', 'boss',
 ]
 export const LADDER_FLOORS = NODE_TEMPLATE.length
@@ -244,10 +249,8 @@ const GOLD_PER_FLOOR = 4
 const GOLD_ELITE_BONUS = 40
 const GOLD_BOSS_BONUS = 80
 const PRICE_CARD = 35
+/** 고블린 상점 물약의 정가(여관 상점엔 물약이 없다 — 회복은 여관 휴식이 맡는다). */
 const PRICE_HEAL = 30
-/** 상점 룰렛 강화(2026-11 리디자인) — 상점마다 한 번. */
-const PRICE_UPGRADE = 50
-const PRICE_HEAL_AMOUNT = 25 // ÷2 리스케일(2026-08-05): HP 절반이라 회복량도 절반
 
 /**
  * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 버티기 + 원기). 2026-07-31에
@@ -275,7 +278,7 @@ export function startingDeck(charId: string): string[] {
  * `choosing` = 이번 층의 갈래를 아직 안 골랐다(2026-08-04 분기 지도).
  * 나머지는 고른 노드에 따라 정해진다(`statusForNode`).
  */
-export type RunStatus = 'choosing' | 'fighting' | 'reward' | 'event' | 'shop' | 'rest' | 'treasure' | 'won' | 'lost'
+export type RunStatus = 'choosing' | 'fighting' | 'reward' | 'event' | 'inn' | 'smith' | 'treasure' | 'won' | 'lost'
 
 export interface RunState {
   charId: string
@@ -398,11 +401,11 @@ function combatMonster(floor: number, exclude?: string): string {
  * ⚠ **지원 칸(이벤트·상점)을 전투로 바꿀 수 있게 하면 안 된다.** 처음엔 모든 대안을
  * 전투로 뒀는데, 그러면 경로를 헤맬수록 이벤트·상점이 전투로 갈려 나가 **클리어율이
  * 27% → 10%로 무너졌다**(5시드 × 900런). 상점이 층 사이 회복의 주 수단이라
- * (`PRICE_HEAL_AMOUNT`) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
+ * (지금은 여관 휴식) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
  * 그래야 15층 페이싱을 맞춰 둔 전투/지원 비율이 경로와 무관하게 유지된다.
  */
-/** 지원 칸 — 서로하고만 바꾼다(아래 ⚠). 휴식·보물은 2026-11 리디자인에서 합류. */
-const SUPPORT_NODES: NodeType[] = ['event', 'shop', 'rest', 'treasure']
+/** 지원 칸 — 서로하고만 바꾼다(아래 ⚠). 2026-11: 보물 합류 · 상점·휴식 → 여관·대장장이. */
+const SUPPORT_NODES: NodeType[] = ['event', 'inn', 'smith', 'treasure']
 function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode[] {
   const blank = (type: NodeType, monsterId?: string): RunNode => ({
     type,
@@ -709,8 +712,8 @@ export function enemyForNode(run: RunState, node: RunNode): MonsterDef {
 }
 function statusForNode(node: RunNode): RunStatus {
   if (node.type === 'event') return 'event'
-  if (node.type === 'shop') return 'shop'
-  if (node.type === 'rest') return 'rest'
+  if (node.type === 'inn') return 'inn'
+  if (node.type === 'smith') return 'smith'
   if (node.type === 'treasure') return 'treasure'
   return 'fighting'
 }
@@ -947,42 +950,47 @@ export function rollRewards(run: RunState): Reward[] {
 export type ShopItem =
   | { id: string; kind: 'card'; cardId: string; price: number }
   | { id: string; kind: 'relic'; relicId: string; price: number }
-  | { id: string; kind: 'heal'; price: number; amount: number }
-  | { id: string; kind: 'upgrade'; price: number } // 룰렛 강화 · 상점마다 한 번
 
 /**
- * 상점 진열 — 카드 3 + 유물 1 + 회복 2.
+ * 여관 안 상점 진열 — **카드 3 + 유물 2**(2026-11-09 `INN_SMITH.md`).
+ * 회복 물약·강화 칸은 뺐다: 회복은 여관 휴식이, 강화는 대장장이가 맡는다.
  * ⚠ **"카드 1장 제거"(40골드)는 2026-08-05에 뺐다.** 덱이 곧 손패라 카드를 줄여서
  * 얻는 이득이 0이고(위 "덱 룰"), 꽉 찬 뒤 자리를 비우는 일은 카드를 살 때의 교체가
  * 공짜로 해 준다 — 즉 **어떤 상황에서도 사면 손해인 칸**이었다. 되살리지 말 것.
- * 유물은 2 → **1칸**(2026-07-30): 상점 2곳에서 유물 4개를 사들이면 후반이 무력화됐다
- * (시뮬: 보스 도달 시 유물 6개, 12·13층 통과율 99%). 유물은 엘리트·이벤트가 주 경로.
+ * ⚠ 유물은 2026-07-30에 2 → 1칸으로 줄였던 적이 있다(상점 2곳에서 유물 4개를 사들이면
+ * 후반이 무력화됐다). 시안대로 2칸으로 되돌렸으니 후반이 다시 쉬워지면 여기부터 본다.
  */
+export const SHOP_RELIC_SLOTS = 2
 export function rollShop(run: RunState): ShopItem[] {
   const items: ShopItem[] = []
   // 유물 할인(상인의 인증패 등)은 **모든 상점 가격**에 적용된다.
-  const off = 1 - (runMods(run).shopDiscountPct ?? 0) / 100
-  const price = (n: number) => Math.max(1, Math.round(n * off))
+  const price = (n: number) => shopPrice(run, n)
   // 카드 칸은 기본 3 + 유물 보정(행상 마차 등). 진열이 넓어지면 원하는 카드를
   // 만날 확률이 올라간다 — 골드를 "가능성"으로 바꾸는 경제형 유물의 자리.
   const cardSlots = 3 + (runMods(run).shopExtraItems ?? 0)
   shuffle(cardRewardPool(run)).slice(0, cardSlots).forEach((cardId, i) =>
     items.push({ id: `card-${i}`, kind: 'card', cardId, price: price(PRICE_CARD) }),
   )
-  const relicId = rollRelicId(run) // 희귀도 가중 — legend는 드물고 아주 비싸다
-  if (relicId)
+  const seen: string[] = []
+  for (let i = 0; i < SHOP_RELIC_SLOTS; i++) {
+    // 희귀도 가중 — legend는 드물고 아주 비싸다. 같은 유물 두 칸은 다시 뽑는다.
+    let relicId = rollRelicId(run)
+    for (let t = 0; t < 6 && relicId && seen.includes(relicId); t++) relicId = rollRelicId(run)
+    if (!relicId || seen.includes(relicId)) continue
+    seen.push(relicId)
     items.push({
-      id: 'relic-0',
+      id: `relic-${i}`,
       kind: 'relic',
       relicId,
       price: price(RELIC_PRICE[RELIC_BY_ID[relicId]?.rarity ?? 'common']),
     })
-  // 회복 2칸(2026-07-30) — 시뮬에서 보스 도달 시 골드 300이 남았다(살 게 없었다).
-  // 골드를 체력으로 바꾸는 창구를 넓혀 남는 골드가 생존으로 이어지게.
-  items.push({ id: 'heal', kind: 'heal', price: price(PRICE_HEAL), amount: PRICE_HEAL_AMOUNT })
-  items.push({ id: 'heal-2', kind: 'heal', price: price(PRICE_HEAL), amount: PRICE_HEAL_AMOUNT })
-  items.push({ id: 'upgrade', kind: 'upgrade', price: price(PRICE_UPGRADE) })
+  }
   return items
+}
+/** 유물 할인(상인의 인증패 등)을 얹은 값 — 여관 상점·휴식·대장장이가 같이 쓴다. */
+function shopPrice(run: RunState, n: number): number {
+  const off = 1 - (runMods(run).shopDiscountPct ?? 0) / 100
+  return Math.max(1, Math.round(n * off))
 }
 
 /**
@@ -993,11 +1001,8 @@ export function buyShopItem(
   run: RunState,
   item: ShopItem,
   cardId?: string,
-): { run: RunState; ok: boolean; needsCardPick?: boolean; needsUpgrade?: boolean } {
+): { run: RunState; ok: boolean; needsCardPick?: boolean } {
   if (run.gold < item.price) return { run, ok: false }
-  // 룰렛을 돌리면 결과가 0이어도 돈은 안 돌아온다 — 결제는 여기서, 강화는 UI가 이어서.
-  if (item.kind === 'upgrade')
-    return upgradableDeckCards(run).length ? { run: { ...run, gold: run.gold - item.price }, ok: true, needsUpgrade: true } : { run, ok: false }
   const paid = { ...run, gold: run.gold - item.price }
   switch (item.kind) {
     case 'card': {
@@ -1007,11 +1012,42 @@ export function buyShopItem(
     }
     case 'relic':
       return { run: grantRelic(paid, item.relicId), ok: true }
-    case 'heal':
-      return { run: healHp(paid, item.amount), ok: true }
-    default:
-      return { run, ok: false }
   }
+}
+
+// --- 여관 · 대장장이(2026-11-09 · `docs/redesign/INN_SMITH.md`) --------------
+/**
+ * 여관 — 휴식(50G · 최대 체력 20%) / 상점(다녀와도 방문이 안 끝난다) / 나가기(5%).
+ * **휴식과 나가기는 둘 중 하나만** — 어느 쪽이든 그걸로 방문이 끝난다(사용자 지정).
+ * 값은 시안 그대로다. 회복량은 `min(최대 − 현재, round(최대 × %))`.
+ */
+export const INN_REST_PRICE = 50
+export const INN_REST_PCT = 0.2
+export const INN_LEAVE_PCT = 0.05
+const healOf = (run: RunState, pct: number) => Math.max(0, Math.min(run.maxHp - run.hp, Math.round(run.maxHp * pct)))
+export const innRestPrice = (run: RunState): number => shopPrice(run, INN_REST_PRICE)
+export const innRestAmount = (run: RunState): number => healOf(run, INN_REST_PCT)
+export const innLeaveAmount = (run: RunState): number => healOf(run, INN_LEAVE_PCT)
+/** 여관에서 쉰다 — 골드가 모자라면 null. 층은 넘기지 않는다(화면이 대사를 보여 준 뒤 넘긴다). */
+export function innRest(run: RunState): RunState | null {
+  const price = innRestPrice(run)
+  if (run.gold < price) return null
+  return healHp({ ...run, gold: run.gold - price }, innRestAmount(run))
+}
+/** 그냥 나간다 — 최대 체력의 5%. 층은 넘기지 않는다. */
+export const innLeave = (run: RunState): RunState => healHp(run, innLeaveAmount(run))
+
+/**
+ * 대장장이 — 50G에 룰렛 강화 **한 번**, 저장하면 바로 지도로(사용자 지정).
+ * 룰렛을 돌리면 결과가 0이어도 돈은 안 돌아온다 — 결제는 여기서, 강화는 UI가 이어서.
+ * 돌리기 전에 그만두면 화면이 결제 전 런으로 돌려준다.
+ */
+export const SMITH_PRICE = 50
+export const smithPrice = (run: RunState): number => shopPrice(run, SMITH_PRICE)
+export function paySmith(run: RunState): RunState | null {
+  const price = smithPrice(run)
+  if (run.gold < price || !upgradableDeckCards(run).length) return null
+  return { ...run, gold: run.gold - price }
 }
 
 // --- 진행 -------------------------------------------------------------------

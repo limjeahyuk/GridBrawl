@@ -39,6 +39,10 @@ import {
   upgradableDeckCards,
   upgradeCard,
   restAtFire,
+  innRest,
+  innLeave,
+  innRestPrice,
+  paySmith,
   rollQuestionFate,
   ambushFight,
   goblinTier,
@@ -301,33 +305,44 @@ function doQuestion(run: RunState): RunState {
   return doEvent(run)
 }
 
-// --- 상점 정책 --------------------------------------------------------------
-function doShop(run: RunState): RunState {
+// --- 여관 · 대장장이 정책(2026-11-09) -------------------------------------
+/**
+ * 여관 — 상점을 먼저 돌고(유물 → 좋은 카드), 그다음 쉴지 정한다. 상점을 보고 와도
+ * 방문이 안 끝나므로 순서는 이게 맞다. greedy는 체력 80% 아래면 쉰다(쉴 돈은 남긴다).
+ */
+function doInn(run: RunState): RunState {
   let cur = run
   const items = rollShop(cur)
+  const restPrice = innRestPrice(cur)
+  const wantRest = () => POLICY === 'random' ? Math.random() < 0.5 : cur.hp / cur.maxHp < 0.8
   const buy = (item: ShopItem) => {
     let res = buyShopItem(cur, item)
     if (res.needsCardPick) res = buyShopItem(cur, item, worstCard(cur.deck))
     if (res.ok) {
-      cur = res.needsUpgrade ? simUpgrade(res.run) : res.run
+      cur = res.run
       if (item.kind === 'relic') relicPick[item.relicId] = (relicPick[item.relicId] ?? 0) + 1
     }
   }
   if (POLICY === 'random') {
     for (const item of items) if (Math.random() < 0.4) buy(item)
-    return advanceFloor(cur)
+  } else {
+    const resting = wantRest()
+    const keep = resting ? restPrice : 0 // 쉴 거면 그 값은 남기고 산다
+    for (const item of items.filter((i) => i.kind === 'relic')) if (cur.gold - item.price >= keep) buy(item)
+    for (const item of items.filter((i) => i.kind === 'card')) {
+      if (item.kind !== 'card') continue
+      if (cardScore(item.cardId, cur.deck, cur) > 12 && cur.gold - item.price >= keep) buy(item)
+    }
+    if (resting) return advanceFloor(innRest(cur) ?? innLeave(cur))
+    return advanceFloor(innLeave(cur))
   }
-  // greedy: 유물 → (체력이 만피가 아니면) 회복 → 남는 골드로 좋은 카드.
-  // 회복 기준을 60%→80%로 둔 건 골드를 남겨 죽는 게 손해라서다(실제 플레이어도 쓴다).
-  for (const item of items.filter((i) => i.kind === 'relic')) buy(item)
-  for (const item of items.filter((i) => i.kind === 'heal'))
-    if (cur.hp / cur.maxHp < 0.8) buy(item)
-  for (const item of items.filter((i) => i.kind === 'upgrade')) buy(item)
-  for (const item of items.filter((i) => i.kind === 'card')) {
-    if (item.kind !== 'card') continue
-    if (cardScore(item.cardId, cur.deck, cur) > 12) buy(item)
-  }
-  return advanceFloor(cur)
+  return advanceFloor((wantRest() && innRest(cur)) || innLeave(cur))
+}
+/** 대장장이 — 돈이 있으면 강화한다(random은 반반). */
+function doSmith(run: RunState): RunState {
+  if (POLICY === 'random' && Math.random() < 0.5) return advanceFloor(run)
+  const paid = paySmith(run)
+  return advanceFloor(paid ? simUpgrade(paid) : run)
 }
 
 /** `--path` 정책대로 이번 층의 갈래를 고른다(위 PATH 주석 참고). */
@@ -398,14 +413,14 @@ async function playRun(charId: string): Promise<void> {
       arrive[floor]++
       cleared[floor]++
       run = doQuestion(run)
-    } else if (run.status === 'shop') {
+    } else if (run.status === 'inn') {
       arrive[floor]++
       cleared[floor]++
-      run = doShop(run)
-    } else if (run.status === 'rest') {
+      run = doInn(run)
+    } else if (run.status === 'smith') {
       arrive[floor]++
       cleared[floor]++
-      run = doRest(run)
+      run = doSmith(run)
     } else if (run.status === 'treasure') {
       arrive[floor]++
       cleared[floor]++

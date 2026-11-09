@@ -10,7 +10,7 @@ import {
 } from '../../game/upgrades'
 import { SceneLayers } from '../SceneLayers'
 
-export type UpgradeSource = 'rest' | 'shop' | 'event'
+export type UpgradeSource = 'rest' | 'smith' | 'event'
 type Step = 'pick' | 'path' | 'spin' | 'value' | 'range' | 'done'
 type Path = 'value' | 'range'
 
@@ -125,9 +125,9 @@ export function UpgradeScreen({
     })
     .join(', ')})`
 
-  const isShop = source === 'shop'
-  const srcLabel = isShop ? '상점 · 강화' : source === 'rest' ? '휴식 · 모닥불' : '이벤트 · 대장간'
-  const leaveLabel = isShop ? '← 상점으로' : source === 'rest' ? '← 모닥불로' : '← 그만둔다'
+  const isSmith = source === 'smith'
+  const srcLabel = isSmith ? '대장장이 · 강화' : source === 'rest' ? '휴식 · 모닥불' : '이벤트 · 대장간'
+  const leaveLabel = isSmith ? '← 대장장이로' : source === 'rest' ? '← 모닥불로' : '← 그만둔다'
 
   const spin = () => {
     const v = spinRoulette(table)
@@ -217,8 +217,8 @@ export function UpgradeScreen({
             <span className="upg__hint">가운데 금색 = 나 · 빨강 = 맞는 칸 · 앞(오른쪽) 4칸 · 뒤 4칸 · 위아래 2줄</span>
             <p>{card.desc}</p>
             <div className="upg__note">
-              {isShop
-                ? '상점 강화: 상점마다 한 번. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다.'
+              {isSmith
+                ? '대장장이 강화: 들를 때마다 한 장 · 한 번. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다.'
                 : source === 'rest'
                   ? '모닥불에선 쉬기(체력 회복)와 강화 중 하나만 고를 수 있다. 결과가 0이면 그걸로 끝.'
                   : '결과가 0이면 그걸로 끝.'}
@@ -575,7 +575,7 @@ export function UpgradeScreen({
             {result ? finalCard.upgradeNote : '카드는 그대로다.'} · 강화 {saved.upgrades[cardId]?.times ?? 0}/{MAX_UPGRADE}
           </p>
           <button type="button" className="upg__go" onClick={() => onDone(saved)}>
-            {isShop ? '상점으로 ▶' : '지도로 ▶'}
+            지도로 ▶
           </button>
         </section>
       )}

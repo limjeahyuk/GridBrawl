@@ -12,17 +12,17 @@
 | Main | ✅ | 타이틀. 2026-11-07 대조 |
 | Login | ✅ | 하단 "이용약관 · 개인정보 처리방침" 줄은 **뺐다** — 연결할 문서가 아직 없다 |
 | Select → Difficulty | ✅ | 두 단계 · 단계 표시 · 영웅 기록 · 11-09 일러스트 배경 + 얼굴 탭 |
-| RunMap | ✅ | 범례 7종 · 휴식·보물 칸(B4) |
+| RunMap | ✅ | 범례 7종 · 보물 칸(B4) · 11-09 상점·휴식 칸 → 여관·대장장이(B9) |
 | BattleField / BattleDungeon | ✅ | 지역 배경·HUD·손패·순서 칸 |
 | MoveBundle / MoveBundleSpec | ✅ | 이동 묶음·발자국·라벨 |
 | OneCell / Hazards | ✅ | 바위·독안개 + 새 함정 4종(B7) — 1칸 타일 · 모서리 위험 칩 · 가시덫 경고 프레임 |
 | RelicsHUD | ✅ | 발동 추정(`ui/relicFx.ts`) |
 | BossHUD | ✅ | ? 칸 → 첫 발동 때 공개(`gb-foe-seen`) |
 | Reward | ✅ | 일반 5장 · 엘리트 4+유물1(B1) |
-| Shop | ✅ | 마렌 · 카드/유물/회복 + **강화 · 50**(B2) · 11-09 여관 배경(`inn-bg.png`) + 말풍선 |
-| Inn / Blacksmith | ⬜ | 지도 칸 교체(상점→여관 · 대장장이)는 룰 변경이라 아직 — `INN_SMITH.md` |
+| Shop | ✅ | **여관 안 상점**(B9) · 카드 3 · 유물 2(회복·강화 칸 뺌) · 여관 배경(`inn-bg.png`) + 말풍선 · "← 여관으로" |
+| Inn / Blacksmith | ✅ | 11-09 `InnScreen.tsx`(여관 · 대장장이) — 브라우저로 흐름 끝까지 확인(B9) |
 | GoblinShop / Merchants | ✅ | 만남 · 거래(재산 게이지 · 배율 칩 · 단계 오름 토스트) · 습격 확인 · 전리품(B5) |
-| Rest / Upgrade | ✅ | 모닥불(`RestScreen`) · 룰렛 강화(`UpgradeScreen`) — 브라우저로 흐름 끝까지 확인 |
+| Rest / Upgrade | ✅ | 모닥불(`RestScreen` — 11-09부터 **? 칸 정체로만**) · 룰렛 강화(`UpgradeScreen`, source = rest · smith · event) |
 | Event | ✅ | ? 칸 정체 공개(`QuestionScreen` — 전투·휴식·고블린·이벤트) → 이벤트 → 결과 |
 | EventsQ / EventCatalog | ✅ | 이벤트 8종(B3). EventCatalog는 개발용 표라 화면 없음 |
 | CardDetail | ✅ | 두 칸 + "지금 쓰면" 미니 판(전투에서 열 때만 — 담은 이동까지 반영) |
@@ -45,7 +45,8 @@
 | B6 | 카드 상세 "지금 쓰면" 미니 판 | ✅ 11-07 · 연출 전용 | `CardDetail.dc.html` |
 | B7 | 새 함정 4종(불길·가시덫·가시덩굴·빙판) | ✅ 11-07 · 시안 효과 그대로(사용자 승인) · 클리어 ~18→~16.6% · 밴드 0.9~2.2%p | `Hazards.dc.html` · `OneCell.dc.html` |
 | B8 | 튜토리얼 9단계 | ✅ 11-07 | `Tutorial.dc.html` · `TutorialFlow.dc.html` |
-| B8b | 튜토리얼 뒤 첫 만남 팁 9종(첫 지도 · 첫 ? 칸 · 첫 상점 · 첫 엘리트 · 6라운드 붕괴 · 첫 보스 · 기력 부족 · 길게 누르기 · 첫 상태이상) | ✅ 11-07 · 연출 전용 | `TutorialFlow.dc.html` 하단 |
+| B8b | 튜토리얼 뒤 첫 만남 팁 9종(첫 지도 · 첫 ? 칸 · 첫 여관(옛 첫 상점) · 첫 엘리트 · 6라운드 붕괴 · 첫 보스 · 기력 부족 · 길게 누르기 · 첫 상태이상) | ✅ 11-07 · 연출 전용 | `TutorialFlow.dc.html` 하단 |
+| B9 | 지도 칸 교체: 상점·휴식 → **여관**(휴식 50G·20% / 상점 / 나가기 5%) · **대장장이**(강화 50G 한 번) | ✅ 11-09 · 3시드 평균 클리어 **17.6 → 15.4%** · 밴드 1.0~3.9%p | `INN_SMITH.md` · `Inn.dc.html` · `Blacksmith.dc.html` |
 
 ### 구현 메모(다음 작업자용)
 
@@ -74,10 +75,16 @@
   붙은 곳: 지도(첫 지도) · ? 칸 공개 · 상점 · 전투(상태이상 > 보스 > 바위 > 6라운드 붕괴 > 기력 부족 > 꾹 누르기 순, 카드 고르는 중에만).
   튜토리얼은 `BattleScreen tips={false}`로 끈다. 시안의 "첫 엘리트"는 **바위가 있는 판**으로 판정한다(지형 카드로 세운 바위도 포함).
   다시 보려면 `localStorage.removeItem('gb-tips-seen')` — 시안의 "도감 › 도움말에서 다시 보기"는 아직 없다.
+- **B9** 규칙 `run.ts`(`NodeType`의 `inn`·`smith` · `innRest`·`innLeave`·`paySmith` · `rollShop` 카드 3 + 유물 2 `SHOP_RELIC_SLOTS`),
+  화면 `ui/screens/InnScreen.tsx`(`InnScreen`·`SmithScreen`). 상점 진열·산 목록은 **여관이 들고 있다** — "← 여관으로" 갔다 와도 그대로.
+  휴식·나가기는 층을 안 넘기고 대사를 바꾼 뒤 "지도로"가 넘긴다. 대장장이는 결제 → 룰렛, 돌리기 전 취소하면 결제 전 런으로(환불).
+  모닥불은 지도에서 빠지고 ? 칸 정체(`FATE_WEIGHTS`)로만 남는다 — 거기선 지금도 쉬기 또는 강화. 팁 id `shop`은 기기 기록 때문에 그대로 두고 여관에서 띄운다.
+  ⚠ 회복 경로가 줄었다(모닥불 칸 30% 무료 · 물약 2개 → 여관 휴식 50G 20%). 유물 2칸이 일부 상쇄해 -2.2%p에 그쳤다. 조일지·풀지는 사용자 판단.
 - **검증 도우미** 개발 빌드에서 콘솔 `__gb.setRun(__gb.startRun('warrior')); __gb.setPhase('run-rest')`로 화면에 바로 뛴다(`App.tsx`).
 
 ## 3. 기록
 
 - 2026-11-07 — 1·2차 대조(CLAUDE.md "2026-11 리디자인" 절). 화면 틀 전부.
 - 2026-11-09 — 4차: 영웅 선택 일러스트 배경 · 상점 여관 배경 · 영웅 도트 v2(마법사 anchorX 36).
+- 2026-11-09 — B9 여관 · 대장장이 칸(아래 표).
 - 2026-11-07 — 전체 재점검 후 이 파일 작성. B1~B8 · B8b 완료 — 시안 32장 전부 반영(➖ 참고용 시트 제외).

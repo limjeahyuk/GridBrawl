@@ -41,6 +41,12 @@ import {
   upgradeCard,
   restAtFire,
   openTreasure,
+  innRest,
+  innLeave,
+  innRestPrice,
+  paySmith,
+  smithPrice,
+  SHOP_RELIC_SLOTS,
   hazardsFor,
   goblinTier,
   rollGoblinShop,
@@ -298,7 +304,7 @@ console.log('\n런 진행 규칙')
   check('꽉 찬 덱 + 잠긴 카드 지정 → 상한을 넘기지 않는다', grantCard(full, 'war-cleave', 'm-up').run.deck.length, deckCap(run))
   check('꽉 찬 덱 + 일반 카드 지정 → 교체된다', grantCard(full, 'war-cleave', 'c-strike').run.deck.length, deckCap(run))
   // 유료 "카드 1장 제거"는 뺐다 — 덱=손패라 얇게 만들 이득이 0인 함정 칸이었다.
-  check('상점에 카드 제거 서비스가 없다', rollShop(run).some((i) => !['card', 'relic', 'heal', 'upgrade'].includes(i.kind)), false)
+  check('상점에 카드 제거 서비스가 없다', rollShop(run).some((i) => !['card', 'relic'].includes(i.kind)), false)
 }
 
 // --- 상태이상 (2026-08-07 전면 재정의) ---------------------------------------
@@ -1129,8 +1135,8 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
       // ⚠ 핵심 회귀 검사. 지원 칸(이벤트·상점)의 대안을 전투로 뒀다가 클리어율이
       //   27%→10%로 무너졌다(상점이 회복의 주 수단이라서). 지원 칸끼리만 바꾼다.
       const head = center(f)?.type
-      if (head === 'event' || head === 'shop') {
-        if (nodes.some((o) => !['event', 'shop', 'rest', 'treasure'].includes(o.type))) supportToCombat++
+      if (head === 'event' || head === 'inn') {
+        if (nodes.some((o) => !['event', 'inn', 'smith', 'treasure'].includes(o.type))) supportToCombat++
       }
       // 엘리트는 유일하게 "전투량"을 고르는 칸 — 엘리트 하나 + 나머지는 일반 전투.
       if (head === 'elite') {
@@ -1295,15 +1301,13 @@ console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드�
   check('나(0,0)와 이미 있는 칸은 못 고른다', [canPickCell(r, [], { df: 0, du: 0 }), canPickCell(r, [], { df: 1, du: 0 })], [false, false])
   check('편집 칸 밖은 못 고른다', canPickCell([{ df: 4, du: 0 }], [], { df: 5, du: 0 }), false)
 
-  // 상점 — 강화 칸은 한 번, 결제는 룰렛 전에 끝난다.
-  const shop = rollShop({ ...run, gold: 100 })
-  const up = shop.find((i) => i.kind === 'upgrade')!
-  check('상점에 강화 칸이 있다', !!up, true)
+  // 대장장이 — 결제는 룰렛 전에 끝난다. 강화할 카드가 없으면 받지 않는다.
   const fresh = grantCard({ ...startRun('mage'), gold: 100 }, 'mag-spark').run
-  const bought = buyShopItem(fresh, up)
-  check('강화 칸을 사면 룰렛으로 넘어간다', [bought.ok, bought.needsUpgrade, bought.run.gold], [true, true, 100 - up.price])
+  const paid = paySmith(fresh)
+  check('대장장이 — 50골드를 받는다', paid?.gold, 100 - smithPrice(fresh))
   const none = { ...fresh, deck: ['m-up', 'm-down', 'm-left', 'm-right'] }
-  check('강화할 카드가 없으면 못 산다', buyShopItem(none, up).ok, false)
+  check('강화할 카드가 없으면 대장장이가 안 받는다', paySmith(none), null)
+  check('골드가 모자라면 대장장이가 안 받는다', paySmith({ ...fresh, gold: smithPrice(fresh) - 1 }), null)
 }
 
 // --- 이벤트 8종(2026-11 리디자인) -------------------------------------------------
@@ -1373,14 +1377,33 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
   check('카드 거래 — 한 장 나가고 한 장 들어온다', [tr.run.deck.includes('war-cleave'), tr.run.deck.length], [false, base.deck.length])
 }
 {
-  // 휴식 · 보물(2026-11) — 지도 칸 두 종류가 실제로 생기고, 하는 일을 한다.
-  let rest = 0, treasure = 0
+  // 여관 · 대장장이 · 보물(2026-11-09) — 지도 칸이 실제로 생기고, 하는 일을 한다.
+  // 상점·휴식 칸은 지도에서 사라졌다(모닥불은 ? 칸의 정체로만 남는다).
+  let inn = 0, smith = 0, treasure = 0, old = 0
   for (let i = 0; i < 100; i++)
-    for (const f of startRun('warrior').map) for (const n of f) { if (n.type === 'rest') rest++; if (n.type === 'treasure') treasure++ }
-  check('지도에 휴식·보물 칸이 나온다', [rest > 0, treasure > 0], [true, true])
-  const hurt = { ...startRun('warrior'), hp: 10 }
-  check('모닥불 — 최대 체력 30% 회복 후 다음 층', [restAtFire(hurt).hp, restAtFire(hurt).floor], [10 + Math.round(hurt.maxHp * 0.3), 2])
+    for (const f of startRun('warrior').map)
+      for (const n of f) {
+        if (n.type === 'inn') inn++
+        if (n.type === 'smith') smith++
+        if (n.type === 'treasure') treasure++
+        if (!['combat', 'elite', 'boss', 'event', 'inn', 'smith', 'treasure'].includes(n.type)) old++
+      }
+  check('지도에 여관·대장장이·보물 칸이 나온다', [inn > 0, smith > 0, treasure > 0], [true, true, true])
+  check('지도에 옛 상점·휴식 칸이 없다', old, 0)
+  const hurt = { ...startRun('warrior'), hp: 10, gold: 200 }
+  check('모닥불(? 칸) — 최대 체력 30% 회복 후 다음 층', [restAtFire(hurt).hp, restAtFire(hurt).floor], [10 + Math.round(hurt.maxHp * 0.3), 2])
   check('보물 — 유물 하나', openTreasure(hurt).run.relicIds.length, hurt.relicIds.length + 1)
+  // 여관 — 휴식 50G · 20%, 나가기 5%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
+  const rested = innRest(hurt)!
+  check('여관 휴식 — 50골드 · 최대 체력 20%', [rested.gold, rested.hp, rested.floor], [200 - innRestPrice(hurt), 10 + Math.round(hurt.maxHp * 0.2), 1])
+  check('여관 휴식 — 골드가 모자라면 못 쉰다', innRest({ ...hurt, gold: innRestPrice(hurt) - 1 }), null)
+  check('여관 나가기 — 최대 체력 5%', innLeave(hurt).hp, 10 + Math.round(hurt.maxHp * 0.05))
+  check('여관 회복은 최대 체력을 넘지 않는다', innRest({ ...hurt, hp: hurt.maxHp - 1 })!.hp, hurt.maxHp)
+  // 여관 안 상점 — 카드 3 · 유물 2, 회복·강화 칸 없음.
+  const stock = rollShop(hurt)
+  check('여관 상점 = 카드 3 · 유물 2', [stock.filter((i) => i.kind === 'card').length, stock.filter((i) => i.kind === 'relic').length], [3, SHOP_RELIC_SLOTS])
+  const rel = stock.filter((i) => i.kind === 'relic').map((i) => (i.kind === 'relic' ? i.relicId : ''))
+  check('여관 상점 유물 두 칸은 서로 다르다', new Set(rel).size, rel.length)
 }
 {
   // 고블린 장사꾼(2026-11) — 쓸수록 부자 · 값은 물건마다 ×0.8~1.5 · 덮쳐서 이기면 재산 0.
@@ -1733,8 +1756,8 @@ console.log('\n지형 — 바위')
     check('성소(수호기사)는 빈 판', terrainOf('elite', 'warden'), 0)
     // 몬스터가 자기 지형을 가졌으면 보스라도 그게 이긴다(화염군주 = 굳은 용암).
     check('화염군주는 자기 지형을 가진다', terrainOf('elite', 'pyrelord') > 0, true)
-    // 이벤트·상점 칸은 전투가 아니라 애초에 지형이 없다.
-    check('전투가 아닌 칸은 빈 판', terrainOf('shop'), 0)
+    // 이벤트·여관 칸은 전투가 아니라 애초에 지형이 없다.
+    check('전투가 아닌 칸은 빈 판', terrainOf('inn'), 0)
   }
 
   // ⑧ **바위가 없으면 지형 규칙이 통째로 no-op이다** — 바위도 지형 카드도 없는 판은

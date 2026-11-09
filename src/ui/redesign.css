@@ -2762,7 +2762,7 @@
 .upg__title h1 { font-size: 34px; }
 .upg__anvil { width: 36px; height: 32px; background: url('/redesign/ui/rest/anvil.png') 0 0 / 36px 32px; image-rendering: pixelated; }
 .upg__src { padding: 3px 10px; font-size: 13px; border: 2px solid #c96a3a; background: #2a1410; color: #ffb07a; }
-.upg__src--shop { border-color: #c9952f; background: #2a1c08; color: #ffd86a; }
+.upg__src--smith { border-color: #c9952f; background: #2a1c08; color: #ffd86a; }
 .upg__crumbs { display: flex; gap: 4px; }
 .upg__crumbs span { padding: 5px 11px; font-size: 13px; background: #1a1626; color: #c9c2d6; border: 2px solid #4a4058; }
 .upg__crumbs span.is-on { background: #f4d470; color: #1d1408; border-color: #f4d470; }
@@ -3122,3 +3122,100 @@
 .firsttip--boss { left: auto; right: 24px; margin-left: 0; top: 150px; }
 .firsttip--question { top: auto; bottom: 40px; }
 .firsttip--shop { top: auto; bottom: 24px; left: 24px; margin-left: 0; width: 290px; }
+
+/* ---- 여관 · 대장장이(디자인 `Inn` · `Blacksmith`, 2026-11-09 `INN_SMITH.md`) ------------
+   여관 = 여관 그림 배경(마렌 왼쪽) + 오른쪽 대사창 · 선택지. 대장장이 = 던전 벽 + 화덕 도트. */
+.screen.inn,
+.screen.smith { display: block; padding: 0; overflow: hidden; background: #1a100a; }
+.inn .shop__title,
+.smith .shop__title { margin: 0; font-size: 42px; text-shadow: 3px 3px 0 #0a0604; }
+.inn .shop__where span,
+.smith .shop__where span { color: #ffd8a8; text-shadow: 2px 2px 0 #0a0604; }
+.inn__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10, 6, 4, 0.72) 0%, rgba(10, 6, 4, 0) 16%),
+    linear-gradient(90deg, rgba(10, 6, 4, 0) 580px, rgba(10, 6, 4, 0.4) 900px);
+}
+.inn__hp { position: relative; }
+.inn__heal {
+  position: absolute;
+  right: 6px;
+  top: 34px;
+  font-style: normal;
+  font-size: 20px;
+  color: #b6ea6a;
+  text-shadow: 2px 2px 0 #0a0604;
+  pointer-events: none;
+  animation: inn-heal 1.2s ease-out both;
+}
+@keyframes inn-heal { 0% { transform: translateY(10px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-30px); opacity: 0; } }
+.inn__say {
+  position: absolute;
+  left: 600px;
+  top: 236px;
+  width: 644px;
+  z-index: 1;
+  box-sizing: border-box;
+  padding: 30px 24px 22px;
+  background: rgba(16, 10, 8, 0.92);
+  border: 3px solid #0a0604;
+  box-shadow: inset 0 0 0 2px #c9952f, 0 8px 0 rgba(0, 0, 0, 0.4);
+}
+.inn__say::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 44px;
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-right: 22px solid #c9952f;
+}
+.inn__say p { margin: 0; font-size: 19px; line-height: 1.6; color: var(--cream); animation: inn-type 1.4s steps(30) both; }
+@keyframes inn-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.inn__name { position: absolute; left: 18px; top: -22px; display: flex; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4); }
+.inn__name b { padding: 4px 14px; background: #7a2a1a; border: 3px solid #0a0604; font-family: var(--font-display); font-weight: 400; font-size: 22px; color: var(--cream); }
+.inn__name span { display: flex; align-items: center; padding: 4px 10px; background: #0a0604; border: 3px solid #0a0604; border-left: 0; font-size: 12px; color: #f4d470; }
+.inn__opts { position: absolute; left: 600px; bottom: 30px; width: 644px; z-index: 1; display: flex; flex-direction: column; gap: 10px; }
+.inn__opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 18px;
+  box-sizing: border-box;
+  background: rgba(20, 14, 12, 0.88);
+  border: 2px solid #6a4a30;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+  color: #fff6dc;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: inn-in 0.45s ease-out both;
+}
+@keyframes inn-in { from { transform: translateX(40px); opacity: 0; } }
+.inn__opt:hover:not(.is-off) { border-color: #f4d470; background: rgba(42, 28, 16, 0.94); transform: translateX(-4px); }
+.inn__opt.is-off { opacity: 0.45; cursor: not-allowed; }
+.inn__optbody { display: flex; flex-direction: column; gap: 3px; flex-grow: 1; }
+.inn__optbody b { font-family: var(--font-display); font-weight: 400; font-size: 26px; }
+.inn__optbody span { font-size: 13px; color: #ffd8a8; }
+.inn__optbody span.is-heal { color: #b6ea6a; }
+.inn__optbody span.is-mute { color: #b9a89a; }
+.inn__chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-family: var(--font-px); font-size: 14px; white-space: nowrap; background: #2a1c08; color: #ffd86a; border: 1px solid #c9952f; }
+/* 대장장이 — 시안처럼 대사창은 왼쪽 아래, 선택지는 오른쪽 아래. */
+.smith__glow { position: absolute; left: 60px; top: 120px; width: 700px; height: 560px; pointer-events: none; background: radial-gradient(ellipse at 45% 60%, rgba(255, 138, 58, 0.55) 0%, rgba(255, 138, 58, 0.15) 40%, rgba(0, 0, 0, 0) 70%); animation: smith-glow 1.6s ease-in-out infinite; }
+@keyframes smith-glow { 50% { opacity: 0.7; } }
+.smith__vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 35% 55%, rgba(0, 0, 0, 0) 30%, rgba(8, 4, 4, 0.75) 100%); }
+/* 화덕 도트 64×52 × 6프레임을 정수 7배로(448×364). */
+.smith__forge { position: absolute; left: 150px; top: 150px; width: 448px; height: 364px; background: url('/redesign/ui/events/forge.png') 0 0 / 2688px 364px; image-rendering: pixelated; animation: smith-f6 0.66s steps(6) infinite; }
+@keyframes smith-f6 { to { background-position: -2688px 0; } }
+.smith__say.inn__say { left: 36px; top: auto; bottom: 30px; width: 700px; min-height: 148px; padding: 32px 26px 18px; box-shadow: inset 0 0 0 2px #ff8a3a, 0 8px 0 rgba(0, 0, 0, 0.4); }
+.smith__say.inn__say::before { display: none; }
+.smith__say p { font-size: 20px; }
+.smith__say .inn__name { left: 20px; }
+.smith__say .inn__name b { background: #5a3018; }
+.smith__say .inn__name span { color: #ff8a3a; }
+.smith .inn__opts { left: auto; right: 36px; width: 440px; }

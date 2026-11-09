@@ -1,75 +1,50 @@
-// 상점 — 골드로 카드·유물·회복을 구매. 덱이 꽉 찬 상태의 카드 구매만 카드 선택
-// (버릴 카드)이 필요하다. ⚠ 유료 "카드 1장 제거"는 뺐다(run.ts "덱 룰" 참고).
+// 여관 안 상점 — 골드로 카드·유물을 산다(2026-11-09 `INN_SMITH.md`). 덱이 꽉 찬 상태의
+// 카드 구매만 카드 선택(버릴 카드)이 필요하다. ⚠ 유료 "카드 1장 제거"는 뺐다(run.ts "덱 룰").
 //
 // 화면은 디자인 `Shop` 그대로다 — 배경 여관 그림 왼쪽에 **여관 주인 마렌**이 서 있고, 오른쪽
-// 진열(마렌의 말풍선 아래)은 카드 / 유물 / 회복 / 강화 묶음으로 나뉜다. 진열 자체는 `rollShop`(카드 3·유물
-// 1·회복 2)을 그대로 쓴다.
-import { useMemo, useState } from 'react'
+// 진열(마렌의 말풍선 아래)은 카드 3 / 유물 2. 회복은 여관 휴식이, 강화는 대장장이가 맡는다.
+// 진열·산 목록은 **여관 화면이 들고 있다**(`InnScreen`) — "← 여관으로" 갔다 와도 그대로다.
+import { useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
-import {
-  advanceFloor, buyShopItem, regionOf, rollShop, runCard, upgradableDeckCards, type RunState, type ShopItem,
-} from '../../game/run'
+import { buyShopItem, regionOf, runCard, type RunState, type ShopItem } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
 import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
-import { useFirstTip } from '../FirstTip'
-import { UpgradeScreen } from './UpgradeScreen'
 
-/** 마렌의 인사 — 체력이 깎였으면 약부터 권한다(디자인 `Shop`의 대사, 2026-11-09 여관 주인 말씨). */
-const greeting = (hpFrac: number): string =>
-  hpFrac < 0.6
-    ? '"어머, 많이 다치셨네요. 물약부터 보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."'
-    : '"천천히 둘러보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."'
-
-export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
-  const shop = useMemo(() => rollShop(run), [run])
-  const [cur, setCur] = useState<RunState>(run)
-  const [bought, setBought] = useState<Set<string>>(new Set())
-  const [pending, setPending] = useState<ShopItem | null>(null) // 카드 선택 대기(제거/획득)
-  // 룰렛 강화 중 — 결제 전 런(취소하면 돌려준다)과 결제 뒤 런.
-  const [upgrading, setUpgrading] = useState<{ before: RunState; paid: RunState; itemId: string } | null>(null)
+export function ShopScreen({
+  run: cur,
+  stock: shop,
+  bought,
+  onChange,
+  onBack,
+}: {
+  run: RunState
+  stock: ShopItem[]
+  bought: Set<string>
+  /** 산 뒤의 런 · 산 목록. */
+  onChange: (next: RunState, bought: Set<string>) => void
+  /** "← 여관으로" — 방문은 끝나지 않는다. */
+  onBack: () => void
+}) {
+  const [pending, setPending] = useState<ShopItem | null>(null) // 카드 선택 대기(교체)
   const char = getChar(cur.charId)
   // 꾹 누르면 카드 상세(설명·능력의 뜻)가 열린다 — 압축 카드에는 설명이 없다.
   const zoom = useCardZoom(char.accent)
-  const tip = useFirstTip(['shop'])
 
+  const done = (next: RunState, id: string) => onChange(next, new Set(bought).add(id))
   const buy = (item: ShopItem) => {
     if (bought.has(item.id)) return
     const res = buyShopItem(cur, item)
-    if (res.ok && res.needsUpgrade) {
-      setUpgrading({ before: cur, paid: res.run, itemId: item.id })
-    } else if (res.ok) {
-      setCur(res.run)
-      setBought((b) => new Set(b).add(item.id))
-    } else if (res.needsCardPick) {
-      setPending(item)
-    }
+    if (res.ok) done(res.run, item.id)
+    else if (res.needsCardPick) setPending(item)
   }
   const pickCard = (cardId: string) => {
     if (!pending) return
     const res = buyShopItem(cur, pending, cardId)
-    if (res.ok) {
-      setCur(res.run)
-      setBought((b) => new Set(b).add(pending.id))
-    }
+    if (res.ok) done(res.run, pending.id)
     setPending(null)
-  }
-
-  if (upgrading) {
-    return (
-      <UpgradeScreen
-        run={upgrading.paid}
-        source="shop"
-        onCancel={() => setUpgrading(null)} // 룰렛을 안 돌렸으면 돈을 안 받는다
-        onDone={(next) => {
-          setCur(next)
-          setBought((b) => new Set(b).add(upgrading.itemId))
-          setUpgrading(null)
-        }}
-      />
-    )
   }
 
   if (pending) {
@@ -112,9 +87,6 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
 
   const cards = shop.filter((i) => i.kind === 'card')
   const relics = shop.filter((i) => i.kind === 'relic')
-  const heals = shop.filter((i) => i.kind === 'heal')
-  const ups = shop.filter((i) => i.kind === 'upgrade')
-  const noUpgradable = !upgradableDeckCards(cur).length
   const cardPrice = cards[0]?.price ?? 0
 
   return (
@@ -124,13 +96,12 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
       <div className="artbg artbg--fill artbg--inn" aria-hidden="true" />
       <div className="artbg artbg--inn" role="img" aria-label="여관 — 여관 주인 마렌" />
       <i className="shop__veil" aria-hidden="true" />
-      {tip}
 
       <header className="shop__head">
         <div className="shop__where">
           <h1 className="shop__title">상점</h1>
           <span>
-            {regionOf(cur.floor) === 'grassland' ? '초원' : '던전'} · {cur.floor}층
+            여관 · {regionOf(cur.floor) === 'grassland' ? '초원' : '던전'} {cur.floor}층
           </span>
         </div>
         <div className="shop__purse">
@@ -141,15 +112,15 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
           <span className="hpchip">
             HP {cur.hp}/{cur.maxHp}
           </span>
-          <button className="btn btn--ghost shop__leave" onClick={() => onDone(advanceFloor(cur))}>
-            떠나기 →
+          <button className="btn btn--ghost shop__leave" onClick={onBack}>
+            ← 여관으로
           </button>
         </div>
       </header>
 
       <section className="trader__say">
         <b>마렌</b>
-        <p>{greeting(cur.hp / Math.max(1, cur.maxHp))}</p>
+        <p>"천천히 둘러보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."</p>
       </section>
 
       <main className="shop__main">
@@ -216,48 +187,6 @@ export function ShopScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
             </div>
           </section>
 
-          <section className="shop__sec" aria-label="회복">
-            <h2>
-              회복 <span>· 두 번까지</span>
-            </h2>
-            <div className="shop__row">
-              {heals.map((item) => (
-                <button
-                  key={item.id}
-                  className={`item item--heal ${bought.has(item.id) ? 'is-owned' : ''}`}
-                  onClick={() => buy(item)}
-                  aria-disabled={bought.has(item.id) || cur.gold < item.price}
-                >
-                  <i className="item__potion" aria-hidden />
-                  <span className="item__healname">
-                    물약 · HP +{item.kind === 'heal' ? item.amount : 0}
-                  </span>
-                  <Price item={item} />
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="shop__sec" aria-label="강화">
-            <h2>
-              강화 <span>· 한 번</span>
-            </h2>
-            <div className="shop__row">
-              {ups.map((item) => (
-                <button
-                  key={item.id}
-                  className={`item item--upgrade ${bought.has(item.id) ? 'is-owned' : ''}`}
-                  onClick={() => buy(item)}
-                  aria-disabled={bought.has(item.id) || cur.gold < item.price || noUpgradable}
-                  title={noUpgradable ? '강화할 카드가 없다' : undefined}
-                >
-                  <i className="item__anvil" aria-hidden />
-                  <span className="item__healname">카드 강화 · 룰렛</span>
-                  <Price item={item} />
-                </button>
-              ))}
-            </div>
-          </section>
         </div>
       </main>
       {zoom.sheet}

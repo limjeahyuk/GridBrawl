@@ -5,9 +5,10 @@ import { markTipSeen, seenTips } from '../game/progress'
 
 export type TipId = 'map' | 'question' | 'shop' | 'elite' | 'collapse' | 'boss' | 'energy' | 'longpress' | 'status'
 export const TIPS: Record<TipId, { title: string; body: string }> = {
-  map: { title: '갈림길은 직접 고른다', body: '빛나는 칸이 지금 갈 수 있는 곳이다. 오른쪽 범례가 칸 종류 — 상인·휴식을 노리려면 몇 층 전부터 그 줄을 타자.' },
+  map: { title: '갈림길은 직접 고른다', body: '빛나는 칸이 지금 갈 수 있는 곳이다. 오른쪽 범례가 칸 종류 — 여관·대장장이를 노리려면 몇 층 전부터 그 줄을 타자.' },
   question: { title: '? 칸은 들어가 봐야 안다', body: '전투 · 휴식 · 고블린 상점 · 이벤트 중 하나. 무엇이 나올지는 정체가 공개되는 순간 정해진다.' },
-  shop: { title: '골드는 전투마다 쌓인다', body: '카드 · 유물뿐 아니라 회복 물약도 살 수 있다. 체력이 모자라면 약부터.' },
+  // id는 'shop' 그대로(기기에 남은 `gb-tips-seen` 기록) — 2026-11-09부터 여관에서 뜬다.
+  shop: { title: '여관에선 쉬거나 산다', body: '휴식(50골드)은 최대 체력의 20%를 채우고 방문을 끝낸다. 상점은 들렀다 돌아올 수 있다. 그냥 나가도 5%는 회복된다.' },
   elite: { title: '바위는 못 지나간다', body: '바위는 들어갈 수도, 밀려 들어갈 수도 없다. 같은 줄 · 같은 열의 사격선도 막는다 — 줄을 바꾸면 대각선으로 우회한다.' },
   collapse: { title: '판 가장자리가 무너진다', body: '6라운드부터 바깥 열부터 무너져 3라운드마다 안쪽으로 번진다. 라운드 끝에 무너진 칸에 서 있으면 피해.' },
   boss: { title: '붉은 ? 칸 = 숨은 보스 능력', body: '오른쪽 위의 ? 칸은 아직 드러나지 않은 보스 능력이다. 처음 발동하는 순간 뒤집혀 공개된다.' },

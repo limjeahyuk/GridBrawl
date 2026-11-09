@@ -64,7 +64,7 @@ export function RestScreen({ run, onDone }: { run: RunState; onDone: (next: RunS
             </div>
           </button>
         </div>
-        <span className="rest__note">상점에서는 마렌에게 50골드를 내고 같은 강화를 할 수 있다(상점마다 한 번).</span>
+        <span className="rest__note">지도의 대장장이 칸에서도 50골드를 내고 같은 강화를 할 수 있다(들를 때마다 한 번).</span>
       </section>
     </div>
   )
