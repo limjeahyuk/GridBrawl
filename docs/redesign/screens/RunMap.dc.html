@@ -15,9 +15,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .mapbg{background-image:url(/redesign/bg/grassland/preview.png);background-size:1280px 720px;background-position:-240px 0;image-rendering:pixelated}
 .ic{image-rendering:pixelated;background-repeat:no-repeat;background-position:center;background-size:42px 42px}
 .ic-unknown{background-image:url(/redesign/ui/map-icons/unknown.png)}
-.ic-merchant{background-image:url(/redesign/ui/map-icons/merchant.png)}
+.ic-inn{background-image:url(/redesign/ui/map-icons/inn.png)}
 .ic-treasure{background-image:url(/redesign/ui/map-icons/treasure.png)}
-.ic-rest{background-image:url(/redesign/ui/map-icons/rest.png)}
+.ic-smith{background-image:url(/redesign/ui/map-icons/smith.png)}
 .ic-enemy{background-image:url(/redesign/ui/map-icons/enemy.png)}
 .ic-elite{background-image:url(/redesign/ui/map-icons/elite.png)}
 .ic-boss{background-image:url(/redesign/ui/map-icons/boss.png)}
@@ -134,19 +134,19 @@ class Component extends DCLogic {
     const TYPES = {
       enemy: { label: '적', desc: '일반 전투 · 카드 보상' },
       elite: { label: '엘리트', desc: '강한 적 · 지형 바위 · 유물 보상' },
-      unknown: { label: '미지', desc: '이벤트 · 전투 · 상인 중 하나' },
-      merchant: { label: '상인', desc: '카드 · 유물 구매, 카드 제거' },
+      unknown: { label: '미지', desc: '이벤트 · 전투 · 고블린 상점 중 하나' },
+      inn: { label: '여관', desc: '휴식(50G) · 상점 · 나가면 체력 조금' },
       treasure: { label: '보물', desc: '유물 상자 하나' },
-      rest: { label: '휴식', desc: '체력 회복 또는 카드 강화' },
+      smith: { label: '대장장이', desc: '카드 강화(50G)' },
       boss: { label: '보스', desc: '수호기사 · 처치하면 던전으로' },
     };
     const N = [
       ['a', 1, 0.18, 'enemy'], ['b', 1, 0.5, 'enemy'], ['c', 1, 0.82, 'enemy'],
-      ['d', 2, 0.08, 'unknown'], ['e', 2, 0.36, 'enemy'], ['f', 2, 0.64, 'merchant'], ['g', 2, 0.92, 'enemy'],
+      ['d', 2, 0.08, 'unknown'], ['e', 2, 0.36, 'enemy'], ['f', 2, 0.64, 'inn'], ['g', 2, 0.92, 'enemy'],
       ['h', 3, 0.22, 'elite'], ['i', 3, 0.5, 'unknown'], ['j', 3, 0.8, 'treasure'],
-      ['k', 4, 0.1, 'rest'], ['l', 4, 0.38, 'enemy'], ['m', 4, 0.64, 'enemy'], ['n', 4, 0.9, 'unknown'],
-      ['o', 5, 0.26, 'merchant'], ['p', 5, 0.56, 'elite'], ['q', 5, 0.86, 'rest'],
-      ['r', 6, 0.18, 'rest'], ['s', 6, 0.5, 'unknown'], ['t', 6, 0.82, 'rest'],
+      ['k', 4, 0.1, 'smith'], ['l', 4, 0.38, 'enemy'], ['m', 4, 0.64, 'enemy'], ['n', 4, 0.9, 'unknown'],
+      ['o', 5, 0.26, 'inn'], ['p', 5, 0.56, 'elite'], ['q', 5, 0.86, 'smith'],
+      ['r', 6, 0.18, 'smith'], ['s', 6, 0.5, 'unknown'], ['t', 6, 0.82, 'smith'],
       ['z', 7, 0.5, 'boss'],
     ];
     const E = {
@@ -202,7 +202,7 @@ class Component extends DCLogic {
       const t = TYPES[n[3]];
       return { icon: 'ic-' + n[3], label: n[1] + '층 · ' + t.label, desc: t.desc, pick: go(id) };
     });
-    const legend = ['unknown', 'merchant', 'treasure', 'rest', 'enemy', 'elite', 'boss'].map((k) => ({ icon: 'ic-' + k, label: TYPES[k].label }));
+    const legend = ['unknown', 'inn', 'treasure', 'smith', 'enemy', 'elite', 'boss'].map((k) => ({ icon: 'ic-' + k, label: TYPES[k].label }));
     return {
       nodes, edges, choices, legend,
       heroL: hp.x - 36, heroT: hp.y - (cur ? 86 : 58),

@@ -1,0 +1,7 @@
+{
+ "id": "shopkeeper",
+ "src": "shopkeeper.png",
+ "width": 832,
+ "height": 1216,
+ "note": "상점 주인 그림 — 사용자가 준 그림을 손대지 않고 그대로 쓴다(배경 포함). 애니메이션 없음. 상점 화면 왼쪽 · NPC 컷씬에 background-size: cover 로 넣는다."
+}

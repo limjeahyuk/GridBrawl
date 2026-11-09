@@ -59,6 +59,7 @@ import {
   rockAt,
   shadowRock,
   type ActionResult,
+  type DamageSrc,
   type Cell,
   type CardDef,
   type FogTile,
@@ -247,6 +248,52 @@ function StatusGlyph({ kind }: { kind: string }) {
   ) : (
     <>{STATUS_CHIP[kind]}</>
   );
+}
+
+// ⚠ 2026-11-09: 아래 넷(STATUS_AURA·AURA_PRIORITY·DMG_SRC·damageOn/bitsOn)은 merge 2cbf2de에서
+//   빠져 컴파일이 깨져 있던 것을 원격 쪽(cd9e9c5)에서 그대로 되살렸다.
+/** 몸에 두르는 기운의 색 — 상태이상 하나가 통째로 몸빛을 바꾼다. */
+const STATUS_AURA: Record<string, string> = {
+  poison: "#7bd88f",
+  burn: "#ff9a3d",
+  frozen: "#9fd8ff",
+  stunned: "#ffe14d",
+  bind: "#c4a3ff",
+};
+/**
+ * 몸빛·HP바 색을 정할 때 **어느 상태이상이 이기는가**. 여러 개가 걸리면 앞선
+ * 것을 쓴다 — 지금 가장 아픈 것(움직일 때마다 무는 중독 → 맞을 때마다 타는 화상 →
+ * 행동을 통째로 막는 봉인) 순서다.
+ */
+const AURA_PRIORITY = ["poison", "burn", "frozen", "stunned", "bind"] as const;
+
+/** 피해 꼬리표 — 화면에 "왜 깎였는지"를 아이콘+한 단어로 붙인다. */
+const DMG_SRC: Record<DamageSrc, { icon: string; label: string }> = {
+  attack: { icon: "⚔", label: "타격" },
+  burn: { icon: "🔥", label: "화상" },
+  shatter: { icon: "❄", label: "파쇄" },
+  slam: { icon: "💥", label: "격돌" },
+  thorns: { icon: "🌵", label: "반사" },
+  recoil: { icon: "💢", label: "반동" },
+  poison: { icon: "☠", label: "중독" },
+  fog: { icon: "🌫", label: "독안개" },
+  collapse: { icon: "🪨", label: "붕괴" },
+  relic: { icon: "✦", label: "유물" },
+};
+
+/** 이 스텝에서 **그 진영이 실제로 깎인 몫**. 내역이 있으면 그걸 합치고, 없으면
+ *  옛 필드(`damage`/`recoil`)로 떨어진다. */
+function damageOn(step: Step, side: 0 | 1): number {
+  if (step.bits) return step.bits.filter((b) => b.on === side).reduce((a, b) => a + b.n, 0);
+  return side === 1 - step.actor ? step.damage : step.recoil;
+}
+/** 그 진영이 받은 피해의 내역(없으면 옛 필드로 한 줄 만들어 준다). */
+function bitsOn(step: Step, side: 0 | 1): { src: DamageSrc; n: number }[] {
+  if (step.bits) return step.bits.filter((b) => b.on === side).map((b) => ({ src: b.src, n: b.n }));
+  const n = damageOn(step, side);
+  if (n <= 0) return [];
+  // 내역이 없는 옛 경로 — 자기 몸에 뜨는 피해는 반동, 상대 몸이면 타격으로 본다.
+  return [{ src: side === step.actor ? "recoil" : "attack", n }];
 }
 
 /**
@@ -581,7 +628,20 @@ export function BattleScreen({
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null]);
   const [phase, setPhase] = useState<"select" | "resolving" | "over">("select");
   const [waitingRemote, setWaitingRemote] = useState(false);
+  /**
+   * 이번 라운드에 **양쪽이 낸 3장**(정규 좌표 — [side0, side1]). 해소하는 동안
+   * 화면 아래에 그대로 펼쳐 둔다(merge 2cbf2de에서 빠진 것을 cd9e9c5에서 되살림).
+   */
+  const [roundPlans, setRoundPlans] = useState<[CardDef[], CardDef[]] | null>(null);
+  /** 지금 재생 중인 슬롯(0·1·2). 라운드 종료 정산 구간에서는 null. */
+  const [activeSlot, setActiveSlot] = useState<number | null>(null);
+  /** 슬롯이 바뀔 때 양쪽 카드를 크게 펼치는 공개 연출(차근차근 모드 전용). */
+  const [slotReveal, setSlotReveal] = useState<{ seq: number; slot: number } | null>(null);
+  /** 이번 라운드에 실제로 일어난 일 — 무엇이 몇 대미지였는지 글로 남는다. */
+  const [log, setLog] = useState<LogRow[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
+  /** 이동 묶음이 펼쳐져 있는가(2026-11 · 시안 MoveBundle.dc.html). */
+  const [bundleOpen, setBundleOpen] = useState(false);
   /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
   const [remain, setRemain] = useState<number | null>(null);
   const submittingRef = useRef(false);
@@ -1746,6 +1806,30 @@ export function BattleScreen({
                 </em>
               </span>
             )}
+            {/* 이동 묶음(2026-11) — 이동 카드는 손패에 펼치지 않고 **한 장으로 접는다**.
+                이동은 여전히 판의 칸을 눌러서 하고, 묶음은 "몇 장인지 · 뭐가 쿨인지 · 왜
+                못 가는지"를 보여 주고 이동 카드를 꾹 눌러 읽는 자리다. */}
+            <MoveBundle
+              cards={hand.filter((c) => c.kind === "move")}
+              open={bundleOpen}
+              setOpen={setBundleOpen}
+              face={faceCard}
+              cdLeft={cdLeft}
+              ready={(c) => selectable(c) && canAfford(c)}
+              blocked={(c) => {
+                const from = planPreview.ghost ?? view.pos[localSide];
+                const to = applyMovePreview(from, c, rocks);
+                return to.col === from.col && to.row === from.row;
+              }}
+              slotNos={slotNosFor}
+              bound={roundLock?.kind === "bind"}
+              onPick={(c) => {
+                addCard(c);
+                setBundleOpen(false);
+              }}
+              longPress={longPress}
+              pressed={pressedCard}
+            />
             <div className="cards__hand">
               {hand
                 .filter((c) => c.kind !== "move")
@@ -2723,6 +2807,141 @@ function FoeRow({
                 : "아직 드러나지 않은 능력이다."}
             </p>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// 이동 묶음(2026-11 · 시안 MoveBundle.dc.html · MoveBundleSpec.dc.html)
+// 앞면 = 장화 + ×N + 3×3 방향 나침반(파랑 준비 · 주황 테 대시 · 숫자 쿨 · 금 담김).
+// 누르면 위로 펼쳐져 이동 카드 전부(준비 / 쿨 N / 막힘 / N번 칸) — 눌러 담고 꾹 눌러 읽는다.
+// ---------------------------------------------------------------------------
+const COMPASS: (MoveDir | null)[] = [
+  "up-left", "up", "up-right",
+  "left", null, "right",
+  "down-left", "down", "down-right",
+];
+const DIR_ARROW: Record<MoveDir, string> = {
+  up: "↑", down: "↓", left: "←", right: "→",
+  "up-left": "↖", "up-right": "↗", "down-left": "↙", "down-right": "↘",
+};
+
+function MoveBundle({
+  cards,
+  open,
+  setOpen,
+  face,
+  cdLeft,
+  ready,
+  blocked,
+  slotNos,
+  bound,
+  onPick,
+  longPress,
+  pressed,
+}: {
+  cards: CardDef[];
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  face: (c: CardDef) => CardDef;
+  cdLeft: (id: string) => number;
+  ready: (c: CardDef) => boolean;
+  blocked: (c: CardDef) => boolean;
+  slotNos: (id: string) => number[];
+  bound: boolean;
+  onPick: (c: CardDef) => void;
+  longPress: ReturnType<typeof useLongPress>;
+  pressed: React.MutableRefObject<CardDef | null>;
+}) {
+  if (!cards.length) return null;
+  const readyN = cards.filter(ready).length;
+  const coolN = cards.filter((c) => cdLeft(c.id) > 0).length;
+  const cellOf = (d: MoveDir) => {
+    const mine = cards.filter((c) => face(c).dir === d);
+    if (!mine.length) return { cls: "is-none", txt: "" };
+    if (mine.some((c) => slotNos(c.id).length)) return { cls: "is-in", txt: "" };
+    const ok = mine.filter(ready);
+    if (ok.length) return { cls: ok.every((c) => (c.steps ?? 1) > 1) ? "is-dash" : "is-ready", txt: "" };
+    const cd = Math.min(...mine.map((c) => cdLeft(c.id)).filter((n) => n > 0));
+    return { cls: "is-cool", txt: Number.isFinite(cd) ? String(cd) : "" };
+  };
+  return (
+    <div className={`mvb ${open ? "is-open" : ""} ${bound ? "is-bound" : ""}`}>
+      <button
+        type="button"
+        className="mvb__face"
+        aria-expanded={open}
+        aria-label={`이동 카드 ${cards.length}장 · 준비 ${readyN} · 쿨 ${coolN}`}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="mvb__top">
+          <span className="mvb__boot" aria-hidden="true" />
+          <b>×{cards.length}</b>
+        </span>
+        <span className="mvb__compass" aria-hidden="true">
+          {COMPASS.map((d, i) => {
+            if (!d) return <i key={i} className="mvb__me" />;
+            const st = cellOf(d);
+            return (
+              <i key={i} className={`mvb__dir ${st.cls}`}>
+                {st.txt}
+              </i>
+            );
+          })}
+        </span>
+        <span className="mvb__count">
+          준비 {readyN} · 쿨 {coolN}
+        </span>
+      </button>
+      {open && (
+        <div className="mvb__pop" role="menu">
+          <span className="mvb__pophead">이동 카드 — 눌러서 담기 · 꾹 눌러 자세히</span>
+          {cards.map((c) => {
+            const fc = face(c);
+            const cd = cdLeft(c.id);
+            const nos = slotNos(c.id);
+            const ok = ready(c) && !blocked(c);
+            const state = nos.length
+              ? `${nos.join("·")}번 칸`
+              : cd > 0
+                ? `쿨 ${cd}`
+                : bound
+                  ? "속박"
+                  : blocked(c)
+                    ? "막힘"
+                    : ready(c)
+                      ? "준비"
+                      : "기력 부족";
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="menuitem"
+                aria-disabled={!ok}
+                className={`mvb__item ${ok ? "" : "is-off"} ${(c.steps ?? 1) > 1 ? "is-dash" : ""}`}
+                onClick={() => {
+                  if (longPress.consumedClick() || !ok) return;
+                  onPick(c);
+                }}
+                onPointerDown={(e) => {
+                  pressed.current = c;
+                  longPress.handlers.onPointerDown(e);
+                }}
+                onPointerMove={longPress.handlers.onPointerMove}
+                onPointerUp={longPress.handlers.onPointerUp}
+                onPointerLeave={longPress.handlers.onPointerLeave}
+                onPointerCancel={longPress.handlers.onPointerCancel}
+                onContextMenu={longPress.handlers.onContextMenu}
+              >
+                <span className="mvb__arrow">{fc.dir ? DIR_ARROW[fc.dir].repeat(c.steps ?? 1) : "?"}</span>
+                <span className="mvb__name">{fc.name}</span>
+                <span className="mvb__state">{state}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

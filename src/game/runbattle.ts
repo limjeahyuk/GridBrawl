@@ -5,7 +5,11 @@
 import { getChar } from '../data/roster'
 import { COMMON_CARDS } from '../battle/cards'
 import { decideAI, type AIProfile } from '../battle/ai'
-import { GRID_COLS, GRID_ROWS, type Cell } from '../battle/types'
+import { GRID_COLS, GRID_ROWS, POISON_TICK_DAMAGE, type Cell } from '../battle/types'
+import type { Passive } from '../data/roster'
+
+const withMaxHpMod = (p: Passive, mod: number): Passive =>
+  mod ? { ...p, maxHpBonus: (p.maxHpBonus ?? 0) + mod } : p
 
 // 이동은 모든 파이터가 쓰는 보편 능력이다. 몬스터의 `deckCardIds`는 정체성(공격·가드)만
 // 담으므로, AI가 접근·회피할 수 있도록 공용 이동 카드를 풀에 주입한다. 이게 없으면
@@ -59,9 +63,14 @@ export function runFightProps(run: RunState): RunFightProps {
   const monCell: Cell = { col: GRID_COLS - 1, row: scripted ? 1 : rndRow() }
   const battleOpts: BattleOpts = {
     chars: [pChar, eChar],
-    passives: [mergeRelics(run.relicIds), eChar.passive],
+    // 이벤트로 깎인 최대 체력(수술실)은 유물 보정과 따로 산다 — 전투의 최대 체력도 같이 깎는다.
+    passives: [withMaxHpMod(mergeRelics(run.relicIds), run.maxHpMod ?? 0), eChar.passive],
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
+    // 항아리 뱀 — 중독된 채로 싸운다(런 전용 엔진 옵션).
+    startStatus: run.eventFight?.poisonRounds
+      ? [[{ kind: 'poison', rounds: run.eventFight.poisonRounds, power: POISON_TICK_DAMAGE, since: 0 }], undefined]
+      : undefined,
     startCells: [pCell, monCell],
     // 지형 — 무대마다 다른 바위 배치(`terrainFor`). 런 전용이라 PvP·봇전은 빈 판.
     obstacles: terrainFor(run),

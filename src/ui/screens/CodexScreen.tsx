@@ -3,7 +3,10 @@ import { ROSTER, type CharacterDef } from '../../data/roster'
 import { COMMON_CARDS } from '../../battle/cards'
 import { FOE_ATLAS, RELIC_ATLAS } from '../../art/relicAtlas'
 import { RELICS, type Rarity } from '../../game/relics'
-import { seenFoeAbilities, seenRelics } from '../../game/progress'
+import { seenFoeAbilities, seenMonsters, seenRelics } from '../../game/progress'
+import { MONSTERS, type MonsterDef } from '../../game/monsters'
+import { sheetFor } from '../../art/sprites'
+import { SpriteClip } from '../SpriteClip'
 import { FoeIcon, RARITY_LABEL, RelicIcon } from '../RelicIcon'
 import { RUN_CARDS } from '../../game/runcards'
 import { PortraitSvg } from '../PortraitSvg'
@@ -119,10 +122,75 @@ function RelicCodex() {
   )
 }
 
+/**
+ * 몬스터 도감(2026-11 · 시안 Codex.dc.html) — 지역별 격자. 못 만난 몬스터는 **검은 실루엣 + ???**.
+ * 만남 기록은 기기 로컬(`gb-monsters-seen`, 런 전투에 들어갈 때 등록).
+ */
+const MON_GROUPS: { label: string; cls: string; of: (m: MonsterDef) => boolean }[] = [
+  { label: '초원', cls: 'is-field', of: (m) => m.tier === 1 || m.tier === 2 },
+  { label: '던전', cls: 'is-dungeon', of: (m) => m.tier === 3 },
+  { label: '보스 · 엘리트', cls: 'is-boss', of: (m) => m.tier === 4 },
+  { label: '? 칸', cls: 'is-unknown', of: (m) => m.tier === 0 },
+]
+function MonsterCodex() {
+  const seen = useMemo(() => seenMonsters(), [])
+  const [sel, setSel] = useState<MonsterDef>(MONSTERS[0])
+  const known = seen.has(sel.id)
+  const sheet = sheetFor(sel.spriteId ?? '')
+  return (
+    <div className="relicdex mondex">
+      <div className="relicdex__sel mondex__sel">
+        <div className={`mondex__art ${known ? '' : 'is-sil'}`}>{sheet && <SpriteClip sheet={sheet} clip="idle" scale={Math.min(sheet.scale, Math.max(1, Math.floor(110 / sheet.frameH)))} />}</div>
+        <div>
+          <b className="relicdex__name">{known ? sel.name : '???'}</b>
+          <p>{known ? sel.note : '아직 만나지 못한 적. 런에서 마주치면 모습이 드러난다.'}</p>
+          {known && (
+            <p className="mondex__stat">
+              체력 {sel.maxHp} · 시작 기력 {sel.startEnergy}
+            </p>
+          )}
+        </div>
+        <span className="relicdex__count">
+          {MONSTERS.filter((m) => seen.has(m.id)).length} / {MONSTERS.length}종
+        </span>
+      </div>
+      {MON_GROUPS.map((g) => {
+        const list = MONSTERS.filter(g.of)
+        return (
+          <section key={g.label} className={`relicdex__group ${g.cls}`}>
+            <h3>
+              {g.label} <span>{list.length}</span>
+            </h3>
+            <div className="relicdex__grid mondex__grid">
+              {list.map((m) => {
+                const sh = sheetFor(m.spriteId ?? '')
+                const k = seen.has(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    className={`relicdex__cell mondex__cell ${sel.id === m.id ? 'is-on' : ''}`}
+                    aria-label={k ? m.name : '미발견 몬스터'}
+                    onClick={() => setSel(m)}
+                  >
+                    <span className={`mondex__thumb ${k ? '' : 'is-sil'}`}>
+                      {sh && <SpriteClip sheet={sh} clip="idle" scale={1} />}
+                    </span>
+                    <span className="relicdex__name">{k ? m.name : '???'}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
 /** 도감: 영웅과 각 영웅의 전용 공격 카드 + 공용 카드를 열람하는 화면. */
 export function CodexScreen({ onBack }: { onBack: () => void }) {
   const [sel, setSel] = useState<CharacterDef>(ROSTER[0])
-  const [tab, setTab] = useState<'hero' | 'relic'>('hero')
+  const [tab, setTab] = useState<'hero' | 'monster' | 'relic'>('hero')
   const bars = statBars(sel)
 
   return (
@@ -137,13 +205,16 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
           <button className={`diffseg ${tab === 'hero' ? 'is-active' : ''}`} onClick={() => setTab('hero')}>
             영웅 · 카드
           </button>
+          <button className={`diffseg ${tab === 'monster' ? 'is-active' : ''}`} onClick={() => setTab('monster')}>
+            몬스터
+          </button>
           <button className={`diffseg ${tab === 'relic' ? 'is-active' : ''}`} onClick={() => setTab('relic')}>
             유물
           </button>
         </div>
       </div>
 
-      {tab === 'relic' ? <RelicCodex /> : <div className="codex__body">
+      {tab === 'relic' ? <RelicCodex /> : tab === 'monster' ? <MonsterCodex /> : <div className="codex__body">
         <div className="codex__roster">
           {ROSTER.map((c) => (
             <button

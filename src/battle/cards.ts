@@ -80,7 +80,7 @@ export const COMMON_CARDS: CardDef[] = [
     block: 15,
     guardCost: 5,
     cooldown: 0,
-    desc: '기력 5 소모. 이번 턴 받는 피해를 최대 30 막는다. 쿨타임이 없다.',
+    desc: '기력 5 소모. 이번 라운드 받는 피해를 최대 15 막는다. 쿨타임이 없다.',
   },
   {
     id: 'c-energy',

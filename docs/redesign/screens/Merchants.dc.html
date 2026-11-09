@@ -48,10 +48,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .gr-death{background-image:url(/redesign/sprites/goblin-rich/death.png)}
 .gr-haggle{background-image:url(/redesign/sprites/goblin-rich/haggle.png)}
 .gr-cheer{background-image:url(/redesign/sprites/goblin-rich/cheer.png)}
-.tr-idle{background-image:url(/redesign/sprites/trader/idle.png)}
-.tr-talk{background-image:url(/redesign/sprites/trader/talk.png)}
-.tr-offer{background-image:url(/redesign/sprites/trader/offer.png)}
-.tr-bow{background-image:url(/redesign/sprites/trader/bow.png)}
+.sk{background-image:url(/redesign/cutscene/shopkeeper/shopkeeper.png);background-size:cover;background-position:center top;background-repeat:no-repeat}
+.n4{animation-name:f4;animation-timing-function:steps(4)}
+@keyframes f4{to{background-position:133.333% 0}}
 .cell{display:flex;flex-direction:column;align-items:center;gap:6px}
 .stage{position:relative;background:#1e2a1a;border:2px solid #2a3a24;box-shadow:inset 0 -14px 0 rgba(0,0,0,0.25)}
 .lab{font-family:'Silkscreen',monospace;font-size:12px;color:#efe9f5}
@@ -59,33 +58,23 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .panel{background:#1a1626;border:3px solid #0a0810;box-shadow:inset 0 0 0 2px #3a3150;box-sizing:border-box}
 </style>
 </helmet>
-<div style="position: relative; width: 1960px; height: 1340px; overflow: hidden; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; padding: 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+<div style="position: relative; width: 1960px; height: 1600px; overflow: hidden; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; padding: 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
   <header>
-    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">상점 캐릭터 — 떠돌이 상인 마렌 · 고블린 장사꾼 3단계</h1>
-    <p style="margin: 6px 0 0; font-size: 15px; color: #c9c2d6">마렌은 상점 칸 전용(전투 없음). 고블린은 ? 칸에서 나오며 <b style="color: #ffd86a">이번 런에 고블린에게 쓴 돈</b>으로 가난 → 중간 → 부자로 자라고, 덮치면 그 단계 그대로 싸운다. 전부 <code>public/redesign/sprites/</code>의 실제 PNG.</p>
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">상점 캐릭터 — 상점 주인 · 고블린 장사꾼 3단계</h1>
+    <p style="margin: 6px 0 0; font-size: 15px; color: #c9c2d6">상점 주인은 상점 칸 전용(전투 없음) — 사용자가 준 그림을 그대로 쓴다. 고블린은 ? 칸에서 나오며 <b style="color: #ffd86a">이번 런에 고블린에게 쓴 돈</b>으로 가난 → 중간 → 부자로 자라고, 덮치면 그 단계 그대로 싸운다. 전부 <code>public/redesign/sprites/</code>의 실제 PNG.</p>
   </header>
 
   <section class="panel" style="padding: 18px 22px; display: flex; gap: 28px; align-items: flex-end">
     <div style="width: 250px; align-self: stretch; display: flex; flex-direction: column; gap: 8px">
-      <span style="font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 3px; color: #7fd6c8">SHOP NPC</span>
-      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">떠돌이 상인 마렌</b>
-      <span style="font-size: 13px; line-height: 1.6; color: #e4def0">넓은 챙 모자 · 붉은 숄 · 앞치마. 등에 짐 틀(말린 카펫 · 냄비 · 등불). 진열대(오른쪽)를 바라본다.</span>
-      <span class="sub">trader · 64×76 · ×3 = 192×228 · 상점 화면 왼쪽</span>
-      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #c9c2d6">
-        <span><b style="color: #f4d470">idle</b> 들어오면 · 고르는 동안</span>
-        <span><b style="color: #f4d470">talk</b> 대사가 뜰 때</span>
-        <span><b style="color: #f4d470">offer</b> 물건에 커서를 올리면(물약 내밀며 윙크)</span>
-        <span><b style="color: #f4d470">bow</b> 사고 나면 한 번</span>
-      </div>
+      <span style="font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 3px; color: #7fd6c8">SHOPKEEPER</span>
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">상점 주인 (이름 임시: 마렌)</b>
+      <span style="font-size: 13px; line-height: 1.6; color: #e4def0">사용자가 준 그림을 손대지 않고 그대로 쓴다(배경 포함 · 832×1216).</span>
+      <span class="sub">cutscene/shopkeeper/shopkeeper.png · 상점 화면 왼쪽 · NPC 컷씬</span>
     </div>
-    <sc-for list="{{trader}}" as="c" hint-placeholder-count="4">
-      <div class="cell">
-        <div class="stage" style="width: 220px; height: 244px; display: flex; align-items: flex-end; justify-content: center">
-          <div class="spr n6 {{c.cls}}" style="width: 192px; height: 228px; background-size: 1152px 228px; animation-duration: {{c.dur}}"></div>
-        </div>
-        <span class="lab">{{c.name}}</span><span class="sub">{{c.meta}}</span>
-      </div>
-    </sc-for>
+    <div class="cell">
+      <div class="stage sk" role="img" aria-label="상점 주인" style="width: 336px; height: 491px"></div>
+      <span class="lab">원본 그대로</span><span class="sub">832×1216</span>
+    </div>
   </section>
 
   <sc-for list="{{gobs}}" as="g" hint-placeholder-count="3">
@@ -114,10 +103,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1960,"height":1340}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1960,"height":1600}}'>
 class Component extends DCLogic {
   renderVals() {
-    const trader = [['idle', 160, '들어오면 · 숨쉬기 + 깜빡'], ['talk', 120, '대사'], ['offer', 110, '물약 내밀기 + 윙크'], ['bow', 120, '구매 감사']].map(([n, ms, d]) => ({ name: n, cls: 'tr-' + n, dur: ms * 6 + 'ms', meta: `6f · ${ms}ms · ${d}` }));
     const CL = [['idle', 6, 110], ['run', 8, 65], ['back', 6, 80], ['attack1', 6, 60], ['attack2', 6, 70], ['hurt', 3, 90], ['death', 9, 100], ['haggle', 6, 120], ['cheer', 6, 110]];
     const RICH = { idle: 130, run: 80, attack1: 70 };
     const T = [
@@ -132,7 +120,7 @@ class Component extends DCLogic {
         return { name: n, cls: `n${f} g${t.k}-${n}`, bs: `${f * 168}px 116px`, dur: f * m + 'ms', meta: `${f}f · ${m}ms`, bg: shop ? '#2a2214' : '#1e2a1a', lc: shop ? '#ffd86a' : '#efe9f5' };
       }),
     }));
-    return { trader, gobs };
+    return { gobs };
   }
 }
 </script>

@@ -81,10 +81,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       <sc-for list="{{crumbs}}" as="c" hint-placeholder-count="5"><span style="padding: 5px 11px; font-size: 13px; background: {{c.bg}}; color: {{c.fg}}; border: 2px solid {{c.edge}}">{{c.label}}</span></sc-for>
     </div>
     <div style="display: flex; gap: 6px; align-items: center">
-      <span style="font-size: 11px; color: #b9b1c9">시안</span>
-      <button type="button" class="fbtn {{srcRestCls}}" onClick="{{toRest}}" style="font-family: 'Noto Sans KR', sans-serif">휴식</button>
-      <button type="button" class="fbtn {{srcShopCls}}" onClick="{{toShop}}" style="font-family: 'Noto Sans KR', sans-serif">상점</button>
-      <span style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; margin-left: 6px; background: #2a1c10; border: 2px solid #c9952f"><span class="coin" aria-hidden="true"></span><span style="font-family: 'Silkscreen', monospace; font-size: 16px; color: #ffd86a">{{gold}}</span></span>
+      <span style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #2a1c10; border: 2px solid #c9952f"><span class="coin" aria-hidden="true"></span><span style="font-family: 'Silkscreen', monospace; font-size: 16px; color: #ffd86a">{{gold}}</span></span>
     </div>
   </header>
 
@@ -295,7 +292,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { src: 'rest', step: 'pick', card: 0, path: 'dmg', rot: 0, spinning: false, result: null, force: null, picks: [], mirror: false, saved: {}, gold: 140 };
+    this.state = { src: 'smith', step: 'pick', card: 0, path: 'dmg', rot: 0, spinning: false, result: null, force: null, picks: [], mirror: false, saved: {}, gold: 140 };
   }
   renderVals() {
     const st = this.state;
@@ -485,16 +482,14 @@ class Component extends DCLogic {
 
     const crumbIdx = { pick: 0, path: 1, spin: 2, dmg: 3, range: 3, done: 4 }[st.step];
     const crumbs = ['카드', '강화 종류', '룰렛', '적용', '저장'].map((label, i) => ({ label: (i < crumbIdx ? '✓ ' : '') + label, bg: i === crumbIdx ? '#f4d470' : '#1a1626', fg: i === crumbIdx ? '#1d1408' : '#c9c2d6', edge: i === crumbIdx ? '#f4d470' : '#4a4058' }));
-    const isShop = st.src === 'shop';
+    const isShop = true; // 강화는 대장장이에서만(50G)
     const dmgAfter = c.dm == null ? '—' : String(c.dm + (res || 0));
 
     return {
       crumbs, gold: String(st.gold),
-      srcLabel: isShop ? '상점 · 강화 50G' : '휴식 · 모닥불', srcBg: isShop ? '#2a1c08' : '#2a1410', srcFg: isShop ? '#ffd86a' : '#ffb07a', srcEdge: isShop ? '#c9952f' : '#c96a3a',
-      srcRestCls: isShop ? '' : 'fbtn-on', srcShopCls: isShop ? 'fbtn-on' : '',
-      toRest: () => this.setState({ src: 'rest' }), toShop: () => this.setState({ src: 'shop' }),
-      srcNote: isShop ? '상점 강화: 50골드 · 상점마다 한 번. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다.' : '모닥불에선 쉬기(체력 회복)와 강화 중 하나만 고를 수 있다. 결과가 0이면 그걸로 끝.',
-      leaveLabel: isShop ? '← 상점으로' : '← 모닥불로', exitLabel: isShop ? '상점으로 ▶' : '지도로 ▶',
+      srcLabel: '대장장이 · 50G', srcBg: '#2a1c08', srcFg: '#ffd86a', srcEdge: '#c9952f',
+      srcNote: '대장장이에게 50골드를 내고 카드 한 장을 강화한다. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다. 골드가 있으면 또 맡길 수 있다(카드당 최대 2번).',
+      leaveLabel: '← 대장간으로', exitLabel: '대장간으로 ▶',
       sPick: st.step === 'pick', sPath: st.step === 'path', sSpin: st.step === 'spin', sDmg: st.step === 'dmg', sRange: st.step === 'range', sDone: st.step === 'done',
       showChip: st.step !== 'pick' && st.step !== 'done', cur, deck, chips,
       toPath: () => { if (!locked) this.setState({ step: 'path' }); }, backPick: () => this.setState({ step: 'pick' }),
@@ -514,7 +509,7 @@ class Component extends DCLogic {
       // 공격력 / 꽝
       dmgTag: res === 0 ? 'NO LUCK' : stat.en + ' UP', dmgEdge: res === 0 ? '#8a849a' : '#ffd86a',
       dmgTitle: res === 0 ? '꽝 — 아무것도 오르지 않았다' : `${stat.word} +${res}!`, dmgAfter: res === 0 ? (c.dm == null ? '—' : String(c.dm)) : dmgAfter,
-      dmgNote: res === 0 ? (st.path === 'range' ? '범위를 노렸지만 0이 나왔다. 강화 기회는 사용됐다.' : '강화 기회는 사용됐다. 다음 모닥불이나 상점에서 다시.') : '바로 적용된다. 범위는 그대로.',
+      dmgNote: res === 0 ? (st.path === 'range' ? '범위를 노렸지만 0이 나왔다. 50골드는 사용됐다.' : '50골드는 사용됐다. 다시 맡기려면 또 50골드.') : '바로 적용된다. 범위는 그대로.',
       dmgBtn: res === 0 ? '확인' : '저장 ✓',
       saveDmg: () => {
         const s = Object.assign({}, st.saved);

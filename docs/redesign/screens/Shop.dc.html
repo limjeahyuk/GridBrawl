@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>상점</title>
+<title>상점 (여관)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -12,55 +12,41 @@
 <style>
 body{margin:0}
 a{color:#f4d470}a:hover{color:#fff1b8}
-.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
-.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}
-.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}
-.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
 .px{background-repeat:no-repeat;image-rendering:pixelated}
 .bag{background-image:url(/redesign/ui/map-icons/merchant.png);background-size:168px 144px;background-position:center}
 .coin{background-image:url(/redesign/ui/map-icons/merchant.png);background-size:20px 17px;background-position:center;width:20px;height:20px;flex-shrink:0}
 .rf3{width:78px;height:78px;background-image:url(/redesign/ui/relics/atlas-full.png);background-size:780px 780px}
-.item{position:relative;width:170px;height:250px;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:8px;background:#1a1626;border:3px solid #3a3150;color:#efe9f5;font:inherit;text-align:left;cursor:pointer}
+.item{position:relative;width:170px;height:250px;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:8px;background:rgba(26,18,14,0.94);border:3px solid #5a3e2a;box-shadow:0 5px 0 rgba(0,0,0,0.45);color:#efe9f5;font:inherit;text-align:left;cursor:pointer}
 .item:hover{border-color:#f4d470;transform:translateY(-4px)}
 .item:disabled{cursor:not-allowed;transform:none}
 .spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite;animation-name:f6;animation-timing-function:steps(6)}
 @keyframes f6{to{background-position:120% 0}}
-.tr-idle{background-image:url(/redesign/sprites/trader/idle.png)}
-.anvil{background-image:url(/redesign/ui/rest/anvil.png);background-size:54px 48px;width:54px;height:48px;image-rendering:pixelated}
+.bg{position:absolute;inset:0;background-image:url(/redesign/cutscene/shopkeeper/shopkeeper.png);background-size:1700px auto;background-position:-420px -443px;background-repeat:no-repeat}
 .price{display:flex;align-items:center;justify-content:center;gap:6px;height:34px;margin-top:auto;background:#2a1c10;border:2px solid #c9952f;font-family:'Silkscreen',monospace;font-size:16px;color:#ffd86a}
 </style>
 </helmet>
-<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #0c0a12; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
-  <div class="layer l-wall" aria-hidden="true"></div>
-  <div class="layer l-light" aria-hidden="true"></div>
-  <div class="layer l-floor" aria-hidden="true"></div>
-  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(10,8,16,0.55)"></div>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #1a100a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="bg" role="img" aria-label="여관 — 여관 주인 마렌"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,6,4,0.1) 0%, rgba(10,6,4,0.2) 38%, rgba(10,6,4,0.82) 52%, rgba(10,6,4,0.88) 100%)"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,6,4,0.65) 0%, rgba(10,6,4,0) 16%)"></div>
 
-  <header style="position: absolute; left: 32px; right: 32px; top: 22px; display: flex; justify-content: space-between; align-items: center">
-    <div style="display: flex; align-items: baseline; gap: 12px"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">상점</h1><span style="font-size: 14px; color: #c9c4ee">던전 · 10층</span></div>
+  <header style="position: absolute; left: 32px; right: 32px; top: 20px; display: flex; justify-content: space-between; align-items: center">
+    <div style="display: flex; align-items: baseline; gap: 12px"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc; text-shadow: 3px 3px 0 #0a0604">상점</h1><span style="font-size: 14px; color: #ffd8a8; text-shadow: 2px 2px 0 #0a0604">여관 · 초원 4층</span></div>
     <div style="display: flex; gap: 12px; align-items: center">
-      <span style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #2a1c10; border: 2px solid #c9952f"><span class="px coin" aria-hidden="true"></span><span style="font-family: 'Silkscreen', monospace; font-size: 20px; color: #ffd86a">96</span></span>
+      <span style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(42,28,8,0.92); border: 2px solid #c9952f"><span class="px coin" aria-hidden="true"></span><span style="font-family: 'Silkscreen', monospace; font-size: 20px; color: #ffd86a">96</span></span>
       <span style="padding: 8px 14px; background: rgba(18,15,26,0.9); border: 2px solid #4a4058; font-family: 'Silkscreen', monospace; font-size: 14px; color: #ffb0b0">HP 70/103</span>
-      <a href="RunMap.dc.html" style="padding: 9px 18px; background: rgba(18,15,26,0.9); border: 2px solid #4a4058; font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #efe9f5; text-decoration: none">떠나기 →</a>
+      <a href="Inn.dc.html" style="padding: 9px 18px; background: rgba(20,14,12,0.9); border: 2px solid #6a4a30; font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #fff6dc; text-decoration: none">← 여관으로</a>
     </div>
   </header>
 
-  <aside style="position: absolute; left: 40px; top: 96px; width: 240px; display: flex; flex-direction: column; align-items: center; gap: 12px">
-    <div style="position: relative; width: 240px; height: 236px; display: flex; justify-content: center; align-items: flex-end">
-      <span aria-hidden="true" style="position: absolute; left: 30px; right: 30px; bottom: 0; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.45)"></span>
-      <div class="spr tr-idle" role="img" aria-label="떠돌이 상인 마렌" style="position: relative; width: 192px; height: 228px; background-size: 1152px 228px; animation-duration: 960ms"></div>
-    </div>
-    <div style="position: relative; width: 100%; box-sizing: border-box; padding: 14px 16px; background: #e8dcc0; color: #2a1c14; border: 3px solid #0a0810">
-      <span aria-hidden="true" style="position: absolute; left: 50%; top: -11px; width: 14px; height: 14px; margin-left: -7px; background: #e8dcc0; transform: rotate(45deg); border-left: 3px solid #0a0810; border-top: 3px solid #0a0810"></span>
-      <b style="font-family: 'Do Hyeon', sans-serif; font-size: 19px; font-weight: 400">떠돌이 상인 마렌</b>
-      <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.55">"골드만 있으면 뭐든 내주지. 피 흘리는 얼굴이면 약부터 보시게."</p>
-    </div>
-    <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #c9c2d6">덱이 꽉 찼으면 카드를 살 때 한 장과 바꾼다. 진열은 이 상점을 나갈 때까지 유지.</p>
-  </aside>
+  <section style="position: absolute; left: 36px; bottom: 30px; width: 520px; box-sizing: border-box; padding: 26px 22px 16px; background: rgba(16,10,8,0.9); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px #c9952f, 0 8px 0 rgba(0,0,0,0.4)">
+    <span style="position: absolute; left: 18px; top: -20px; padding: 3px 14px; background: #7a2a1a; border: 3px solid #0a0604; font-family: 'Do Hyeon', sans-serif; font-size: 21px; color: #fff6dc">마렌</span>
+    <p style="margin: 0; font-size: 17px; line-height: 1.6; color: #fff6dc">"천천히 둘러보세요. 덱이 꽉 찼으면 한 장이랑 바꿔 드릴게요."</p>
+  </section>
 
-  <main style="position: absolute; left: 316px; top: 120px; right: 40px; display: flex; flex-direction: column; gap: 18px">
+  <main style="position: absolute; left: 610px; top: 104px; right: 36px; display: flex; flex-direction: column; gap: 16px">
     <section aria-label="카드" style="display: flex; flex-direction: column; gap: 10px">
-      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">카드 <span style="font-size: 13px; color: #b9b1c9">· 한 장 35</span></h2>
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 24px; color: #fff6dc">카드 <span style="font-size: 13px; color: #d8c8b8">· 한 장 35</span></h2>
       <div style="display: flex; gap: 14px">
         <sc-for list="{{cards}}" as="c" hint-placeholder-count="3">
           <button type="button" class="item" disabled="{{c.sold}}" style="opacity: {{c.op}}">
@@ -74,39 +60,21 @@ a{color:#f4d470}a:hover{color:#fff1b8}
         </sc-for>
       </div>
     </section>
-    <div style="display: flex; gap: 28px">
-      <section aria-label="유물" style="display: flex; flex-direction: column; gap: 10px">
-        <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">유물 <span style="font-size: 13px; color: #b9b1c9">· 등급별 60 / 95 / 145 / 230</span></h2>
-        <button type="button" class="item" style="width: 330px; height: 150px; flex-direction: row; align-items: center; gap: 14px; border-color: #6ab8ff">
-          <span class="px rf3" aria-hidden="true" style="background-position: -468px -234px; flex-shrink: 0"></span>
-          <span style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1; height: 100%">
-            <span style="display: flex; gap: 6px; align-items: center"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 21px">흡성의 룬</span><span style="font-size: 11px; padding: 1px 6px; background: #6ab8ff; color: #0c1e34">희귀</span></span>
-            <span style="font-size: 12px; line-height: 1.5; color: #e4def0">공격으로 피해를 주면 체력 5 회복.</span>
-            <span class="price"><span class="px coin" aria-hidden="true"></span>95</span>
-          </span>
-        </button>
-      </section>
-      <section aria-label="회복" style="display: flex; flex-direction: column; gap: 10px">
-        <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">회복 <span style="font-size: 13px; color: #b9b1c9">· 두 번까지</span></h2>
-        <div style="display: flex; gap: 14px">
-          <sc-for list="{{heals}}" as="h" hint-placeholder-count="2">
-            <button type="button" class="item" style="width: 160px; height: 150px; align-items: center; opacity: {{h.op}}" disabled="{{h.off}}">
-              <span class="px rf3" aria-hidden="true" style="width: 52px; height: 52px; background-size: 520px 520px; background-position: -364px -52px"></span>
-              <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">물약 · HP +25</span>
-              <span class="price" style="width: 100%"><span class="px coin" aria-hidden="true"></span>{{h.price}}</span>
-            </button>
-          </sc-for>
-        </div>
-      </section>
-      <section aria-label="강화" style="display: flex; flex-direction: column; gap: 10px">
-        <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">강화 <span style="font-size: 13px; color: #b9b1c9">· 한 번</span></h2>
-        <a href="Upgrade.dc.html" class="item" style="width: 180px; height: 150px; align-items: center; text-decoration: none; border-color: #c9952f">
-          <span class="anvil" aria-hidden="true"></span>
-          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">카드 강화 · 룰렛</span>
-          <span class="price" style="width: 100%"><span class="px coin" aria-hidden="true"></span>50</span>
-        </a>
-      </section>
-    </div>
+    <section aria-label="유물" style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 24px; color: #fff6dc">유물 <span style="font-size: 13px; color: #d8c8b8">· 등급별 60 / 95 / 145 / 230</span></h2>
+      <div style="display: flex; gap: 14px">
+        <sc-for list="{{relics}}" as="r" hint-placeholder-count="2">
+          <button type="button" class="item" style="width: 298px; height: 140px; flex-direction: row; align-items: center; gap: 12px; border-color: {{r.edge}}">
+            <span class="px rf3" aria-hidden="true" style="background-position: {{r.pos}}; flex-shrink: 0"></span>
+            <span style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1; height: 100%">
+              <span style="display: flex; gap: 6px; align-items: center"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px">{{r.name}}</span><span style="font-size: 11px; padding: 1px 6px; background: {{r.edge}}; color: {{r.tagFg}}">{{r.rarity}}</span></span>
+              <span style="font-size: 12px; line-height: 1.5; color: #e4def0">{{r.desc}}</span>
+              <span class="price"><span class="px coin" aria-hidden="true"></span>{{r.price}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
   </main>
 </div>
 </x-dc>
@@ -119,8 +87,11 @@ class Component extends DCLogic {
       { name: '대지 가르기', dm: 'DM14', en: 'EN12', grid: [H, E, H, H, S, H, H, E, H], desc: '세로 3줄 · 맞으면 기절.', price: '판매 완료', strip: '#8a3040', sold: true, op: 0.4 },
       { name: '방패 돌진', dm: 'DM15', en: 'EN13', grid: [E, E, E, H, S, H, E, E, E], desc: '두 칸 파고들며 훑는다 · 넉백.', price: '35', strip: '#8a3040', sold: false, op: 1 },
     ];
-    const heals = [{ price: '30', op: 1, off: false }, { price: '30', op: 1, off: false }];
-    return { cards, heals };
+    const relics = [
+      { name: '흡성의 룬', rarity: '희귀', edge: '#6ab8ff', tagFg: '#0c1e34', pos: '-468px -234px', desc: '공격으로 피해를 주면 체력 5 회복.', price: '95' },
+      { name: '두꺼운 판금', rarity: '일반', edge: '#8a849a', tagFg: '#120f1a', pos: '-234px 0px', desc: '받는 피해 -3.', price: '60' },
+    ];
+    return { cards, relics };
   }
 }
 </script>

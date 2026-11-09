@@ -1,20 +1,13 @@
-# 상점 캐릭터 — 떠돌이 상인 마렌 · 고블린 장사꾼
+# 고블린 장사꾼
 
-시안: `screens/Shop.dc.html`(마렌), `screens/GoblinShop.dc.html`(고블린 상점, 눌러 볼 수 있음), `screens/Merchants.dc.html`(스프라이트 전체).
-스프라이트: `public/redesign/sprites/{trader, goblin-poor, goblin-mid, goblin-rich}/` — `meta.json` 값은 `sprites-v2.ts`에 들어 있다.
+시안: `screens/GoblinShop.dc.html`(고블린 상점, 눌러 볼 수 있음), `screens/Merchants.dc.html`(스프라이트 전체).
+스프라이트: `public/redesign/sprites/{goblin-poor, goblin-mid, goblin-rich}/` — `meta.json` 값은 `sprites-v2.ts`에 들어 있다.
 
 > ⚠ 아래 숫자(체력·가격·문턱·보상)는 **시안에서 임의로 정한 값**이다. 규칙의 모양만 지키면 밸런스는 바꿔도 된다.
 
 ## 1. 누가 어디서 나오나
 
-| | 마렌 (`trader`) | 고블린 장사꾼 (`goblin-*`) |
-| --- | --- | --- |
-| 나오는 곳 | 지도의 **상점 칸** | **? 칸**이 상점으로 판정됐을 때 |
-| 전투 | 없음 | **덮친다**를 고르면 그 자리에서 전투 |
-| 클립 | `idle` 기본 · `talk` 대사 · `offer` 물건에 손/커서를 올리면 · `bow` 산 직후 1회 | 상점: `haggle` 기본 · `cheer` 살 때마다 1회 / 전투: `idle run back attack1 attack2 hurt death` |
-| 크기 | 64×76 ×3 | 84×58 ×3 (일반 고블린 72×48보다 조금 큼) |
-
-`ClipName`에 `haggle` · `cheer` · `talk` · `offer` · `bow`를 추가해야 한다.
+`ClipName`에 `haggle` · `cheer`를 추가해야 한다. (상점 칸 주인은 `public/redesign/cutscene/shopkeeper/` — 별도 도트 상반신)
 
 ## 2. 고블린 재산 — 쓸수록 부자가 된다
 

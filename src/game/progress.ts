@@ -80,3 +80,8 @@ export const markRelicsSeen = (ids: string[]) => addToSet(RELIC_KEY, ids)
 /** 한 번 본 적 능력은 다음에 만나도 처음부터 보인다. 키는 `<몬스터 id>:<훅 이름>`. */
 export const seenFoeAbilities = () => readSet(FOE_KEY)
 export const markFoeAbilitySeen = (keys: string[]) => addToSet(FOE_KEY, keys)
+
+/** 만난 몬스터(2026-11 도감 몬스터 탭). 런 전투에 들어갈 때 등록된다. */
+const MONSTER_KEY = 'gb-monsters-seen'
+export const seenMonsters = () => readSet(MONSTER_KEY)
+export const markMonsterSeen = (id: string) => addToSet(MONSTER_KEY, [id])

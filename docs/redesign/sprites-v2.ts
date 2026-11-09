@@ -1,6 +1,6 @@
 // 자동 생성 — public/redesign/sprites/*/meta.json 에서 뽑은 값 (tools: redesign/build_all.py)
 // 기존 SHEETS와 같은 SheetDef 모양. 경로는 'redesign/sprites/<id>'라 sheet id 앞에 접두사를 붙였다.
-// ⚠ 'back'(후퇴 걸음) 클립이 새로 생겼다. 상점 캐릭터용 'haggle'·'cheer'(고블린)·'talk'·'offer'·'bow'(마렌)도 ClipName에 추가할 것 — ClipName에 'back'을 추가하고, 이동 카드가 뒤로 갈 때 재생하면 된다.
+// ⚠ 'back'(후퇴 걸음) 클립이 새로 생겼다. 고블린 상점용 'haggle'·'cheer'도 ClipName에 추가할 것 — ClipName에 'back'을 추가하고, 이동 카드가 뒤로 갈 때 재생하면 된다.
 import type { SheetDef } from './sprites'
 
 export const SHEETS_V2: Record<string, SheetDef> = {
@@ -40,9 +40,6 @@ export const SHEETS_V2: Record<string, SheetDef> = {
   // boss · dungeon — 대체 대상: overlord
   overlord: { id: 'redesign/sprites/overlord', frameW: 176, frameH: 128, scale: 2, footY: 128, anchorX: 71, facesRight: true,
     clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 75, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 85, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 100, loop: false }, death: { frames: 8, frameMs: 115, loop: false } } },
-  // npc · 상점 탭 — 떠돌이 상인 마렌 (전투 없음)
-  'trader': { id: 'redesign/sprites/trader', frameW: 64, frameH: 76, scale: 3, footY: 75, anchorX: 27, facesRight: true,
-    clips: { idle: { frames: 6, frameMs: 160, loop: true }, talk: { frames: 6, frameMs: 120, loop: true }, offer: { frames: 6, frameMs: 110, loop: false, impactFrame: 2 }, bow: { frames: 6, frameMs: 120, loop: false } } },
   // merchant · ? 칸 — 가난한 고블린
   'goblin-poor': { id: 'redesign/sprites/goblin-poor', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 38, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },

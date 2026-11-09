@@ -1,9 +1,8 @@
 import json, os
 from pix import save_sheet, preview
-import mon_merchant, npc_trader
+import mon_merchant
 OUT = 'out'
 SHEETS = [
-    ('trader', npc_trader.clips, 3, 'npc', None, None),
     ('goblin-poor', mon_merchant.poor_clips, 3, 'merchant', None, None),
     ('goblin-mid', mon_merchant.mid_clips, 3, 'merchant', None, None),
     ('goblin-rich', mon_merchant.rich_clips, 3, 'merchant', None, None),

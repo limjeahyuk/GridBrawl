@@ -7,10 +7,9 @@
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
-import { upgradedCard } from '../../game/upgrades'
 import { resolveRunCard } from '../../game/runcards'
 import {
-  advanceFloor, cardLevel, grantCard, grantRelic, rollRewards, runCard, skipRewardForHeal,
+  advanceFloor, grantCard, grantRelic, rollRewards, runCard, skipRewardForHeal,
   SKIP_HEAL, type Reward, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
@@ -90,14 +89,11 @@ export function RewardScreen({
           }
           const base = resolveRunCard(run.charId, r.cardId)
           if (!base) return null
-          // 이미 덱에 있으면 이 칸은 "새 카드"가 아니라 "강화"다 — 받은 뒤의 모습을
-          // 그대로 보여 준다. 무엇이 오르는지는 카드 앞면의 ⬆ 줄이 말해 준다.
-          const owned = run.deck.includes(r.cardId)
-          const c = owned ? upgradedCard(base, cardLevel(run, r.cardId) + 1) : base
+          const c = base
           return (
             <button
               key={i}
-              className={`reward__opt reward__card ${owned ? 'reward__card--upgrade' : ''}`}
+              className="reward__opt reward__card"
               style={{ ['--accent' as string]: cardAccent(c, char.accent) }}
               {...zoom.bind(c)}
               onClick={() => {
@@ -105,7 +101,6 @@ export function RewardScreen({
                 take(r)
               }}
             >
-              {owned && <span className="reward__uptag">강화</span>}
               <CardFace card={c} accent={cardAccent(c, char.accent)} compact />
             </button>
           )

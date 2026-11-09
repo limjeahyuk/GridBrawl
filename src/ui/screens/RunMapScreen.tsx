@@ -33,6 +33,8 @@ const NODE_ICON: Record<RunNode['type'], string> = {
   boss: 'boss',
   event: 'unknown',
   shop: 'merchant',
+  rest: 'rest',
+  treasure: 'treasure',
 }
 const NODE_LABEL: Record<RunNode['type'], string> = {
   combat: '적',
@@ -40,16 +42,20 @@ const NODE_LABEL: Record<RunNode['type'], string> = {
   boss: '보스',
   event: '미지',
   shop: '상인',
+  rest: '휴식',
+  treasure: '보물',
 }
 /** 그 칸을 고르면 무엇을 얻는지 — 몬스터 칸은 이름·체력이 이 자리에 대신 온다. */
 const NODE_HINT: Record<RunNode['type'], string> = {
   combat: '일반 전투 · 카드 보상',
   elite: '강한 적 · 유물 보상',
   boss: '마지막 관문',
-  event: '대가를 치르면 보상',
-  shop: '카드 · 유물 구매',
+  event: '이벤트 · 전투 · 상인 · 휴식 중 하나',
+  shop: '카드 · 유물 구매 · 카드 강화',
+  rest: '체력 회복 또는 카드 강화',
+  treasure: '유물 상자 하나',
 }
-const LEGEND: RunNode['type'][] = ['event', 'shop', 'combat', 'elite', 'boss']
+const LEGEND: RunNode['type'][] = ['event', 'shop', 'treasure', 'rest', 'combat', 'elite', 'boss']
 
 const REGIONS = {
   grassland: { label: '초원', from: 1, to: GRASSLAND_LAST_FLOOR },

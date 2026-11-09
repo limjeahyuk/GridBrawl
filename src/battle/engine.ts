@@ -118,6 +118,12 @@ export interface BattleOpts {
    * 시작 셀과 겹치는 바위는 생성자가 버린다(파이터가 바위 위에 설 수는 없다).
    */
   obstacles?: readonly Obstacle[]
+  /**
+   * 시작 상태이상(**런 전용**, 2026-11 — 항아리 이벤트의 "중독된 채로 싸운다").
+   * PvP·봇전은 절대 채우지 않으므로 규칙이 거기선 no-op이다(`RULES_VERSION` 무관 —
+   * `obstacles`와 같은 근거).
+   */
+  startStatus?: [StatusEffect[] | undefined, StatusEffect[] | undefined]
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -189,7 +195,7 @@ export class CardBattle {
       stunsUsed: [0, 0],
       freezesUsed: [0, 0],
       empowered: [0, 0],
-      status: [[], []],
+      status: [opts?.startStatus?.[0]?.map((e) => ({ ...e })) ?? [], opts?.startStatus?.[1]?.map((e) => ({ ...e })) ?? []],
       obstacles,
       fog: [],
       round: 1,

@@ -1,6 +1,6 @@
 # 화면 디자인 → 코드 옮기기 가이드
 
-이 폴더의 `*.dc.html` 32개가 **GridBrawl 리디자인의 최종 화면 시안**이다(디자인 캔버스에서 내보낸 원본).
+이 폴더의 `*.dc.html` 33개가 **GridBrawl 리디자인의 최종 화면 시안**이다(디자인 캔버스에서 내보낸 원본).
 "docs/redesign/screens 보고 이대로 만들어줘"라는 요청을 받으면 **이 파일을 먼저 읽고**, 아래 표에서 해당 화면 파일과 대응 코드 파일을 찾아 작업한다.
 
 ## 파일 읽는 법
@@ -19,16 +19,17 @@
 | `Login.dc.html` | `screens/LoginScreen.tsx` | Google 버튼 자리는 **Google 공식 Sign-In 버튼 에셋**으로 교체 · 게스트 버튼 |
 | `Select.dc.html` → `Difficulty.dc.html` | `screens/RunStartScreen.tsx` (+ `ModeSelectScreen.tsx`) | 영웅 선택 → **별도 단계로** 난이도 선택. 상단 단계 표시(영웅 ✓ · 난이도 · 출발). 난이도 데이터는 `game/run.ts`의 `RUN_DIFFICULTIES`, 잠금은 `progress.ts` |
 | `Tutorial.dc.html`, `TutorialFlow.dc.html` | `screens/TutorialScreen.tsx` | 9단계 스포트라이트 온보딩(4단계 이동 = **판의 노란 칸 누르기**). 단계 데이터는 `Tutorial.dc.html`의 `renderVals()` 배열 `S`, 순서·성공 조건은 `TutorialFlow` |
-| `RunMap.dc.html` | `screens/RunMapScreen.tsx`, `RunBar.tsx` | 갈림길 지도: 갈 수 있는 칸만 깜빡이고 눌러서 이동. 범례 7종. 아이콘 `public/redesign/ui/map-icons/` |
+| `RunMap.dc.html` | `screens/RunMapScreen.tsx`, `RunBar.tsx` | 갈림길 지도: 갈 수 있는 칸만 깜빡이고 눌러서 이동. 범례 7종(미지 · 여관 · 보물 · 대장장이 · 적 · 엘리트 · 보스). 아이콘 `public/redesign/ui/map-icons/` |
 | `BattleField.dc.html`, `BattleDungeon.dc.html` | `screens/BattleScreen.tsx`, `battlefx.css` | 지역별 배경 레이어, 상태바, 판, 손패·순서 칸 |
 | `MoveBundle.dc.html`, `MoveBundleSpec.dc.html` | `BattleScreen.tsx`(손패 `.cards__row`, `moveTargets`), `battlefx.css` | **이동 카드는 손패에 펼치지 않고 묶음 1장**(112×120, 순서 칸 바로 오른쪽). 앞면 = 장화 아이콘 + `×N` + 3×3 방향 나침반(파랑 준비 · 주황 테 대시 · 숫자 쿨 · 금 담김) + 준비/쿨 개수. 누르면 위로 펼쳐져 이동 카드 전부(준비/쿨 N/막힘/N번 칸) — 눌러 담기, 꾹 눌러 상세. 판: 1칸 = 노랑, 대시·특수 = 주황 + `CD` 라벨, 함정 칸은 빨간 경고 칩, 못 가는 칸을 누르면 이유 토스트. 순서 칸의 이동은 사거리 대신 큰 화살표. 잔상 + 발자국 번호로 경로 표시. 속박이면 묶음에 붉은 빗금 |
 | `OneCell.dc.html`, `Hazards.dc.html` | `BattleScreen.tsx`(지형 렌더), `battlefx.css`(`.rock` 등) | **1칸 함정은 `hazards-cell/`을 쓴다**: 184×96, 칸 왼쪽 위에 맞추고 `top = 칸 top − 36px`. 128px판(`hazards/`)은 예전 규격 |
 | `RelicsHUD.dc.html` | `BattleScreen.tsx`(상태바 아래 유물 줄), `RunBar.tsx`(지도) | 상태 7종(상시·발동·누적·횟수·조건·첫 라운드·런) 표시 규칙과 발동 애니메이션 CSS(`pop`, `burst`, `rise`) |
 | `BossHUD.dc.html` | `BattleScreen.tsx` | 보스·적 능력은 **? 칸으로 시작 → 처음 발동 때 뒤집혀 공개**(`flip`, 붉은 띠) |
 | `Reward.dc.html` | `screens/RewardScreen.tsx` | 골드는 항상 지급. 일반 = 카드 5장 중 1, 엘리트 = 카드 4장 + 유물 1 중 1. 건너뛰기 = 회복 |
-| `Shop.dc.html` | `screens/ShopScreen.tsx` | 왼쪽 상인은 **마렌**(`sprites/trader`, idle·talk·offer·bow). 진열은 `run.ts`의 `rollShop`(카드 3·유물 1·회복 2) 그대로 |
+| `Shop.dc.html` | `screens/ShopScreen.tsx` | **여관 안 상점.** 배경은 여관 그림(`public/redesign/cutscene/shopkeeper/shopkeeper.png`) 전체, 진열은 카드 3 · 유물 2(회복 · 강화 칸 없음). 위쪽 "← 여관으로" |
 | `GoblinShop.dc.html`, `Merchants.dc.html` | `screens/EventScreen.tsx`(? → 상점 판정), 새 고블린 상점 화면, `monsters.ts` | **? 칸 상점 = 고블린 장사꾼**. 만남(거래 · 덮친다 · 지나간다) → 거래 / 습격. 런 동안 쓴 돈 `goblinSpent`로 가난(0) → 중간(80) → 부자(200), 덮쳐서 이기면 0 → 이후 고블린 상점은 가난부터. 값은 단계 무관 물건마다 정가 ×0.8~1.5, 단계마다 다른 건 진열 품목·전투력 — 규칙과 데이터는 `docs/redesign/GOBLIN_MERCHANT.md` |
-| `Rest.dc.html`, `Upgrade.dc.html` | 휴식 화면, 새 강화 화면, `ShopScreen.tsx`(강화 50 칸), `game/upgrades.ts` | **룰렛 카드 강화**: 카드(이동만 불가) → 수치(공격력·방어량·회복량) / 범위(공격만) → 60칸 룰렛(수치 판 0/+5/+10/+15/+20 · 범위 판 0~5) → 수치는 +값, 범위는 붙은 칸 N개를 직접 골라 저장. **카드당 최대 2번**, 같은 카드 중복 강화는 없앰(앞뒤 대칭 토글 · 되돌리기 · 판 미리보기). 규칙은 `docs/redesign/CARD_UPGRADE.md` |
+| `Inn.dc.html`, `Blacksmith.dc.html` | 새 여관 · 대장장이 화면, `RunMapScreen.tsx`(지도 칸 `inn` · `smith`) | **지도의 상점 · 휴식 칸 → 여관 · 대장장이.** 여관 = 휴식 50G(최대 체력 20%) · 상점 · 나가기(5%), 배경은 여관 그림을 **화면 전체**에 깔고 대사창과 선택지를 위에 올린다. 대장장이 = 카드 강화 50G · 나가기. 규칙은 `docs/redesign/INN_SMITH.md` |
+| `Upgrade.dc.html` | 새 강화 화면(대장장이에서 50G), `game/upgrades.ts` | **룰렛 카드 강화**: 카드(이동만 불가) → 수치(공격력·방어량·회복량) / 범위(공격만) → 60칸 룰렛(수치 판 0/+5/+10/+15/+20 · 범위 판 0~5) → 수치는 +값, 범위는 붙은 칸 N개를 직접 골라 저장. **카드당 최대 2번**, 같은 카드 중복 강화는 없앰(앞뒤 대칭 토글 · 되돌리기 · 판 미리보기). 규칙은 `docs/redesign/CARD_UPGRADE.md` |
 | `EventsQ.dc.html`, `EventCatalog.dc.html` | `screens/EventScreen.tsx`, 이벤트 데이터 | **? 이벤트 8종**(대장장이 · 거래 · 온천 · 약방 · 항아리 · 갓챠 · 두더지 · 수술실). 선택지엔 **대가만** 보이고 결과는 고른 뒤 공개, 히든 선택지는 자물쇠로 잠금. 목록·규칙은 `docs/redesign/EVENTS.md`, 데이터는 `docs/redesign/events.json` — 새 이벤트도 여기에 추가 |
 | `Event.dc.html` | `screens/EventScreen.tsx` | ? 칸 정체 공개 → 대화 → 결과 3단계. 선택지마다 대가·보상 칩을 먼저 보여준다 |
 | `CardDetail.dc.html` | `CardDetail.tsx`, `CardFace.tsx` | 길게 누르기(≈0.4초 링) → 큰 카드 + 5×3 사거리 + 수치 + 용어 + "지금 쓰면" 미니 판 |

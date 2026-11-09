@@ -380,6 +380,31 @@ export const MONSTERS: MonsterDef[] = [
     terrain: 'lavaslab',
     note: '엘리트 — 불씨를 모을수록 무거워진다. 길게 끌면 인페르노가 터진다.',
   },
+  // --- ? 칸 전용(2026-11 리디자인) -------------------------------------------
+  // tier 0 — 티어 풀(`monstersOfTier`)에 안 잡혀 일반 칸엔 안 나온다. 고블린은 ? 칸의
+  // 고블린 상점을 **덮쳤을 때만**(`startAmbush`), 뱀은 항아리 이벤트에서만 나온다.
+  // 수치는 기획서(GOBLIN_MERCHANT.md · EVENTS.md)의 **시안 값** 그대로다.
+  {
+    id: 'goblin-poor', name: '가난한 고블린', baseArtId: 'mage', spriteId: 'goblin-poor', tier: 0,
+    maxHp: 28, startEnergy: 20, aiLevel: 'easy', behavior: 'skirmisher', passive: {},
+    deckCardIds: ['c-shot', 'c-jab'], note: '가진 게 없어 돌을 던지며 도망친다.',
+  },
+  {
+    id: 'goblin-mid', name: '중간 고블린', baseArtId: 'mage', spriteId: 'goblin-mid', tier: 0,
+    maxHp: 52, startEnergy: 26, aiLevel: 'normal', behavior: 'rusher', passive: { turnShield: 4 },
+    deckCardIds: ['war-cleave', 'c-jab', 'c-guard'], note: '단골이 강도로 돌변하면 언월도를 뽑는다.',
+  },
+  {
+    id: 'goblin-rich', name: '부자 고블린', baseArtId: 'mage', spriteId: 'goblin-rich', tier: 0,
+    maxHp: 88, startEnergy: 32, aiLevel: 'hard', behavior: 'balanced',
+    passive: { damageReduction: 3, turnEnergy: 6, attackBonus: 3 },
+    deckCardIds: ['war-bash', 'war-cleave', 'arc-shot', 'c-brace'], note: '돈으로 산 갑옷과 금화 세례. 엘리트급.',
+  },
+  {
+    id: 'snake', name: '동굴 뱀', baseArtId: 'archer', spriteId: 'snake', tier: 0,
+    maxHp: 34, startEnergy: 22, aiLevel: 'normal', behavior: 'skirmisher', passive: { poisonOnHit: 1 },
+    deckCardIds: ['c-jab', 'arc-venom'], note: '항아리 속에서 독이 올랐다. 물리면 중독된다.',
+  },
 ]
 
 export const MONSTER_BY_ID: Record<string, MonsterDef> = Object.fromEntries(
