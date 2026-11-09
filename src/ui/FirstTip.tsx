@@ -5,7 +5,7 @@ import { markTipSeen, seenTips } from '../game/progress'
 
 export type TipId = 'map' | 'question' | 'shop' | 'elite' | 'collapse' | 'boss' | 'energy' | 'longpress' | 'status'
 export const TIPS: Record<TipId, { title: string; body: string }> = {
-  map: { title: '갈림길은 직접 고른다', body: '빛나는 칸이 지금 갈 수 있는 곳이다. 오른쪽 범례가 칸 종류 — 여관·대장장이를 노리려면 몇 층 전부터 그 줄을 타자.' },
+  map: { title: '갈림길은 직접 고른다', body: '빛나는 칸이 지금 갈 수 있는 곳이다. 오른쪽 범례가 칸 종류 — 여관·대장간을 노리려면 몇 층 전부터 그 줄을 타자.' },
   question: { title: '? 칸은 들어가 봐야 안다', body: '전투 · 휴식 · 고블린 상점 · 이벤트 중 하나. 무엇이 나올지는 정체가 공개되는 순간 정해진다.' },
   // id는 'shop' 그대로(기기에 남은 `gb-tips-seen` 기록) — 2026-11-09부터 여관에서 뜬다.
   shop: { title: '여관에선 쉬거나 산다', body: '휴식(50골드)은 최대 체력의 20%를 채우고 방문을 끝낸다. 상점은 들렀다 돌아올 수 있다. 그냥 나가도 5%는 회복된다.' },

@@ -40,7 +40,7 @@
  "events": [
   {
    "id": "EV-FORGE",
-   "name": "대장장이",
+   "name": "낡은 대장간",
    "mode": "once",
    "art": {
     "src": "/redesign/ui/events/forge.png",

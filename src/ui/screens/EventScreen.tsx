@@ -1,5 +1,5 @@
 // ? 칸 이벤트(디자인 `EventsQ` · 규칙 `docs/redesign/EVENTS.md`). 로직은 `game/events.ts`.
-// 선택지엔 대가만 → 고른 뒤 결과 공개. 반복 이벤트는 "계속하기", 대장장이는 룰렛 강화로,
+// 선택지엔 대가만 → 고른 뒤 결과 공개. 반복 이벤트는 "계속하기", 낡은 대장간은 룰렛 강화로,
 // 항아리는 뱀 전투로 이어진다.
 import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'

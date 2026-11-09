@@ -43,6 +43,7 @@ import {
   innLeave,
   innRestPrice,
   paySmith,
+  smithPass,
   rollQuestionFate,
   ambushFight,
   goblinTier,
@@ -338,11 +339,10 @@ function doInn(run: RunState): RunState {
   }
   return advanceFloor((wantRest() && innRest(cur)) || innLeave(cur))
 }
-/** 대장장이 — 돈이 있으면 강화한다(random은 반반). */
+/** 대장간 — 돈이 있으면 강화, 아니면 쉬어 간다(10%). random은 반반. */
 function doSmith(run: RunState): RunState {
-  if (POLICY === 'random' && Math.random() < 0.5) return advanceFloor(run)
-  const paid = paySmith(run)
-  return advanceFloor(paid ? simUpgrade(paid) : run)
+  const paid = POLICY === 'random' && Math.random() < 0.5 ? null : paySmith(run)
+  return advanceFloor(paid ? simUpgrade(paid) : smithPass(run))
 }
 
 /** `--path` 정책대로 이번 층의 갈래를 고른다(위 PATH 주석 참고). */

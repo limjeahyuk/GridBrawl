@@ -28,7 +28,7 @@ export interface EventDef {
 }
 
 export const EVENT_DEFS: EventDef[] = [
-  { id: 'forge', code: 'EV-FORGE', name: '대장장이', mode: 'once', art: { file: 'forge', w: 64, h: 52, frames: 6, frameMs: 110 },
+  { id: 'forge', code: 'EV-FORGE', name: '낡은 대장간', mode: 'once', art: { file: 'forge', w: 64, h: 52, frames: 6, frameMs: 110 },
     text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.' },
   { id: 'trade', code: 'EV-TRADE', name: '거래', mode: 'once', art: { file: 'trader', w: 52, h: 60, frames: 1 },
     text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.' },
@@ -186,7 +186,7 @@ export interface EventOutcome {
   relicId?: string
   cardId?: string
   done: boolean
-  /** 룰렛 강화 화면으로(대장장이). */
+  /** 룰렛 강화 화면으로(낡은 대장간). */
   upgrade?: boolean
   /** 이벤트가 연 전투(항아리). */
   fight?: SpecialFight
@@ -224,7 +224,7 @@ export function resolveEventChoice(
   if (!c || c.off || c.leave) return null
   if (c.pick && !pickId) return null
   switch (key) {
-    // --- 대장장이
+    // --- 낡은 대장간
     case 'hammer':
       return { run, st, title: '망치를 들었다', body: '카드 한 장을 골라 두들긴다.', done: true, upgrade: true }
     case 'iron':

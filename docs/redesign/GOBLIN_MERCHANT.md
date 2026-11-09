@@ -7,7 +7,7 @@
 
 ## 1. 누가 어디서 나오나
 
-`ClipName`에 `haggle` · `cheer`를 추가해야 한다. (상점 칸 주인은 `public/redesign/cutscene/shopkeeper/` — 별도 도트 상반신)
+`ClipName`에 `haggle` · `cheer`를 추가해야 한다. (여관 주인 마렌은 배경 그림 `public/redesign/cutscene/inn/inn-bg.png` — 원본 `docs/redesign/2dImg/inn.png`)
 
 ## 2. 고블린 재산 — 쓸수록 부자가 된다
 

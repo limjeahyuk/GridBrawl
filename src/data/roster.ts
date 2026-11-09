@@ -361,11 +361,11 @@ export const ROSTER: CharacterDef[] = [
   {
     id: 'mage',
     name: 'DIRGE',
-    title: 'Hollow Oracle',
+    title: 'Azure Witch',
     accent: '#c9a6ff',
     accent2: '#8d6fd0',
     description:
-      '만가를 읊는 원령 무녀. 한 방은 가볍지만 판을 통째로 덮는 주문으로 도망칠 자리를 지운다. 태우고 얼려 놓은 뒤 천천히 조여드는 싸움을 한다.',
+      '금테 두른 푸른 챙모자를 눌러쓴 만가를 부르는 마녀. 푸른 보석 지팡이로 주문을 읊는다. 한 방은 가볍지만 판을 통째로 덮는 주문으로 도망칠 자리를 지운다. 태우고 얼려 놓은 뒤 천천히 조여드는 싸움을 한다.',
     maxHp: 78,
     maxEnergy: 50,
     startEnergy: 30,

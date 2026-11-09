@@ -1,4 +1,4 @@
-"""DIRGE — Hollow Oracle (mage). v2 = matches the select illustration:
+"""DIRGE — Azure Witch (mage). v2 = matches the select illustration:
 wide blue witch hat with a gold band, long black hair, blue robe with gold trim, brown corset,
 wooden staff with a blue gem; arcane-blue magic."""
 from rig import *

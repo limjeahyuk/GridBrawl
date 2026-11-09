@@ -482,12 +482,12 @@ class Component extends DCLogic {
 
     const crumbIdx = { pick: 0, path: 1, spin: 2, dmg: 3, range: 3, done: 4 }[st.step];
     const crumbs = ['카드', '강화 종류', '룰렛', '적용', '저장'].map((label, i) => ({ label: (i < crumbIdx ? '✓ ' : '') + label, bg: i === crumbIdx ? '#f4d470' : '#1a1626', fg: i === crumbIdx ? '#1d1408' : '#c9c2d6', edge: i === crumbIdx ? '#f4d470' : '#4a4058' }));
-    const isShop = true; // 강화는 대장장이에서만(50G)
+    const isShop = true; // 지도 칸 강화는 대장간에서만(50G)
     const dmgAfter = c.dm == null ? '—' : String(c.dm + (res || 0));
 
     return {
       crumbs, gold: String(st.gold),
-      srcLabel: '대장장이 · 50G', srcBg: '#2a1c08', srcFg: '#ffd86a', srcEdge: '#c9952f',
+      srcLabel: '대장간 · 50G', srcBg: '#2a1c08', srcFg: '#ffd86a', srcEdge: '#c9952f',
       srcNote: '대장장이에게 50골드를 내고 카드 한 장을 강화한다. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다. 대장간에서는 한 번만 — 강화를 마치면 바로 지도로 나간다(카드당 최대 2번).',
       leaveLabel: '← 대장간으로', exitLabel: '지도로 ▶',
       sPick: st.step === 'pick', sPath: st.step === 'path', sSpin: st.step === 'spin', sDmg: st.step === 'dmg', sRange: st.step === 'range', sDone: st.step === 'done',

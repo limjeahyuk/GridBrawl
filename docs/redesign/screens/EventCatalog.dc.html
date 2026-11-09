@@ -79,7 +79,7 @@ class Component extends DCLogic {
     const hid = (label, result, cond) => ch(label, result, '', null, { lockD: 'block', condD: 'block', cond, edge: '#c9952f' });
     const art = (cls, w, h, sc, nf) => ({ art: cls, w: w * sc, h: h * sc, bs: `${w * sc * nf}px ${h * sc}px` });
     const events = [
-      Object.assign({ id: 'EV-FORGE', name: '대장장이', kind: '한 번', kindFg: '#ff8a5a', edge: '#6a3428', glow: 'rgba(255,138,58,0.35)', text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
+      Object.assign({ id: 'EV-FORGE', name: '낡은 대장간', kind: '한 번', kindFg: '#ff8a5a', edge: '#6a3428', glow: 'rgba(255,138,58,0.35)', text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
         choices: [ch('카드라도 두들긴다', '카드 강화 화면(룰렛)'), ch('주변에 쇠라도 챙긴다', '유물 「차가운 쇠」'), hid('쇠를 두들긴다', '차가운 쇠를 잃고 쇠 유물 하나(무작위)', '「차가운 쇠」 보유')],
         note: '쇠 유물 풀: 두꺼운 판금 · 무쇠 신발 · 단단한 손잡이 · 강철 의지 · 탑 방패 · 가시 방패 · 가시 갑옷' }, art('a-forge', 64, 52, 2, 6)),
       Object.assign({ id: 'EV-TRADE', name: '거래', kind: '한 번', kindFg: '#c48aff', edge: '#4a3a6a', glow: 'rgba(196,138,255,0.3)', text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.',

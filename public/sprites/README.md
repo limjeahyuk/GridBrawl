@@ -1,5 +1,7 @@
 # 스프라이트 시트 배치 규격
 
+> ⚠ **2026-11-09** — 영웅 3명과 대부분의 몬스터는 리디자인 시트(`public/redesign/sprites/`)로 옮겨 갔고, 아무도 안 쓰게 된 폴더(bat · demon · dragon · evil-wizard · goblin · golem · huntress · ogre · slime · terrible-knight · wizard)는 지웠다. 남은 것: `medieval-warrior` · `flying-eye` · `martial-hero` · `mimic` · `angel` · `church-wizard`(아직 리디자인 그림이 없는 몬스터) · `rat`(미사용 보존) · `hero-knight`(앱 아이콘 원본). 아래 표는 그 전 기록이다.
+
 캐릭터 아트를 절차 SVG(`src/art/art.ts`)에서 픽셀 스프라이트로 옮기는 중입니다.
 정의는 [`src/art/sprites.ts`](../../src/art/sprites.ts)에 있습니다.
 

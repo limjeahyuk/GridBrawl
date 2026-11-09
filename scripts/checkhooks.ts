@@ -45,6 +45,7 @@ import {
   innLeave,
   innRestPrice,
   paySmith,
+  smithPass,
   smithPrice,
   SHOP_RELIC_SLOTS,
   hazardsFor,
@@ -1260,6 +1261,23 @@ console.log('\n함정 — 불길 · 가시덫 · 가시덩굴 · 빙판')
   check('끝열(시작 자리)엔 함정이 없다', onEdge, 0)
   const eliteRun = { ...r0, map: r0.map.map((f) => f.map((n) => ({ ...n, type: 'elite' as const }))) }
   check('엘리트 칸엔 함정 대신 바위', [0, 1, 2, 3, 4].some(() => hazardsFor(eliteRun).length > 0), false)
+
+  // AI도 함정을 안다(2026-11-09) — 걸어서 들어가지 않는다. 이동 카드만 쥐여 주고
+  // 상대와 두 칸 — 사이 칸에 덩굴을 두면 한 칸 이동(m-left)을 안 고른다(밀착 공격이 없어 상대 칸엔 안 올라선다).
+  const moves = COMMON_CARDS.filter((c) => c.kind === 'move')
+  const trapAhead = (kind: Hazard['kind'], phase?: number) =>
+    new CardBattle('warrior', 'warrior', {
+      startCells: [{ col: 2, row: 1 }, { col: 4, row: 1 }],
+      hazards: [{ kind, cell: { col: 3, row: 1 }, phase }],
+    })
+  let walkedIn = 0, walkedFree = 0
+  for (let i = 0; i < 40; i++) {
+    if (decideAI(trapAhead('bramble').state, 1, getChar('warrior'), 'hard', moves)[0]?.id === 'm-left') walkedIn++
+    if (decideAI(trapAhead('spikes', 2).state, 1, getChar('warrior'), 'hard', moves)[0]?.id === 'm-left') walkedFree++
+  }
+  check('AI는 덩굴로 걸어 들어가지 않는다', walkedIn, 0)
+  // 가시덫은 솟은 라운드에만 아프다 — 숨은 라운드엔 그냥 밟고 지나간다(위상 2 = 1라운드엔 숨음).
+  check('AI는 숨은 가시덫은 그냥 밟는다', walkedFree > 0, true)
 }
 
 // --- 룰렛 카드 강화(2026-11 리디자인) -----------------------------------------
@@ -1301,13 +1319,13 @@ console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드�
   check('나(0,0)와 이미 있는 칸은 못 고른다', [canPickCell(r, [], { df: 0, du: 0 }), canPickCell(r, [], { df: 1, du: 0 })], [false, false])
   check('편집 칸 밖은 못 고른다', canPickCell([{ df: 4, du: 0 }], [], { df: 5, du: 0 }), false)
 
-  // 대장장이 — 결제는 룰렛 전에 끝난다. 강화할 카드가 없으면 받지 않는다.
+  // 대장간 — 결제는 룰렛 전에 끝난다. 강화할 카드가 없으면 받지 않는다.
   const fresh = grantCard({ ...startRun('mage'), gold: 100 }, 'mag-spark').run
   const paid = paySmith(fresh)
-  check('대장장이 — 50골드를 받는다', paid?.gold, 100 - smithPrice(fresh))
+  check('대장간 — 50골드를 받는다', paid?.gold, 100 - smithPrice(fresh))
   const none = { ...fresh, deck: ['m-up', 'm-down', 'm-left', 'm-right'] }
-  check('강화할 카드가 없으면 대장장이가 안 받는다', paySmith(none), null)
-  check('골드가 모자라면 대장장이가 안 받는다', paySmith({ ...fresh, gold: smithPrice(fresh) - 1 }), null)
+  check('강화할 카드가 없으면 대장간이 안 받는다', paySmith(none), null)
+  check('골드가 모자라면 대장간이 안 받는다', paySmith({ ...fresh, gold: smithPrice(fresh) - 1 }), null)
 }
 
 // --- 이벤트 8종(2026-11 리디자인) -------------------------------------------------
@@ -1377,7 +1395,7 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
   check('카드 거래 — 한 장 나가고 한 장 들어온다', [tr.run.deck.includes('war-cleave'), tr.run.deck.length], [false, base.deck.length])
 }
 {
-  // 여관 · 대장장이 · 보물(2026-11-09) — 지도 칸이 실제로 생기고, 하는 일을 한다.
+  // 여관 · 대장간 · 보물(2026-11-09) — 지도 칸이 실제로 생기고, 하는 일을 한다.
   // 상점·휴식 칸은 지도에서 사라졌다(모닥불은 ? 칸의 정체로만 남는다).
   let inn = 0, smith = 0, treasure = 0, old = 0
   for (let i = 0; i < 100; i++)
@@ -1388,16 +1406,17 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
         if (n.type === 'treasure') treasure++
         if (!['combat', 'elite', 'boss', 'event', 'inn', 'smith', 'treasure'].includes(n.type)) old++
       }
-  check('지도에 여관·대장장이·보물 칸이 나온다', [inn > 0, smith > 0, treasure > 0], [true, true, true])
+  check('지도에 여관·대장간·보물 칸이 나온다', [inn > 0, smith > 0, treasure > 0], [true, true, true])
   check('지도에 옛 상점·휴식 칸이 없다', old, 0)
   const hurt = { ...startRun('warrior'), hp: 10, gold: 200 }
   check('모닥불(? 칸) — 최대 체력 30% 회복 후 다음 층', [restAtFire(hurt).hp, restAtFire(hurt).floor], [10 + Math.round(hurt.maxHp * 0.3), 2])
   check('보물 — 유물 하나', openTreasure(hurt).run.relicIds.length, hurt.relicIds.length + 1)
-  // 여관 — 휴식 50G · 20%, 나가기 5%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
+  // 여관 — 휴식 50G · 50%, 나가기 20%. 대장간 — 지나가면 10%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
   const rested = innRest(hurt)!
-  check('여관 휴식 — 50골드 · 최대 체력 20%', [rested.gold, rested.hp, rested.floor], [200 - innRestPrice(hurt), 10 + Math.round(hurt.maxHp * 0.2), 1])
+  check('여관 휴식 — 50골드 · 최대 체력 50%', [rested.gold, rested.hp, rested.floor], [200 - innRestPrice(hurt), 10 + Math.round(hurt.maxHp * 0.5), 1])
   check('여관 휴식 — 골드가 모자라면 못 쉰다', innRest({ ...hurt, gold: innRestPrice(hurt) - 1 }), null)
-  check('여관 나가기 — 최대 체력 5%', innLeave(hurt).hp, 10 + Math.round(hurt.maxHp * 0.05))
+  check('여관 나가기 — 최대 체력 20%', innLeave(hurt).hp, 10 + Math.round(hurt.maxHp * 0.2))
+  check('대장간을 그냥 지나가면 — 최대 체력 10%', smithPass(hurt).hp, 10 + Math.round(hurt.maxHp * 0.1))
   check('여관 회복은 최대 체력을 넘지 않는다', innRest({ ...hurt, hp: hurt.maxHp - 1 })!.hp, hurt.maxHp)
   // 여관 안 상점 — 카드 3 · 유물 2, 회복·강화 칸 없음.
   const stock = rollShop(hurt)

@@ -1,9 +1,9 @@
-// 여관 · 대장장이 — 2026-11-09 지도의 상점·휴식 칸을 대신하는 두 칸(`docs/redesign/INN_SMITH.md`).
+// 여관 · 대장간 — 2026-11-09 지도의 상점·휴식 칸을 대신하는 두 칸(`docs/redesign/INN_SMITH.md`).
 // 시안 `Inn.dc.html` · `Blacksmith.dc.html`. 규칙(값·회복량)은 전부 `game/run.ts`에 있다.
 import { useMemo, useState } from 'react'
 import {
   advanceFloor, innLeave, innLeaveAmount, innRest, innRestAmount, innRestPrice, paySmith, regionOf, rollShop,
-  smithPrice, upgradableDeckCards, type RunState,
+  smithPass, smithPassAmount, smithPrice, upgradableDeckCards, type RunState,
 } from '../../game/run'
 import { useFirstTip } from '../FirstTip'
 import { SceneLayers } from '../SceneLayers'
@@ -66,7 +66,7 @@ function Purse({ run, heal }: { run: RunState; heal?: number }) {
 }
 
 /**
- * 여관 — 휴식(50G · 20%) / 상점 / 나가기(5%). 휴식이나 나가기를 고르면 그걸로 방문이 끝나고
+ * 여관 — 휴식(50G · 50%) / 상점 / 나가기(20%). 휴식이나 나가기를 고르면 그걸로 방문이 끝나고
  * "지도로" 하나만 남는다. 상점은 다녀와도 방문이 안 끝난다 — 진열·산 목록을 여기서 들고 있다.
  */
 export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
@@ -105,7 +105,7 @@ export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunSt
     : [
         {
           label: '휴식',
-          sub: canRest ? `최대 체력의 20% 회복 (+${restN}) · 쉬면 여관을 떠난다` : '골드가 모자란다',
+          sub: canRest ? `최대 체력의 50% 회복 (+${restN}) · 쉬면 여관을 떠난다` : '골드가 모자란다',
           cost: price,
           off: !canRest,
           tone: canRest ? 'heal' : 'mute',
@@ -119,7 +119,7 @@ export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunSt
         { label: '상점', sub: '카드 · 유물을 골드로 산다 (다 보고 돌아올 수 있다)', onTap: () => setInShop(true) },
         {
           label: '나가기',
-          sub: `최대 체력의 5% 회복 (+${leaveN})`,
+          sub: `최대 체력의 20% 회복 (+${leaveN})`,
           tone: 'heal',
           onTap: () => {
             const next = innLeave(cur)
@@ -155,7 +155,8 @@ export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunSt
 }
 
 /**
- * 대장장이 — 카드 강화 50G(한 번 · 저장하면 바로 지도로) / 나가기.
+ * 대장간(지도 칸) — 카드 강화 50G(한 번 · 저장하면 바로 지도로) / 쉬어 간다(최대 체력 10%).
+ * ⚠ ? 이벤트 「낡은 대장간」과는 다른 곳이다(`EventScreen` — 강화 또는 유물).
  * 룰렛을 돌리기 전에 그만두면 결제 전 런으로 돌아온다(돈을 안 받는다).
  * 그림이 아직 없어 화덕 도트(`ui/events/forge.png`)로 대신한다 — 생기면 여관처럼 배경으로.
  */
@@ -165,6 +166,7 @@ export function SmithScreen({ run, onDone }: { run: RunState; onDone: (next: Run
     return <UpgradeScreen run={paid} source="smith" onCancel={() => setPaid(null)} onDone={(next) => onDone(advanceFloor(next))} />
 
   const price = smithPrice(run)
+  const passN = smithPassAmount(run)
   const canUp = upgradableDeckCards(run).length > 0
   const ok = canUp && run.gold >= price
   return (
@@ -175,7 +177,7 @@ export function SmithScreen({ run, onDone }: { run: RunState; onDone: (next: Run
       <i className="smith__forge" role="img" aria-label="꺼지지 않는 화덕과 모루" />
       <header className="shop__head">
         <div className="shop__where">
-          <h1 className="shop__title">대장장이</h1>
+          <h1 className="shop__title">대장간</h1>
           <span>{where(run)}</span>
         </div>
         <Purse run={run} />
@@ -197,7 +199,12 @@ export function SmithScreen({ run, onDone }: { run: RunState; onDone: (next: Run
             tone: ok ? undefined : 'mute',
             onTap: () => setPaid(paySmith(run)),
           },
-          { label: '나가기', sub: '지도로 돌아간다', tone: 'mute', onTap: () => onDone(advanceFloor(run)) },
+          {
+            label: '쉬어 간다',
+            sub: `화덕 옆에서 숨을 돌리고 지도로 — 최대 체력의 10% 회복 (+${passN})`,
+            tone: 'heal',
+            onTap: () => onDone(advanceFloor(smithPass(run))),
+          },
         ]}
       />
     </div>

@@ -229,7 +229,7 @@ export default function App() {
     setRunUnlocked(null)
     setPhase('run-map')
   }, [])
-  // 지도에서 갈래를 골라 그 칸으로 진입 — 타입에 따라 전투/이벤트/여관/대장장이/보물로.
+  // 지도에서 갈래를 골라 그 칸으로 진입 — 타입에 따라 전투/이벤트/여관/대장간/보물로.
   const chooseNode = useCallback((index: number) => {
     setRun((r) => {
       if (!r) return r

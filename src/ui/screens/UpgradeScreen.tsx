@@ -1,6 +1,6 @@
 // 룰렛 카드 강화(디자인 `Upgrade` · 규칙 `docs/redesign/CARD_UPGRADE.md`).
 // 카드 → 강화 종류(수치/범위) → 60칸 룰렛 → (범위면 칸 고르기) → 저장.
-// 모닥불·상점·대장장이 이벤트가 같은 화면을 쓴다.
+// 대장간(지도 칸)·모닥불(? 칸)·낡은 대장간(이벤트)이 같은 화면을 쓴다.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CardDef, Offset } from '../../battle/types'
 import { regionOf, runCard, upgradeBlockOf, upgradeCard, type RunState } from '../../game/run'
@@ -126,8 +126,8 @@ export function UpgradeScreen({
     .join(', ')})`
 
   const isSmith = source === 'smith'
-  const srcLabel = isSmith ? '대장장이 · 강화' : source === 'rest' ? '휴식 · 모닥불' : '이벤트 · 대장간'
-  const leaveLabel = isSmith ? '← 대장장이로' : source === 'rest' ? '← 모닥불로' : '← 그만둔다'
+  const srcLabel = isSmith ? '대장간 · 강화' : source === 'rest' ? '휴식 · 모닥불' : '이벤트 · 낡은 대장간'
+  const leaveLabel = isSmith ? '← 대장간으로' : source === 'rest' ? '← 모닥불로' : '← 그만둔다'
 
   const spin = () => {
     const v = spinRoulette(table)
@@ -218,7 +218,7 @@ export function UpgradeScreen({
             <p>{card.desc}</p>
             <div className="upg__note">
               {isSmith
-                ? '대장장이 강화: 들를 때마다 한 장 · 한 번. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다.'
+                ? '대장간 강화: 들를 때마다 한 장 · 한 번. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다.'
                 : source === 'rest'
                   ? '모닥불에선 쉬기(체력 회복)와 강화 중 하나만 고를 수 있다. 결과가 0이면 그걸로 끝.'
                   : '결과가 0이면 그걸로 끝.'}

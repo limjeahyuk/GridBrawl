@@ -80,8 +80,8 @@ class Component extends DCLogic {
   }
   renderVals() {
     const st = this.state;
-    // 휴식 50골 · 최대 체력 20% / 나가기 5%. 휴식을 고르면 방문 끝(지도로만).
-    const REST_COST = 50, REST_PCT = 0.2, LEAVE_PCT = 0.05;
+    // 휴식 50골 · 최대 체력 50% / 나가기 20%(2026-11-09 상향). 휴식을 고르면 방문 끝(지도로만).
+    const REST_COST = 50, REST_PCT = 0.5, LEAVE_PCT = 0.2;
     const healOf = (pct) => Math.min(st.maxHp - st.hp, Math.round(st.maxHp * pct));
     const restN = healOf(REST_PCT), leaveN = healOf(LEAVE_PCT);
     const canRest = st.gold >= REST_COST;
@@ -91,10 +91,10 @@ class Component extends DCLogic {
     const choices = st.done ? [
       { label: '지도로', sub: '다음 칸을 고르러 간다', subFg: '#ffd8a8', chipD: 'none', cost: '', href: 'RunMap.dc.html', cls: '', d: 'd1', onTap: () => {} },
     ] : [
-      { label: '휴식', sub: canRest ? `최대 체력의 20% 회복 (+${restN}) · 쉬면 여관을 떠난다` : '골드가 모자란다', subFg: canRest ? '#b6ea6a' : '#b9a89a', chipD: 'inline-flex', cost: String(REST_COST), href: '#', cls: canRest ? '' : 'opt-off', d: 'd1',
+      { label: '휴식', sub: canRest ? `최대 체력의 50% 회복 (+${restN}) · 쉬면 여관을 떠난다` : '골드가 모자란다', subFg: canRest ? '#b6ea6a' : '#b9a89a', chipD: 'inline-flex', cost: String(REST_COST), href: '#', cls: canRest ? '' : 'opt-off', d: 'd1',
         onTap: () => { if (canRest) this.setState({ done: 'rest', gold: st.gold - REST_COST, hp: st.hp + restN, heal: restN, k: st.k + 1 }); } },
       { label: '상점', sub: '카드 · 유물을 골드로 산다 (다 보고 돌아올 수 있다)', subFg: '#ffd8a8', chipD: 'none', cost: '', href: 'Shop.dc.html', cls: '', d: 'd2', onTap: () => {} },
-      { label: '나가기', sub: `최대 체력의 5% 회복 (+${leaveN})`, subFg: '#b6ea6a', chipD: 'none', cost: '', href: '#', cls: '', d: 'd3',
+      { label: '나가기', sub: `최대 체력의 20% 회복 (+${leaveN})`, subFg: '#b6ea6a', chipD: 'none', cost: '', href: '#', cls: '', d: 'd3',
         onTap: () => this.setState({ done: 'leave', hp: st.hp + leaveN, heal: leaveN, k: st.k + 1 }) },
     ];
     return {

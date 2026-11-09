@@ -43,7 +43,7 @@ const NODE_LABEL: Record<RunNode['type'], string> = {
   boss: '보스',
   event: '미지',
   inn: '여관',
-  smith: '대장장이',
+  smith: '대장간',
   treasure: '보물',
 }
 /** 그 칸을 고르면 무엇을 얻는지 — 몬스터 칸은 이름·체력이 이 자리에 대신 온다. */
@@ -52,8 +52,8 @@ const NODE_HINT: Record<RunNode['type'], string> = {
   elite: '강한 적 · 유물 보상',
   boss: '마지막 관문',
   event: '이벤트 · 무엇이 있을지 모른다',
-  inn: '휴식(골드로 회복) · 카드 · 유물 구매',
-  smith: '골드로 카드 한 장 강화',
+  inn: '휴식(골드 50%) · 카드 · 유물 구매 · 나가도 20%',
+  smith: '골드로 카드 한 장 강화 · 그냥 지나가면 휴식',
   treasure: '유물 상자 하나',
 }
 const LEGEND: RunNode['type'][] = ['event', 'inn', 'treasure', 'smith', 'combat', 'elite', 'boss']

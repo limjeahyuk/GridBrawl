@@ -6,9 +6,11 @@ import {
   MOVE_DELTA,
   canStand,
   facingBetween,
+  hazardAt,
   isCollapsedCell,
   isFullyCollapsed,
   shadowRock,
+  spikeStateAt,
   type Cell,
   type CardDef,
   type Difficulty,
@@ -225,6 +227,17 @@ export function decideAI(
   const reacts = !!foresight?.react
   // 지형 — 런에서만 채워진다. 빈 배열이면 아래 판정이 전부 예전 그대로다.
   const rocks = state.obstacles
+  // 함정(2026-11-09) — 런에서만 채워진다. 빈 배열이면 아래 판정이 전부 예전 그대로다.
+  const hazards = state.hazards ?? []
+  /**
+   * 이 칸에 **들어서면** 아픈가 — 엔진 `enterHazard`와 같은 규칙(불길 = 화상 · 덩굴 = 속박 ·
+   * 이번 라운드에 솟은 가시덫 = 속박). 빙판은 아프지 않고 미끄러질 뿐이라 `landingOf`가 따로 본다.
+   * ⚠ AI는 이 칸으로 **걸어 들어가지 않는다**(접근·카이팅·회피·탈출 모두). 밀려 들어가는 건 못 막는다.
+   */
+  const hurtsAt = (c: Cell): boolean => {
+    const h = hazardAt(hazards, c)
+    return !!h && (h.kind === 'fire' || h.kind === 'bramble' || (h.kind === 'spikes' && spikeStateAt(h, state.round) === 'up'))
+  }
   /** 이 공격이 바위를 무시하는가 — 엔진 `piercesRock`과 같은 규칙. */
   const pierces = (c: CardDef) => !!c.pierce || !!char.passive.alwaysPierce
   // ⚠ 방향은 **지금 서 있는 자리**에서 상대를 보고 정한다(2026-08-05, 엔진과 같은
@@ -270,6 +283,7 @@ export function decideAI(
   }
 
   // 이동 카드가 도착할 셀 — 엔진 applyMove와 동일 규칙(벽·**바위**에서 멈춤, 겹침 허용)
+  // + 내린 칸이 **빙판이면 한 칸 더** 미끄러진다(엔진 `enterHazard` — 한 번만, 상대 앞에선 멈춤).
   function landingOf(c: CardDef): Cell {
     const steps = c.steps ?? 1
     const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
@@ -279,8 +293,14 @@ export function decideAI(
       if (!canStand(rocks, next)) break
       cur = next
     }
+    if ((cur.col !== pos.col || cur.row !== pos.row) && hazardAt(hazards, cur)?.kind === 'ice') {
+      const slide: Cell = { col: cur.col + dc, row: cur.row + dr }
+      if (canStand(rocks, slide) && !(slide.col === foeCur.col && slide.row === foeCur.row)) cur = slide
+    }
     return cur
   }
+  /** 이 이동이 함정에 걸어 들어가는가. */
+  const intoTrap = (c: CardDef): boolean => hurtsAt(landingOf(c))
 
   /** 이 이동이 실제로 자리를 옮기는가 — 바위·벽에 막혀 제자리면 슬롯만 버린다. */
   function goesSomewhere(c: CardDef): boolean {
@@ -382,7 +402,7 @@ export function decideAI(
   function evadeCards(foe: Cell, inc: CardDef): CardDef[] {
     return pool
       .filter((c) => {
-        if (c.kind !== 'move' || !goesSomewhere(c)) return false
+        if (c.kind !== 'move' || !goesSomewhere(c) || intoTrap(c)) return false
         const land = landingOf(c)
         if (isCollapsedCell(land, state.round)) return false
         return !hits(foe, facingBetween(foe, land, 1 - self), inc, land, rocks, !!inc.pierce)
@@ -450,6 +470,8 @@ export function decideAI(
       // 바위·벽에 막혀 제자리인 이동은 버린다 — 안 그러면 바위 앞에서 매 슬롯
       // "오른쪽으로 간다"를 골라 놓고 한 발짝도 못 가는 채로 턴을 통째로 날린다.
       if (!goesSomewhere(w)) return false
+      // 함정으로 걸어 들어가지 않는다 — 돌아가는 길이 없으면 이번 슬롯은 다른 일을 한다.
+      if (intoTrap(w)) return false
       if (canPointBlank) return true
       const land = landingOf(w)
       return !(land.col === opp.col && land.row === opp.row)
@@ -468,7 +490,7 @@ export function decideAI(
     if (drow !== 0) wishes.push(moveCard(vdir, 1)) // 같은 줄로 — 원거리 명중선 확보
     if (Math.abs(dcol) < keepGap) wishes.push(moveCard(away, 2), moveCard(away, 1))
     // 벽에 몰려 더 못 물러나면 approachCards로 떨어져 최소한 줄이라도 맞춘다.
-    const out = wishes.filter((w): w is CardDef => !!w && goesSomewhere(w))
+    const out = wishes.filter((w): w is CardDef => !!w && goesSomewhere(w) && !intoTrap(w))
     return out.length ? out : approachCards(opp)
   }
 
@@ -559,10 +581,22 @@ export function decideAI(
       // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05).
       const m =
         esc.find(
-          (c) => usable(c) && goesSomewhere(c) && !isCollapsedCell(landingOf(c), state.round + 1),
-        ) ?? esc.find((c) => usable(c) && goesSomewhere(c))
+          (c) => usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), state.round + 1),
+        ) ?? esc.find((c) => usable(c) && goesSomewhere(c) && !intoTrap(c))
       if (m) {
         take(m)
+        continue
+      }
+    }
+
+    // 1-bis) 불길 위에 서 있으면 내려온다 — 라운드 끝에 서 있어도 화상이다(엔진 함정 정산).
+    //   때릴 수 있어도 먼저 내려온다: 화상은 그 라운드에 맞는 모든 타격에 +5가 붙는다.
+    if (hazardAt(hazards, pos)?.kind === 'fire') {
+      const off = pool
+        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), state.round))
+        .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))[0]
+      if (off) {
+        take(off)
         continue
       }
     }
@@ -653,7 +687,9 @@ export function decideAI(
       continue
     }
     const moves = pool.filter((c) => c.kind === 'move')
-    const anyMove = moves.find((c) => usable(c) && goesSomewhere(c)) ?? moves.find(usable)
+    const anyMove =
+      moves.find((c) => usable(c) && goesSomewhere(c) && !intoTrap(c)) ??
+      moves.find((c) => usable(c) && !goesSomewhere(c))
     if (anyMove) {
       take(anyMove)
       continue

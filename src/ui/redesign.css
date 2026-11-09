@@ -3123,8 +3123,8 @@
 .firsttip--question { top: auto; bottom: 40px; }
 .firsttip--shop { top: auto; bottom: 24px; left: 24px; margin-left: 0; width: 290px; }
 
-/* ---- 여관 · 대장장이(디자인 `Inn` · `Blacksmith`, 2026-11-09 `INN_SMITH.md`) ------------
-   여관 = 여관 그림 배경(마렌 왼쪽) + 오른쪽 대사창 · 선택지. 대장장이 = 던전 벽 + 화덕 도트. */
+/* ---- 여관 · 대장간(디자인 `Inn` · `Blacksmith`, 2026-11-09 `INN_SMITH.md`) ------------
+   여관 = 여관 그림 배경(마렌 왼쪽) + 오른쪽 대사창 · 선택지. 대장간 = 던전 벽 + 화덕 도트. */
 .screen.inn,
 .screen.smith { display: block; padding: 0; overflow: hidden; background: #1a100a; }
 .inn .shop__title,
@@ -3205,7 +3205,7 @@
 .inn__optbody span.is-heal { color: #b6ea6a; }
 .inn__optbody span.is-mute { color: #b9a89a; }
 .inn__chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-family: var(--font-px); font-size: 14px; white-space: nowrap; background: #2a1c08; color: #ffd86a; border: 1px solid #c9952f; }
-/* 대장장이 — 시안처럼 대사창은 왼쪽 아래, 선택지는 오른쪽 아래. */
+/* 대장간 — 시안처럼 대사창은 왼쪽 아래, 선택지는 오른쪽 아래. */
 .smith__glow { position: absolute; left: 60px; top: 120px; width: 700px; height: 560px; pointer-events: none; background: radial-gradient(ellipse at 45% 60%, rgba(255, 138, 58, 0.55) 0%, rgba(255, 138, 58, 0.15) 40%, rgba(0, 0, 0, 0) 70%); animation: smith-glow 1.6s ease-in-out infinite; }
 @keyframes smith-glow { 50% { opacity: 0.7; } }
 .smith__vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 35% 55%, rgba(0, 0, 0, 0) 30%, rgba(8, 4, 4, 0.75) 100%); }
