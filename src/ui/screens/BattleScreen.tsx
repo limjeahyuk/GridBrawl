@@ -15,13 +15,6 @@ import {
   planAffordable,
   type BattleOpts,
 } from "../../battle/engine";
-import {
-  loadBattlePace,
-  saveBattlePace,
-  PACE_CFG,
-  PACE_META,
-  type BattlePace,
-} from "../../game/settings";
 import type { BattleScene } from "../../game/run";
 import type { BossCinematic } from "../../game/bosses";
 import { deckFor } from "../../battle/cards";
@@ -343,25 +336,6 @@ function statusChips(
   return out;
 }
 
-/**
- * 전투 기록 한 줄 — "누가 · 몇 번째로 · 무슨 카드를 냈고 · 그래서 누가 얼마나 깎였나".
- * 숫자가 떠올랐다 사라지는 것만으로는 놓친다는 신고에 대한 답이라, 이 목록은
- * 라운드가 끝날 때까지 화면에 **남아 있는다**.
- */
-interface LogRow {
-  id: number;
-  /** 몇 번째 카드였나(0·1·2). 라운드 종료 정산은 undefined. */
-  slot?: number;
-  who: string;
-  /** 이 행동을 한 쪽이 나인가 — 색과 정렬이 갈린다. */
-  mine: boolean;
-  card: string;
-  result: ActionResult;
-  /** 이 스텝에서 깎인 몫. `onMe`는 **내가** 맞았는지(누가 때렸는지가 아니다). */
-  hits: { src: DamageSrc; n: number; onMe: boolean }[];
-  heal: number;
-}
-
 const isAtk = (r: ActionResult) =>
   r === "hit" || r === "blocked" || r === "whiff";
 const STEP_MS: Record<Step["phase"], number> = {
@@ -375,6 +349,8 @@ const STEP_MS: Record<Step["phase"], number> = {
   status: 620, // 독·화상 틱 — 여러 개가 잇달아 뜰 수 있어 짧게
   rock: 560, // 바위가 솟거나 부서지는 순간 — 판의 모양이 바뀌므로 눈에 담을 틈은 준다
 };
+/** 선택 화면 일러스트가 있는 영웅(`redesign.css`의 `.artbg--{id}`) — 필살기 컷인에 그 그림을 쓴다. */
+const HERO_ART = new Set(["warrior", "archer", "mage"]);
 /** 필살기(시그니처) 컷인이 화면을 채우는 시간 — 끝나면 실제 타격이 이어진다. */
 const CUTIN_MS = 1750;
 /**
@@ -659,39 +635,10 @@ export function BattleScreen({
   // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
 
   const [view, setView] = useState<View>(() => baseView(battle));
-  /**
-   * 연출 속도 — **차근차근 / 빠르게** 둘뿐이다(`game/settings.ts`).
-   * ⚠ 해소 루프는 async라 state를 잡아 두면 **시작 시점의 옛 값**을 계속 본다.
-   *   루프 안에서는 반드시 `paceRef`를 읽는다(격노 컷인의 `enragedRef`와 같은 이유).
-   */
-  const [pace, setPaceState] = useState<BattlePace>(loadBattlePace);
-  const paceRef = useRef(pace);
-  paceRef.current = pace;
-  const setPace = (p: BattlePace) => {
-    setPaceState(p);
-    saveBattlePace(p);
-  };
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null]);
   useEffect(() => onSlotsChange?.(slots), [slots, onSlotsChange]);
   const [phase, setPhase] = useState<"select" | "resolving" | "over">("select");
   const [waitingRemote, setWaitingRemote] = useState(false);
-  /**
-   * 이번 라운드에 **양쪽이 낸 3장**(정규 좌표 — [side0, side1]). 해소하는 동안
-   * 화면 아래에 그대로 펼쳐 둔다: 예전엔 실행을 누르는 순간 카드가 사라져서
-   * "내가 뭘 냈더라 / 쟤는 뭘 냈지"를 확인할 방법이 아예 없었다.
-   */
-  const [roundPlans, setRoundPlans] = useState<[CardDef[], CardDef[]] | null>(
-    null,
-  );
-  /** 지금 재생 중인 슬롯(0·1·2). 라운드 종료 정산 구간에서는 null. */
-  const [activeSlot, setActiveSlot] = useState<number | null>(null);
-  /** 슬롯이 바뀔 때 양쪽 카드를 크게 펼치는 공개 연출(차근차근 모드 전용). */
-  const [slotReveal, setSlotReveal] = useState<{
-    seq: number;
-    slot: number;
-  } | null>(null);
-  /** 이번 라운드에 실제로 일어난 일 — 무엇이 몇 대미지였는지 글로 남는다. */
-  const [log, setLog] = useState<LogRow[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
   /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
   const [remain, setRemain] = useState<number | null>(null);
@@ -1163,14 +1110,6 @@ export function BattleScreen({
     // host is side 0, guest side 1 — feed plans in canonical order
     const planA = localSide === 0 ? localPlan : oppPlan;
     const planB = localSide === 0 ? oppPlan : localPlan;
-    // 이번 라운드의 연출 길이는 **시작할 때 한 번** 정한다 — 재생 도중에 토글을
-    // 눌러 템포가 중간에 바뀌면 그게 더 헷갈린다(다음 라운드부터 적용된다).
-    const cfg = PACE_CFG[paceRef.current];
-    /** 스텝 꼬리 대기에만 붙는 배수 — 타격까지의 선행 시간은 손대지 않는다. */
-    const paced = (ms: number) => Math.round(ms * cfg.step);
-    setRoundPlans([planA, planB]);
-    setLog([]);
-    setActiveSlot(null);
     // ⚠ resolveRound은 battle.state를 **턴 종료 상태로** 밀어 버린다. 첫 공격의
     //   준비 동작에 쓸 턴 시작 화면은 그 전에 떠 둬야 한다.
     const turnStart = baseView(battle);
@@ -1239,29 +1178,9 @@ export function BattleScreen({
     // 이전 스텝까지 화면에 남아 있는 상태. 공격의 **준비 동작** 구간에 그대로
     // 쓴다 — 몸이 파고드는 동안엔 아직 피해도 HP 감소도 보이면 안 된다.
     let shown: View = turnStart;
-    /** 직전 스텝이 몇 번째 슬롯이었나 — 여기가 바뀌는 순간이 카드 공개 시점이다. */
-    let seenSlot: number | null = null;
 
     for (const [si, step] of steps.entries()) {
       if (cancelled.current) return;
-
-      // ── 슬롯이 넘어갔다: "이번엔 양쪽이 이 카드를 낸다"를 먼저 못 박는다.
-      //    차근차근 모드에서만 화면을 덮고, 빠르게 모드에서는 표시만 갱신한다.
-      if (step.slot !== undefined && step.slot !== seenSlot) {
-        seenSlot = step.slot;
-        setActiveSlot(step.slot);
-        if (cfg.reveal) {
-          setSlotReveal({ seq: si + 1, slot: step.slot });
-          playSfx("ui");
-          await wait(cfg.revealMs);
-          setSlotReveal(null);
-          if (cancelled.current) return;
-        }
-      } else if (step.slot === undefined && seenSlot !== null) {
-        // 라운드 종료 정산(독안개·붕괴) — 더 이상 어느 카드의 결과도 아니다.
-        seenSlot = null;
-        setActiveSlot(null);
-      }
 
       // 필살기: 타격을 보여주기 전에 컷인으로 "이게 필살기다"를 못 박는다.
       // 기력 부족으로 불발된 카드는 연출하지 않는다.
@@ -1385,7 +1304,7 @@ export function BattleScreen({
             blocked: step.result === "blocked",
           });
         if (cancelled.current) return;
-        await wait(Math.max(150, paced(STEP_MS.attack) - lead - held));
+        await wait(Math.max(150, STEP_MS.attack - lead - held));
       } else {
         setResolveHit(null);
         setView(full);
@@ -1406,37 +1325,18 @@ export function BattleScreen({
             },
           );
         if (cancelled.current) return;
-        await wait(Math.max(160, paced(STEP_MS[step.phase]) - held));
+        // 같은 슬롯에서 상대도 이어서 움직이면 기다리지 않는다 — 둘이 함께 걷는다.
+        const next = steps[si + 1];
+        const together =
+          step.phase === "move" &&
+          !held &&
+          next?.phase === "move" &&
+          next.slot === step.slot &&
+          next.actor !== step.actor;
+        if (!together) await wait(Math.max(160, STEP_MS[step.phase] - held));
       }
       if (cancelled.current) return;
       shown = full;
-
-      // ── 이 스텝을 기록에 남긴다. 떠올랐다 사라지는 숫자와 달리 라운드가 끝날
-      //    때까지 남으므로, 놓쳤어도 "무엇이 얼마였는지" 되짚을 수 있다.
-      const hits = ([0, 1] as const).flatMap((side) =>
-        bitsOn(step, side).map((b) => ({ ...b, onMe: side === localSide })),
-      );
-      if (hits.length || step.heal > 0 || step.result !== "move")
-        setLog((rows) => [
-          ...rows,
-          {
-            id: si + 1,
-            slot: step.slot,
-            who: battle.chars[actor].name,
-            mine: actor === localSide,
-            card: step.card.name,
-            result: step.result,
-            hits,
-            heal: step.heal,
-          },
-        ]);
-
-      // 피해가 났으면 숫자를 읽을 틈을 준다(차근차근 모드에서만 — `hold`가 0이면
-      // 아무 일도 일어나지 않는다).
-      if (cfg.hold && (damageOn(step, 0) > 0 || damageOn(step, 1) > 0)) {
-        await wait(cfg.hold);
-        if (cancelled.current) return;
-      }
 
       // 격노 컷인 — 보스 체력이 문턱을 지나는 순간 스텝 사이를 끊고 들어간다.
       // ⚠ 판정은 `battle.state`가 아니라 **이 스텝의 스냅샷**(`full.hp`)으로 한다:
@@ -1484,7 +1384,6 @@ export function BattleScreen({
     }
 
     setSlots([null, null, null]);
-    setRoundPlans(null);
     setTick((t) => t + 1); // refresh cooldown display
     submittingRef.current = false;
     setPhase("select");
@@ -2248,69 +2147,6 @@ export function BattleScreen({
                   .filter(Boolean)
                   .join("     ") || " "}
           </div>
-          {/* 차근차근 모드: 양쪽이 낸 3장을 그대로 펼쳐 두고, 지금 몇 번째가
-              나가는지 표시한다. 곁에 전투 기록이 쌓여 "무엇이 몇 대미지였는지"가
-              라운드가 끝날 때까지 남는다. */}
-          {PACE_CFG[pace].board && roundPlans && !waitingRemote && (
-            <div className="rplay">
-              <div className="rplay__plans">
-                {([localSide, 1 - localSide] as const).map((sideIdx) => {
-                  const side = sideIdx as 0 | 1;
-                  const mine = side === localSide;
-                  return (
-                    <div
-                      key={side}
-                      className={`rplay__row ${mine ? "is-me" : ""}`}
-                    >
-                      <span className="rplay__who">
-                        {mine ? "나" : battle.chars[side].name}
-                      </span>
-                      {[0, 1, 2].map((i) => {
-                        const c = roundPlans[side][i];
-                        return (
-                          <span
-                            key={i}
-                            className={`rplay__card ${
-                              activeSlot === i
-                                ? "rplay__card--now"
-                                : activeSlot !== null && i < activeSlot
-                                  ? "rplay__card--done"
-                                  : ""
-                            }`}
-                            style={
-                              c
-                                ? {
-                                    ["--accent" as string]: cardAccent(
-                                      c,
-                                      battle.chars[side].accent,
-                                    ),
-                                  }
-                                : undefined
-                            }
-                          >
-                            <b className="rplay__no">{i + 1}</b>
-                            {c ? (
-                              <CardFace
-                                card={mine ? faceCard(c) : c}
-                                accent={cardAccent(
-                                  c,
-                                  battle.chars[side].accent,
-                                )}
-                                compact
-                              />
-                            ) : (
-                              <span className="rplay__none">—</span>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-              <BattleLog rows={log} />
-            </div>
-          )}
         </div>
       )}
 
@@ -2337,41 +2173,6 @@ export function BattleScreen({
         />
       )}
 
-      {/* 카드 공개 — 슬롯이 바뀔 때마다 "이번엔 이 두 장"을 크게 보여준다.
-          ⚠ **입력을 삼키지 않는다**(pointer-events: none) — 이 구간엔 누를 게
-            없고, 삼키면 그 시간만큼 종료 버튼도 안 눌린다. */}
-      {slotReveal && roundPlans && (
-        <div key={`reveal-${slotReveal.seq}`} className="reveal">
-          <div className="reveal__no">{slotReveal.slot + 1}번째 카드</div>
-          <div className="reveal__pair">
-            {([localSide, 1 - localSide] as const).map((sideIdx) => {
-              const side = sideIdx as 0 | 1;
-              const mine = side === localSide;
-              const c = roundPlans[side][slotReveal.slot];
-              return (
-                <div
-                  key={side}
-                  className={`reveal__one ${mine ? "reveal__one--me" : ""}`}
-                >
-                  <div className="reveal__who">
-                    {mine ? "나" : battle.chars[side].name}
-                  </div>
-                  {c ? (
-                    <CardFace
-                      card={mine ? faceCard(c) : c}
-                      accent={cardAccent(c, battle.chars[side].accent)}
-                    />
-                  ) : (
-                    // 봉인돼 카드를 못 내는 라운드 — 빈칸으로 두면 "왜 안 나오지"가 된다
-                    <div className="reveal__none">행동 불가</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {cutIn && (
         <div
           key={`cutin-${cutIn.seq}`}
@@ -2390,11 +2191,17 @@ export function BattleScreen({
               />
             ))}
           </div>
-          {/* 시트가 있으면 픽셀 초상, 없으면 절차 SVG로 폴백(`PortraitSvg`가 판단). */}
-          <PortraitSvg
-            char={battle.chars[cutIn.actor]}
-            className="cutin__art"
-          />
+          {/* 영웅은 선택 화면의 일러스트(`.artbg--{id}`), 그 밖은 픽셀 초상(`PortraitSvg`가 판단). */}
+          {HERO_ART.has(battle.chars[cutIn.actor].id) ? (
+            <div
+              className={`cutin__hero artbg--${battle.chars[cutIn.actor].id}`}
+            />
+          ) : (
+            <PortraitSvg
+              char={battle.chars[cutIn.actor]}
+              className="cutin__art"
+            />
+          )}
           <div className="cutin__label">
             <div className="cutin__who">
               {battle.chars[cutIn.actor].name} · 필살기
@@ -2443,38 +2250,6 @@ export function BattleScreen({
 }
 
 // ---------------------------------------------------------------------------
-
-/**
- * 이번 라운드 전투 기록. **마지막 다섯 줄만** 남긴다 — 한 라운드에 스텝이 열 개를
- * 넘길 수 있는데(중독 틱·바위·붕괴가 각자 한 줄이다) 전부 쌓으면 자리가 넘치고,
- * 정작 방금 일어난 일이 위로 밀려 올라간다.
- */
-function BattleLog({ rows }: { rows: LogRow[] }) {
-  const tail = rows.slice(-5);
-  return (
-    <div className="rlog">
-      <div className="rlog__head">이번 라운드에 일어난 일</div>
-      {tail.length === 0 && <div className="rlog__empty">…</div>}
-      {tail.map((r) => (
-        <div key={r.id} className={`rlog__row ${r.mine ? "is-me" : "is-foe"}`}>
-          {r.slot !== undefined && <b className="rlog__slot">{r.slot + 1}</b>}
-          <span className="rlog__who">{r.mine ? "나" : r.who}</span>
-          <span className="rlog__card">{r.card}</span>
-          {RESULT_TEXT[r.result] && (
-            <span className="rlog__res">{RESULT_TEXT[r.result]}</span>
-          )}
-          {r.heal > 0 && <span className="rlog__heal">+{r.heal}</span>}
-          {r.hits.map((h, i) => (
-            <span key={i} className={`rlog__hit ${h.onMe ? "is-onme" : ""}`}>
-              {DMG_SRC[h.src].icon} {DMG_SRC[h.src].label} <b>-{h.n}</b>
-              <em>{h.onMe ? "나" : "상대"}</em>
-            </span>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 /** 지금 이 파이터가 재생해야 할 스프라이트 클립. 우선순위는 "가장 극적인 것"順. */
 function clipOf(v: View, idx: number, moving: "run" | "back" | null): ClipName {
