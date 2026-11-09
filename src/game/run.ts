@@ -15,7 +15,6 @@ import {
   RELIC_BY_ID,
   RELIC_PRICE,
   REWARD_RELICS,
-  signatureRelicId,
   type Rarity,
   type Relic,
   type RunMods,
@@ -622,7 +621,8 @@ export function terrainFor(run: RunState): readonly Obstacle[] {
 // --- 파생값 -----------------------------------------------------------------
 export function computeMaxHp(charId: string, relicIds: string[]): number {
   const base = getChar(charId).maxHp
-  return Math.max(1, base + (mergeRelics(relicIds).maxHpBonus ?? 0))
+  // 직업 패시브(런)의 최대 체력 보정이 여기서 같이 들어간다(`mergeRelics`의 charId).
+  return Math.max(1, base + (mergeRelics(relicIds, charId).maxHpBonus ?? 0))
 }
 /**
  * 이번 층에서 고를 수 있는 칸의 **노드 인덱스**. 1층은 전부 열려 있고, 그 뒤로는
@@ -717,7 +717,8 @@ function statusForNode(node: RunNode): RunStatus {
 
 // --- 런 시작 ----------------------------------------------------------------
 export function startRun(charId: string, difficulty: RunDifficulty = DEFAULT_DIFFICULTY): RunState {
-  const relicIds = [signatureRelicId(charId)].filter(Boolean)
+  // 유물 없이 시작한다 — 직업 패시브는 유물이 아니다(`relics.ts`의 `classPassive`).
+  const relicIds: string[] = []
   const maxHp = computeMaxHp(charId, relicIds)
   return {
     charId,

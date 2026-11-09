@@ -9,7 +9,7 @@
 //
 // 순수 로직이다 — 화면(`EventScreen`)과 밸런스 시뮬(`simrun.ts`)이 같은 걸 쓴다.
 // ---------------------------------------------------------------------------
-import { RELIC_BY_ID, signatureRelicId } from './relics'
+import { RELIC_BY_ID } from './relics'
 import {
   GOBLIN_LOOT, cardRewardPool, grantCard, grantGoblinItem, grantRelic, healHp, isLockedCard, loseHp, loseMaxHp, loseRelic,
   removeCard, rollRelicId, upgradableDeckCards, type RunState, type SpecialFight,
@@ -108,11 +108,11 @@ export interface EventChoice {
 const gold = (n: number): CostChip => ({ kind: 'gold', text: `${n}G` })
 const hp = (n: number): CostChip => ({ kind: 'hp', text: `HP -${n}` })
 
-/** 거래에서 내줄 수 있는 것 — 잠긴 이동 4장 · 시그니처 유물은 빼고. */
+/** 거래에서 내줄 수 있는 것 — 잠긴 이동 4장은 빼고(직업 패시브는 애초에 유물이 아니다). */
 export function tradeList(run: RunState, what: 'card' | 'relic'): string[] {
   return what === 'card'
     ? run.deck.filter((id) => !isLockedCard(id))
-    : run.relicIds.filter((id) => id !== signatureRelicId(run.charId))
+    : run.relicIds
 }
 
 export function eventChoices(run: RunState, st: EventState): EventChoice[] {

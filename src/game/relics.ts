@@ -40,20 +40,24 @@ export interface Relic {
   effect: Omit<Passive, 'desc'>
   /** 전투 밖에 작용하는 효과(상점·골드·보상). */
   mods?: RunMods
-  /** 시작 시그니처 유물이면 해당 캐릭터 id. 일반 보상 풀엔 넣지 않는다. */
-  signatureOf?: string
 }
 
-// --- 캐릭터별 시그니처 유물 (옛 passive를 이관) -----------------------------
-// 각 캐릭터의 roster passive를 그대로 유물화한다. 이름/아이콘은 캐릭터 콘셉트에 맞춰.
+// --- 직업 패시브(런) — **유물이 아니다** ----------------------------------------
+// 2026-11-09 사용자 확정: 서약의 돌무덤 · 독니 화살통 · 혼백의 마법서는 **직업에 붙은 패시브**다.
+// 예전엔 `sig-*` 유물로 `run.relicIds`에 넣어 두고 보상·거래에서만 빼 주는 "유물 모양의 패시브"
+// 였는데, 유물 목록·유물 줄·도감에 같이 보여 "거래할 수 있는 유물인가?"가 모호했다. 이제
+// `RELICS`·`run.relicIds` 어디에도 없고 `mergeRelics(ids, charId)`가 직업에서 직접 얹는다.
+// ⚠ `maxHpBonus`가 직업 밴드를 맞추는 손잡이라 거래·분실이 가능하면 안 된다 — 그래서 패시브다.
+// `id`(`sig-*`)는 아이콘 아틀라스 키로만 남았다.
 //
+
 // **런 보정(runEffect, 2026-07-30)**: 캐릭터 패시브를 그대로 유물화하면 런 클리어율이
 // 27~57%로 벌어진다(캐릭터별 대량 시뮬 — docs/ROGUELIKE.md ⑪). 이유는 구조적이다:
 //   ① 체력이 층 사이에 이어지는 런에선 **지속회복 > 피해감소**다(감소는 출혈을 늦추고,
 //      회복은 되돌린다) → 회복 수단이 없는 캐릭터가 누적 출혈로 죽는다.
 //   ② 런의 제약은 기력이 아니라 **슬롯 3칸**이다(쿨0 공격은 턴당 1회, 기력은 턴마다
 //      쌓임) → 매 라운드 기력을 크게 주는 패시브가 큰 카드를 매 라운드 쏘게 해 압도한다.
-// 그래서 시그니처 유물은 패시브에서 출발하되 **런 수치를 따로 지정**한다(가감 모두).
+// 그래서 직업 패시브는 PvP 패시브에서 출발하되 **런 수치를 따로 지정**한다(가감 모두).
 // roster의 `passive`는 건드리지 않으므로 **PvP·봇전·1:1 시뮬은 불변**이다.
 const SIGNATURE: Record<
   string,
@@ -112,19 +116,22 @@ const SIGNATURE: Record<
   },
 }
 
-const signatureRelics: Relic[] = ROSTER.map((c) => {
-  const meta = SIGNATURE[c.id]
+export interface ClassPassive {
+  /** 아이콘 아틀라스 키(`sig-*`) — 유물 id가 아니다. */
+  id: string
+  name: string
+  icon: string
+  desc: string
+  effect: Omit<Passive, 'desc'>
+}
+/** 이 직업의 런 패시브. 런 밖(PvP·봇전)은 `ROSTER.passive`를 그대로 쓴다. */
+export function classPassive(charId: string): ClassPassive | undefined {
+  const meta = SIGNATURE[charId]
+  const c = ROSTER.find((x) => x.id === charId)
+  if (!meta || !c) return undefined
   const { desc, ...base } = c.passive
-  return {
-    id: meta.id,
-    name: meta.name,
-    desc: meta.desc ?? desc,
-    icon: meta.icon,
-    rarity: 'rare' as Rarity,
-    effect: meta.runEffect ?? base,
-    signatureOf: c.id,
-  }
-})
+  return { id: meta.id, name: meta.name, icon: meta.icon, desc: meta.desc ?? desc, effect: meta.runEffect ?? base }
+}
 
 // --- 일반 보상 유물 (런 중 획득) --------------------------------------------
 // 사용자 예시(송곳니=흡혈, 깃털=부활)를 포함해 훅을 골고루 쓰는 세트.
@@ -559,7 +566,7 @@ const genericRelics: Relic[] = [
   { id: 'kingsseal', name: '왕의 봉인', icon: '📜', rarity: 'legend', desc: '승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.', effect: {}, mods: { rewardOptions: 2, goldBonusPct: 60, shopExtraItems: 2 } },
 ]
 
-export const RELICS: Relic[] = [...signatureRelics, ...genericRelics]
+export const RELICS: Relic[] = genericRelics
 
 export const RELIC_BY_ID: Record<string, Relic> = Object.fromEntries(RELICS.map((r) => [r.id, r]))
 
@@ -567,12 +574,7 @@ export function getRelic(id: string): Relic | undefined {
   return RELIC_BY_ID[id]
 }
 
-/** 캐릭터의 시작 시그니처 유물 id. */
-export function signatureRelicId(charId: string): string {
-  return SIGNATURE[charId]?.id ?? ''
-}
-
-/** 일반 보상 후보 유물(시그니처 제외). */
+/** 일반 보상 후보 유물(직업 패시브는 유물이 아니라 애초에 여기 없다). */
 export const REWARD_RELICS: Relic[] = genericRelics
 
 /**
@@ -586,13 +588,18 @@ export const REWARD_RELICS: Relic[] = genericRelics
  * 무시되고 있었다**(카드에 붙은 독은 엔진이 따로 처리해 살아 있었기에 겉으론
  * 멀쩡해 보였다). 이제 effect의 키를 그대로 훑으므로 훅을 새로 파도 자동으로 붙는다.
  */
-export function mergeRelics(ids: string[]): Passive {
+export function mergeRelics(ids: string[], charId?: string): Passive {
   const out: Passive = { desc: '' }
   const acc = out as unknown as Record<string, unknown>
-  for (const id of ids) {
-    const r = RELIC_BY_ID[id]
-    if (!r) continue
-    for (const [k, v] of Object.entries(r.effect)) {
+  // 직업 패시브(런)를 먼저 깐다 — 유물이 아니라 직업에 붙어 있다(위 "직업 패시브" 절).
+  const effects = [
+    ...(charId ? [classPassive(charId)?.effect] : []),
+    ...ids.map((id) => RELIC_BY_ID[id]?.effect),
+  ]
+  for (const effect of effects) {
+    if (!effect) continue
+    for (const [k, v] of Object.entries(effect)) {
+
       if (k === 'desc' || v == null) continue
       if (k === 'energyTriggers') {
         // 누적 기력 트리거는 **합치지 않고 이어 붙인다** — 주기가 다른 트리거들이

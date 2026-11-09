@@ -36,14 +36,15 @@
 **1:1 카드 전투 로그라이크.** 직업을 고르고 15층 지도를 오르며 전투·이벤트·여관·대장간을 지나 보스를 잡는다. 한 라운드에 카드 3장을 골라 순서대로 실행한다. PvP 단판(봇전·온라인)은 PVP 버튼 아래에 남아 있다.
 세계관·그림은 **2026-11 리디자인**(지역 둘: 초원 1~7층 · 던전 8~15층). 에셋 `public/redesign/`, 스타일 맨 뒤 층 `src/ui/redesign.css`.
 
-### 로스터 — 3직업 (HP·패시브는 PvP 기준 값, 런은 시그니처 유물이 얹힌다)
+### 로스터 — 3직업 (HP·패시브는 PvP 기준 값, 런은 **직업 패시브(런)**가 대신한다)
 | id | 이름 | HP | 패시브(PvP) | 잘함 | 못함 |
 | --- | --- | --- | --- | --- | --- |
 | `warrior` | CAIRN · Oathbound Warden | 103 | 받는 피해 −3 · 라운드마다 체력 +2 | 내구·회복·기절·넉백·반사 | 느린 기동, 원거리 없음 |
 | `archer` | SABLE · Ashen Fletcher | 81 | 공격 +3 · 적중 시 중독 1R | 기동·한방·관통·중독 | 낮은 체력, 밀착 사각 |
 | `mage` | DIRGE · **Azure Witch** | 78 | 혼백의 마법서: 라운드마다 기력 +6 · 보호막 +4 | 넓은 범위·화상·빙결·보호막 | 낮은 단일 화력, 비싼 기력 |
 
-- 런 실효 수치는 `relics.ts`의 `SIGNATURE.runEffect`(시그니처 유물)가 정한다 — 지금 `maxHpBonus` 전사 107 · 궁수 16 · 마법사 80.
+- 런 실효 수치는 `relics.ts`의 **직업 패시브**(`SIGNATURE.runEffect` → `classPassive(charId)`)가 정한다 — 지금 `maxHpBonus` 전사 107 · 궁수 16 · 마법사 80.
+- ⚠ **직업 패시브는 유물이 아니다**(2026-11-09 사용자 확정) — 서약의 돌무덤 · 독니 화살통 · 혼백의 마법서는 `RELICS`·`run.relicIds`·유물 줄·도감 유물 탭·거래 어디에도 없다. `mergeRelics(ids, charId)`가 직업에서 직접 얹는다. 거래·분실이 되면 직업 밴드 손잡이(`maxHpBonus`)가 흔들리므로 유물로 되돌리지 말 것. 런은 유물 0개로 시작한다.
 - 직업 기본기 3장(`CharacterDef.basics`) + 직업 카드(전사 10 · 궁수 8 · 마법사 9). `basics`는 `deckFor`에 꼭 포함돼야 한다(멀티 플랜 복원·AI 풀).
 - 영웅 그림 v2(2026-11-09)는 선택 화면 일러스트에 맞췄다. ⚠ **전사는 방패가 빠진 채 그려졌다** — 방패 넣은 도트는 사용자가 추후 전달(PROGRESS T5).
 - 옛 6종 id(`volt/titan/...`)는 코드에 없다. 그 id를 가리키는 저장 덱은 기본 덱으로 떨어진다.
@@ -146,7 +147,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 ```
 - **현재(2026-11-09, 최고급 기본) 3시드(12345·777·2026) 평균 클리어율 ≈ 26.1% · 밴드 2.2~4.1%p**(전사가 약간 앞선다).
 - ⚠ 단일 시드로 판정하지 말 것 — 같은 수치에서도 밴드가 몇 %p씩 널뛴다. 여러 시드 평균.
-- ⚠ 직업 조정은 **`SIGNATURE.runEffect`의 `maxHpBonus`로만**(1HP 단위). 수치가 ÷2 스케일이라 DR·regen·thorns는 정수 1이 수십 %p를 흔든다. `turnEnergy`로 조정하지 말 것(AI 기력 문턱 인공물).
+- ⚠ 직업 조정은 **직업 패시브(`SIGNATURE.runEffect`)의 `maxHpBonus`로만**(1HP 단위). 수치가 ÷2 스케일이라 DR·regen·thorns는 정수 1이 수십 %p를 흔든다. `turnEnergy`로 조정하지 말 것(AI 기력 문턱 인공물).
 - 민감도(대략): 궁수 ≈0.64 · 마법사 ≈0.23 · 전사 ≈0.16 %p/HP. 전사의 병목은 HP가 아니라 사거리다.
 - 런에선 지속 회복(regen·lifesteal)이 극도로 강하다. 궁수는 화력·사거리를 올리면 오히려 나빠진다(붙는다).
 - 시뮬 정책: `--policy=greedy|random` · `--path=random|template|greedy|safe` · `--diff=novice|adept|expert|master` · `--char=`. npm 플래그는 `--` 뒤에.
@@ -203,7 +204,7 @@ React 19 + TypeScript + Vite, 게임 엔진 없음. `npm run dev` · `build` · 
 
 ## 11. 해야 할 일 (디자인 대기)
 
-`docs/redesign/PROGRESS.md` 2-bis가 기준이다 — 도감 도움말(튜토리얼·팁 다시 보기) · 로그인 약관/개인정보 링크 · 보물 화면 시안 · 대장간 배경 그림 · 전사 방패 도트 · 마법사 시그니처 마법서 아이콘.
+`docs/redesign/PROGRESS.md` 2-bis가 기준이다 — 도감 도움말(튜토리얼·팁 다시 보기) · 로그인 약관/개인정보 링크 · 보물 화면 시안 · 대장간 배경 그림 · 전사 방패 도트 · 마법사 직업 패시브 마법서 아이콘.
 
 ## 컨벤션
 

@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react'
 import { sheetFor } from '../../art/sprites'
 import { ROSTER } from '../../data/roster'
-import { getRelic, signatureRelicId } from '../../game/relics'
+import { classPassive } from '../../game/relics'
 import {
   computeMaxHp,
   DEFAULT_DIFFICULTY,
@@ -46,7 +46,7 @@ const HERO_FACE: Record<string, [number, number]> = { warrior: [240, 140], arche
 const FACE_ZOOM = 1.2
 
 /** 시작 체력 — 시그니처 유물의 최대 체력까지 반영한 실제 값(`startRun`과 같다). */
-const startHp = (charId: string) => computeMaxHp(charId, [signatureRelicId(charId)])
+const startHp = (charId: string) => computeMaxHp(charId, [])
 
 export function RunStartScreen({
   onStart,
@@ -192,7 +192,7 @@ export function RunStartScreen({
     setPrevId(charId)
     setCharId(id)
   }
-  const relic = getRelic(signatureRelicId(char.id))
+  const passive = classPassive(char.id) // 직업 패시브(유물 아님)
   const sig = char.cards.find((k) => k.signature)
   const hp = startHp(char.id)
   return (
@@ -261,9 +261,9 @@ export function RunStartScreen({
             </div>
             <b>{hp}</b>
           </div>
-          {relic && (
+          {passive && (
             <p className="heropanel__passive">
-              <b>{relic.name}</b> — {relic.desc.replace(`${relic.name}: `, '')}
+              <b>{passive.name}</b> — {passive.desc.replace(`${passive.name}: `, '')}
             </p>
           )}
           {sig && (

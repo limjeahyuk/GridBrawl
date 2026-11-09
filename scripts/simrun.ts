@@ -439,7 +439,7 @@ async function playRun(charId: string): Promise<void> {
   }
   for (const id of run.relicIds) {
     const r = getRelic(id)
-    if (r && !r.signatureOf) rarityGot[r.rarity] = (rarityGot[r.rarity] ?? 0) + 1
+    if (r) rarityGot[r.rarity] = (rarityGot[r.rarity] ?? 0) + 1
   }
   const reached = run.status === 'won' ? LADDER_FLOORS : run.floor
   floorSum += reached

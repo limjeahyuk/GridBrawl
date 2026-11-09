@@ -59,7 +59,7 @@ export function runFightProps(run: RunState): RunFightProps {
   const monCell: Cell = { col: GRID_COLS - 1, row: scripted ? 1 : rndRow() }
   const battleOpts: BattleOpts = {
     chars: [pChar, eChar],
-    passives: [mergeRelics(run.relicIds), eChar.passive],
+    passives: [mergeRelics(run.relicIds, run.charId), eChar.passive], // 직업 패시브 + 유물
     // HP 이월 — 플레이어는 지난 층에서 남은 체력으로 싸운다(몬스터는 풀피).
     startHp: [run.hp, undefined],
     startCells: [pCell, monCell],

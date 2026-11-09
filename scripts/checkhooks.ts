@@ -11,7 +11,7 @@ import { COMMON_CARDS, ENERGY_REGEN, deckFor } from '../src/battle/cards'
 import { SHEETS, placeSprite } from '../src/art/sprites'
 import { faceToward } from '../src/ui/screens/BattleScreen'
 import { getChar, ROSTER, type CharacterDef, type Passive } from '../src/data/roster'
-import { mergeRelics, mergeRunMods, RELICS, REWARD_RELICS } from '../src/game/relics'
+import { classPassive, mergeRelics, mergeRunMods, RELICS, REWARD_RELICS } from '../src/game/relics'
 import {
   LADDER_FLOORS,
   LOCKED_CARD_IDS,
@@ -263,7 +263,11 @@ console.log('\n런 진행 규칙')
   const basicIds = getChar('archer').basics.map((c) => c.id)
   check('시작 덱에 직업 고유 카드 없음', run.deck.some((id) => uniqueIds.includes(id)), false)
   check('시작 덱에 직업 기본기 3장', basicIds.filter((id) => run.deck.includes(id)).length, 3)
-  check('시그니처 유물만 들고 시작', run.relicIds, ['sig-archer'])
+  // 직업 패시브는 유물이 아니다(2026-11-09) — 유물 없이 시작하고, 효과는 직업에서 얹힌다.
+  check('유물 없이 시작한다', run.relicIds, [])
+  check('유물 목록에 직업 패시브가 없다', RELICS.some((r) => r.id.startsWith('sig-')), false)
+  check('직업 패시브의 최대 체력 보정이 시작 체력에 들어간다', run.maxHp, getChar('archer').maxHp + (classPassive('archer')?.effect.maxHpBonus ?? 0))
+  check('직업 패시브 효과가 전투에 얹힌다', mergeRelics([], 'archer').poisonOnHit, classPassive('archer')?.effect.poisonOnHit)
 
   // 직업 카드를 하나도 못 얻은 상태에선 보상 한 칸이 직업 카드로 보장된다.
   const classIds = getChar('archer').cards.map((c) => c.id)
