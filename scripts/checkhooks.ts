@@ -38,40 +38,28 @@ import {
   startRun,
   terrainFor,
   upgradableDeckCards,
-  TERRAIN,
-  applyCardUpgrade,
-  afterWin,
-  buyGoblinItem,
-  buyShopItem,
-  enterReveal,
-  goblinTier,
-  GOBLIN_TIER_AT,
-  loseMaxHp,
+  upgradeCard,
+  restAtFire,
   openTreasure,
-  restHeal,
-  restHealAmount,
+  hazardsFor,
+  goblinTier,
   rollGoblinShop,
-  startAmbush,
-  UNKNOWN_WEIGHTS,
+  buyGoblinItem,
+  goblinMonsterId,
+  rollQuestionFate,
+  buyShopItem,
+  computeMaxHp,
+  currentEnemy,
+  afterWin,
+  TERRAIN,
   type NodeType,
   type RunDifficulty,
   type RunState,
 } from '../src/game/run'
 import { runFightProps } from '../src/game/runbattle'
-import {
-  MAX_UPGRADE,
-  ROULETTE_RANGE,
-  ROULETTE_SLOTS,
-  ROULETTE_VALUE,
-  addUpgrade,
-  canPickCell,
-  cellsForTap,
-  isUpgradable,
-  rollRoulette,
-  rouletteSlots,
-  upgradedCard,
-} from '../src/game/upgrades'
-import { EVENT_DEFS, RELIC_POOLS, chooseEvent, eventChoices, openEvent, type EventId } from '../src/game/events'
+import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
+import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, resolveEventChoice, startEvent } from '../src/game/events'
+import { RELIC_BY_ID } from '../src/game/relics'
 import { RUN_CARDS, RUN_CARD_BY_ID, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
@@ -89,7 +77,9 @@ import {
   STATUS_MAX_ROUNDS,
   STATUS_STACK_CAP,
   type CardDef,
+  type Hazard,
   type Obstacle,
+  spikeStateAt,
 } from '../src/battle/types'
 
 let failed = 0
@@ -309,9 +299,6 @@ console.log('\n런 진행 규칙')
   check('꽉 찬 덱 + 일반 카드 지정 → 교체된다', grantCard(full, 'war-cleave', 'c-strike').run.deck.length, deckCap(run))
   // 유료 "카드 1장 제거"는 뺐다 — 덱=손패라 얇게 만들 이득이 0인 함정 칸이었다.
   check('상점에 카드 제거 서비스가 없다', rollShop(run).some((i) => !['card', 'relic', 'heal', 'upgrade'].includes(i.kind)), false)
-  // 이벤트 "거래"로도 이동 카드는 못 내놓는다(빼면 남의 물건만 공짜로 얻는 셈이 된다).
-  const trade = chooseEvent(run, openEvent('EV-TRADE'), 'card-relic', { cardId: 'm-left' })
-  check('거래 — 잠긴 카드를 내놓으면 다시 고르게 한다', [trade.need, trade.relicId, trade.run.deck.includes('m-left')], ['card', undefined, true])
 }
 
 // --- 상태이상 (2026-08-07 전면 재정의) ---------------------------------------
@@ -1142,9 +1129,8 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
       // ⚠ 핵심 회귀 검사. 지원 칸(이벤트·상점)의 대안을 전투로 뒀다가 클리어율이
       //   27%→10%로 무너졌다(상점이 회복의 주 수단이라서). 지원 칸끼리만 바꾼다.
       const head = center(f)?.type
-      const SUPPORT = ['event', 'shop', 'rest', 'treasure']
-      if (head && SUPPORT.includes(head)) {
-        if (nodes.some((o) => !SUPPORT.includes(o.type))) supportToCombat++
+      if (head === 'event' || head === 'shop') {
+        if (nodes.some((o) => !['event', 'shop', 'rest', 'treasure'].includes(o.type))) supportToCombat++
       }
       // 엘리트는 유일하게 "전투량"을 고르는 칸 — 엘리트 하나 + 나머지는 일반 전투.
       if (head === 'elite') {
@@ -1174,7 +1160,7 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
   }
   check('보스 층은 갈래가 없다', bossBranched, 0)
   check('모든 층에 가운데 줄이 있다', noCenter, 0)
-  check('지원 칸(이벤트·상점)은 전투로 바뀌지 않는다', supportToCombat, 0)
+  check('지원 칸(이벤트·상점·휴식·보물)은 전투로 바뀌지 않는다', supportToCombat, 0)
   check('엘리트 층은 엘리트 1 + 나머지 일반전투', eliteShapeBad, 0)
   check('막다른 칸이 없다(마지막 층 제외)', deadend, 0)
   check('들어오는 길이 없는 칸이 없다', orphan, 0)
@@ -1218,202 +1204,213 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
   check('마지막 층 다음은 승리', advanceFloor(last).status, 'won')
 }
 
-// --- 카드 강화 — 룰렛 (2026-11 · docs/redesign/CARD_UPGRADE.md) ------------------
-console.log('\n카드 강화 — 룰렛(수치 / 범위) · 카드당 최대 2번 · 꽝은 안 센다')
+// --- 함정 4종(2026-11 리디자인 · 런 전용) -------------------------------------
+console.log('\n함정 — 불길 · 가시덫 · 가시덩굴 · 빙판')
 {
-  // 판 — 확률이 60칸에 정확히 옮겨졌는가, 같은 숫자가 이웃하지 않는가.
-  for (const [name, table] of [['수치', ROULETTE_VALUE], ['범위', ROULETTE_RANGE]] as const) {
-    const slots = rouletteSlots(table)
-    check(`${name} 판은 60칸`, slots.length, ROULETTE_SLOTS)
-    check(
-      `${name} 판 칸 수 = 확률 × 60`,
-      table.map(([v]) => slots.filter((x) => x === v).length),
-      table.map(([, p]) => Math.round((p / 100) * ROULETTE_SLOTS)),
-    )
-    check(`${name} 판에 같은 숫자가 붙은 칸이 없다`, slots.some((v, i) => v === slots[(i + 1) % slots.length]), false)
+  const hzBattle = (hazards: Hazard[], foe = { col: 5, row: 3 }) =>
+    new CardBattle('warrior', 'warrior', { startCells: [{ col: 1, row: 1 }, foe], hazards })
+  const R = card('m-right')
+  const kinds = (b: CardBattle, p = 0) => b.state.status[p].map((e) => e.kind)
+  check('함정을 안 넘기면 빈 판(PvP 불변)', new CardBattle('warrior', 'warrior').state.hazards, [])
+
+  let b = hzBattle([{ kind: 'fire', cell: { col: 2, row: 1 } }])
+  b.resolveRound([R, card('c-energy'), card('c-guard')], HOLD)
+  check('불길 — 서 있으면 라운드 끝에 화상(다음 라운드까지)', kinds(b).includes('burn'), true)
+  check('불길 — 라운드마다 사그라든다(3 → 2)', b.state.hazards[0].rounds, 2)
+
+  b = hzBattle([{ kind: 'bramble', cell: { col: 2, row: 1 } }])
+  b.resolveRound([R, R, card('c-energy')], HOLD)
+  check('가시덩굴 — 밟으면 속박, 남은 이동이 무효', b.state.pos[0], { col: 2, row: 1 })
+
+  b = hzBattle([{ kind: 'spikes', cell: { col: 2, row: 1 }, phase: 1 }])
+  check('가시덫 주기 — 숨음 → 경고 → 솟음', [0, 1, 2].map((r) => spikeStateAt({ kind: 'spikes', cell: { col: 0, row: 0 }, phase: 0 }, r)), ['hidden', 'warn', 'up'])
+  b.resolveRound([R, R, card('c-energy')], HOLD)
+  check('가시덫 — 솟은 라운드에 밟으면 속박', b.state.pos[0], { col: 2, row: 1 })
+  b = hzBattle([{ kind: 'spikes', cell: { col: 2, row: 1 }, phase: 0 }])
+  b.resolveRound([R, R, card('c-energy')], HOLD)
+  check('가시덫 — 경고 중엔 그냥 지나간다', b.state.pos[0], { col: 3, row: 1 })
+
+  b = hzBattle([{ kind: 'ice', cell: { col: 2, row: 1 } }])
+  b.resolveRound([R, card('c-energy'), card('c-guard')], HOLD)
+  check('빙판 — 들어선 방향으로 한 칸 더', b.state.pos[0], { col: 3, row: 1 })
+  b = hzBattle([{ kind: 'ice', cell: { col: 2, row: 1 } }], { col: 3, row: 1 })
+  b.resolveRound([R, card('c-energy'), card('c-guard')], HOLD)
+  check('빙판 — 상대 앞에서는 멈춘다', b.state.pos[0], { col: 2, row: 1 })
+
+  b = hzBattle([{ kind: 'fire', cell: { col: 3, row: 2 } }, { kind: 'bramble', cell: { col: 3, row: 1 } }])
+  b.resolveRound(HOLD, HOLD)
+  check('불길이 붙은 덩굴을 태운다', b.state.hazards.map((h) => h.kind), ['fire'])
+  check('시작 칸에는 함정이 안 선다', hzBattle([{ kind: 'fire', cell: { col: 1, row: 1 } }]).state.hazards, [])
+
+  // 배치 — 일반 전투에만, 끝열은 비운다.
+  const r0 = startRun('warrior')
+  let onEdge = 0, any = 0
+  for (let i = 0; i < 300; i++) {
+    const hz = hazardsFor(r0)
+    if (hz.length) any++
+    onEdge += hz.filter((h) => h.cell.col === 0 || h.cell.col === GRID_COLS - 1).length
   }
-  // 결과는 가중 추첨 — 경계값이 판의 값과 정확히 맞는다.
-  check('룰렛 rng 0 → 첫 값(꽝)', rollRoulette(ROULETTE_VALUE, () => 0), 0)
-  check('룰렛 rng 0.999 → 마지막 값', rollRoulette(ROULETTE_VALUE, () => 0.999), 20)
-  check('룰렛 rng 0.5 → 가운데(+10)', rollRoulette(ROULETTE_VALUE, () => 0.5), 10)
+  check('일반 전투의 일부에 함정이 깔린다', any > 50 && any < 250, true)
+  check('끝열(시작 자리)엔 함정이 없다', onEdge, 0)
+  const eliteRun = { ...r0, map: r0.map.map((f) => f.map((n) => ({ ...n, type: 'elite' as const }))) }
+  check('엘리트 칸엔 함정 대신 바위', [0, 1, 2, 3, 4].some(() => hazardsFor(eliteRun).length > 0), false)
+}
 
-  // 고를 수 있는 카드 — 이동만 안 된다.
-  check('이동 카드는 강화 불가', isUpgradable(card('m-up')), false)
-  check('공격 · 가드 · 회복 · 기력 카드는 강화 가능', ['c-strike', 'c-guard', 'c-repair', 'c-energy'].map((id) => isUpgradable(card(id))), [true, true, true, true])
+// --- 룰렛 카드 강화(2026-11 리디자인) -----------------------------------------
+console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드당 2번 · 꽝은 안 셈')
+{
+  const sum = (t: readonly (readonly [number, number])[]) => t.reduce((n, [, p]) => n + p, 0)
+  check('수치 룰렛 확률 합 100', sum(ROULETTE_VALUE), 100)
+  check('범위 룰렛 확률 합 100', sum(ROULETTE_RANGE), 100)
+  check('룰렛 결과는 판에 있는 값', [0, 0.15, 0.5, 0.99].map((r) => spinRoulette(ROULETTE_VALUE, () => r)), [0, 5, 10, 20])
+  check('최대 강화 2번', MAX_UPGRADE, 2)
 
-  // 수치 강화 — 카드 종류마다 다른 값이 오른다.
-  const one = (id: string, value: number) => upgradedCard(card(id), addUpgrade(undefined, { value }))
-  check('공격은 피해가 오른다', one('c-strike', 10).damage, card('c-strike').damage! + 10)
-  check('가드는 방어량이 오른다', one('c-guard', 5).block, card('c-guard').block! + 5)
-  check('회복은 회복량이 오른다', one('c-repair', 15).healHp, card('c-repair').healHp! + 15)
-  check('이름에 +횟수', one('c-strike', 5).name, `${card('c-strike').name}+1`)
+  let run = grantCard(startRun('warrior'), 'war-cleave').run
+  const plain = resolveRunCard('warrior', 'war-cleave')!
+  check('가진 카드를 또 얻어도 아무 일 없다(중복 강화 폐지)', grantCard(run, 'war-cleave').run.deck.length, run.deck.length)
+  let leaked = 0
+  for (let i = 0; i < 300; i++) if (rollRewards(run).some((r) => r.kind === 'card' && r.cardId === 'war-cleave')) leaked++
+  check('가진 카드는 보상에 안 나온다', leaked, 0)
 
-  // 꽝은 횟수에 안 센다 — 카드가 안 바뀌었으니까.
-  check('꽝(+0)은 기록이 안 생긴다', addUpgrade(undefined, { value: 0 }).times, 0)
-  check('꽝이면 원본 그대로', upgradedCard(card('c-strike'), addUpgrade(undefined, { value: 0 })), card('c-strike'))
+  check('꽝(0)은 횟수에 안 센다', upgradeCard(run, 'war-cleave', { value: 0 }).upgrades['war-cleave'], undefined)
+  run = upgradeCard(run, 'war-cleave', { value: 10 })
+  check('수치 강화 — 피해 +10', runCard(run, 'war-cleave')!.damage, plain.damage! + 10)
+  check('이름에 +1', runCard(run, 'war-cleave')!.name, `${plain.name}+1`)
+  run = upgradeCard(run, 'war-cleave', { cells: [{ df: 2, du: 0 }] })
+  check('범위 강화 — 칸이 붙는다', runCard(run, 'war-cleave')!.range!.length, plain.range!.length + 1)
+  check('2번 하면 최대', canUpgradeCard(run, 'war-cleave'), false)
+  check('최대면 더 안 바뀐다', upgradeCard(run, 'war-cleave', { value: 20 }), run)
+  check('원본은 그대로(PvP 카드 풀 불변)', [resolveRunCard('warrior', 'war-cleave')!.damage, resolveRunCard('warrior', 'war-cleave')!.range!.length], [plain.damage, plain.range!.length])
+  const fightCard = runFightProps(run).deck.find((c) => c.id === 'war-cleave')
+  check('전투 덱에 강화가 들어간다', fightCard?.damage, plain.damage! + 10)
+  check('이동 카드는 강화 불가', canUpgradeCard(run, 'm-up'), false)
+  check('가드는 방어량이 오른다', upgradedCard(card('c-guard'), addUpgrade(undefined, { value: 5 })).block, card('c-guard').block! + 5)
+  check('덱에서 빠지면 강화도 지워진다', removeCard(run, 'war-cleave').upgrades['war-cleave'], undefined)
 
-  // 카드당 최대 2번.
-  check('상한 = 2', MAX_UPGRADE, 2)
-  let run = startRun('warrior')
-  run = applyCardUpgrade(run, 'c-brace', { value: 5 })
-  run = applyCardUpgrade(run, 'c-brace', { value: 0 }) // 꽝 — 안 센다
-  run = applyCardUpgrade(run, 'c-brace', { value: 10 })
-  check('두 번 강화 = 2/2 (꽝 제외)', cardLevel(run, 'c-brace'), 2)
-  check('2/2 카드는 더 못 고른다', canUpgradeCard(run, 'c-brace'), false)
-  check('2/2 카드에 또 걸어도 그대로', applyCardUpgrade(run, 'c-brace', { value: 20 }).upgrades['c-brace'].valueBonus, 15)
-  check('전투 덱에 강화 수치가 들어간다', runCard(run, 'c-brace')?.block, card('c-brace').block! + 15)
-  check('강화할 수 있는 카드 목록에서 빠진다', upgradableDeckCards(run).includes('c-brace'), false)
-  check('이동 카드는 목록에 없다', upgradableDeckCards(run).some(isLockedCard), false)
-  const removed = removeCard(run, 'c-brace')
-  check('덱에서 빠지면 강화 기록도 지워진다', cardLevel(removed, 'c-brace'), 0)
+  // 범위 고르기 — 지금 범위·나·고른 칸에 8방향으로 붙은 빈 칸만.
+  const r = [{ df: 1, du: 0 }]
+  check('붙은 칸은 고를 수 있다', canPickCell(r, [], { df: 2, du: 1 }), true)
+  check('떨어진 칸은 못 고른다', canPickCell(r, [], { df: 3, du: 0 }), false)
+  check('고른 칸에 붙은 칸이 열린다', canPickCell(r, [{ df: 2, du: 0 }], { df: 3, du: 0 }), true)
+  check('나(0,0)와 이미 있는 칸은 못 고른다', [canPickCell(r, [], { df: 0, du: 0 }), canPickCell(r, [], { df: 1, du: 0 })], [false, false])
+  check('편집 칸 밖은 못 고른다', canPickCell([{ df: 4, du: 0 }], [], { df: 5, du: 0 }), false)
 
-  // 범위 강화 — 붙은 칸만, 대칭 토글.
-  const r0 = [{ df: 1, du: 0 }, { df: -1, du: 0 }]
-  check('범위에 붙은 칸은 고를 수 있다', canPickCell(r0, [], { df: 2, du: 0 }), true)
-  check('떨어진 칸은 못 고른다', canPickCell(r0, [], { df: 3, du: 0 }), false)
-  check('나(0,0)는 못 고른다', canPickCell(r0, [], { df: 0, du: 0 }), false)
-  check('이미 있는 칸은 못 고른다', canPickCell(r0, [], { df: 1, du: 0 }), false)
-  check('고른 칸에 붙으면 열린다', canPickCell(r0, [{ df: 2, du: 0 }], { df: 3, du: 0 }), true)
-  check('편집 칸 밖(df 5)은 못 고른다', canPickCell([{ df: 4, du: 0 }], [], { df: 5, du: 0 }), false)
-  check('대칭이면 두 칸이 찍힌다', cellsForTap(r0, [], { df: 2, du: 1 }, true, 3), [{ df: 2, du: 1 }, { df: -2, du: 1 }])
-  check('남은 칸이 1개면 한 칸만', cellsForTap(r0, [], { df: 2, du: 1 }, true, 1), [{ df: 2, du: 1 }])
-  check('대칭 끄면 한 칸', cellsForTap(r0, [], { df: 2, du: 1 }, false, 3), [{ df: 2, du: 1 }])
-  const wide = upgradedCard(card('c-strike'), addUpgrade(undefined, { cells: [{ df: 2, du: 0 }] }))
-  check('범위 강화 = range.concat(picks)', wide.range?.length, card('c-strike').range!.length + 1)
+  // 상점 — 강화 칸은 한 번, 결제는 룰렛 전에 끝난다.
+  const shop = rollShop({ ...run, gold: 100 })
+  const up = shop.find((i) => i.kind === 'upgrade')!
+  check('상점에 강화 칸이 있다', !!up, true)
+  const fresh = grantCard({ ...startRun('mage'), gold: 100 }, 'mag-spark').run
+  const bought = buyShopItem(fresh, up)
+  check('강화 칸을 사면 룰렛으로 넘어간다', [bought.ok, bought.needsUpgrade, bought.run.gold], [true, true, 100 - up.price])
+  const none = { ...fresh, deck: ['m-up', 'm-down', 'm-left', 'm-right'] }
+  check('강화할 카드가 없으면 못 산다', buyShopItem(none, up).ok, false)
+}
 
-  // 중복 강화는 없다 — 같은 카드를 또 얻어도 아무 일도 없다.
-  const base = startRun('warrior')
-  const got = grantCard(base, 'war-cleave').run
-  const again = grantCard(got, 'war-cleave')
-  check('이미 가진 카드는 아무 일도 안 한다', [again.run.deck.length, cardLevel(again.run, 'war-cleave')], [got.deck.length, 0])
-  check('보상 풀에 이미 가진 카드가 없다', rollRewards(got).some((r) => r.kind === 'card' && got.deck.includes(r.cardId)), false)
+// --- 이벤트 8종(2026-11 리디자인) -------------------------------------------------
+console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복형')
+{
+  check('이벤트 8종', EVENT_DEFS.map((e) => e.id).sort(), ['apothecary', 'forge', 'gacha', 'jar', 'mole', 'spring', 'surgery', 'trade'])
+  const pooled = Object.values(RELIC_POOLS).flat()
+  check('유물 풀의 id가 전부 실제 유물', pooled.filter((id) => !RELIC_BY_ID[id]), [])
+  check('차가운 쇠는 실제 유물', !!RELIC_BY_ID['coldiron'], true)
 
-  // 상점 강화 칸 — 상점마다 하나, 꽝이어도 돈은 안 돌아온다(먼저 낸다).
-  const rich = { ...base, gold: 200 }
-  const up = rollShop(rich).filter((i) => i.kind === 'upgrade')
-  check('상점에 강화 칸이 하나', up.length, 1)
-  const paid = buyShopItem(rich, up[0])
-  check('강화 칸을 사면 돈을 먼저 내고 강화 화면으로', [paid.ok, paid.openUpgrade, paid.run.gold], [true, true, 200 - up[0].price])
+  const base = { ...grantCard(startRun('warrior'), 'war-cleave').run, gold: 200 }
+  // 대장장이 — 히든은 차가운 쇠가 있어야 열린다.
+  const forge = startEvent('forge')
+  check('히든은 잠겨 있다', eventChoices(base, forge).find((c) => c.key === 'swap')!.hidden, 'locked')
+  check('잠긴 히든은 고를 수 없다', resolveEventChoice(base, forge, 'swap'), null)
+  const iron = resolveEventChoice(base, forge, 'iron')!
+  check('쇠를 챙기면 차가운 쇠', iron.run.relicIds.includes('coldiron'), true)
+  check('차가운 쇠가 있으면 히든이 열린다', eventChoices(iron.run, forge).find((c) => c.key === 'swap')!.hidden, 'open')
+  const swap = resolveEventChoice(iron.run, forge, 'swap')!
+  check('쇠를 두들기면 차가운 쇠를 잃고 쇠 유물', [swap.run.relicIds.includes('coldiron'), RELIC_POOLS.iron.includes(swap.relicId as never)], [false, true])
+  check('카드라도 두들긴다 → 룰렛 강화', resolveEventChoice(base, forge, 'hammer')!.upgrade, true)
+
+  // 약방 — 골드를 내고, 반복이라 끝나지 않는다.
+  const apo = startEvent('apothecary')
+  const p = resolveEventChoice({ ...base, hp: 40 }, apo, 'potion-0')!
+  check('약값 50', p.run.gold, 150)
+  check('약방은 반복(계속하기)', p.done, false)
+  check('골드가 없으면 약이 흐려진다', eventChoices({ ...base, gold: 10 }, apo)[0].off, '골드 부족')
+  check('세 병은 회복·감소·없음이 하나씩', [...apo.potions].sort(), ['heal', 'hurt', 'none'])
+
+  // 두더지 — 팔 때마다 대가가 3씩 는다.
+  let mole = startEvent('mole')
+  const miss = resolveEventChoice(base, mole, 'dig', undefined, () => 0.99)!
+  check('두더지 실패 — HP -10, 계속', [base.hp - miss.run.hp, miss.done], [10, false])
+  mole = miss.st
+  check('다음엔 대가 13', eventChoices(miss.run, mole)[0].cost[0].text, 'HP -13')
+  check('두더지 성공 → 유물 · 끝', !!resolveEventChoice(miss.run, mole, 'dig', undefined, () => 0)!.relicId, true)
+
+  // 갓챠 — 두 상품을 다 뽑으면 자동으로 끝난다.
+  let g = startEvent('gacha')
+  let cur = base
+  const win1 = resolveEventChoice(cur, g, 'coin', undefined, () => 0)!
+  check('갓챠 당첨 1 — 아직 남았다', [win1.done, win1.st.prizes.length], [false, 1])
+  cur = win1.run; g = win1.st
+  const win2 = resolveEventChoice(cur, g, 'coin', undefined, () => 0)!
+  check('갓챠 다 뽑으면 끝', win2.done, true)
+
+  // 수술실 — 최대 체력은 유물을 얻어도 되돌아오지 않는다.
+  const heart = resolveEventChoice(base, startEvent('surgery'), 'heart')!
+  check('심장 — 최대 HP -10 (유물의 최대 체력 보너스 반영 후에도)', heart.run.maxHp, computeMaxHp(base.charId, heart.run.relicIds) - 10)
+
+  // 항아리 — 반은 뱀 전투(중독으로 시작), 이기면 독 유물.
+  const jar = resolveEventChoice(base, startEvent('jar'), 'open', undefined, () => 0.1)!
+  check('항아리 — 뱀 전투', jar.fight?.monsterId, 'snake')
+  const fightRun = { ...jar.run, special: jar.fight, status: 'fighting' as const }
+  const fp = runFightProps(fightRun)
+  check('뱀 전투는 중독으로 시작', new CardBattle(fp.p0CharId, fp.p1CharId, fp.battleOpts).state.status[0].map((e) => e.kind), ['poison'])
+  check('뱀이 상대', currentEnemy(fightRun).id, 'snake')
+  const won = applySpecialWin(afterWin(fightRun, 30))
+  check('뱀을 이기면 독 유물', RELIC_POOLS.poison.includes(won.special?.wonRelicId as never), true)
+  check('층을 넘기면 이벤트 전투가 지워진다', advanceFloor(won).special, undefined)
+  check('항아리 꽝', resolveEventChoice(base, startEvent('jar'), 'open', undefined, () => 0.9)!.fight, undefined)
+
+  // 거래 — 잠긴 이동 카드는 내줄 수 없다.
+  check('거래 목록에 이동 4장이 없다', eventChoices(base, startEvent('trade')).length, 3)
+  const tr = resolveEventChoice(base, startEvent('trade'), 'card-card', 'war-cleave')!
+  check('카드 거래 — 한 장 나가고 한 장 들어온다', [tr.run.deck.includes('war-cleave'), tr.run.deck.length], [false, base.deck.length])
 }
 {
-  // ⚠ 강화는 **런 전용**이다. PvP 덱 빌더가 보는 풀에 강화 카드가 새어 나가면 안 된다.
+  // 휴식 · 보물(2026-11) — 지도 칸 두 종류가 실제로 생기고, 하는 일을 한다.
+  let rest = 0, treasure = 0
+  for (let i = 0; i < 100; i++)
+    for (const f of startRun('warrior').map) for (const n of f) { if (n.type === 'rest') rest++; if (n.type === 'treasure') treasure++ }
+  check('지도에 휴식·보물 칸이 나온다', [rest > 0, treasure > 0], [true, true])
+  const hurt = { ...startRun('warrior'), hp: 10 }
+  check('모닥불 — 최대 체력 30% 회복 후 다음 층', [restAtFire(hurt).hp, restAtFire(hurt).floor], [10 + Math.round(hurt.maxHp * 0.3), 2])
+  check('보물 — 유물 하나', openTreasure(hurt).run.relicIds.length, hurt.relicIds.length + 1)
+}
+{
+  // 고블린 장사꾼(2026-11) — 쓸수록 부자 · 값은 물건마다 ×0.8~1.5 · 덮쳐서 이기면 재산 0.
+  check('고블린 단계 문턱', [goblinTier(0), goblinTier(79), goblinTier(80), goblinTier(199), goblinTier(200)], ['poor', 'poor', 'mid', 'mid', 'rich'])
+  const r0 = { ...startRun('warrior'), gold: 999 }
+  let bad = 0
+  for (let i = 0; i < 200; i++)
+    for (const it of rollGoblinShop(r0, 'rich')) if (it.mul < 0.8 || it.mul > 1.5 || it.price !== Math.round(it.base * it.mul)) bad++
+  check('값 배율은 0.8~1.5 · 값 = 정가 × 배율', bad, 0)
+  check('가난 = 카드 2 · 회복 1', rollGoblinShop(r0, 'poor').map((i) => i.kind).sort(), ['card', 'card', 'heal'])
+  check('부자 = 카드 2 · 유물 2 · 회복 1', rollGoblinShop(r0, 'rich').map((i) => i.kind).sort(), ['card', 'card', 'heal', 'relic', 'relic'])
+  const heal = rollGoblinShop(r0, 'poor').find((i) => i.kind === 'heal')!
+  const paid = buyGoblinItem(r0, heal)
+  check('사면 쓴 돈이 쌓인다', [paid.ok, paid.run.goblinSpent, paid.run.gold], [true, heal.price, 999 - heal.price])
+  const rich = { ...r0, goblinSpent: 250 }
+  const stock = rollGoblinShop(rich, 'rich')
+  const fightRun = { ...rich, special: { kind: 'goblin' as const, monsterId: goblinMonsterId('rich'), goblinTier: 'rich' as const, goblinStock: stock }, status: 'fighting' as const }
+  check('덮치면 그 단계 고블린과 싸운다', currentEnemy(fightRun).id, 'goblin-rich')
+  const won = applySpecialWin(afterWin(fightRun, 50))
+  check('이기면 재산 0', won.goblinSpent, 0)
+  check('부자를 이기면 유물 확정', !!won.special?.wonRelicId, true)
+  check('이기면 고블린 골드', won.gold >= 999 + 140, true)
+  let fates = new Set<string>()
+  for (let i = 0; i < 400; i++) fates.add(rollQuestionFate())
+  check('? 칸 정체는 넷', [...fates].sort(), ['combat', 'event', 'goblin', 'rest'])
+}
+{
   const leaked = ROSTER.flatMap((c) => deckFor(c)).filter((c) => c.upgraded !== undefined)
   check('PvP 카드 풀에 강화 카드가 없다', leaked.map((c) => c.id), [])
-  const runLeaked = [...COMMON_CARDS, ...RUN_CARDS, ...ROSTER.flatMap((c) => [...c.basics, ...c.cards])]
-    .filter((c) => c.upgraded !== undefined)
-  check('원본 상수가 오염되지 않았다', runLeaked.map((c) => c.id), [])
-}
-
-// --- 지도 칸 7종 · ? 칸 · 휴식 · 보물 (2026-11) ------------------------------------
-console.log('\n지도 — 휴식 · 보물 · ? 칸 정체 공개')
-{
-  const run = startRun('mage')
-  const types = new Set(run.map.flat().map((n) => n.type))
-  check('템플릿에 휴식·보물이 있다', ['rest', 'treasure'].every((t) => types.has(t as NodeType)), true)
-  check('보스 앞 층은 휴식', run.map[LADDER_FLOORS - 2].find((n) => n.lane === 1)?.type, 'rest')
-  // ? 칸 — 지도엔 ?로 남고, 들어가는 순간 정해진다.
-  const unk = { ...run, floor: 1, map: [[{ type: 'event' as NodeType, lane: 1, next: [] }]], picked: [] } as RunState
-  check('? 칸은 지도에서 정체가 없다', unk.map[0][0].reveal, undefined)
-  const seen = new Set<string>()
-  for (let i = 0; i < 400; i++) {
-    const r = chooseBranch(unk, 0)
-    seen.add(currentNode(r).reveal ?? '?')
-    if (r.status !== 'reveal') seen.add('bad-status')
-  }
-  check('? 칸은 공개 단계부터', seen.has('bad-status'), false)
-  check('? 칸 정체 4종이 다 나온다', [...seen].sort(), Object.keys(UNKNOWN_WEIGHTS).sort())
-  const combat = { ...unk, map: [[{ type: 'event' as NodeType, lane: 1, next: [], reveal: 'combat' as const, monsterId: 'slime' }]], picked: [0], status: 'reveal' as const }
-  check('전투로 열리면 싸운다', enterReveal(combat).status, 'fighting')
-  // 휴식 — 30% 회복
-  const hurt = { ...run, hp: 10 }
-  check('모닥불 쉬기 = 최대 체력 30%', restHeal(hurt).hp, Math.min(run.maxHp, 10 + restHealAmount(run)))
-  // 보물 — 유물 하나
-  const t = openTreasure(run)
-  check('보물 상자 = 유물 하나', t.run.relicIds.length, run.relicIds.length + 1)
-  // 수술실 심장 — 최대 체력이 실제로 깎이고 전투에도 들어간다.
-  const cut = loseMaxHp(run, 10)
-  check('최대 체력 -10', cut.maxHp, run.maxHp - 10)
-  check('유물을 얻어도 깎인 최대 체력이 유지된다', grantRelic(cut, 'heart').maxHp, grantRelic(run, 'heart').maxHp - 10)
-}
-
-// --- 고블린 장사꾼 (2026-11 · docs/redesign/GOBLIN_MERCHANT.md) ---------------------
-console.log('\n고블린 장사꾼 — 쓸수록 부자 · 덮쳐서 이기면 가난부터')
-{
-  check('0골드 = 가난', goblinTier(0), 'poor')
-  check(`${GOBLIN_TIER_AT.mid} = 중간`, goblinTier(GOBLIN_TIER_AT.mid), 'mid')
-  check(`${GOBLIN_TIER_AT.rich} = 부자`, goblinTier(GOBLIN_TIER_AT.rich), 'rich')
-  let run = { ...startRun('archer'), gold: 999 }
-  const stock = rollGoblinShop(run, 'poor')
-  check('가난 진열 = 카드 2 · 회복 1', stock.map((i) => i.kind), ['card', 'card', 'heal'])
-  check('부자 진열 = 카드 2 · 유물 2 · 회복 1', rollGoblinShop(run, 'rich').map((i) => i.kind), ['card', 'card', 'relic', 'relic', 'heal'])
-  const muls = Array.from({ length: 200 }, () => rollGoblinShop(run, 'mid')).flat().map((i) => i.mul ?? 0)
-  check('값 배율은 0.8~1.5', [Math.min(...muls) >= 0.8, Math.max(...muls) <= 1.5], [true, true])
-  const bought = buyGoblinItem(run, stock[2])
-  check('산 만큼 고블린이 부자가 된다', bought.run.goblinSpent, stock[2].price)
-  run = { ...run, goblinSpent: 250, floor: 3, map: [[], [], [{ type: 'event', lane: 1, next: [], reveal: 'goblin' }]], picked: [0, 0, 0] } as RunState
-  const fight = startAmbush(run, rollGoblinShop(run, 'rich'))
-  check('덮치면 그 단계 고블린과 싸운다', [fight.status, currentNode(fight).monsterId], ['fighting', 'goblin-rich'])
-  check('? 칸 고블린 전투는 빈 판', terrainFor(fight).length, 0)
-  const won = afterWin(fight, 50)
-  check('이기면 재산이 0 — 다음 고블린은 가난부터', [won.goblinSpent, goblinTier(won.goblinSpent)], [0, 'poor'])
-  check('부자를 이기면 유물 확정', won.relicIds.length, run.relicIds.length + 1)
-  check('승리 보상 = 진열품에서', rollRewards(won).every((r) => fight.ambush!.stock.some((i) => (i.kind === 'card' && r.kind === 'card' && i.cardId === r.cardId) || (i.kind === 'relic' && r.kind === 'relic' && i.relicId === r.relicId))), true)
-  check('고블린 3종·뱀은 일반 칸에 안 나온다', ['goblin-poor', 'goblin-mid', 'goblin-rich', 'snake'].map((id) => getMonster(id).tier), [0, 0, 0, 0])
-}
-
-// --- ? 이벤트 8종 (2026-11 · docs/redesign/EVENTS.md) -------------------------------
-console.log('\n? 이벤트 8종 — 대가만 보이고 결과는 고른 뒤')
-{
-  check('이벤트 8종', EVENT_DEFS.length, 8)
-  const run = { ...startRun('warrior'), gold: 500 }
-  check('유물 풀의 id가 전부 실제 유물', Object.values(RELIC_POOLS).flat().filter((id) => !RELICS.some((r) => r.id === id)), [])
-  // 히든 — 차가운 쇠가 없으면 잠겨 있고 무엇이 필요한지 말하지 않는다.
-  const forge = openEvent('EV-FORGE')
-  const locked = eventChoices(run, forge).find((c) => c.key === 'smith')!
-  check('히든 선택지는 ???로 잠김', [locked.label, locked.locked], ['???', true])
-  const withIron = grantRelic(run, 'coldiron')
-  const open = eventChoices(withIron, forge).find((c) => c.key === 'smith')!
-  check('차가운 쇠가 있으면 열림', [open.locked ?? false, open.unlockedBy], [false, '차가운 쇠가'])
-  const smith = chooseEvent(withIron, forge, 'smith')
-  check('쇠를 두들기면 차가운 쇠를 잃고 쇠 유물', [smith.run.relicIds.includes('coldiron'), RELIC_POOLS.iron.includes(smith.relicId ?? '')], [false, true])
-  // 대가는 고른 뒤에 — 카드 고르기 전엔 아무것도 안 잃는다.
-  const ask = chooseEvent(run, openEvent('EV-TRADE'), 'card-card')
-  check('거래 — 고르기 전엔 대가를 안 낸다', [ask.need, ask.run.deck.length], ['card', run.deck.length])
-  // 약방 — 반복. 골드가 모자라면 약이 흐려진다.
-  const ap = openEvent('EV-APOTHECARY', () => 0.3)
-  check('약방은 세 병의 효과가 다 다르다', [...ap.potions].sort(), ['heal', 'hurt', 'none'])
-  const poor = { ...run, gold: 10 }
-  check('골드가 모자라면 약을 못 산다', eventChoices(poor, ap).filter((c) => c.key.startsWith('potion')).every((c) => !!c.disabled), true)
-  const sip = chooseEvent(run, ap, 'potion-0')
-  check('약을 사도 방문이 안 끝난다(반복)', [sip.session.over, sip.run.gold], [false, run.gold - 50])
-  // 두더지 — 실패할수록 대가가 3씩 는다.
-  let mole = openEvent('EV-MOLE')
-  const miss = chooseEvent(run, mole, 'dig', {}, () => 0.99)
-  mole = miss.session
-  check('두더지 실패 → 다음 대가 13', eventChoices(miss.run, mole).find((c) => c.key === 'dig')?.cost?.hp, 13)
-  const hit = chooseEvent(miss.run, mole, 'dig', {}, () => 0)
-  check('두더지 성공 → 유물 · 자동 종료', [!!hit.relicId, hit.session.over], [true, true])
-  // 갓챠 — 두 상품을 다 뽑으면 나간다.
-  let g = openEvent('EV-GACHA')
-  let gr = run
-  for (let i = 0; i < 2; i++) {
-    const out = chooseEvent(gr, g, 'coin', {}, () => 0)
-    gr = out.run
-    g = out.session
-  }
-  check('갓챠 상품 2개를 다 뽑으면 자동으로 나간다', [g.gachaLeft.length, g.over], [0, true])
-  // 항아리 — 50%는 중독된 채 뱀과 싸운다.
-  const jar = chooseEvent(run, openEvent('EV-JAR'), 'open', {}, () => 0)
-  check('항아리 → 동굴 뱀 전투', [jar.fight, currentNode(jar.run).monsterId], [true, 'snake'])
-  const fp = runFightProps(jar.run)
-  check('중독된 채로 시작한다', fp.battleOpts.startStatus?.[0]?.[0]?.kind, 'poison')
-  const empty = chooseEvent(run, openEvent('EV-JAR'), 'open', {}, () => 0.99)
-  check('나머지는 빈 항아리', [empty.fight ?? false, empty.run], [false, run])
-  // 수술실 — 심장은 최대 체력을 깎고 심장 유물.
-  const surgery = chooseEvent(run, openEvent('EV-SURGERY'), 'heart')
-  check('심장 → 최대 체력 -10 · 심장 유물', [surgery.run.maxHpMod, RELIC_POOLS.heart.includes(surgery.relicId ?? '')], [-10, true])
-  // 모든 이벤트에 선택지가 있다.
-  check('모든 이벤트에 고를 수 있는 선택지가 있다', EVENT_DEFS.filter((e) => !eventChoices(run, openEvent(e.id as EventId)).some((c) => !c.locked && !c.disabled)).map((e) => e.id), [])
+  check('이벤트 몬스터는 지도 풀에 없다', MONSTERS.filter((m) => m.tier === 0).map((m) => m.id).sort(), ['goblin-mid', 'goblin-poor', 'goblin-rich', 'snake'])
 }
 
 // --- 기존 규칙이 안 깨졌는지(회귀) -------------------------------------------

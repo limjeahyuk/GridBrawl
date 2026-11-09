@@ -137,14 +137,8 @@ h3 {
     url('/redesign/bg/dungeon/wall.png') 0 0 / 1280px 720px repeat-x;
   image-rendering: pixelated;
 }
-/* 글자가 적은 화면(결과·런 종료)은 덜 누른다. */
-.grid-bg--hall {
-  background:
-    linear-gradient(rgba(10, 8, 16, 0.5), rgba(10, 8, 16, 0.5)),
-    url('/redesign/bg/dungeon/floor.png') 0 0 / 1280px 720px repeat-x,
-    url('/redesign/bg/dungeon/torchlight.png') 0 0 / 1280px 720px repeat-x,
-    url('/redesign/bg/dungeon/wall.png') 0 0 / 1280px 720px repeat-x;
-}
+/* ⚠ `.grid-bg--hall`(덜 누른 변형)은 2026-11-07에 지웠다 — 결과·런 종료가 그 지역의
+   배경(`SceneLayers`)을 직접 깔게 되면서 붙는 화면이 하나도 없어졌다. */
 
 /* 버튼 — 기본은 금판(주 동작), `--ghost`는 어두운 판(보조). */
 .btn {

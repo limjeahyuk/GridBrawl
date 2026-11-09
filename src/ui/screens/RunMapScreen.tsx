@@ -26,6 +26,7 @@ import {
 import { getMonster } from '../../game/monsters'
 import { RelicGrid } from '../RelicIcon'
 import { SpriteClip } from '../SpriteClip'
+import { useFirstTip } from '../FirstTip'
 
 const NODE_ICON: Record<RunNode['type'], string> = {
   combat: 'enemy',
@@ -50,8 +51,8 @@ const NODE_HINT: Record<RunNode['type'], string> = {
   combat: '일반 전투 · 카드 보상',
   elite: '강한 적 · 유물 보상',
   boss: '마지막 관문',
-  event: '이벤트 · 전투 · 상인 · 휴식 중 하나',
-  shop: '카드 · 유물 구매 · 카드 강화',
+  event: '이벤트 · 무엇이 있을지 모른다',
+  shop: '카드 · 유물 구매 · 강화',
   rest: '체력 회복 또는 카드 강화',
   treasure: '유물 상자 하나',
 }
@@ -70,7 +71,12 @@ const laneX = (lane: number) => 110 + [0.18, 0.5, 0.82][lane] * 616
 const FLOOR_BOTTOM = 624
 const FLOOR_TOP = 108
 
+/**
+ * 지도 칸 아이콘. 원본이 14×14라 **그림은 늘 14의 정수배로** 그린다(칸 크기와 따로) —
+ * `contain`으로 늘리면 32px 같은 어중간한 크기에서 픽셀이 뭉개진다.
+ */
 function NodeIcon({ type, size }: { type: RunNode['type']; size: number }) {
+  const px = Math.max(14, Math.floor(size / 14) * 14)
   return (
     <span
       className="mapicon"
@@ -79,6 +85,7 @@ function NodeIcon({ type, size }: { type: RunNode['type']; size: number }) {
         width: size,
         height: size,
         backgroundImage: `url(/redesign/ui/map-icons/${NODE_ICON[type]}.png)`,
+        backgroundSize: `${px}px ${px}px`,
       }}
     />
   )
@@ -120,9 +127,11 @@ export function RunMapScreen({
   const lastNode = run.map[lastFloor - 1]?.[run.picked[lastFloor - 1]]
   const standing = lastNode && inRegion(lastFloor) ? { x: laneX(lastNode.lane), y: floorY(lastFloor) } : null
   const atStart = !standing && region === here
+  const tip = useFirstTip(['map'])
 
   return (
     <div className="screen runmap">
+      {tip}
       <section className={`worldmap worldmap--${region}`} aria-label={`${label} 지도`}>
         <i className="worldmap__bg" aria-hidden="true" />
         <i className="worldmap__vignette" aria-hidden="true" />

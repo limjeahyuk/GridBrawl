@@ -22,29 +22,30 @@ import { ROSTER, getChar } from '../src/data/roster'
 import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
 import { RUN_CARDS } from '../src/game/runcards'
-import { ROULETTE_VALUE, rollRoulette } from '../src/game/upgrades'
-import { chooseEvent, eventChoices, markEventSeen, openEvent, rollEventId, type EventChoice } from '../src/game/events'
+import { ROULETTE_VALUE, spinRoulette } from '../src/game/upgrades'
+import { applySpecialWin, eventChoices, resolveEventChoice, startEvent, tradeList, type EventOutcome } from '../src/game/events'
 import {
   LADDER_FLOORS,
   advanceFloor,
   afterLoss,
   afterWin,
-  applyCardUpgrade,
-  buyGoblinItem,
   buyShopItem,
   chooseBranch,
-  enterReveal,
-  goblinTier,
-  openTreasure,
-  restHeal,
-  rollGoblinShop,
-  startAmbush,
   currentNode,
   currentOptions,
   grantCard,
   grantRelic,
   isLockedCard,
   upgradableDeckCards,
+  upgradeCard,
+  restAtFire,
+  rollQuestionFate,
+  ambushFight,
+  goblinTier,
+  goblinMonsterId,
+  rollGoblinShop,
+  buyGoblinItem,
+  openTreasure,
   rollRewards,
   rollShop,
   skipRewardForHeal,
@@ -131,10 +132,7 @@ function rawScore(c: CardDef): number {
   if (c.kind === 'energy') return 10
   return 6 // move
 }
-/**
- * 봇이 보상·상점에서 카드를 고를 때 쓰는 값. **이미 가진 카드는 0** — 같은 카드 두 장은
- * 아무 일도 안 한다(2026-11, 중복 강화 폐지). 풀이 애초에 안 내지만 안전하게.
- */
+/** 봇이 보상·상점에서 카드를 고를 때 쓰는 값. 가진 카드는 0(2026-11 — 중복 강화 폐지, 풀에서도 빠진다). */
 function cardScore(id: string, deck: string[], _run?: RunState): number {
   const c = cardById(id)
   if (!c || deck.includes(id)) return 0
@@ -223,101 +221,84 @@ function applyReward(run: RunState, r: Reward): RunState {
   return grantCard(run, r.cardId, worstCard(run.deck)).run // 덱 상한 → 최약 카드와 교체
 }
 
-// --- 강화 정책 (2026-11 룰렛) --------------------------------------------------
-/**
- * 룰렛 강화 한 번 — 덱에서 **가장 좋은** 카드를 골라 **수치** 판을 돌린다.
- * ⚠ 범위 강화는 시뮬이 안 고른다(칸을 고르는 판단을 봇으로 옮기지 않았다). 수치 판의
- *   기대값(+10)이 범위 판(평균 2.5칸)보다 시뮬 점수로 재기 쉬워서다 — 실제 플레이어는
- *   범위도 고르므로 시뮬 클리어율은 강화 가치를 **조금 덜** 잰다.
- */
+// --- 룰렛 강화 정책 --------------------------------------------------------
+/** 강화할 카드 — 덱에서 가장 센 카드에 수치 룰렛을 돌린다(+피해는 센 카드에 붙일수록 값이 크다). */
 function simUpgrade(run: RunState): RunState {
   const pool = upgradableDeckCards(run)
   if (!pool.length) return run
-  const target = pool.reduce((hi, id) => (rawScoreOf(id) > rawScoreOf(hi) ? id : hi), pool[0])
-  return applyCardUpgrade(run, target, { value: rollRoulette(ROULETTE_VALUE) })
-}
-const rawScoreOf = (id: string) => {
-  const c = cardById(id)
-  return c ? rawScore(c) : 0
+  const id = POLICY === 'random'
+    ? pool[Math.floor(Math.random() * pool.length)]
+    : pool.reduce((hi, x) => (rawScore(cardById(x)!) > rawScore(cardById(hi)!) ? x : hi), pool[0])
+  return upgradeCard(run, id, { value: spinRoulette(ROULETTE_VALUE) })
 }
 
-// --- 이벤트 정책 ------------------------------------------------------------
-/** 이벤트 선택지 고르기(greedy) — 체력·골드로 위험을 잰다. 반복 이벤트는 그만둘 때를 안다. */
-function wantChoice(run: RunState, c: EventChoice, tries: number): boolean {
-  if (c.locked || c.disabled) return false
-  const hpPct = run.hp / run.maxHp
-  const cost = c.cost ?? {}
-  if (cost.hp && run.hp - cost.hp < run.maxHp * 0.45) return false
-  if (cost.maxHp && hpPct < 0.5) return false
-  if (cost.gold && run.gold - cost.gold < 30) return false
-  if (c.leave) return false
-  if (c.key.startsWith('potion')) return hpPct < 0.6 && tries < 2
-  if (c.key === 'coin') return tries < 5
-  if (c.key === 'dig') return tries < 3
-  return true
+// --- 이벤트 정책(2026-11 이벤트 8종) ---------------------------------------
+/** greedy 봇의 선택 — 없으면 나간다. */
+function eventPick(run: RunState, st: ReturnType<typeof startEvent>): string | null {
+  const ok = eventChoices(run, st).filter((c) => !c.off)
+  const has = (k: string) => ok.some((c) => c.key === k)
+  if (POLICY === 'random') {
+    const c = ok[Math.floor(Math.random() * ok.length)]
+    return c && !c.leave ? c.key : null
+  }
+  const hp = run.hp / run.maxHp
+  switch (st.id) {
+    case 'forge': return has('swap') ? 'swap' : has('hammer') ? 'hammer' : has('iron') ? 'iron' : null
+    case 'trade': return has('card-relic') ? 'card-relic' : null
+    case 'spring': return 'rest'
+    case 'apothecary': return null // 기대값 +3HP/50G — 사지 않는다
+    case 'jar': return hp > 0.5 ? 'open' : null
+    case 'gacha': return has('coin') && st.tries < 6 ? 'coin' : null
+    case 'mole': return run.hp - (10 + 3 * st.tries) > run.maxHp * 0.5 ? 'dig' : null
+    case 'surgery': return run.hp - 15 > run.maxHp * 0.4 ? 'hand' : 'heart'
+  }
 }
 function doEvent(run: RunState): RunState {
-  const id = rollEventId(run)
-  let cur = markEventSeen(run, id)
-  let s = openEvent(id)
-  for (let guard = 0; !s.over && guard < 12; guard++) {
-    const choices = eventChoices(cur, s)
-    const open = choices.filter((c) => !c.locked && !c.disabled)
-    const c =
-      POLICY === 'random'
-        ? open[Math.floor(Math.random() * open.length)]
-        : (open.find((o) => !o.leave && o.unlockedBy) ??
-          open.find((o) => wantChoice(cur, o, s.tries)) ??
-          open.find((o) => o.leave))
-    if (!c) break
-    let out = chooseEvent(cur, s, c.key)
-    if (out.need === 'card') out = chooseEvent(cur, s, c.key, { cardId: worstCard(cur.deck) })
-    if (out.need === 'relic') out = chooseEvent(cur, s, c.key, { relicId: cur.relicIds[cur.relicIds.length - 1] })
-    if (out.need === 'upgrade') {
-      cur = simUpgrade(out.run)
-      break
-    }
-    if (out.relicId) relicPick[out.relicId] = (relicPick[out.relicId] ?? 0) + 1
-    cur = out.run
-    s = out.session
-    if (out.fight) return cur // 항아리 뱀 — 전투로 넘어간다
-    if (out.need) break // 못 고르는 선택지 — 그냥 나간다
+  let st = startEvent()
+  let cur = run
+  for (let i = 0; i < 12; i++) {
+    const key = eventPick(cur, st)
+    if (!key) break
+    const pick = key.startsWith('card-') ? worstCard(tradeList(cur, 'card')) : key === 'relic-relic' ? tradeList(cur, 'relic')[0] : undefined
+    const o: EventOutcome | null = resolveEventChoice(cur, st, key, pick)
+    if (!o) break
+    cur = o.run
+    st = o.st
+    if (o.relicId) relicPick[o.relicId] = (relicPick[o.relicId] ?? 0) + 1
+    if (o.upgrade) cur = simUpgrade(cur)
+    if (o.fight) return { ...cur, special: o.fight, status: 'fighting' }
+    if (o.done) break
   }
   return advanceFloor(cur)
 }
 
-// --- 휴식 · 보물 · 고블린 -------------------------------------------------------
+/** 모닥불 — 체력이 60% 아래면 쉰다(random은 반반). */
 function doRest(run: RunState): RunState {
-  if (POLICY === 'random') return advanceFloor(Math.random() < 0.5 ? restHeal(run) : simUpgrade(run))
-  // 체력이 넉넉하면 강화, 아니면 쉰다.
-  return advanceFloor(run.hp / run.maxHp < 0.7 || !upgradableDeckCards(run).length ? restHeal(run) : simUpgrade(run))
+  const rest = POLICY === 'random' ? Math.random() < 0.5 : run.hp / run.maxHp < 0.6
+  return rest || !upgradableDeckCards(run).length ? restAtFire(run) : advanceFloor(simUpgrade(run))
 }
-function doTreasure(run: RunState): RunState {
-  const r = openTreasure(run)
-  if (r.relicId) relicPick[r.relicId] = (relicPick[r.relicId] ?? 0) + 1
-  return advanceFloor(r.run)
-}
+/** 고블린 상점 — greedy는 유물·회복만 사고 덮치지 않는다(random은 30%로 덮친다). */
 function doGoblin(run: RunState): RunState {
-  const stock = rollGoblinShop(run, goblinTier(run.goblinSpent ?? 0))
-  // greedy: 부자면 체력이 넉넉할 때 덮친다. 아니면 장을 본다(키운다).
   const tier = goblinTier(run.goblinSpent ?? 0)
-  const attack = POLICY === 'random' ? Math.random() < 0.25 : tier === 'rich' && run.hp / run.maxHp > 0.6
-  if (attack) return startAmbush(run, stock)
+  const stock = rollGoblinShop(run, tier)
+  if (POLICY === 'random' && Math.random() < 0.3)
+    return { ...run, special: { kind: 'goblin', monsterId: goblinMonsterId(tier), goblinTier: tier, goblinStock: stock }, status: 'fighting' }
   let cur = run
-  for (const item of stock) {
-    const want =
-      item.kind === 'relic' ||
-      (item.kind === 'heal' && cur.hp / cur.maxHp < 0.8) ||
-      (item.kind === 'card' && cardScore(item.cardId, cur.deck, cur) > 12)
-    if (!want || cur.gold - item.price < 0) continue
-    let res = buyGoblinItem(cur, item)
-    if (res.needsCardPick) res = buyGoblinItem(cur, item, worstCard(cur.deck))
-    if (res.ok) {
-      cur = res.run
-      if (item.kind === 'relic') relicPick[item.relicId] = (relicPick[item.relicId] ?? 0) + 1
-    }
+  for (const it of stock) {
+    const want = it.kind === 'relic' || (it.kind === 'heal' && cur.hp / cur.maxHp < 0.6)
+    if (!want) continue
+    const res = buyGoblinItem(cur, it)
+    if (res.ok) cur = res.run
   }
   return advanceFloor(cur)
+}
+/** ? 칸 — 정체를 굴리고 그 칸처럼 처리한다. */
+function doQuestion(run: RunState): RunState {
+  const fate = rollQuestionFate()
+  if (fate === 'combat') return { ...run, special: ambushFight(run), status: 'fighting' }
+  if (fate === 'rest') return doRest(run)
+  if (fate === 'goblin') return doGoblin(run)
+  return doEvent(run)
 }
 
 // --- 상점 정책 --------------------------------------------------------------
@@ -325,15 +306,10 @@ function doShop(run: RunState): RunState {
   let cur = run
   const items = rollShop(cur)
   const buy = (item: ShopItem) => {
-    if (item.kind === 'upgrade') {
-      const res = buyShopItem(cur, item)
-      if (res.ok) cur = simUpgrade(res.run)
-      return
-    }
     let res = buyShopItem(cur, item)
     if (res.needsCardPick) res = buyShopItem(cur, item, worstCard(cur.deck))
     if (res.ok) {
-      cur = res.run
+      cur = res.needsUpgrade ? simUpgrade(res.run) : res.run
       if (item.kind === 'relic') relicPick[item.relicId] = (relicPick[item.relicId] ?? 0) + 1
     }
   }
@@ -346,11 +322,11 @@ function doShop(run: RunState): RunState {
   for (const item of items.filter((i) => i.kind === 'relic')) buy(item)
   for (const item of items.filter((i) => i.kind === 'heal'))
     if (cur.hp / cur.maxHp < 0.8) buy(item)
+  for (const item of items.filter((i) => i.kind === 'upgrade')) buy(item)
   for (const item of items.filter((i) => i.kind === 'card')) {
     if (item.kind !== 'card') continue
     if (cardScore(item.cardId, cur.deck, cur) > 12) buy(item)
   }
-  for (const item of items.filter((i) => i.kind === 'upgrade')) buy(item)
   return advanceFloor(cur)
 }
 
@@ -380,7 +356,7 @@ async function playRun(charId: string): Promise<void> {
   while (run.status !== 'won' && run.status !== 'lost' && guard++ < 400) {
     const floor = run.floor
     if (run.status === 'fighting') {
-      const enemyId = currentNode(run).monsterId ?? '?'
+      const enemyId = run.special?.monsterId ?? currentNode(run).monsterId ?? '?'
       const before = run.hp
       arrive[floor]++
       hpSum[floor] += run.hp / run.maxHp
@@ -404,7 +380,7 @@ async function playRun(charId: string): Promise<void> {
         ms.dmgTaken += before - res.hpLeft
         cleared[floor]++
         const before2 = run.gold
-        run = afterWin(run, res.hpLeft)
+        run = applySpecialWin(afterWin(run, res.hpLeft))
         goldEarned += run.gold - before2
       } else {
         ms.dmgTaken += before
@@ -416,8 +392,16 @@ async function playRun(charId: string): Promise<void> {
     }
     if (run.status === 'choosing') {
       run = chooseBranch(run, pickBranch(run))
-    } else if (run.status === 'reveal') {
-      run = enterReveal(run)
+    } else if (run.status === 'reward') {
+      run = takeReward(run)
+    } else if (run.status === 'event') {
+      arrive[floor]++
+      cleared[floor]++
+      run = doQuestion(run)
+    } else if (run.status === 'shop') {
+      arrive[floor]++
+      cleared[floor]++
+      run = doShop(run)
     } else if (run.status === 'rest') {
       arrive[floor]++
       cleared[floor]++
@@ -425,21 +409,9 @@ async function playRun(charId: string): Promise<void> {
     } else if (run.status === 'treasure') {
       arrive[floor]++
       cleared[floor]++
-      run = doTreasure(run)
-    } else if (run.status === 'goblin') {
-      arrive[floor]++
-      run = doGoblin(run)
-      if (run.status !== 'fighting') cleared[floor]++
-    } else if (run.status === 'reward') {
-      run = takeReward(run)
-    } else if (run.status === 'event') {
-      arrive[floor]++
-      cleared[floor]++
-      run = doEvent(run)
-    } else if (run.status === 'shop') {
-      arrive[floor]++
-      cleared[floor]++
-      run = doShop(run)
+      const t = openTreasure(run)
+      if (t.relicId) relicPick[t.relicId] = (relicPick[t.relicId] ?? 0) + 1
+      run = advanceFloor(t.run)
     }
   }
   const legends = run.relicIds.filter((id) => getRelic(id)?.rarity === 'legend').length

@@ -26,10 +26,9 @@ import { TutorialScreen } from './ui/screens/TutorialScreen'
 import { RunStartScreen } from './ui/screens/RunStartScreen'
 import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { RewardScreen } from './ui/screens/RewardScreen'
-import { EventScreen } from './ui/screens/EventScreen'
+import { QuestionScreen } from './ui/screens/QuestionScreen'
+import { RestScreen, TreasureScreen } from './ui/screens/RestScreen'
 import { ShopScreen } from './ui/screens/ShopScreen'
-import { GoblinScreen } from './ui/screens/GoblinScreen'
-import { RestScreen, RevealScreen, TreasureScreen } from './ui/screens/RunNodeScreens'
 import { RunEndScreen } from './ui/screens/RunEndScreen'
 import {
   startRun,
@@ -42,11 +41,11 @@ import {
   type RunDifficulty,
   type RunState,
 } from './game/run'
-import { markCleared, markRelicsSeen } from './game/progress'
+import { markCleared, markFoeMet, markRelicsSeen } from './game/progress'
 import { getMonster } from './game/monsters'
 import { foeAbilities } from './ui/relicFx'
 import { runFightProps } from './game/runbattle'
-import { markMonsterSeen } from './game/progress'
+import { applySpecialWin } from './game/events'
 
 /** 전투 HUD가 쓰는 상대 정보 — 등급 표기와 몬스터가 실제로 가진 능력. */
 function runFoeInfo(run: RunState) {
@@ -88,23 +87,6 @@ const TUTORIAL_DONE_KEY = 'gb-tutorial-done'
 /** 온라인 대전 턴 제한(초). 0이 되면 자동 제출 — 상대를 무한정 기다리지 않게. */
 const MP_TURN_SECONDS = 30
 
-/** 런 상태 → 화면. 지도에서 칸에 들어가거나 ? 칸이 열릴 때 쓴다. */
-function phaseForStatus(run: RunState): Phase {
-  switch (run.status) {
-    case 'reveal': return 'run-reveal'
-    case 'event': return 'run-event'
-    case 'shop': return 'run-shop'
-    case 'rest': return 'run-rest'
-    case 'treasure': return 'run-treasure'
-    case 'goblin': return 'run-goblin'
-    case 'reward': return 'run-reward'
-    case 'won':
-    case 'lost': return 'run-end'
-    case 'choosing': return 'run-map'
-    default: return 'run-fight'
-  }
-}
-
 type Phase =
   | 'tutorial'
   | 'title'
@@ -124,10 +106,8 @@ type Phase =
   | 'run-reward'
   | 'run-event'
   | 'run-shop'
-  | 'run-reveal'
   | 'run-rest'
   | 'run-treasure'
-  | 'run-goblin'
   | 'run-end'
   /** 밸런스 어드민 — 개발 빌드에서만 도달한다. */
   | 'admin'
@@ -151,6 +131,8 @@ export default function App() {
   const [mpOutcome, setMpOutcome] = useState<Outcome>('win')
   // --- 로그라이크 런 ---
   const [run, setRun] = useState<RunState | null>(null)
+  // 개발 빌드 전용 — 콘솔에서 런 화면으로 바로 뛴다(화면 검증용). 배포 번들에선 지워진다.
+  if (import.meta.env.DEV) Object.assign(window, { __gb: { setRun, setPhase, startRun } })
   // 얻은 유물은 도감에 등록된다 — 어느 경로(보상·상점·이벤트)로 얻었든 여기로 모인다.
   useEffect(() => {
     if (run) markRelicsSeen(run.relicIds)
@@ -252,7 +234,14 @@ export default function App() {
     setRun((r) => {
       if (!r) return r
       const next = chooseBranch(r, index)
-      setPhase(phaseForStatus(next))
+      const t = currentNode(next).type
+      setPhase(
+        t === 'event' ? 'run-event'
+        : t === 'shop' ? 'run-shop'
+        : t === 'rest' ? 'run-rest'
+        : t === 'treasure' ? 'run-treasure'
+        : 'run-fight',
+      )
       return next
     })
   }, [])
@@ -264,7 +253,7 @@ export default function App() {
         setPhase('run-end')
         return afterLoss(r)
       }
-      const next = afterWin(r, hpLeft)
+      const next = applySpecialWin(afterWin(r, hpLeft))
       if (next.status === 'won') {
         setRunWon(true)
         // 보스를 넘겼다 = 이 난이도 클리어. 다음 단계를 연다(이미 깼으면 null).
@@ -281,11 +270,6 @@ export default function App() {
     setRun(next)
     setPhase(next.status === 'won' ? 'run-end' : 'run-map')
   }, [])
-  // ? 칸 정체 공개·이벤트 전투·고블린 습격처럼 **층을 넘기지 않고** 다른 칸 화면으로 갈 때.
-  const runEntered = useCallback((next: RunState) => {
-    setRun(next)
-    setPhase(phaseForStatus(next))
-  }, [])
 
   /**
    * 이번 층 전투의 props. **`run`이 바뀔 때만** 만든다.
@@ -297,11 +281,12 @@ export default function App() {
    *   전투 중엔 `run`이 안 바뀌므로 이제 정말 판당 한 번이다.
    */
   const runFight = useMemo(() => (run ? runFightProps(run) : null), [run])
-  // 도감 몬스터 탭 — 런 전투에 들어가는 순간 그 몬스터를 "만났다"로 남긴다.
-  const fightMonster = phase === 'run-fight' && run ? currentNode(run).monsterId : undefined
+  // 마주친 몬스터는 도감에 등록된다(실루엣이 걷힌다) — 능력 기록과 달리 능력이
+  // 없는 몬스터도 남는다.
   useEffect(() => {
-    if (fightMonster) markMonsterSeen(fightMonster)
-  }, [fightMonster])
+    const id = run && run.status === 'fighting' ? currentNode(run).monsterId : null
+    if (id) markFoeMet(id)
+  }, [run])
 
   // one plan-exchange per connected match; disposed when the match changes
   const mpExchange = useMemo(
@@ -405,7 +390,7 @@ export default function App() {
   } else if (phase === 'run-fight' && run && runFight) {
     screen = (
       <BattleScreen
-        key={`run-${run.floor}-${runFight.p1CharId}`}
+        key={`run-${run.floor}-${runFight.p1CharId}-${run.special?.kind ?? ''}`}
         p0CharId={runFight.p0CharId}
         p1CharId={runFight.p1CharId}
         localSide={0}
@@ -425,17 +410,22 @@ export default function App() {
   } else if (phase === 'run-reward' && run) {
     screen = <RewardScreen run={run} onDone={runAdvanced} />
   } else if (phase === 'run-event' && run) {
-    screen = <EventScreen run={run} onDone={runAdvanced} onFight={runEntered} />
+    screen = (
+      <QuestionScreen
+        run={run}
+        onDone={runAdvanced}
+        onFight={(next) => {
+          setRun(next)
+          setPhase('run-fight')
+        }}
+      />
+    )
   } else if (phase === 'run-shop' && run) {
     screen = <ShopScreen run={run} onDone={runAdvanced} />
-  } else if (phase === 'run-reveal' && run) {
-    screen = <RevealScreen run={run} onDone={runEntered} />
   } else if (phase === 'run-rest' && run) {
     screen = <RestScreen run={run} onDone={runAdvanced} />
   } else if (phase === 'run-treasure' && run) {
     screen = <TreasureScreen run={run} onDone={runAdvanced} />
-  } else if (phase === 'run-goblin' && run) {
-    screen = <GoblinScreen run={run} onDone={runAdvanced} onFight={runEntered} />
   } else if (phase === 'run-end' && run) {
     screen = (
       <RunEndScreen

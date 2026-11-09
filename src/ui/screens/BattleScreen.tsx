@@ -25,7 +25,8 @@ import {
 import type { BattleScene } from "../../game/run";
 import type { BossCinematic } from "../../game/bosses";
 import { deckFor } from "../../battle/cards";
-import { CardFace, cardAccent } from "../CardFace";
+import { CardFace, cardAccent, moveIcon } from "../CardFace";
+import { useFirstTip } from "../FirstTip";
 import { CardDetail, useLongPress } from "../CardDetail";
 import { KIND_LABEL } from "../cardAbility";
 import { PortraitSvg } from "../PortraitSvg";
@@ -59,10 +60,14 @@ import {
   rockAt,
   shadowRock,
   type ActionResult,
-  type DamageSrc,
   type Cell,
   type CardDef,
+  type DamageSrc,
   type FogTile,
+  type Hazard,
+  type HazardKind,
+  spikeStateAt,
+  hazardAt,
   type MoveDir,
   type Obstacle,
   type Step,
@@ -89,6 +94,9 @@ interface View {
   obstacles: Obstacle[];
   /** 이 시점의 독안개 칸. */
   fog: FogTile[];
+  /** 이 시점의 함정(런 전용)과 그때의 라운드 — 가시덫 상태가 라운드로 정해진다. */
+  hazards: Hazard[];
+  round: number;
   acting: [boolean, boolean]; // attack lunge
   /** 지금 내는 공격 카드의 fx 종류. 준비 동작~타격 내내 유지돼야 한다 —
    *  중간에 바뀌면 CSS animation-name이 갈려 모션이 처음부터 다시 뛴다. */
@@ -115,8 +123,20 @@ interface View {
   seq: number;
 }
 
-const cellX = (col: number) => ((col + 0.5) / GRID_COLS) * 100;
-const cellY = (row: number) => ((row + 0.5) / GRID_ROWS) * 100;
+/**
+ * 판 기하 — **칸 184×58 · 간격 7**(디자인 `OneCell`의 실제 판 크기). 칸 하나의
+ * 가운데를 px로 돌려준다.
+ *
+ * ⚠ 예전엔 `(col + 0.5) / GRID_COLS * 100%`로 쟀다. 격자에는 간격(7px)이 있는데
+ *   백분율은 그걸 모르므로 칸마다 최대 3px씩 밀렸고, **1칸 함정 타일**(184×96)이
+ *   칸에서 어긋났다 — 타일은 칸 왼쪽 위에 맞춰 그려져 있어 어긋남이 그대로 보인다.
+ *   `.gridboard`가 1139×253(= 6·184+5·7 × 4·58+3·7)이라 px이 곧 정확한 값이다.
+ */
+const CELL_W = 184;
+const CELL_H = 58;
+const CELL_GAP = 7;
+const cellX = (col: number) => CELL_W / 2 + col * (CELL_W + CELL_GAP);
+const cellY = (row: number) => CELL_H / 2 + row * (CELL_H + CELL_GAP);
 /**
  * 스텝 사이의 대기. 턴 재생은 이 `await wait()` 사슬 하나로 굴러간다.
  *
@@ -202,6 +222,7 @@ function applyMovePreview(
   from: Cell,
   card: CardDef,
   rocks: readonly Obstacle[] = [],
+  hazards: readonly Hazard[] = [],
 ): Cell {
   const [dc, dr] = MOVE_DELTA[card.dir ?? "right"];
   let cur = { ...from };
@@ -209,6 +230,11 @@ function applyMovePreview(
     const next = { col: cur.col + dc, row: cur.row + dr };
     if (!canStand(rocks, next)) break; // 벽·바위에서 멈춤 — 엔진 applyMove와 같은 규칙
     cur = next;
+  }
+  // 빙판 — 엔진 `enterHazard`처럼 한 칸 더 미끄러진다(상대 칸 정지는 미리보기에선 생략).
+  if ((cur.col !== from.col || cur.row !== from.row) && hazardAt(hazards, cur)?.kind === "ice") {
+    const next = { col: cur.col + dc, row: cur.row + dr };
+    if (canStand(rocks, next)) cur = next;
   }
   return cur;
 }
@@ -237,21 +263,6 @@ const STATUS_CHIP: Record<string, string> = {
   defUp: "🔷",
   freeCast: "🌀",
 };
-/** 픽셀 아이콘이 있는 상태이상(`public/redesign/ui/status/`). 나머지는 위 글리프. */
-const STATUS_ICON = new Set(["poison", "burn", "bind"]);
-function StatusGlyph({ kind }: { kind: string }) {
-  return STATUS_ICON.has(kind) ? (
-    <i
-      className="stchip__ico"
-      style={{ backgroundImage: `url(/redesign/ui/status/${kind}.png)` }}
-    />
-  ) : (
-    <>{STATUS_CHIP[kind]}</>
-  );
-}
-
-// ⚠ 2026-11-09: 아래 넷(STATUS_AURA·AURA_PRIORITY·DMG_SRC·damageOn/bitsOn)은 merge 2cbf2de에서
-//   빠져 컴파일이 깨져 있던 것을 원격 쪽(cd9e9c5)에서 그대로 되살렸다.
 /** 몸에 두르는 기운의 색 — 상태이상 하나가 통째로 몸빛을 바꾼다. */
 const STATUS_AURA: Record<string, string> = {
   poison: "#7bd88f",
@@ -284,16 +295,33 @@ const DMG_SRC: Record<DamageSrc, { icon: string; label: string }> = {
 /** 이 스텝에서 **그 진영이 실제로 깎인 몫**. 내역이 있으면 그걸 합치고, 없으면
  *  옛 필드(`damage`/`recoil`)로 떨어진다. */
 function damageOn(step: Step, side: 0 | 1): number {
-  if (step.bits) return step.bits.filter((b) => b.on === side).reduce((a, b) => a + b.n, 0);
+  if (step.bits)
+    return step.bits.filter((b) => b.on === side).reduce((a, b) => a + b.n, 0);
   return side === 1 - step.actor ? step.damage : step.recoil;
 }
 /** 그 진영이 받은 피해의 내역(없으면 옛 필드로 한 줄 만들어 준다). */
 function bitsOn(step: Step, side: 0 | 1): { src: DamageSrc; n: number }[] {
-  if (step.bits) return step.bits.filter((b) => b.on === side).map((b) => ({ src: b.src, n: b.n }));
+  if (step.bits)
+    return step.bits
+      .filter((b) => b.on === side)
+      .map((b) => ({ src: b.src, n: b.n }));
   const n = damageOn(step, side);
   if (n <= 0) return [];
   // 내역이 없는 옛 경로 — 자기 몸에 뜨는 피해는 반동, 상대 몸이면 타격으로 본다.
   return [{ src: side === step.actor ? "recoil" : "attack", n }];
+}
+
+/** 픽셀 아이콘이 있는 상태이상(`public/redesign/ui/status/`). 나머지는 위 글리프. */
+const STATUS_ICON = new Set(["poison", "burn", "bind"]);
+function StatusGlyph({ kind }: { kind: string }) {
+  return STATUS_ICON.has(kind) ? (
+    <i
+      className="stchip__ico"
+      style={{ backgroundImage: `url(/redesign/ui/status/${kind}.png)` }}
+    />
+  ) : (
+    <>{STATUS_CHIP[kind]}</>
+  );
 }
 
 /**
@@ -388,6 +416,14 @@ const RANGED_FX = new Set(["bolt", "orb", "flame"]);
 // 손패에는 공격·수비만 둔다 — 이동은 판의 칸을 눌러서 한다(2026-08-03).
 // 탭을 오가는 조작이 특히 "이동 후 공격"에서 번거로웠다.
 
+/** 함정 한 줄 설명(툴팁). 규칙은 `types.ts`의 `Hazard`. */
+const HAZARD_TIP: Record<HazardKind, string> = {
+  fire: "불길 — 들어서거나 라운드 끝에 서 있으면 화상",
+  spikes: "가시덫 — 솟은 라운드에 밟으면 속박(경고 다음 라운드에 솟는다)",
+  bramble: "가시덩굴 — 밟으면 속박 · 불길에 탄다",
+  ice: "빙판 — 들어선 방향으로 한 칸 더 미끄러진다",
+};
+
 function baseView(b: CardBattle): View {
   const s = b.state;
   return {
@@ -397,6 +433,8 @@ function baseView(b: CardBattle): View {
     shield: [s.shield[0], s.shield[1]],
     obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
     fog: s.fog.map((f) => ({ ...f })),
+    hazards: s.hazards.map((h) => ({ ...h })),
+    round: s.round,
     acting: [false, false],
     actFx: [null, null],
     damage: [0, 0],
@@ -449,6 +487,8 @@ function stepToView(step: Step, seq: number): View {
     shield: [s.shield[0], s.shield[1]],
     obstacles: s.obstacles.map((r) => ({ ...r, cell: { ...r.cell } })),
     fog: s.fog.map((f) => ({ ...f })),
+    hazards: s.hazards.map((h) => ({ ...h })),
+    round: s.round,
     acting,
     actFx,
     status: [
@@ -502,6 +542,8 @@ export function BattleScreen({
   foeInfo,
   getOpponentPlan,
   turnSeconds,
+  onSlotsChange,
+  tips = true,
   onEnd,
   onQuit,
 }: {
@@ -537,6 +579,10 @@ export function BattleScreen({
   /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
    *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
   turnSeconds?: number;
+  /** 순서 칸이 바뀔 때마다(튜토리얼이 "카드를 놓았다"를 알아채는 자리). */
+  onSlotsChange?: (slots: (CardDef | null)[]) => void;
+  /** 첫 만남 팁(꾹 누르기 · 기력 부족 · 바위 · 붕괴 · 보스 · 상태이상). 튜토리얼만 끈다. */
+  tips?: boolean;
   /** 전투 종료 콜백 — 로컬 승패 + 로컬 남은 체력(로그라이크 HP 인계용). */
   onEnd: (localWon: boolean, selfHpLeft: number) => void;
   onQuit: () => void;
@@ -626,22 +672,27 @@ export function BattleScreen({
     saveBattlePace(p);
   };
   const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null]);
+  useEffect(() => onSlotsChange?.(slots), [slots, onSlotsChange]);
   const [phase, setPhase] = useState<"select" | "resolving" | "over">("select");
   const [waitingRemote, setWaitingRemote] = useState(false);
   /**
    * 이번 라운드에 **양쪽이 낸 3장**(정규 좌표 — [side0, side1]). 해소하는 동안
-   * 화면 아래에 그대로 펼쳐 둔다(merge 2cbf2de에서 빠진 것을 cd9e9c5에서 되살림).
+   * 화면 아래에 그대로 펼쳐 둔다: 예전엔 실행을 누르는 순간 카드가 사라져서
+   * "내가 뭘 냈더라 / 쟤는 뭘 냈지"를 확인할 방법이 아예 없었다.
    */
-  const [roundPlans, setRoundPlans] = useState<[CardDef[], CardDef[]] | null>(null);
+  const [roundPlans, setRoundPlans] = useState<[CardDef[], CardDef[]] | null>(
+    null,
+  );
   /** 지금 재생 중인 슬롯(0·1·2). 라운드 종료 정산 구간에서는 null. */
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   /** 슬롯이 바뀔 때 양쪽 카드를 크게 펼치는 공개 연출(차근차근 모드 전용). */
-  const [slotReveal, setSlotReveal] = useState<{ seq: number; slot: number } | null>(null);
+  const [slotReveal, setSlotReveal] = useState<{
+    seq: number;
+    slot: number;
+  } | null>(null);
   /** 이번 라운드에 실제로 일어난 일 — 무엇이 몇 대미지였는지 글로 남는다. */
   const [log, setLog] = useState<LogRow[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
-  /** 이동 묶음이 펼쳐져 있는가(2026-11 · 시안 MoveBundle.dc.html). */
-  const [bundleOpen, setBundleOpen] = useState(false);
   /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
   const [remain, setRemain] = useState<number | null>(null);
   const submittingRef = useRef(false);
@@ -790,6 +841,13 @@ export function BattleScreen({
     battle.lockedThisRound(localSide) ?? battle.statusOf(localSide, "bind");
   const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c);
 
+  // which slot numbers (1-based) contain this card id
+  const slotNosFor = (id: string): number[] =>
+    slots
+      .map((s, i) => (s?.id === id ? i + 1 : null))
+      .filter((n): n is number => n !== null);
+
+
   const addCard = (c: CardDef) => {
     if (phase !== "select" || !selectable(c) || !canAfford(c)) return;
     const i = slots.indexOf(null);
@@ -863,16 +921,26 @@ export function BattleScreen({
 
   const planPreview = useMemo(() => {
     const cur = view.pos[localSide];
-    const none = { ghost: null as Cell | null, cells: [] as Cell[] };
+    const none = {
+      ghost: null as Cell | null,
+      cells: [] as Cell[],
+      steps: [] as { cell: Cell; no: number }[],
+    };
     if (phase !== "select") return none;
     const foe = view.pos[1 - localSide];
     let at = { ...cur };
     // 공격 범위는 **누적하지 않는다** — 여러 장을 고르면 빨간 칸이 뒤섞여 헷갈리므로
     // 가장 마지막에 고른 공격의 범위만 남긴다(위치는 앞선 이동까지 반영된 값).
     let cells: Cell[] = [];
-    for (const c of slots) {
+    // 발자국 — 이동이 담긴 순서대로 내려앉는 칸(디자인 `MoveBundle`의 `.trail`).
+    const steps: { cell: Cell; no: number }[] = [];
+    for (let si = 0; si < slots.length; si++) {
+      const c = slots[si];
       if (!c) continue;
-      if (c.kind === "move") at = applyMovePreview(at, c, rocks);
+      if (c.kind === "move") {
+        at = applyMovePreview(at, c, rocks, battle.state.hazards);
+        steps.push({ cell: { ...at }, no: si + 1 });
+      }
       // ⚠ 방향은 **그 카드가 나갈 자리에서** 다시 잰다(2026-08-05) — 앞선 이동으로
       //   상대를 지나쳤으면 사거리도 같이 뒤집힌다. 엔진과 같은 규칙.
       else if (c.kind === "attack")
@@ -886,7 +954,7 @@ export function BattleScreen({
         );
     }
     const moved = at.col !== cur.col || at.row !== cur.row;
-    return { ghost: moved ? at : null, cells };
+    return { ghost: moved ? at : null, cells, steps };
   }, [slots, view, localSide, battle, phase]);
 
   // Preview the hovered card's effect on my position. `from` = where I stand
@@ -907,11 +975,11 @@ export function BattleScreen({
     let from = { ...cur };
     for (let j = 0; j < upto; j++) {
       const c = slots[j];
-      if (c?.kind === "move") from = applyMovePreview(from, c, rocks);
+      if (c?.kind === "move") from = applyMovePreview(from, c, rocks, battle.state.hazards);
     }
     let ghost: Cell | null =
       hoveredCard.kind === "move"
-        ? applyMovePreview(from, hoveredCard, rocks)
+        ? applyMovePreview(from, hoveredCard, rocks, battle.state.hazards)
         : from;
     if (ghost && ghost.col === cur.col && ghost.row === cur.row) ghost = null;
     return { from, ghost };
@@ -933,7 +1001,7 @@ export function BattleScreen({
     const from = planPreview.ghost ?? view.pos[localSide];
     for (const c of hand) {
       if (c.kind !== "move" || !selectable(c) || !canAfford(c)) continue;
-      const to = applyMovePreview(from, c, rocks);
+      const to = applyMovePreview(from, c, rocks, battle.state.hazards);
       if (to.col === from.col && to.row === from.row) continue; // 벽·바위에 막혀 제자리
       const key = `${to.col},${to.row}`;
       const prev = out.get(key);
@@ -949,6 +1017,101 @@ export function BattleScreen({
     phase,
     battle.state.cooldowns,
   ]);
+
+  /**
+   * **안 밝혀진 칸을 눌렀을 때 띄울 이유**(디자인 `MoveBundleSpec`의 "못 가는 칸을
+   * 눌렀을 때"). 밝혀지지 않는 칸은 전부 똑같이 생겨서, 쿨인지·이미 담았는지·
+   * 기력인지·속박인지가 구분되지 않았다 — 그 칸을 눌러 1초간 이유를 보여 준다.
+   */
+  const moveReasons = useMemo(() => {
+    const out = new Map<string, string>();
+    if (phase !== "select") return out;
+    const full = slots.every((x) => x !== null);
+    const from = planPreview.ghost ?? view.pos[localSide];
+    for (const c of hand) {
+      if (c.kind !== "move") continue;
+      const to = applyMovePreview(from, c, rocks, battle.state.hazards);
+      if (to.col === from.col && to.row === from.row) continue;
+      const key = `${to.col},${to.row}`;
+      if (moveTargets.has(key)) continue;
+      const why = full
+        ? "순서 칸이 꽉 찼다"
+        : cdLeft(c.id) > 0
+          ? `${c.name} 쿨 ${cdLeft(c.id)}`
+          : placedNoRepeat(c)
+            ? `${c.name}은 이미 담았다`
+            : `기력 부족 — ${c.name}`;
+      if (!out.has(key)) out.set(key, why);
+    }
+    return out;
+  }, [hand, slots, planPreview, view, localSide, phase, moveTargets, battle.state.cooldowns]);
+
+  // 1초만 떠 있는 안내. ⚠ 생 `setTimeout`이 아니라 `wait`을 거친다 — 백그라운드에서
+  // 안 깨는 타이머에 걸리면 안내가 영구히 남는다(CLAUDE.md "전투 연출").
+  const [moveToast, setMoveToast] = useState<{ key: string; text: string } | null>(null);
+  const toastSeq = useRef(0);
+  const sayWhy = (key: string, text: string) => {
+    const seq = ++toastSeq.current;
+    setMoveToast({ key, text });
+    playSfx("uiBack");
+    void wait(1100).then(() => {
+      if (toastSeq.current === seq) setMoveToast(null);
+    });
+  };
+
+  // --- 이동 묶음(디자인 `MoveBundle`) -------------------------------------
+  const moveDeck = useMemo(() => hand.filter((c) => c.kind === "move"), [hand]);
+  const [tray, setTray] = useState(false);
+  /**
+   * 묶음 앞면 — 3×3 나침반과 준비·쿨 개수. 색의 뜻은 디자인 그대로다:
+   * 파랑 = 그 방향 준비 · 주황 테 = 대시도 준비 · 어두움+숫자 = 쿨 · 금 = 순서 칸에
+   * 담김 · 빈 칸 = 그 방향 카드 없음.
+   */
+  const bundle = useMemo(() => {
+    const ORDER: (MoveDir | null)[] = [
+      "up-left", "up", "up-right",
+      "left", null, "right",
+      "down-left", "down", "down-right",
+    ];
+    const dirOf = (c: CardDef) => faceCard(c).dir;
+    const compass = ORDER.map((d) => {
+      if (!d) return { k: "me", t: "" };
+      const ms = moveDeck.filter((c) => dirOf(c) === d);
+      if (!ms.length) return { k: "none", t: "" };
+      const ready = ms.filter((c) => selectable(c) && canAfford(c));
+      const placed = ms.some((c) => slotNosFor(c.id).length > 0);
+      if (!ready.length && placed) return { k: "in", t: "" };
+      if (!ready.length) {
+        const cds = ms.map((c) => cdLeft(c.id)).filter((n) => n > 0);
+        return { k: "cd", t: cds.length ? String(Math.min(...cds)) : "" };
+      }
+      return {
+        k: ready.some((c) => (c.steps ?? 1) > 1) ? "dash" : "ready",
+        t: "",
+      };
+    });
+    const ready = moveDeck.filter((c) => selectable(c) && canAfford(c)).length;
+    const cooling = moveDeck.filter((c) => cdLeft(c.id) > 0).length;
+    const full = slots.every((x) => x !== null);
+    const bind = roundLock?.kind === "bind";
+    const dim = roundLock?.kind === "frozen" || roundLock?.kind === "stunned";
+    return {
+      compass,
+      ready: bind || dim ? 0 : ready,
+      cooling: bind || dim ? "—" : String(cooling),
+      locked: bind,
+      dim,
+      hint: dim
+        ? "행동 불가"
+        : bind
+          ? "속박 · 1R"
+          : tray
+            ? "▼ 닫기"
+            : full
+              ? "순서 칸이 꽉 찼다"
+              : "▲ 펼치기",
+    };
+  }, [moveDeck, slots, tray, roundLock, battle.state.cooldowns, battle.state.energy]);
 
   // 강조할 타격 셀 — 공격 카드를 올려보는 중이면 그 카드의 사거리, 아니면 고른
   // 플랜의 공격들이 덮는 셀(그대로 남아 있는 예시).
@@ -975,12 +1138,6 @@ export function BattleScreen({
     "left",
   );
   const ghostPlace = ghostSheet ? placeSprite(ghostSheet, ghostFace) : null;
-
-  // which slot numbers (1-based) contain this card id
-  const slotNosFor = (id: string): number[] =>
-    slots
-      .map((s, i) => (s?.id === id ? i + 1 : null))
-      .filter((n): n is number => n !== null);
 
   // ---- resolve a turn ----------------------------------------------------
   /** 한 턴을 굴리고 끝까지 재생한다. 이중 제출 잠금·실패 복구는 아래 `submitPlan`이 감싼다. */
@@ -1445,6 +1602,20 @@ export function BattleScreen({
         : "grass"
       : "dungeon";
 
+  // 첫 만남 팁 — 카드를 고르는 동안에만, 한 번에 하나(`ui/FirstTip.tsx`).
+  const tip = useFirstTip(
+    tips && phase === "select"
+      ? [
+          view.status[localSide].some((e) => e.kind === "poison" || e.kind === "burn" || e.kind === "frozen") && "status",
+          !!boss && "boss",
+          battle.state.obstacles.length > 0 && "elite",
+          battle.state.round >= COLLAPSE_START_ROUND && "collapse",
+          hand.some((c) => c.kind !== "move" && selectable(c) && !canAfford(c)) && "energy",
+          "longpress",
+        ]
+      : [],
+  );
+
   return (
     <div
       className={`screen battle ${hitstop ? "is-hitstop" : ""} ${boss ? "battle--boss" : ""}`}
@@ -1524,21 +1695,54 @@ export function BattleScreen({
                   ? " cell--target cell--target-foe"
                   : "") + hazard;
             // 이동 가능한 칸이면 눌러서 그 자리로 간다(노란 강조 + 커서)
-            const mv = moveTargets.get(`${ccol},${row}`);
+            const key = `${ccol},${row}`;
+            const mv = moveTargets.get(key);
             if (mv) {
               const warn = hazard
                 ? ` — ${collapseDamageAt(turn + 1)} 피해`
                 : "";
+              // 대시·특수 이동은 **주황**이고 쿨을 라벨에 같이 적는다(디자인
+              // `MoveBundleSpec`) — 칸 하나로 두세 칸을 가는 것과 한 칸짜리가
+              // 같은 색이면 "왜 여기까지 가지"가 된다.
+              const face = faceCard(mv);
+              const dash = (mv.steps ?? 1) > 1 || (mv.cooldown ?? 0) > 0;
+              const cd = (mv.cooldown ?? 0) > 0 ? ` · CD${mv.cooldown}` : "";
               return (
                 <button
                   key={i}
-                  className={`cell cell--move${cls}`}
+                  className={`cell cell--move${dash ? " cell--move-dash" : ""}${cls}`}
                   onClick={() => addCard(mv)}
                   title={`이동: ${mv.name}${warn}`}
                   aria-label={`이동: ${mv.name}${warn}`}
-                />
+                >
+                  {hazard && (
+                    <span className="cell__warn">
+                      붕괴 → {collapseDamageAt(turn + 1)} 피해
+                    </span>
+                  )}
+                  <span className="cell__movelab">
+                    {moveIcon(face.dir, face.steps ?? 1)} {face.name}
+                    {cd}
+                  </span>
+                </button>
               );
             }
+            // 안 밝혀진 칸 — 이동 카드가 닿기는 하는데 못 쓰는 칸이면 이유를 띄운다.
+            const why = moveReasons.get(key);
+            if (why)
+              return (
+                <button
+                  key={i}
+                  className={`cell cell--movewhy${cls}`}
+                  onClick={() => sayWhy(key, why)}
+                  title={why}
+                  aria-label={why}
+                >
+                  {moveToast?.key === key && (
+                    <span className="cell__why">{moveToast.text}</span>
+                  )}
+                </button>
+              );
             return <span className={`cell${cls}`} key={i} />;
           })}
           {/* 지형 — 판 위에 얹는 바위. ⚠ `pointer-events: none`이 필수다(칸을 눌러
@@ -1552,12 +1756,28 @@ export function BattleScreen({
                 key={`rock-${r.cell.col},${r.cell.row}`}
                 className="rock"
                 style={{
-                  left: `${cellX(dcol(r.cell.col))}%`,
-                  top: `${cellY(r.cell.row)}%`,
+                  left: `${cellX(dcol(r.cell.col))}px`,
+                  top: `${cellY(r.cell.row)}px`,
                   ["--wear" as string]: wear,
                 }}
                 aria-hidden
               />
+            );
+          })}
+          {/* 함정(런 전용) — 바닥형이라 파이터 **아래**(z 1). 1칸 타일(184×96)은 바위와 같은 맞춤이다.
+              모서리 칩 = 밟으면 무엇이 되는가(화상 · 속박 · 미끄러짐). 가시덫은 경고 라운드에 붉게 선다. */}
+          {view.hazards.map((h) => {
+            const st = h.kind === "spikes" ? spikeStateAt(h, view.round) : null;
+            return (
+              <div
+                key={`hz-${h.cell.col},${h.cell.row}`}
+                className={`hztile hztile--${h.kind}${st ? ` is-${st}` : ""}`}
+                style={{ left: `${cellX(dcol(h.cell.col))}px`, top: `${cellY(h.cell.row)}px` }}
+                title={HAZARD_TIP[h.kind]}
+                aria-hidden
+              >
+                {st !== "hidden" && <i className={`hztile__chip hztile__chip--${h.kind}`} />}
+              </div>
             );
           })}
           {/* 독안개 — 파이터 **위**에 반투명으로 덮는다(서 있으면 안개 속에 잠긴다).
@@ -1569,12 +1789,28 @@ export function BattleScreen({
                 key={`fog-${f.cell.col},${f.cell.row}`}
                 className="fogtile"
                 style={{
-                  left: `${cellX(dcol(f.cell.col))}%`,
-                  top: `${cellY(f.cell.row)}%`,
+                  left: `${cellX(dcol(f.cell.col))}px`,
+                  top: `${cellY(f.cell.row)}px`,
                 }}
                 aria-hidden
               />
             ))}
+          {/* 발자국 — 담아 둔 이동이 지나가는 칸에 순서 번호를 찍는다(디자인
+              `MoveBundle`). 잔상만 있으면 "몇 번째 이동으로 거기까지 가는지"가
+              안 보인다. ⚠ 클릭을 먹으면 안 된다(칸을 눌러 이동한다). */}
+          {planPreview.steps.map((st) => (
+            <span
+              key={`trail-${st.no}`}
+              className="trail"
+              style={{
+                left: `${cellX(dcol(st.cell.col)) + 54}px`,
+                top: `${cellY(st.cell.row) - 15}px`,
+              }}
+              aria-hidden
+            >
+              {st.no}
+            </span>
+          ))}
           {preview.ghost && (
             // 잔상도 본체와 **같은 몸**이어야 한다 — 스프라이트 캐릭터인데 잔상만
             // SVG로 그리면 딴 사람이 서 있고 바닥선까지 어긋난다.
@@ -1583,8 +1819,8 @@ export function BattleScreen({
                 ghostSheet ? " fighter--sprite" : ""
               }`}
               style={{
-                left: `${cellX(dcol(preview.ghost.col))}%`,
-                top: `${cellY(preview.ghost.row)}%`,
+                left: `${cellX(dcol(preview.ghost.col))}px`,
+                top: `${cellY(preview.ghost.row)}px`,
                 ["--accent" as string]: local.accent,
                 // 잔상도 **도착 지점에서** 상대를 바라본다 — 상대를 지나쳐 가는
                 // 이동이면 본체와 반대쪽을 보게 되고, 그게 실제 결과와 맞다.
@@ -1634,8 +1870,8 @@ export function BattleScreen({
               key={`sp-${sparks.seq}`}
               className={`sparks ${sparks.big ? "sparks--big" : ""}`}
               style={{
-                left: `${cellX(dcol(sparks.cell.col))}%`,
-                top: `${cellY(sparks.cell.row)}%`,
+                left: `${cellX(dcol(sparks.cell.col))}px`,
+                top: `${cellY(sparks.cell.row)}px`,
                 ["--spark" as string]: sparks.color,
               }}
             >
@@ -1783,10 +2019,112 @@ export function BattleScreen({
             ))}
           </div>
 
-          {/* ⚠ **이동 카드는 선택창에 없다**(2026-08-05 사용자 요청). 이동은 판의
-              칸을 눌러서 하므로(`moveTargets`) 화살표 칩은 같은 일을 두 번 하는
-              자리였고, 좁은 손패 폭만 잡아먹었다. 쿨타임·기력으로 못 쓰는 이동은
-              **칸이 아예 안 밝혀지는** 것으로 이미 드러난다. */}
+          {/* 이동 묶음 — **이동 카드는 손패에 펼치지 않고 한 장으로 접는다**
+              (디자인 `MoveBundle`·`MoveBundleSpec`). 이동은 판의 칸을 눌러서 하지만
+              (2026-08-05), 숨기기만 하면 ① 보상·상점에서 산 이동 카드가 전투에서
+              안 보이고 ② 칸이 안 밝혀질 때 쿨·막힘·속박이 구분되지 않고 ③ 꾹 눌러
+              읽을 곳이 없다. 묶음이 그 셋을 받는다. */}
+          {moveDeck.length > 0 && (
+            <div className="bundlewrap">
+              {tray && (
+                <section className="tray" aria-label="이동 카드 목록">
+                  <div className="tray__head">
+                    <span>이동 카드 {moveDeck.length}장</span>
+                    <em>판의 칸을 눌러도 똑같이 담긴다 · 꾹 누르면 상세</em>
+                  </div>
+                  <div className="tray__cards">
+                    {moveDeck.map((c) => {
+                      const face = faceCard(c);
+                      const at = slotNosFor(c.id);
+                      const cd = cdLeft(c.id);
+                      const from = planPreview.ghost ?? view.pos[localSide];
+                      const to = applyMovePreview(from, c, rocks, battle.state.hazards);
+                      const stuck = to.col === from.col && to.row === from.row;
+                      const full = slots.every((x) => x !== null);
+                      const st = at.length
+                        ? { t: `${at.join(" ")}번 칸`, k: "in" }
+                        : cd > 0
+                          ? { t: `쿨 ${cd}`, k: "cd" }
+                          : stuck
+                            ? { t: "막힘", k: "stuck" }
+                            : full
+                              ? { t: "칸 없음", k: "cd" }
+                              : { t: "준비", k: "ready" };
+                      return (
+                        <button
+                          key={c.id}
+                          className={`mc mc--${st.k}${(c.steps ?? 1) > 1 ? " mc--dash" : ""}`}
+                          onClick={() => {
+                            if (longPress.consumedClick()) return;
+                            addCard(c);
+                          }}
+                          onPointerDown={(e) => {
+                            pressedCard.current = face;
+                            longPress.handlers.onPointerDown(e);
+                          }}
+                          onPointerMove={longPress.handlers.onPointerMove}
+                          onPointerUp={longPress.handlers.onPointerUp}
+                          onPointerLeave={longPress.handlers.onPointerLeave}
+                          onPointerCancel={longPress.handlers.onPointerCancel}
+                          onContextMenu={longPress.handlers.onContextMenu}
+                          aria-disabled={st.k !== "ready"}
+                        >
+                          <span className="mc__top">
+                            <span>{c.steps ?? 1}칸</span>
+                            <em>{(c.cooldown ?? 0) > 0 ? `CD${c.cooldown}` : "—"}</em>
+                          </span>
+                          <span className="mc__g">
+                            {moveIcon(face.dir, face.steps ?? 1)}
+                          </span>
+                          <span className="mc__name">{face.name}</span>
+                          <span className="mc__st">{st.t}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+              <button
+                className={`bundle${tray ? " bundle--open" : ""}${
+                  bundle.locked ? " bundle--locked" : ""
+                }${bundle.dim ? " bundle--dim" : ""}`}
+                onClick={() => setTray((v) => !v)}
+                aria-expanded={tray}
+                aria-label="이동 카드 묶음 — 눌러서 펼치기"
+              >
+                <span className="bundle__b2" aria-hidden />
+                <span className="bundle__b1" aria-hidden />
+                <span className="bundle__f">
+                  <span className="bundle__head">
+                    <i className="bundle__boot" aria-hidden />
+                    <span>
+                      <em>MOVE</em>
+                      <b>×{moveDeck.length}</b>
+                    </span>
+                  </span>
+                  <span className="bundle__mid">
+                    <span className="cmp" aria-hidden>
+                      {bundle.compass.map((q, i) => (
+                        <i key={i} className={`cmp--${q.k}`}>
+                          {q.t}
+                        </i>
+                      ))}
+                    </span>
+                    <span className="bundle__counts">
+                      <span>
+                        준비 <b>{bundle.ready}</b>
+                      </span>
+                      <span>
+                        쿨 <em>{bundle.cooling}</em>
+                      </span>
+                    </span>
+                  </span>
+                  <span className="bundle__hint">{bundle.hint}</span>
+                  {bundle.locked && <span className="bundle__chain" aria-hidden />}
+                </span>
+              </button>
+            </div>
+          )}
           <div className="cards__row">
             {/* 봉인이 라운드를 넘어왔을 때만 뜬다(전설 유물 상대). 이 자리가 없으면
                 "카드를 냈는데 아무 일도 안 일어난다"가 되고, 그건 버그로 읽힌다. */}
@@ -1806,30 +2144,6 @@ export function BattleScreen({
                 </em>
               </span>
             )}
-            {/* 이동 묶음(2026-11) — 이동 카드는 손패에 펼치지 않고 **한 장으로 접는다**.
-                이동은 여전히 판의 칸을 눌러서 하고, 묶음은 "몇 장인지 · 뭐가 쿨인지 · 왜
-                못 가는지"를 보여 주고 이동 카드를 꾹 눌러 읽는 자리다. */}
-            <MoveBundle
-              cards={hand.filter((c) => c.kind === "move")}
-              open={bundleOpen}
-              setOpen={setBundleOpen}
-              face={faceCard}
-              cdLeft={cdLeft}
-              ready={(c) => selectable(c) && canAfford(c)}
-              blocked={(c) => {
-                const from = planPreview.ghost ?? view.pos[localSide];
-                const to = applyMovePreview(from, c, rocks);
-                return to.col === from.col && to.row === from.row;
-              }}
-              slotNos={slotNosFor}
-              bound={roundLock?.kind === "bind"}
-              onPick={(c) => {
-                addCard(c);
-                setBundleOpen(false);
-              }}
-              longPress={longPress}
-              pressed={pressedCard}
-            />
             <div className="cards__hand">
               {hand
                 .filter((c) => c.kind !== "move")
@@ -2000,12 +2314,26 @@ export function BattleScreen({
         </div>
       )}
 
+      {tip}
       {/* 꾹 눌러 편 카드 상세 — 판 위 어디든 덮는다(읽는 동안 전투는 멈춰 있다). */}
       {zoomCard && (
         <CardDetail
           card={faceCard(zoomCard)}
           accent={local.accent}
           onClose={() => setZoomCard(null)}
+          board={
+            // "지금 쓰면" — 이미 담은 이동까지 반영한 자리에서 이 카드가 덮는 칸(화면 좌표).
+            zoomCard.kind === "attack"
+              ? (() => {
+                  let from = { ...view.pos[localSide] };
+                  for (const c of slots) if (c?.kind === "move") from = applyMovePreview(from, c, rocks, battle.state.hazards);
+                  const foe = view.pos[1 - localSide];
+                  const hits = attackCells(from, zoomCard, facingBetween(from, foe, localSide), foe, rocks, piercesRock(zoomCard));
+                  const m = (c: Cell) => ({ col: dcol(c.col), row: c.row });
+                  return { me: m(from), foe: m(foe), hits: hits.map(m), foeName: battle.chars[1 - localSide].name };
+                })()
+              : undefined
+          }
         />
       )}
 
@@ -2244,8 +2572,8 @@ function FighterSprite({
     <div
       className={cls}
       style={{
-        left: `${cellX(flip ? GRID_COLS - 1 - v.pos[idx].col : v.pos[idx].col)}%`,
-        top: `${cellY(v.pos[idx].row)}%`,
+        left: `${cellX(flip ? GRID_COLS - 1 - v.pos[idx].col : v.pos[idx].col)}px`,
+        top: `${cellY(v.pos[idx].row)}px`,
         ["--accent" as string]: accent,
         // 격돌 키프레임이 "어느 쪽 벽으로 처박히는가"를 이 값으로 읽는다(±1)
         ...(slamDir ? { ["--slam" as string]: slamDir } : null),
@@ -2807,141 +3135,6 @@ function FoeRow({
                 : "아직 드러나지 않은 능력이다."}
             </p>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-// ---------------------------------------------------------------------------
-// 이동 묶음(2026-11 · 시안 MoveBundle.dc.html · MoveBundleSpec.dc.html)
-// 앞면 = 장화 + ×N + 3×3 방향 나침반(파랑 준비 · 주황 테 대시 · 숫자 쿨 · 금 담김).
-// 누르면 위로 펼쳐져 이동 카드 전부(준비 / 쿨 N / 막힘 / N번 칸) — 눌러 담고 꾹 눌러 읽는다.
-// ---------------------------------------------------------------------------
-const COMPASS: (MoveDir | null)[] = [
-  "up-left", "up", "up-right",
-  "left", null, "right",
-  "down-left", "down", "down-right",
-];
-const DIR_ARROW: Record<MoveDir, string> = {
-  up: "↑", down: "↓", left: "←", right: "→",
-  "up-left": "↖", "up-right": "↗", "down-left": "↙", "down-right": "↘",
-};
-
-function MoveBundle({
-  cards,
-  open,
-  setOpen,
-  face,
-  cdLeft,
-  ready,
-  blocked,
-  slotNos,
-  bound,
-  onPick,
-  longPress,
-  pressed,
-}: {
-  cards: CardDef[];
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  face: (c: CardDef) => CardDef;
-  cdLeft: (id: string) => number;
-  ready: (c: CardDef) => boolean;
-  blocked: (c: CardDef) => boolean;
-  slotNos: (id: string) => number[];
-  bound: boolean;
-  onPick: (c: CardDef) => void;
-  longPress: ReturnType<typeof useLongPress>;
-  pressed: React.MutableRefObject<CardDef | null>;
-}) {
-  if (!cards.length) return null;
-  const readyN = cards.filter(ready).length;
-  const coolN = cards.filter((c) => cdLeft(c.id) > 0).length;
-  const cellOf = (d: MoveDir) => {
-    const mine = cards.filter((c) => face(c).dir === d);
-    if (!mine.length) return { cls: "is-none", txt: "" };
-    if (mine.some((c) => slotNos(c.id).length)) return { cls: "is-in", txt: "" };
-    const ok = mine.filter(ready);
-    if (ok.length) return { cls: ok.every((c) => (c.steps ?? 1) > 1) ? "is-dash" : "is-ready", txt: "" };
-    const cd = Math.min(...mine.map((c) => cdLeft(c.id)).filter((n) => n > 0));
-    return { cls: "is-cool", txt: Number.isFinite(cd) ? String(cd) : "" };
-  };
-  return (
-    <div className={`mvb ${open ? "is-open" : ""} ${bound ? "is-bound" : ""}`}>
-      <button
-        type="button"
-        className="mvb__face"
-        aria-expanded={open}
-        aria-label={`이동 카드 ${cards.length}장 · 준비 ${readyN} · 쿨 ${coolN}`}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="mvb__top">
-          <span className="mvb__boot" aria-hidden="true" />
-          <b>×{cards.length}</b>
-        </span>
-        <span className="mvb__compass" aria-hidden="true">
-          {COMPASS.map((d, i) => {
-            if (!d) return <i key={i} className="mvb__me" />;
-            const st = cellOf(d);
-            return (
-              <i key={i} className={`mvb__dir ${st.cls}`}>
-                {st.txt}
-              </i>
-            );
-          })}
-        </span>
-        <span className="mvb__count">
-          준비 {readyN} · 쿨 {coolN}
-        </span>
-      </button>
-      {open && (
-        <div className="mvb__pop" role="menu">
-          <span className="mvb__pophead">이동 카드 — 눌러서 담기 · 꾹 눌러 자세히</span>
-          {cards.map((c) => {
-            const fc = face(c);
-            const cd = cdLeft(c.id);
-            const nos = slotNos(c.id);
-            const ok = ready(c) && !blocked(c);
-            const state = nos.length
-              ? `${nos.join("·")}번 칸`
-              : cd > 0
-                ? `쿨 ${cd}`
-                : bound
-                  ? "속박"
-                  : blocked(c)
-                    ? "막힘"
-                    : ready(c)
-                      ? "준비"
-                      : "기력 부족";
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="menuitem"
-                aria-disabled={!ok}
-                className={`mvb__item ${ok ? "" : "is-off"} ${(c.steps ?? 1) > 1 ? "is-dash" : ""}`}
-                onClick={() => {
-                  if (longPress.consumedClick() || !ok) return;
-                  onPick(c);
-                }}
-                onPointerDown={(e) => {
-                  pressed.current = c;
-                  longPress.handlers.onPointerDown(e);
-                }}
-                onPointerMove={longPress.handlers.onPointerMove}
-                onPointerUp={longPress.handlers.onPointerUp}
-                onPointerLeave={longPress.handlers.onPointerLeave}
-                onPointerCancel={longPress.handlers.onPointerCancel}
-                onContextMenu={longPress.handlers.onContextMenu}
-              >
-                <span className="mvb__arrow">{fc.dir ? DIR_ARROW[fc.dir].repeat(c.steps ?? 1) : "?"}</span>
-                <span className="mvb__name">{fc.name}</span>
-                <span className="mvb__state">{state}</span>
-              </button>
-            );
-          })}
         </div>
       )}
     </div>

@@ -170,6 +170,11 @@ HP는 **판 사이에 이어진다**(전투 시작마다 풀피 아님) → 깔�
 ---
 
 ## ⑤-bis 이벤트 · 상점 (2026-07-24)
+
+> ⚠ **2026-11-07 리디자인으로 이 절의 이벤트 목록과 아래 ⑤-ter(중복 강화)는 옛 규칙이 됐다.** 지금은 이벤트 8종(`game/events.ts` · `docs/redesign/EVENTS.md`),
+> 룰렛 강화(`docs/redesign/CARD_UPGRADE.md`), 상점에 "강화 · 50" 칸, 지도에 휴식·보물 칸, ? 칸 정체 공개 + 고블린 장사꾼(`docs/redesign/GOBLIN_MERCHANT.md`)이다.
+> 진행 기록은 `docs/redesign/PROGRESS.md`.
+
 **이벤트**(`EVENTS`, 8종+): 각자 선택지가 있고 대부분 **위험-보상 거래**다. 사용자 요구대로 "HP 깎고 유물", "카드 빼고 유물"이 핵심.
 - 저주받은 제단(HP-25→유물) · 버려진 대장간(카드 제거→유물) · 치유의 샘(HP+45) · 도박꾼(HP-15→골드) · 고대 사당(골드→HP) · 수상한 상자(HP-10→유물) · 흩어진 동전(골드) · 피의 서약(HP-20→골드) · **강화 3종**(늙은 대장장이 · 피의 담금질 · 떠도는 각인사 — 아래 ⑤-ter).
 - `resolveEventEffect(run, effect, removeCardId?)`가 적용. 카드 제거형·강화형은 카드 선택이 필요(`needsCardPick`). ⚠ 잠긴 카드(이동 4방향)를 고르면 대가를 안 치른 셈이라 **유물도 주지 않고 다시 고르게** 한다.
@@ -180,7 +185,7 @@ HP는 **판 사이에 이어진다**(전투 시작마다 풀피 아님) → 깔�
 
 ---
 
-## ⑤-ter 카드 강화 (2026-08-08 · 사용자 요청) — ⚠ 2026-11 폐지, ⑤-quater의 룰렛으로 대체
+## ⑤-ter 카드 강화 (2026-08-08 · 사용자 요청)
 
 **같은 카드를 또 얻으면 그 카드가 강해진다.** 구현은 `game/upgrades.ts`(규칙) + `RunState.upgrades`(상태).
 
@@ -224,24 +229,6 @@ HP는 **판 사이에 이어진다**(전투 시작마다 풀피 아님) → 깔�
 
 ### 락스텝 — PvP는 완전히 불변
 `upgradedCard`가 만드는 건 **새 객체**이고 원본 상수(`cards.ts`·`roster.ts`·`runcards.ts`)는 건드리지 않는다. 그 사본은 `run.ts`/`runbattle.ts`를 거쳐서만 엔진에 들어가므로 PvP·봇전의 카드 풀에는 절대 안 새어 나간다(`npm run check`가 지킨다). `CardDef`에 붙은 `upgraded`/`upgradeNote`는 **표시 전용**이라 `resolveTurn` 출력에 안 닿는다 → **`RULES_VERSION`은 안 올린다.**
-
-## ⑤-quater 2026-11 기획 반영 — 룰렛 강화 · 칸 7종 · ? 정체 · 고블린 · 이벤트 8종
-
-원본 기획: `docs/redesign/CARD_UPGRADE.md` · `EVENTS.md` · `GOBLIN_MERCHANT.md`. ⚠ 아래 ⑤-ter(중복 강화)는 **폐지됐다**.
-
-| 시스템 | 규칙 | 코드 |
-| --- | --- | --- |
-| 룰렛 강화 | 카드(이동 불가) → 수치 +0/5/10/15/20(10/25/30/25/10%) 또는 범위 붙은 칸 0~5(10/20/20/20/20/10%) · 카드당 2번 · 꽝은 안 셈 | `upgrades.ts` · `applyCardUpgrade` · `UpgradeScreen` |
-| 휴식 | 쉬기(최대 체력 30%) 또는 강화 하나 | `restHeal` · `RestScreen` |
-| 보물 | 유물 하나 | `openTreasure` · `TreasureScreen` |
-| ? 칸 | 들어갈 때 정체 공개 — 이벤트 55 · 전투 20 · 고블린 15 · 휴식 10 | `chooseBranch` · `enterReveal` · `UNKNOWN_WEIGHTS` |
-| 상점 강화 | 50골드(할인 적용) · 상점마다 한 번 · 꽝이면 환불 없음(돌리기 전 그만두면 환불) | `rollShop`의 `upgrade` 칸 |
-| 고블린 | 쓴 돈 0/80/200 → 가난/중간/부자 · 값 ×0.8~1.5 · 덮쳐 이기면 골드 20/55/140 + 진열품(부자는 유물 확정) · 재산 0 | `rollGoblinShop` · `buyGoblinItem` · `startAmbush` |
-| 이벤트 8종 | 대장장이 · 거래 · 온천 · 약방 · 항아리 · 갓챠 · 두더지 · 수술실 — 대가만 보이고 결과는 나중 · 히든 자물쇠 · 한 런에 같은 이벤트 안 겹침 | `events.ts` · `EventScreen` |
-
-- 템플릿: `combat combat event combat shop combat elite treasure combat elite shop combat event rest boss`. 지원 칸 넷(이벤트·상점·휴식·보물)은 서로하고만 바뀐다.
-- 보상: 일반 5장 중 1 · 엘리트 카드 4 + 유물 1(`REWARD_OPTIONS` 6 → 5).
-- **밸런스(사용자 결정으로 유지 — 2026-11-09, 이게 새 기준선)**: 최고급 3시드(11·22·33) × 900런 스윕 — 이전 HEAD 평균 15.5%(전사 15.4 / 궁수 15.5 / 마법사 15.6) → **26.2%**(전사 28.0 / 마법사 25.6 / 궁수 24.9). 강화를 꺼도 ≈26% — 지도 쪽(보스 앞 휴식·보물·? 휴식)이 원인이다. 되돌리려면 `SIGNATURE.runEffect.maxHpBonus`를 내리거나 휴식 회복량(`REST_HEAL_PCT`)·`UNKNOWN_WEIGHTS.rest`를 줄인다.
 
 ## ⑥ 난이도 곡선 (2026-07-30 튜닝 — 상수는 `game/run.ts`)
 층이 오를수록 적 **티어 상승** + **체력·공격력 스케일** 증가. **1층은 매우 약하게**(사용자 요구). 일정 층마다 **엘리트**(강화 몬스터 + 유물 확정), 마지막에 **보스**.

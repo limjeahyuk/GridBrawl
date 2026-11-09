@@ -75,13 +75,21 @@ const addToSet = (key: string, ids: string[]) => {
 
 const RELIC_KEY = 'gb-relics-seen'
 const FOE_KEY = 'gb-foe-seen'
+const MET_KEY = 'gb-foe-met'
 export const seenRelics = () => readSet(RELIC_KEY)
 export const markRelicsSeen = (ids: string[]) => addToSet(RELIC_KEY, ids)
 /** 한 번 본 적 능력은 다음에 만나도 처음부터 보인다. 키는 `<몬스터 id>:<훅 이름>`. */
 export const seenFoeAbilities = () => readSet(FOE_KEY)
 export const markFoeAbilitySeen = (keys: string[]) => addToSet(FOE_KEY, keys)
+/**
+ * **한 번이라도 마주친 몬스터**(도감의 몬스터 탭). 능력 기록(`gb-foe-seen`)과 따로
+ * 둔다 — 능력이 아예 없는 몬스터는 거기 영영 안 남아서 도감에서도 안 열린다.
+ */
+export const seenFoes = () => readSet(MET_KEY)
+export const markFoeMet = (id: string) => addToSet(MET_KEY, [id])
 
-/** 만난 몬스터(2026-11 도감 몬스터 탭). 런 전투에 들어갈 때 등록된다. */
-const MONSTER_KEY = 'gb-monsters-seen'
-export const seenMonsters = () => readSet(MONSTER_KEY)
-export const markMonsterSeen = (id: string) => addToSet(MONSTER_KEY, [id])
+// --- 첫 만남 팁(2026-11 리디자인 · `TutorialFlow` 하단) ---------------------------
+// 튜토리얼 뒤 **처음 만날 때 딱 한 번** 뜨는 팁. 본 팁 id를 기기에 남긴다(던지지 않는다).
+const TIP_KEY = 'gb-tips-seen'
+export const seenTips = () => readSet(TIP_KEY)
+export const markTipSeen = (id: string) => addToSet(TIP_KEY, [id])

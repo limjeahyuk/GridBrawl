@@ -21,9 +21,8 @@ export type ClipName =
   | 'block'
   | 'hurt'
   | 'death'
-  /** 고블린 장사꾼 — 상점에서 손을 비비는 기본 동작. */
+  /** 상점 NPC 전용(고블린 장사꾼) — 흥정 대기 · 살 때 한 번. */
   | 'haggle'
-  /** 고블린 장사꾼 — 물건이 팔릴 때마다 한 번. */
   | 'cheer'
 
 export interface ClipDef {
@@ -125,22 +124,22 @@ export const SHEETS: Record<string, SheetDef> = {
   // hero — 대체 대상: mage
   mage: { id: 'redesign/sprites/dirge', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 37, facesRight: true,
     clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 78, loop: true }, back: { frames: 6, frameMs: 100, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 8, frameMs: 75, loop: false, impactFrame: 3 }, attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 105, loop: false } } },
+  // ⚠ 상인 마렌 시트(`trader`)는 지웠다(2026-11) — 상점 주인은 이제 스프라이트가 아니라
+  //   그림 한 장이다(`public/redesign/cutscene/shopkeeper/`, ShopScreen의 `.trader__portrait`).
+  // 이벤트 전용 — 항아리 뱀 · 고블린 장사꾼 3단계(`docs/redesign/sprites-v2.ts`).
+  // ⚠ 고블린의 `haggle`·`cheer`는 상점 화면 전용 클립이다.
+  snake: { id: 'redesign/sprites/snake', frameW: 72, frameH: 40, scale: 3, footY: 40, anchorX: 34, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 120, loop: true }, run: { frames: 6, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 75, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 7, frameMs: 100, loop: false } } },
+  'goblin-poor': { id: 'redesign/sprites/goblin-poor', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 38, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
+  'goblin-mid': { id: 'redesign/sprites/goblin-mid', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 37, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
+  'goblin-rich': { id: 'redesign/sprites/goblin-rich', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 37, facesRight: true,
+    clips: { idle: { frames: 6, frameMs: 130, loop: true }, run: { frames: 8, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
   // monster · grassland — 대체 대상: slime
   slime: { id: 'redesign/sprites/slime', frameW: 64, frameH: 44, scale: 3, footY: 43, anchorX: 26, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 130, loop: true }, run: { frames: 6, frameMs: 85, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 6, frameMs: 100, loop: false } } },
   // monster · grassland — 대체 대상: goblin
-  // merchant · ? 칸 — 가난한 고블린
-  'goblin-poor': { id: 'redesign/sprites/goblin-poor', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 38, facesRight: true,
-    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
-  // merchant · ? 칸 — 중간 고블린
-  'goblin-mid': { id: 'redesign/sprites/goblin-mid', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 37, facesRight: true,
-    clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
-  // merchant · ? 칸 — 부자 고블린
-  'goblin-rich': { id: 'redesign/sprites/goblin-rich', frameW: 84, frameH: 58, scale: 3, footY: 55, anchorX: 37, facesRight: true,
-    clips: { idle: { frames: 6, frameMs: 130, loop: true }, run: { frames: 8, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 80, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 9, frameMs: 100, loop: false }, haggle: { frames: 6, frameMs: 120, loop: true }, cheer: { frames: 6, frameMs: 110, loop: false } } },
-  // monster · 항아리 이벤트 — 동굴 뱀
-  snake: { id: 'redesign/sprites/snake', frameW: 72, frameH: 40, scale: 3, footY: 40, anchorX: 34, facesRight: true,
-    clips: { idle: { frames: 6, frameMs: 120, loop: true }, run: { frames: 6, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 75, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 7, frameMs: 100, loop: false } } },
   goblin: { id: 'redesign/sprites/goblin', frameW: 72, frameH: 48, scale: 3, footY: 45, anchorX: 30, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 110, loop: true }, run: { frames: 8, frameMs: 65, loop: true }, attack1: { frames: 6, frameMs: 60, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 65, loop: false, impactFrame: 2 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 8, frameMs: 100, loop: false } } },
   // monster · grassland — 대체 대상: ogre

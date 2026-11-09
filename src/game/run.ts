@@ -16,14 +16,15 @@ import {
   RELIC_PRICE,
   REWARD_RELICS,
   signatureRelicId,
+  type Rarity,
   type Relic,
   type RunMods,
 } from './relics'
 import { getMonster, monstersOfTier, type MonsterDef, type TerrainId } from './monsters'
 import { bossScene } from './bosses'
 import { RUN_CARDS, resolveRunCard } from './runcards'
-import { addUpgrade, isUpgradable, upgradedCard, type CardUpgrade } from './upgrades'
-import { ROCK_HP, type CardDef, type Difficulty, type Obstacle, type Offset } from '../battle/types'
+import { addUpgrade, upgradeBlock, upgradedCard, type CardUpgrade } from './upgrades'
+import { GRID_COLS, GRID_ROWS, ROCK_HP, type CardDef, type Difficulty, type Hazard, type HazardKind, type Obstacle, type Offset } from '../battle/types'
 
 // --- 런 난이도 4단계 (2026-08-11) -------------------------------------------
 /**
@@ -145,18 +146,10 @@ export function shiftedAiLevel(level: Difficulty, shift: number): Difficulty {
 }
 
 // --- 노드 사다리 템플릿 -----------------------------------------------------
-/**
- * 칸 종류 — 지도 범례 7종(2026-11 리디자인): 적(`combat`) · 엘리트 · 보스 · 미지(`event`, ?) ·
- * 상인(`shop`) · 휴식(`rest`) · 보물(`treasure`). id는 예전 이름을 그대로 쓴다(`event` = ? 칸).
- */
 export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'shop' | 'rest' | 'treasure'
-/** ? 칸이 열렸을 때의 정체. 들어가는 순간 정해진다(`chooseBranch`). */
-export type UnknownKind = 'event' | 'combat' | 'goblin' | 'rest'
 export interface RunNode {
   type: NodeType
-  monsterId?: string // combat/elite/boss (? 칸은 정체가 전투·고블린일 때 들어가며 채워진다)
-  /** ? 칸의 정체 — 들어가기 전엔 없다. */
-  reveal?: UnknownKind
+  monsterId?: string // combat/elite/boss
   /**
    * 세로 위치(0=위, 1=가운데, 2=아래). 화면에서 어느 줄에 그릴지이자 **어디로
    * 이어지는지의 근거**다 — 간선은 세로로 한 칸 안쪽(|Δlane| ≤ 1)으로만 난다.
@@ -177,15 +170,9 @@ const CENTER_LANE = 1
  */
 const NODE_TEMPLATE: NodeType[] = [
   'combat', 'combat', 'event', 'combat', 'shop', 'combat', 'elite',
-  'treasure', 'combat', 'elite', 'shop',
-  'combat', 'event', 'rest', 'boss',
+  'event', 'combat', 'elite', 'shop',
+  'combat', 'combat', 'event', 'boss',
 ]
-/**
- * 지원 칸 — 전투가 아닌 칸들. **서로하고만** 바뀐다(아래 `nodesForFloor`의 ⚠).
- * 2026-11 리디자인에서 휴식·보물이 더해졌다(템플릿 8층 보물 · 14층 휴식 — 보스 앞 모닥불).
- */
-const SUPPORT_TYPES: readonly NodeType[] = ['event', 'shop', 'rest', 'treasure']
-const isSupport = (t: NodeType) => SUPPORT_TYPES.includes(t)
 export const LADDER_FLOORS = NODE_TEMPLATE.length
 
 // --- 덱 룰 ------------------------------------------------------------------
@@ -220,8 +207,8 @@ export const LOCKED_CARD_IDS: readonly string[] = ['m-up', 'm-down', 'm-left', '
 export const isLockedCard = (cardId: string): boolean => LOCKED_CARD_IDS.includes(cardId)
 
 // --- 튜닝 상수 --------------------------------------------------------------
-/** 승리 보상으로 보여주는 선택지 수 — 일반 5장 중 1 · 엘리트 카드 4 + 유물 1(2026-11 리디자인). */
-const REWARD_OPTIONS = 5
+/** 승리 보상으로 보여주는 선택지 수(5장 중 1택). */
+const REWARD_OPTIONS = 5 // 2026-11 리디자인: 일반 5장 · 엘리트는 카드 4 + 유물 1
 /** 일반 전투 보상 5장 중 유물이 섞일 확률(엘리트·보스는 확정). */
 const RELIC_IN_REWARD = 0.03
 /** 층별 몬스터 체력 스케일 — 보스로 갈수록 확실히 벽이 되게 0.07/층. */
@@ -258,6 +245,8 @@ const GOLD_ELITE_BONUS = 40
 const GOLD_BOSS_BONUS = 80
 const PRICE_CARD = 35
 const PRICE_HEAL = 30
+/** 상점 룰렛 강화(2026-11 리디자인) — 상점마다 한 번. */
+const PRICE_UPGRADE = 50
 const PRICE_HEAL_AMOUNT = 25 // ÷2 리스케일(2026-08-05): HP 절반이라 회복량도 절반
 
 /**
@@ -286,18 +275,7 @@ export function startingDeck(charId: string): string[] {
  * `choosing` = 이번 층의 갈래를 아직 안 골랐다(2026-08-04 분기 지도).
  * 나머지는 고른 노드에 따라 정해진다(`statusForNode`).
  */
-export type RunStatus =
-  | 'choosing'
-  | 'reveal' // ? 칸 정체 공개(그다음 아래 넷 중 하나로)
-  | 'fighting'
-  | 'reward'
-  | 'event'
-  | 'shop'
-  | 'rest' // 모닥불 — 쉬기 또는 강화
-  | 'treasure' // 보물 상자
-  | 'goblin' // ? 칸의 고블린 장사꾼
-  | 'won'
-  | 'lost'
+export type RunStatus = 'choosing' | 'fighting' | 'reward' | 'event' | 'shop' | 'rest' | 'treasure' | 'won' | 'lost'
 
 export interface RunState {
   charId: string
@@ -306,27 +284,19 @@ export interface RunState {
   relicIds: string[]
   deck: string[]
   /**
-   * 카드 강화 단계(2026-08-08) — 카드 id → 단계(없으면 0, 상한 `MAX_UPGRADE`).
-   *
-   * **덱과 따로 두는 이유**: 덱은 id 목록이고 쿨타임·"같은 공격은 한 턴에 한 번"이
-   * 전부 id로 판정된다 — 즉 같은 id를 두 장 넣어도 두 번째는 아무 일도 안 한다.
-   * 그래서 중복 획득을 장수가 아니라 **단계**로 받는다(`grantCard`). 덱은 여전히
-   * id 목록 그대로라 `deckCap`·교체·제거 로직이 하나도 안 바뀐다.
+   * 카드 강화 기록(2026-11 룰렛) — 카드 id → 더한 수치·칸·횟수(`upgrades.ts`).
+   * 덱(id 목록)과 따로 둬서 `deckCap`·교체·제거 로직이 그대로다.
    */
   upgrades: Record<string, CardUpgrade>
   /**
-   * 이번 런에서 고블린 상점에 쓴 골드 합(2026-11). 고블린의 재산 단계가 이것 하나로
-   * 정해진다(`goblinTier`). 덮쳐서 이기면 0으로 돌아간다(사용자 확정).
+   * 칸이 아니라 **이벤트가 연 전투**(항아리 뱀 · 고블린 습격). 있으면 `currentEnemy`가
+   * 칸의 몬스터 대신 이걸 쓰고, 보상 화면이 `kind`로 보상을 고른다. 층을 넘기면 지운다.
    */
-  goblinSpent: number
-  /** 이벤트(수술실 심장)로 깎인 최대 체력. 음수. 유물 보정과 따로 둔다. */
-  maxHpMod: number
-  /** 이번 런에서 이미 본 ? 이벤트 id — 같은 이벤트를 한 런에 두 번 안 낸다. */
-  seenEvents: string[]
-  /** 지금 전투가 고블린 습격이면 그 단계와 진열품(승리 보상이 여기서 나온다). */
-  ambush?: { tier: GoblinTier; stock: ShopItem[] }
-  /** 지금 전투가 이벤트 전투(항아리 뱀)면 이길 때 줄 유물 풀과 시작 상태. */
-  eventFight?: { relicPool: string[]; poisonRounds: number }
+  special?: SpecialFight
+  /** 이벤트로 깎인 최대 체력 합(유물로 다시 계산해도 남게). */
+  maxHpLoss?: number
+  /** 이번 런에서 고블린 상점에 쓴 골드 — 단계(가난·중간·부자)를 정한다. 덮쳐서 이기면 0. */
+  goblinSpent?: number
   hp: number
   maxHp: number
   gold: number
@@ -345,6 +315,21 @@ export interface RunState {
    */
   picked: number[]
   status: RunStatus
+}
+
+export interface SpecialFight {
+  /** jar = 항아리 뱀 · ambush = ? 칸의 매복 전투 · goblin = 고블린 습격. */
+  kind: 'jar' | 'ambush' | 'goblin'
+  monsterId: string
+  /** 고블린 습격 — 덮친 고블린의 단계와 그때 진열(이기면 여기서 전리품을 고른다). */
+  goblinTier?: GoblinTier
+  goblinStock?: GoblinItem[]
+  /** 플레이어가 중독 N라운드로 시작(항아리). */
+  startPoison?: number
+  /** 이겨서 받은 덤 유물(보상 화면 안내용). */
+  wonRelicId?: string
+  /** 가난한 고블린을 이겨 무작위로 받은 진열품. */
+  wonItemId?: string
 }
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
@@ -416,6 +401,8 @@ function combatMonster(floor: number, exclude?: string): string {
  * (`PRICE_HEAL_AMOUNT`) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
  * 그래야 15층 페이싱을 맞춰 둔 전투/지원 비율이 경로와 무관하게 유지된다.
  */
+/** 지원 칸 — 서로하고만 바꾼다(아래 ⚠). 휴식·보물은 2026-11 리디자인에서 합류. */
+const SUPPORT_NODES: NodeType[] = ['event', 'shop', 'rest', 'treasure']
 function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode[] {
   const blank = (type: NodeType, monsterId?: string): RunNode => ({
     type,
@@ -431,10 +418,10 @@ function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode
   else out.push(blank(primary))
 
   while (out.length < count) {
-    if (isSupport(primary)) {
-      // 지원 칸끼리만 — 그 층에 아직 없는 지원 칸을 무작위로 세운다.
-      const free = SUPPORT_TYPES.filter((t) => !out.some((n) => n.type === t))
-      out.push(blank(pick(free.length ? free : SUPPORT_TYPES.slice())))
+    if (SUPPORT_NODES.includes(primary)) {
+      // 지원 칸끼리만(2026-11: 휴식·보물이 합류) — 같은 층에 같은 종류가 겹치지 않게.
+      const used = out.map((n) => n.type)
+      out.push(blank(pick(SUPPORT_NODES.filter((t) => !used.includes(t)))))
     } else {
       // 전투·엘리트의 대안은 언제나 일반 전투다(엘리트는 이걸로 회피한다).
       // 이미 나온 몬스터는 피해서 뽑는다 — 같은 얼굴 둘을 고르는 건 선택이 아니다.
@@ -595,6 +582,33 @@ export const TERRAIN: Record<TerrainId, readonly Obstacle[]> = {
 /** 몬스터가 자기 지형을 안 가진 엘리트 칸의 기본 배치. */
 const ELITE_TERRAIN: TerrainId = 'rubble'
 
+/**
+ * 함정 배치(2026-11 리디자인 · 시안 `Hazards`). **일반 전투(? 매복 포함)의 일부에만** 깔린다 —
+ * 엘리트는 바위, 보스·고블린은 빈 판이라 지형 면을 겹치지 않는다. 종류는 지역이 고른다:
+ * 초원 = 가시덩굴 · 불길 / 던전 = 가시덫 · 빙판 · 불길. 끝열(시작 자리)은 비운다.
+ */
+const HAZARD_CHANCE = 0.4
+const REGION_HAZARDS: Record<'grassland' | 'dungeon', HazardKind[]> = {
+  grassland: ['bramble', 'fire'],
+  dungeon: ['spikes', 'ice', 'fire'],
+}
+export function hazardsFor(run: RunState, rng: () => number = Math.random): Hazard[] {
+  const sp = run.special
+  const combat = sp ? sp.kind === 'ambush' : currentNode(run).type === 'combat'
+  if (!combat || rng() >= HAZARD_CHANCE) return []
+  const kinds = REGION_HAZARDS[regionOf(run.floor)]
+  const cells: { col: number; row: number }[] = []
+  for (let col = 1; col < GRID_COLS - 1; col++) for (let row = 0; row < GRID_ROWS; row++) cells.push({ col, row })
+  const n = 2 + Math.floor(rng() * 2)
+  const out: Hazard[] = []
+  for (let i = 0; i < n && cells.length; i++) {
+    const cell = cells.splice(Math.floor(rng() * cells.length), 1)[0]
+    const kind = kinds[Math.floor(rng() * kinds.length)]
+    out.push({ kind, cell, ...(kind === 'spikes' ? { phase: Math.floor(rng() * 3) } : null) })
+  }
+  return out
+}
+
 export function terrainFor(run: RunState): readonly Obstacle[] {
   const node = currentNode(run)
   const own = node.monsterId ? getMonster(node.monsterId).terrain : undefined
@@ -606,13 +620,10 @@ export function terrainFor(run: RunState): readonly Obstacle[] {
 }
 
 // --- 파생값 -----------------------------------------------------------------
-export function computeMaxHp(charId: string, relicIds: string[], mod = 0): number {
+export function computeMaxHp(charId: string, relicIds: string[]): number {
   const base = getChar(charId).maxHp
-  return Math.max(1, base + (mergeRelics(relicIds).maxHpBonus ?? 0) + mod)
+  return Math.max(1, base + (mergeRelics(relicIds).maxHpBonus ?? 0))
 }
-/** 런 상태 기준 최대 체력(유물 + 이벤트 보정). */
-const maxHpOf = (run: Pick<RunState, 'charId' | 'relicIds' | 'maxHpMod'>, relicIds = run.relicIds) =>
-  computeMaxHp(run.charId, relicIds, run.maxHpMod ?? 0)
 /**
  * 이번 층에서 고를 수 있는 칸의 **노드 인덱스**. 1층은 전부 열려 있고, 그 뒤로는
  * 직전 층에서 고른 칸의 `next`만 열린다 — 그래서 갈래가 1~3개로 달라진다.
@@ -661,39 +672,10 @@ export function currentNode(run: RunState): RunNode {
 export function chooseBranch(run: RunState, index: number): RunState {
   const idxs = currentOptionIndices(run)
   const at = clamp(index, 0, Math.max(0, idxs.length - 1))
-  let node = run.map[run.floor - 1][idxs[at]]
+  const node = run.map[run.floor - 1][idxs[at]]
   const picked = run.picked.slice()
   picked[run.floor - 1] = idxs[at]
-  let map = run.map
-  // ? 칸은 **들어가는 순간** 정체가 정해진다 — 지도엔 끝까지 ?로 남아 있어야 고르는 게 도박이다.
-  if (node.type === 'event' && !node.reveal) {
-    const reveal = rollUnknown()
-    node = { ...node, reveal, monsterId: reveal === 'combat' ? combatMonster(run.floor) : undefined }
-    map = run.map.map((f, i) => (i === run.floor - 1 ? f.map((n, j) => (j === idxs[at] ? node : n)) : f))
-    return { ...run, map, picked, status: 'reveal' }
-  }
-  return { ...run, map, picked, status: statusForNode(node) }
-}
-
-/**
- * ? 칸의 정체 비율 — **시안에서 정한 값**(기획엔 종류만 있고 비율은 없다). 이벤트가
- * 기본이고 전투·고블린 상점·휴식이 섞인다. 바꾸면 `sim:run --sweep`으로 재측정.
- */
-export const UNKNOWN_WEIGHTS: Readonly<Record<UnknownKind, number>> = {
-  event: 55,
-  combat: 20,
-  goblin: 15,
-  rest: 10,
-}
-function rollUnknown(): UnknownKind {
-  const entries = Object.entries(UNKNOWN_WEIGHTS) as [UnknownKind, number][]
-  let r = Math.random() * entries.reduce((s, [, w]) => s + w, 0)
-  for (const [k, w] of entries) if ((r -= w) < 0) return k
-  return 'event'
-}
-/** 정체 공개 화면을 넘기고 그 칸으로 들어간다. */
-export function enterReveal(run: RunState): RunState {
-  return { ...run, status: statusForNode(currentNode(run)) }
+  return { ...run, picked, status: statusForNode(node) }
 }
 export function isEliteFloor(run: RunState): boolean {
   const t = currentNode(run).type
@@ -705,6 +687,7 @@ export function isEliteFloor(run: RunState): boolean {
  * tier4(수호기사·화염군주)는 이미 엘리트 스탯이라 엘리트 보정을 중복 적용하지 않는다.
  */
 export function currentEnemy(run: RunState): MonsterDef {
+  if (run.special) return enemyForNode(run, { type: 'combat', monsterId: run.special.monsterId, lane: 1, next: [] })
   return enemyForNode(run, currentNode(run))
 }
 /**
@@ -725,14 +708,7 @@ export function enemyForNode(run: RunState, node: RunNode): MonsterDef {
   }
 }
 function statusForNode(node: RunNode): RunStatus {
-  if (node.type === 'event') {
-    switch (node.reveal) {
-      case 'combat': return 'fighting'
-      case 'goblin': return 'goblin'
-      case 'rest': return 'rest'
-      default: return 'event'
-    }
-  }
+  if (node.type === 'event') return 'event'
   if (node.type === 'shop') return 'shop'
   if (node.type === 'rest') return 'rest'
   if (node.type === 'treasure') return 'treasure'
@@ -749,9 +725,6 @@ export function startRun(charId: string, difficulty: RunDifficulty = DEFAULT_DIF
     relicIds,
     deck: startingDeck(charId),
     upgrades: {},
-    goblinSpent: 0,
-    maxHpMod: 0,
-    seenEvents: [],
     hp: maxHp,
     maxHp,
     gold: 0,
@@ -774,7 +747,11 @@ export function deckCap(run: RunState): number {
 }
 
 // --- 전투 결과 --------------------------------------------------------------
-function goldForWin(run: RunState): number {
+/**
+ * 이 전투로 받는 골드. 랜덤이 없어 **보상 화면이 같은 값을 다시 계산해** "+N"으로
+ * 보여 줄 수 있다(`afterWin`이 이미 더해 둔 몫이라 화면에만 쓰인다).
+ */
+export function goldForWin(run: RunState): number {
   const node = currentNode(run)
   let g = GOLD_BASE + GOLD_PER_FLOOR * run.floor
   if (node.type === 'elite') g += GOLD_ELITE_BONUS
@@ -785,23 +762,9 @@ function goldForWin(run: RunState): number {
 /** 승리 — 남은 체력 인계 + 골드 획득 → 보상 단계(보스면 클리어). */
 export function afterWin(run: RunState, hpLeft: number): RunState {
   const hp = clamp(Math.round(hpLeft), 0, run.maxHp)
-  if (currentNode(run).type === 'boss') return { ...run, hp, gold: run.gold + goldForWin(run), status: 'won' }
-  // 고블린을 쓰러뜨렸다 — 단계별 골드 + (부자면) 유물 확정, 그리고 **재산이 0으로**.
-  if (run.ambush) {
-    let out: RunState = {
-      ...run,
-      hp,
-      gold: run.gold + GOBLIN_REWARD_GOLD[run.ambush.tier],
-      goblinSpent: 0,
-      status: 'reward',
-    }
-    if (run.ambush.tier === 'rich') out = grantRandomRelic(out).run
-    return out
-  }
-  let out: RunState = { ...run, hp, gold: run.gold + goldForWin(run), status: 'reward' }
-  // 항아리 뱀 — 이기면 그 풀의 유물 하나.
-  if (run.eventFight) out = grantRelicFromPool(out, run.eventFight.relicPool).run
-  return out
+  const gold = run.gold + goldForWin(run)
+  if (currentNode(run).type === 'boss') return { ...run, hp, gold, status: 'won' }
+  return { ...run, hp, gold, status: 'reward' }
 }
 export function afterLoss(run: RunState): RunState {
   return { ...run, hp: 0, status: 'lost' }
@@ -825,37 +788,10 @@ export function rollRelicId(run: RunState): string | undefined {
 export function grantRelic(run: RunState, relicId: string): RunState {
   if (!relicId || run.relicIds.includes(relicId)) return run
   const relicIds = [...run.relicIds, relicId]
-  const maxHp = maxHpOf(run, relicIds)
+  const maxHp = Math.max(1, computeMaxHp(run.charId, relicIds) - (run.maxHpLoss ?? 0))
   const delta = maxHp - run.maxHp
   const hp = Math.min(run.hp + Math.max(0, delta), maxHp)
   return { ...run, relicIds, maxHp, hp: clamp(hp, 1, maxHp) }
-}
-/**
- * 유물을 잃는다(거래·대장장이). 최대 체력이 줄면 현재 체력도 그 안으로 깎인다.
- * ⚠ **시그니처 유물은 못 잃는다** — 직업의 출발점이라 빠지면 런의 전제가 깨진다.
- */
-export function removeRelic(run: RunState, relicId: string): RunState {
-  if (!run.relicIds.includes(relicId) || relicId === signatureRelicId(run.charId)) return run
-  const relicIds = run.relicIds.filter((id) => id !== relicId)
-  const maxHp = maxHpOf(run, relicIds)
-  return { ...run, relicIds, maxHp, hp: clamp(run.hp, 1, maxHp) }
-}
-/** 거래에 내놓을 수 있는 유물(시그니처 제외). */
-export function tradableRelics(run: RunState): string[] {
-  return run.relicIds.filter((id) => id !== signatureRelicId(run.charId))
-}
-/** 풀(유물 id 목록)에서 미보유 하나. 풀이 비면 아무 유물이나(`grantRandomRelic`). */
-export function grantRelicFromPool(run: RunState, pool: readonly string[]): { run: RunState; relicId?: string } {
-  const free = pool.filter((id) => RELIC_BY_ID[id] && !run.relicIds.includes(id))
-  if (!free.length) return grantRandomRelic(run)
-  const relicId = pick(free)
-  return { run: grantRelic(run, relicId), relicId }
-}
-/** 최대 체력을 깎는다(수술실). 현재 체력도 새 최대치 안으로. */
-export function loseMaxHp(run: RunState, amount: number): RunState {
-  const maxHpMod = (run.maxHpMod ?? 0) - amount
-  const maxHp = maxHpOf({ ...run, maxHpMod })
-  return { ...run, maxHpMod, maxHp, hp: clamp(run.hp, 1, maxHp) }
 }
 /** 무작위(미보유) 유물 하나를 준다. 다 가졌으면 소량 회복으로 대체. */
 export function grantRandomRelic(run: RunState): { run: RunState; relicId?: string } {
@@ -863,51 +799,56 @@ export function grantRandomRelic(run: RunState): { run: RunState; relicId?: stri
   if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
   return { run: grantRelic(run, relicId), relicId }
 }
-// --- 카드 강화 (2026-11 룰렛) ----------------------------------------------
-/** 그 카드의 강화 기록(없으면 undefined). */
-export function cardUpgrade(run: RunState, cardId: string): CardUpgrade | undefined {
-  return run.upgrades[cardId]
+/** 유물을 잃는다(이벤트 거래·쇠 두들기기). 최대 체력이 줄면 현재 체력도 그 안으로. */
+export function loseRelic(run: RunState, relicId: string): RunState {
+  if (!run.relicIds.includes(relicId)) return run
+  const relicIds = run.relicIds.filter((id) => id !== relicId)
+  const maxHp = Math.max(1, computeMaxHp(run.charId, relicIds) - (run.maxHpLoss ?? 0))
+  return { ...run, relicIds, maxHp, hp: clamp(run.hp, 1, maxHp) }
 }
-/** 그 카드가 강화된 횟수(0~2). */
+/**
+ * 최대 체력을 깎는다(수술실). 유물 합산과 별개라 `maxHpLoss`로 따로 기억해 둔다 —
+ * 안 그러면 다음 유물을 얻을 때 `computeMaxHp`가 다시 계산하며 되돌려 버린다.
+ */
+export function loseMaxHp(run: RunState, n: number): RunState {
+  const maxHpLoss = (run.maxHpLoss ?? 0) + n
+  const maxHp = Math.max(1, run.maxHp - n)
+  return { ...run, maxHpLoss, maxHp, hp: clamp(run.hp, 1, maxHp) }
+}
+
+// --- 카드 강화 (2026-11 룰렛) ----------------------------------------------
+/** 그 카드가 강화된 횟수(꽝은 안 센다). */
 export function cardLevel(run: RunState, cardId: string): number {
   return run.upgrades[cardId]?.times ?? 0
 }
-/**
- * 덱에 실제로 들어가는 카드 정의 — **강화가 반영된 사본**. 전투·보상·상점·이벤트가
- * 전부 이걸 쓴다. 강화가 없으면 원본을 그대로 돌려주므로 객체가 늘지 않는다.
- */
+/** 덱에 실제로 들어가는 카드 정의 — 강화가 반영된 사본(없으면 원본 그대로). */
 export function runCard(run: RunState, cardId: string): CardDef | undefined {
   const base = resolveRunCard(run.charId, cardId)
   return base && upgradedCard(base, run.upgrades[cardId])
 }
-/** 이 카드를 지금 강화할 수 있는가(이동 아님 · 2번 안 씀 · 올릴 게 있음). */
-export function canUpgradeCard(run: RunState, cardId: string): boolean {
+/** 강화 못 하는 이유(이동 카드 · 최대 2/2 …). 할 수 있으면 null. */
+export function upgradeBlockOf(run: RunState, cardId: string): string | null {
   const base = resolveRunCard(run.charId, cardId)
-  return !!base && isUpgradable(base, run.upgrades[cardId])
+  return base ? upgradeBlock(base, run.upgrades[cardId]) : '알 수 없는 카드'
 }
+export const canUpgradeCard = (run: RunState, cardId: string): boolean => !upgradeBlockOf(run, cardId)
 /** 덱에서 강화할 수 있는 카드들. */
 export function upgradableDeckCards(run: RunState): string[] {
   return run.deck.filter((id) => canUpgradeCard(run, id))
 }
-/**
- * 룰렛 결과를 카드에 얹는다. **꽝(+0·0칸)은 횟수에 안 센다** — 기회만 사라진다.
- * `cells`는 이미 `canPickCell` 규칙대로 고른 칸이어야 한다(화면이 지킨다).
- */
-export function applyCardUpgrade(
-  run: RunState,
-  cardId: string,
-  step: { value?: number; cells?: readonly Offset[] },
-): RunState {
+/** 룰렛 결과 적용. 꽝(0)이면 그대로. */
+export function upgradeCard(run: RunState, cardId: string, gain: { value?: number; cells?: Offset[] }): RunState {
   if (!canUpgradeCard(run, cardId)) return run
-  return { ...run, upgrades: { ...run.upgrades, [cardId]: addUpgrade(run.upgrades[cardId], step) } }
+  const up = addUpgrade(run.upgrades[cardId], gain)
+  return up ? { ...run, upgrades: { ...run.upgrades, [cardId]: up } } : run
 }
 
 /**
  * 카드 획득. 덱이 꽉 찼는데 removeId가 없으면 needsReplace로 UI에 교체를 넘긴다.
  *
- * ⚠ **이미 가진 카드는 아무 일도 안 한다**(2026-11). 예전엔 강화로 받았지만 그 길은
- *   없앴다(사용자 결정 — 강화는 룰렛 하나). 같은 id 두 장은 쿨타임이 id로 걸려 쓸모가
- *   없으므로 보상·상점 풀이 애초에 가진 카드를 안 낸다(`cardRewardPool`).
+ * 이미 가진 카드는 **아무 일도 없다**(2026-11 — 중복 강화 폐지). 같은 id를 두 장
+ * 넣어 봐야 쿨타임·"한 라운드 한 번"이 id로 걸려 쓸모가 없어서, 보상·상점 풀이
+ * 가진 카드를 아예 안 내놓는다(`cardRewardPool`).
  *
  * ⚠ 잠긴 카드(이동 4방향)를 버리려 하면 **안 고른 것과 같이** 취급한다 — 그냥
  * 무시하면 상한을 넘겨 담게 된다.
@@ -954,6 +895,7 @@ export function loseHp(run: RunState, amount: number): RunState {
 export type Reward =
   | { kind: 'card'; cardId: string }
   | { kind: 'relic'; relicId: string }
+  | { kind: 'heal'; amount: number } // 고블린 전리품의 물약
 
 /** 그 캐릭터의 미보유 직업(고유) 카드 — 시작 덱에서 빠졌으므로 런에서 번다. */
 function missingClassCards(run: RunState): string[] {
@@ -961,14 +903,11 @@ function missingClassCards(run: RunState): string[] {
     .cards.map((c) => c.id)
     .filter((id) => !run.deck.includes(id))
 }
-/**
- * 보상·상점에 나올 수 있는 카드 전체 풀(공용 확장 + 직업 + 런 전용).
- * **이미 가진 카드는 빼고 준다** — 같은 카드 두 장은 아무 일도 안 한다(`grantCard`).
- */
-const COMMON_POOL = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
+/** 보상·상점에 나올 수 있는 카드 전체 풀(공용 확장 + 직업 + 런 전용) — **가진 카드는 뺀다**. */
 export function cardRewardPool(run: RunState): string[] {
+  const commonPool = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
   const classCards = getChar(run.charId).cards.map((c) => c.id)
-  const all = [...COMMON_POOL, ...classCards, ...RUN_CARDS.map((c) => c.id)]
+  const all = [...commonPool, ...classCards, ...RUN_CARDS.map((c) => c.id)]
   return all.filter((id) => !run.deck.includes(id))
 }
 /**
@@ -980,10 +919,6 @@ export function cardRewardPool(run: RunState): string[] {
  * 덱에서 직업 카드를 뺀 뒤로는 그걸 못 주우면 런이 성립하지 않기 때문이다.
  */
 export function rollRewards(run: RunState): Reward[] {
-  if (run.ambush) {
-    const loot = goblinLoot(run)
-    if (loot.length) return loot
-  }
   const slots = REWARD_OPTIONS + (runMods(run).rewardOptions ?? 0)
   const cards = shuffle(cardRewardPool(run)).slice(0, slots)
   const out: Reward[] = cards.map((cardId) => ({ kind: 'card', cardId }))
@@ -1006,20 +941,14 @@ export function rollRewards(run: RunState): Reward[] {
   return shuffle(out)
 }
 
+// --- 이벤트 — `game/events.ts`(2026-11 리디자인 8종) -------------------------
+
 // --- 상점 -------------------------------------------------------------------
-/**
- * 진열품. `mul`·`base`는 **고블린 상점 전용** — 정가 대비 배율(0.8~1.5)과 정가.
- * `upgrade`는 상점의 **룰렛 강화 칸**(2026-11, 상점마다 한 번).
- */
-export type ShopItem = (
+export type ShopItem =
   | { id: string; kind: 'card'; cardId: string; price: number }
   | { id: string; kind: 'relic'; relicId: string; price: number }
   | { id: string; kind: 'heal'; price: number; amount: number }
-  | { id: string; kind: 'upgrade'; price: number }
-) & { mul?: number; base?: number }
-
-/** 상점 강화 가격(시안에서 정한 값). 할인 유물이 그대로 먹는다. */
-export const PRICE_UPGRADE = 50
+  | { id: string; kind: 'upgrade'; price: number } // 룰렛 강화 · 상점마다 한 번
 
 /**
  * 상점 진열 — 카드 3 + 유물 1 + 회복 2.
@@ -1064,15 +993,13 @@ export function buyShopItem(
   run: RunState,
   item: ShopItem,
   cardId?: string,
-): { run: RunState; ok: boolean; needsCardPick?: boolean; openUpgrade?: boolean } {
+): { run: RunState; ok: boolean; needsCardPick?: boolean; needsUpgrade?: boolean } {
   if (run.gold < item.price) return { run, ok: false }
+  // 룰렛을 돌리면 결과가 0이어도 돈은 안 돌아온다 — 결제는 여기서, 강화는 UI가 이어서.
+  if (item.kind === 'upgrade')
+    return upgradableDeckCards(run).length ? { run: { ...run, gold: run.gold - item.price }, ok: true, needsUpgrade: true } : { run, ok: false }
   const paid = { ...run, gold: run.gold - item.price }
   switch (item.kind) {
-    // 강화는 **먼저 낸다** — 룰렛이 꽝이어도 돈은 안 돌아온다(기획). 강화할 카드가
-    // 없으면 아예 안 판다.
-    case 'upgrade':
-      if (!upgradableDeckCards(run).length) return { run, ok: false }
-      return { run: paid, ok: true, openUpgrade: true }
     case 'card': {
       const res = grantCard(paid, item.cardId, cardId)
       if (res.needsReplace) return { run, ok: false, needsCardPick: true } // 결제 전으로 되돌림
@@ -1094,120 +1021,103 @@ export function buyShopItem(
  */
 export function advanceFloor(run: RunState): RunState {
   const floor = run.floor + 1
-  const clean = { ...run, ambush: undefined, eventFight: undefined }
-  if (floor > LADDER_FLOORS) return { ...clean, status: 'won' }
-  return { ...clean, floor, status: 'choosing' }
+  if (floor > LADDER_FLOORS) return { ...run, special: undefined, status: 'won' }
+  return { ...run, floor, special: undefined, status: 'choosing' }
+}
+// --- ? 칸 정체 · 고블린 장사꾼(2026-11 리디자인 · `docs/redesign/GOBLIN_MERCHANT.md`) ---
+/** ? 칸이 실제로 무엇인지 — 들어가 봐야 안다. 가중치는 시안에 없어 정한 값이다. */
+export type QuestionFate = 'event' | 'combat' | 'rest' | 'goblin'
+const FATE_WEIGHTS: [QuestionFate, number][] = [['event', 55], ['combat', 15], ['rest', 15], ['goblin', 15]]
+export function rollQuestionFate(rng: () => number = Math.random): QuestionFate {
+  let r = rng() * 100
+  for (const [f, w] of FATE_WEIGHTS) {
+    if (r < w) return f
+    r -= w
+  }
+  return 'event'
+}
+/** ? 칸의 매복 전투 — 그 층의 일반 몬스터. */
+export function ambushFight(run: RunState): SpecialFight {
+  return { kind: 'ambush', monsterId: combatMonster(run.floor) }
 }
 
-// --- 휴식(모닥불) · 보물 (2026-11) -------------------------------------------
-/** 모닥불 "쉬기" — 최대 체력의 30%(시안에서 정한 값). 강화와 둘 중 하나만. */
-export const REST_HEAL_PCT = 30
-export const restHealAmount = (run: RunState): number => Math.round((run.maxHp * REST_HEAL_PCT) / 100)
-export function restHeal(run: RunState): RunState {
-  return healHp(run, restHealAmount(run))
-}
-/** 보물 칸 — 유물 상자 하나. 연 결과(얻은 유물)를 돌려준다. */
-export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
-  return grantRandomRelic(run)
-}
-
-// --- 고블린 장사꾼 (2026-11 · docs/redesign/GOBLIN_MERCHANT.md) ----------------
-/**
- * ? 칸이 상점으로 열리면 나오는 고블린. **쓸수록 부자가 된다** — 이번 런에서 고블린
- * 상점에 쓴 골드(`goblinSpent`)만으로 단계가 정해지고, 덮쳐서 이기면 0으로 돌아가
- * 이후 고블린은 전부 가난부터 다시 시작한다(사용자 확정). 그래서 "키워서 턴다"가
- * 선택이 된다. 숫자(문턱·보상·체력)는 **시안에서 정한 값**이다.
- */
 export type GoblinTier = 'poor' | 'mid' | 'rich'
 export const GOBLIN_TIER_AT = { mid: 80, rich: 200 } as const
 export const goblinTier = (spent: number): GoblinTier =>
   spent >= GOBLIN_TIER_AT.rich ? 'rich' : spent >= GOBLIN_TIER_AT.mid ? 'mid' : 'poor'
-export const GOBLIN_NAME: Record<GoblinTier, string> = {
-  poor: '가난한 고블린',
-  mid: '중간 고블린',
-  rich: '부자 고블린',
+export type GoblinItem =
+  | { id: string; kind: 'card'; cardId: string; base: number; mul: number; price: number }
+  | { id: string; kind: 'relic'; relicId: string; base: number; mul: number; price: number }
+  | { id: string; kind: 'heal'; amount: number; base: number; mul: number; price: number }
+/** 값은 단계와 상관없이 **물건마다** 정가 ×0.8~1.5(소수 첫째 자리) — 떠날 때까지 유지. */
+const goblinPrice = (base: number, rng: () => number) => {
+  const mul = Math.round((0.8 + rng() * 0.7) * 10) / 10
+  return { base, mul, price: Math.round(base * mul) }
 }
-export const GOBLIN_REWARD_GOLD: Record<GoblinTier, number> = { poor: 20, mid: 55, rich: 140 }
-const GOBLIN_HEAL: Record<GoblinTier, number> = { poor: 15, mid: 25, rich: 40 }
-
-/** 단계마다 다른 건 **무엇을 파느냐**다. 값은 물건마다 정가 × 0.8~1.5. */
-export function rollGoblinShop(run: RunState, tier: GoblinTier, rng: () => number = Math.random): ShopItem[] {
-  const off = 1 - (runMods(run).shopDiscountPct ?? 0) / 100
-  const tag = (base: number) => {
-    const mul = Math.round((0.8 + rng() * 0.7) * 10) / 10
-    return { base, mul, price: Math.max(1, Math.round(base * mul * off)) }
-  }
-  const items: ShopItem[] = []
-  // 카드 2 — 가난은 공용 보급품, 중간은 직업·런 카드, 부자는 런 카드(강한 쪽).
-  const owned = (id: string) => run.deck.includes(id)
-  const cardPool =
-    tier === 'poor'
-      ? COMMON_POOL.filter((id) => !owned(id))
-      : tier === 'mid'
-        ? cardRewardPool(run)
-        : RUN_CARDS.map((c) => c.id).filter((id) => !owned(id))
-  shuffle(cardPool.length ? cardPool : cardRewardPool(run))
-    .slice(0, 2)
-    .forEach((cardId, i) => items.push({ id: `g-card-${i}`, kind: 'card', cardId, ...tag(PRICE_CARD) }))
-  // 유물 — 가난 0 · 중간 1(일반~희귀) · 부자 2(희귀 이상, 전설 가능)
-  const relicCount = tier === 'poor' ? 0 : tier === 'mid' ? 1 : 2
-  const rarities: readonly string[] = tier === 'mid' ? ['common', 'rare'] : ['rare', 'epic', 'legend']
-  const taken: string[] = []
-  for (let i = 0; i < relicCount; i++) {
-    const pool = availableRelicDefs(run).filter((r) => rarities.includes(r.rarity) && !taken.includes(r.id))
-    const r = pickWeightedRelic(pool, tier === 'rich' ? LADDER_FLOORS : run.floor)
-    if (!r) continue
-    taken.push(r.id)
-    items.push({ id: `g-relic-${i}`, kind: 'relic', relicId: r.id, ...tag(RELIC_PRICE[r.rarity]) })
-  }
-  items.push({ id: 'g-heal', kind: 'heal', amount: GOBLIN_HEAL[tier], ...tag(PRICE_HEAL) })
-  return items
+const GOBLIN_STOCK: Record<GoblinTier, { cards: number; relics: number; rarities: Rarity[]; heal: number }> = {
+  poor: { cards: 2, relics: 0, rarities: [], heal: 15 },
+  mid: { cards: 2, relics: 1, rarities: ['common', 'rare'], heal: 25 },
+  rich: { cards: 2, relics: 2, rarities: ['rare', 'epic', 'legend'], heal: 40 },
 }
-
-/** 고블린 상점 구매 — 일반 구매와 같고, 낸 돈만큼 고블린이 부자가 된다. */
+/** 단계마다 다른 건 **무엇을 파느냐**다. */
+export function rollGoblinShop(run: RunState, tier: GoblinTier, rng: () => number = Math.random): GoblinItem[] {
+  const cfg = GOBLIN_STOCK[tier]
+  const out: GoblinItem[] = []
+  shuffle(cardRewardPool(run)).slice(0, cfg.cards).forEach((cardId, i) =>
+    out.push({ id: `g-card-${i}`, kind: 'card', cardId, ...goblinPrice(PRICE_CARD, rng) }),
+  )
+  let pool = availableRelicDefs(run).filter((r) => cfg.rarities.includes(r.rarity))
+  for (let i = 0; i < cfg.relics; i++) {
+    const r = pickWeightedRelic(pool, tier === 'rich' ? LADDER_FLOORS : run.floor) // 부자 = 전설 확률
+    if (!r) break
+    pool = pool.filter((x) => x.id !== r.id)
+    out.push({ id: `g-relic-${i}`, kind: 'relic', relicId: r.id, ...goblinPrice(RELIC_PRICE[r.rarity], rng) })
+  }
+  out.push({ id: 'g-heal', kind: 'heal', amount: cfg.heal, ...goblinPrice(PRICE_HEAL, rng) })
+  return out
+}
+/** 물건 하나를 그 런에 준다(값은 안 받는다 — 구매·전리품 공용). */
+export function grantGoblinItem(run: RunState, item: GoblinItem, removeId?: string): { run: RunState; needsReplace?: boolean } {
+  if (item.kind === 'card') return grantCard(run, item.cardId, removeId)
+  if (item.kind === 'relic') return { run: grantRelic(run, item.relicId) }
+  return { run: healHp(run, item.amount) }
+}
+/** 고블린 상점 구매 — 쓴 돈이 `goblinSpent`에 쌓인다. */
 export function buyGoblinItem(
   run: RunState,
-  item: ShopItem,
-  cardId?: string,
+  item: GoblinItem,
+  removeId?: string,
 ): { run: RunState; ok: boolean; needsCardPick?: boolean } {
-  const res = buyShopItem(run, item, cardId)
-  if (!res.ok) return res
-  return { ...res, run: { ...res.run, goblinSpent: (res.run.goblinSpent ?? 0) + item.price } }
+  if (run.gold < item.price) return { run, ok: false }
+  const res = grantGoblinItem(run, item, removeId)
+  if (res.needsReplace) return { run, ok: false, needsCardPick: true }
+  return { run: { ...res.run, gold: res.run.gold - item.price, goblinSpent: (run.goblinSpent ?? 0) + item.price }, ok: true }
+}
+/** 진열품 이름(카드 이름 · 유물 이름 · 물약). */
+export function goblinItemName(run: RunState, item: GoblinItem): string {
+  if (item.kind === 'card') return runCard(run, item.cardId)?.name ?? item.cardId
+  if (item.kind === 'relic') return RELIC_BY_ID[item.relicId]?.name ?? item.relicId
+  return `물약 HP +${item.amount}`
+}
+/** 덮칠 고블린. */
+export const goblinMonsterId = (tier: GoblinTier): string => `goblin-${tier}`
+/** 덮쳐서 이긴 전리품 — 골드 + (가난: 진열품 무작위 / 중간·부자: 진열품 고르기 · 부자는 유물 확정). */
+export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; relic: boolean }> = {
+  poor: { gold: 20, pick: false, relic: false },
+  mid: { gold: 55, pick: true, relic: false },
+  rich: { gold: 140, pick: true, relic: true },
 }
 
-/** 덮친다 — 그 자리에서 이 단계의 고블린과 전투. 진열품이 곧 승리 보상이다. */
-export function startAmbush(run: RunState, stock: ShopItem[]): RunState {
-  const tier = goblinTier(run.goblinSpent ?? 0)
-  const idx = run.picked[run.floor - 1] ?? 0
-  const map = run.map.map((f, i) =>
-    i === run.floor - 1 ? f.map((n, j) => (j === idx ? { ...n, monsterId: `goblin-${tier}` } : n)) : f,
-  )
-  return { ...run, map, ambush: { tier, stock }, status: 'fighting' }
+// --- 휴식 · 보물(2026-11 리디자인) ------------------------------------------
+/** 모닥불에서 쉬면 최대 체력의 30%(시안 임의값). 강화와 둘 중 하나. */
+export const REST_HEAL_PCT = 0.3
+export const restHealAmount = (run: RunState): number => Math.round(run.maxHp * REST_HEAL_PCT)
+export function restAtFire(run: RunState): RunState {
+  return advanceFloor(healHp(run, restHealAmount(run)))
 }
-
-/**
- * 고블린 습격 승리 보상 — 가난: 진열품 1개 **무작위** · 중간·부자: 진열품 1개 **고르기**.
- * 회복 칸은 보상에서 뺀다(보상 화면은 카드·유물만 받는다). 부자의 유물 확정은 `afterWin`.
- */
-function goblinLoot(run: RunState): Reward[] {
-  if (!run.ambush) return []
-  const loot: Reward[] = []
-  for (const it of run.ambush.stock) {
-    if (it.kind === 'card' && !run.deck.includes(it.cardId)) loot.push({ kind: 'card', cardId: it.cardId })
-    if (it.kind === 'relic' && !run.relicIds.includes(it.relicId)) loot.push({ kind: 'relic', relicId: it.relicId })
-  }
-  if (run.ambush.tier === 'poor' && loot.length) return [pick(loot)]
-  return loot
-}
-
-// --- 이벤트 전투(항아리 뱀) ----------------------------------------------------
-/** 이벤트에서 전투로 넘어간다 — 그 칸의 적을 바꾸고, 이기면 풀에서 유물. */
-export function startEventFight(run: RunState, monsterId: string, relicPool: string[], poisonRounds: number): RunState {
-  const idx = run.picked[run.floor - 1] ?? 0
-  const map = run.map.map((f, i) =>
-    i === run.floor - 1 ? f.map((n, j) => (j === idx ? { ...n, monsterId } : n)) : f,
-  )
-  return { ...run, map, eventFight: { relicPool, poisonRounds }, status: 'fighting' }
+/** 보물 칸 — 유물 상자 하나. */
+export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
+  return grantRandomRelic(run)
 }
 /** 보상을 포기하고 회복 후 진행. */
 export function skipRewardForHeal(run: RunState): RunState {

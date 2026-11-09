@@ -31,6 +31,10 @@ import {
   type CardDef,
   type DamageBit,
   type FogTile,
+  type Hazard,
+  FIRE_ROUNDS,
+  hazardAt,
+  spikeStateAt,
   type Obstacle,
   type RockPlan,
   type StatusEffect,
@@ -86,6 +90,8 @@ export interface BattleState {
   obstacles: Obstacle[]
   /** 판에 깔린 독안개. 카드가 깔고 라운드 종료마다 그 칸에 선 쪽을 갉는다. */
   fog: FogTile[]
+  /** 판 위 함정(런 전용 — `types.ts`의 `Hazard`). 비어 있으면 규칙이 통째로 no-op. */
+  hazards: Hazard[]
   /** 지금 몇 **라운드**인가(1부터). 한 라운드 = 카드 3장 = 3턴. */
   round: number
   over: boolean
@@ -119,11 +125,12 @@ export interface BattleOpts {
    */
   obstacles?: readonly Obstacle[]
   /**
-   * 시작 상태이상(**런 전용**, 2026-11 — 항아리 이벤트의 "중독된 채로 싸운다").
-   * PvP·봇전은 절대 채우지 않으므로 규칙이 거기선 no-op이다(`RULES_VERSION` 무관 —
-   * `obstacles`와 같은 근거).
+   * 시작 상태이상(**런 전용**, 2026-11 — 항아리 이벤트의 "중독 상태로 시작").
+   * PvP·봇전은 안 넘기므로 규칙이 no-op이다(`RULES_VERSION` 무관 — 바위와 같은 근거).
    */
   startStatus?: [StatusEffect[] | undefined, StatusEffect[] | undefined]
+  /** 함정(**런 전용**, 2026-11). 시작 칸·바위와 겹치는 건 버린다. PvP는 안 넘긴다. */
+  hazards?: readonly Hazard[]
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -195,9 +202,15 @@ export class CardBattle {
       stunsUsed: [0, 0],
       freezesUsed: [0, 0],
       empowered: [0, 0],
-      status: [opts?.startStatus?.[0]?.map((e) => ({ ...e })) ?? [], opts?.startStatus?.[1]?.map((e) => ({ ...e })) ?? []],
+      status: [
+        (opts?.startStatus?.[0] ?? []).map((e) => ({ ...e })),
+        (opts?.startStatus?.[1] ?? []).map((e) => ({ ...e })),
+      ],
       obstacles,
       fog: [],
+      hazards: (opts?.hazards ?? [])
+        .filter((h) => inBounds(h.cell) && !sameCell(h.cell, p0) && !sameCell(h.cell, p1) && !rockAt(obstacles, h.cell))
+        .map((h) => ({ ...h, cell: cloneCell(h.cell), rounds: h.kind === 'fire' ? (h.rounds ?? FIRE_ROUNDS) : h.rounds })),
       round: 1,
       over: false,
       winner: null,
@@ -268,6 +281,8 @@ export class CardBattle {
       status: [s.status[0].map((e) => ({ ...e })), s.status[1].map((e) => ({ ...e }))],
       obstacles: s.obstacles.map((r) => ({ ...r, cell: cloneCell(r.cell) })),
       fog: s.fog.map((f) => ({ ...f, cell: cloneCell(f.cell) })),
+      hazards: s.hazards.map((h) => ({ ...h, cell: cloneCell(h.cell) })),
+      round: s.round,
     }
   }
 
@@ -573,6 +588,28 @@ export class CardBattle {
     }
 
     /**
+     * **함정 밟기**(런 전용 · 2026-11). p가 (dc, dr) 방향으로 움직여 지금 칸에 들어섰다.
+     * 빙판이면 한 칸 더 미끄러지고 그 칸도 밟는다(빙판끼리 이어 미끄러지진 않는다).
+     * 돌려주는 값 = 미끄러진 칸 수 — 중독이 "몸이 옮겨진 칸"으로 같이 센다.
+     */
+    const enterHazard = (p: number, dc: number, dr: number, slid = false): number => {
+      if (!s.hazards.length) return 0
+      const h = hazardAt(s.hazards, s.pos[p])
+      if (!h) return 0
+      if (h.kind === 'fire') applyStatus(p, 'burn', BURN_HIT_DAMAGE, 1)
+      else if (h.kind === 'bramble' || (h.kind === 'spikes' && spikeStateAt(h, s.round) === 'up'))
+        applyStatus(p, 'bind', 0, 1)
+      else if (h.kind === 'ice' && !slid && (dc || dr)) {
+        const next: Cell = { col: s.pos[p].col + Math.sign(dc), row: s.pos[p].row + Math.sign(dr) }
+        // 바위·벽·**상대** 앞에서는 멈춘다.
+        if (!canStand(s.obstacles, next) || sameCell(next, s.pos[1 - p])) return 0
+        s.pos[p] = next
+        return 1 + enterHazard(p, dc, dr, true)
+      }
+      return 0
+    }
+
+    /**
      * 이 카드가 실제로 낼 기력. `freeCast` 버프가 걸려 있으면 **공짜**다.
      * ⚠ 엔진과 `planAffordable`(UI 선택 가능 판정)·AI 예산이 같은 규칙을 봐야 한다 —
      * 한쪽만 고치면 "낼 수 있다고 표시되는데 불발"이 난다.
@@ -608,7 +645,8 @@ export class CardBattle {
         }
         // 중독은 **움직인 칸마다** 갉는다 — 이동한 뒤에 정산해야 새 자리 스냅샷과
         // 피해가 같은 순간으로 읽힌다.
-        const moved = this.applyMove(p, c)
+        let moved = this.applyMove(p, c)
+        if (moved) moved += enterHazard(p, ...MOVE_DELTA[c.dir ?? 'right'])
         emit(p, c, 'move')
         tickPoison(p, moved)
       } else if (c.kind === 'guard') {
@@ -812,7 +850,11 @@ export class CardBattle {
       // 빗나가도 휘두른 건 휘두른 것이고, 기력이 모자라 불발(`nofuel`)이면 위에서 이미
       // 돌아갔으므로 여기 오지 않는다. 이동공격은 **거기에 더해** 움직인 칸만큼 더 문다.
       tickPoison(p, 1)
-      if (c.dashForward) tickPoison(p, this.applyDash(p, c.dashForward))
+      if (c.dashForward) {
+        const dir = this.facing(p) * Math.sign(c.dashForward)
+        const m = this.applyDash(p, c.dashForward)
+        tickPoison(p, m + (m ? enterHazard(p, dir, 0) : 0))
+      }
       // ⚠ 공격 카드의 바위는 여기서 세우지 않는다 — `settleAttack`이 **넉백 뒤에**
       //   세운다. 지형 카드는 "밀어내고 그 자리에 바위를 세운다"가 요점이라, 여기서
       //   세우면 상대가 아직 그 칸에 서 있어서 `raiseRocks`가 건너뛰고 만다.
@@ -1020,6 +1062,8 @@ export class CardBattle {
         blocked += k.blocked
         if (k.blocked > 0) slamDir = k.dir
       }
+      // 밀려난 칸에 함정이 있으면 밟는다(빙판이면 더 미끄러진다 — 넉백 콤보).
+      if (moved > 0) moved += enterHazard(d, this.facing(r.p) * (r.pull && !r.push ? -1 : 1), 0)
       // **한 칸이라도 막히면 기절**한다(사용자 예시: 3칸 중 2칸만 밀려도 기절).
       const slammed = blocked > 0
       // 처박기 피해도 실제로 깎인 몫을 기억해 둔다 — `Step.damage`에는 안 실리는
@@ -1320,6 +1364,19 @@ export class CardBattle {
     }
     tickStatuses()
 
+    // 함정의 라운드 끝(런 전용) — ⚠ `tickStatuses` **뒤**라야 불길의 화상이 다음 라운드까지 간다.
+    if (!s.over && s.hazards.length) {
+      for (let p = 0; p < 2; p++)
+        if (hazardAt(s.hazards, s.pos[p])?.kind === 'fire') applyStatus(p, 'burn', BURN_HIT_DAMAGE, 1)
+      // 불길에 붙은(상하좌우) 덩굴이 탄다 → 불길이 한 라운드 사그라든다.
+      const fires = s.hazards.filter((h) => h.kind === 'fire')
+      const touching = (a: Cell, b: Cell) => Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1
+      s.hazards = s.hazards
+        .filter((h) => h.kind !== 'bramble' || !fires.some((f) => touching(f.cell, h.cell)))
+        .map((h) => (h.kind === 'fire' ? { ...h, rounds: (h.rounds ?? 1) - 1 } : h))
+        .filter((h) => h.kind !== 'fire' || (h.rounds ?? 0) > 0)
+    }
+
     // 전장 붕괴: COLLAPSE_START_ROUND부터, 라운드 종료 시 무너진 칸에 서 있으면 피해.
     // 실드는 무시하지만 유물의 `collapseResist`만큼은 줄어든다(발판 유물).
     // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
@@ -1330,6 +1387,7 @@ export class CardBattle {
       s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, s.round))
       // 안개도 같은 이유로 무너진 칸에서는 사라진다(그 칸 자체가 없어진다).
       s.fog = s.fog.filter((f) => !isCollapsedCell(f.cell, s.round))
+      s.hazards = s.hazards.filter((h) => !isCollapsedCell(h.cell, s.round))
       const base = collapseDamageAt(s.round)
       for (let p = 0; p < 2; p++) {
         if (!isCollapsedCell(s.pos[p], s.round)) continue
