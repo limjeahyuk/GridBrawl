@@ -21,7 +21,7 @@ import {
 } from './relics'
 import { getMonster, monstersOfTier, type MonsterDef, type TerrainId } from './monsters'
 import { bossScene } from './bosses'
-import { RUN_CARDS, resolveRunCard } from './runcards'
+import { resolveRunCard, runCardsFor } from './runcards'
 import { addUpgrade, upgradeBlock, upgradedCard, type CardUpgrade } from './upgrades'
 import { GRID_COLS, GRID_ROWS, ROCK_HP, type CardDef, type Difficulty, type Hazard, type HazardKind, type Obstacle, type Offset } from '../battle/types'
 
@@ -925,7 +925,8 @@ function missingClassCards(run: RunState): string[] {
 export function cardRewardPool(run: RunState): string[] {
   const commonPool = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
   const classCards = getChar(run.charId).cards.map((c) => c.id)
-  const all = [...commonPool, ...classCards, ...RUN_CARDS.map((c) => c.id)]
+  // 런 카드는 공용 + 자기 직업 것만(2026-11-10 — 마법사 카드가 전사에게 나오던 문제).
+  const all = [...commonPool, ...classCards, ...runCardsFor(run.charId).map((c) => c.id)]
   return all.filter((id) => !run.deck.includes(id))
 }
 /**

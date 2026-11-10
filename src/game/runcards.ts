@@ -325,6 +325,33 @@ export const EVENT_CARDS: CardDef[] = [
   },
 ]
 
+/**
+ * **런 카드의 직업**(2026-11-10 사용자 신고: "법사 카드를 전사도 쓸 수 있고 전사 카드를 궁수가 쓰고…").
+ * 50장이 직업 구분 없이 한 풀이라 지팡이·서리·화살·망치가 아무 직업에게나 나왔다. 여기 적힌 카드는
+ * **그 직업의 보상·상점·거래에만** 나오고, 안 적힌 카드(기력·회복·기본 수비·보조 이동)는 공용이다.
+ * 기준은 이름(무기·속성)과 직업 정체성 — 전사 = 근접·넉백·방벽·힘 / 궁수 = 중독·끌기·관통·기동 /
+ * 마법사 = 범위·화상·빙결·순간 이동·주문. ⚠ 직업 카드(`roster.ts`)는 원래부터 자기 직업에만 나온다.
+ */
+export const RUN_CARD_CLASS: Record<string, 'warrior' | 'archer' | 'mage'> = {
+  // 전사 13
+  'r-protocol': 'warrior', 'r-maul': 'warrior', 'r-collapse': 'warrior', 'r-frenzy': 'warrior',
+  'r-bastion': 'warrior', 'r-whet': 'warrior', 'r-bulwarkcry': 'warrior', 'r-lance': 'warrior',
+  'r-crescent': 'warrior', 'r-thunderclap': 'warrior', 'r-havoc': 'warrior', 'r-anchor': 'warrior',
+  'r-ironwall': 'warrior',
+  // 궁수 10
+  'r-hook': 'archer', 'r-railgun': 'archer', 'r-plaguebolt': 'archer', 'r-blightwave': 'archer',
+  'r-witherpulse': 'archer', 'r-scattershot': 'archer', 'r-gale': 'archer', 'r-vault': 'archer',
+  'r-retreat': 'archer', 'r-executioner': 'archer',
+  // 마법사 13
+  'r-stunrod': 'mage', 'r-tether': 'mage', 'r-overclock': 'mage', 'r-resonance': 'mage',
+  'r-rupture': 'mage', 'r-annihilate': 'mage', 'r-blink': 'mage', 'r-backblink': 'mage',
+  'r-freerein': 'mage', 'r-emberburst': 'mage', 'r-frostnova': 'mage', 'r-arcburn': 'mage',
+  'r-shockwave': 'mage',
+}
+/** 이 직업이 보상·상점·거래로 받을 수 있는 런 카드(공용 + 자기 직업). */
+export const runCardsFor = (charId: string): CardDef[] =>
+  RUN_CARDS.filter((c) => !RUN_CARD_CLASS[c.id] || RUN_CARD_CLASS[c.id] === charId)
+
 export const RUN_CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(
   [...RUN_CARDS, ...EVENT_CARDS].map((c) => [c.id, c]),
 )

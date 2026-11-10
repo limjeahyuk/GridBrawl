@@ -51,6 +51,7 @@ import {
   hazardsFor,
   goblinTier,
   rollGoblinShop,
+  cardRewardPool,
   buyGoblinItem,
   goblinMonsterId,
   rollQuestionFate,
@@ -69,7 +70,7 @@ import { runFightProps } from '../src/game/runbattle'
 import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
 import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, resolveEventChoice, startEvent } from '../src/game/events'
 import { RELIC_BY_ID } from '../src/game/relics'
-import { RUN_CARDS, RUN_CARD_BY_ID, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
+import { RUN_CARDS, RUN_CARD_BY_ID, RUN_CARD_CLASS, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster, MONSTERS } from '../src/game/monsters'
@@ -2296,6 +2297,24 @@ console.log('\n붕괴 — 가운데 4칸은 끝까지 · 엘리트·보스는 �
   ai.state.pos = [{ col: 0, row: 0 }, { col: 3, row: 0 }] // 몬스터가 안전지대 바로 위 무너진 칸
   const plan = decideAI(ai.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.filter((c) => c.kind === 'move'))
   check('AI는 안전지대로 피한다', plan[0]?.kind === 'move' && plan[0].dir?.includes('down'), true)
+}
+
+// --- 런 카드 직업 구분(2026-11-10 신고: "법사 카드를 전사도 쓴다") ------------------
+console.log('\n런 카드 — 자기 직업 것만 나온다')
+{
+  check('직업 표의 id가 전부 실제 런 카드', Object.keys(RUN_CARD_CLASS).filter((id) => !RUN_CARD_BY_ID[id]), [])
+  for (const me of ['warrior', 'archer', 'mage']) {
+    const r: RunState = startRun(me)
+    const seen = new Set<string>()
+    for (let i = 0; i < 400; i++) for (const id of cardRewardPool(r)) seen.add(id)
+    // 상점·고블린도 같은 풀을 쓴다 — 실제 진열로도 한 번 더 본다.
+    for (let i = 0; i < 200; i++) for (const it of rollGoblinShop(r, 'rich')) if (it.kind === 'card') seen.add(it.cardId)
+    const foreignRun = [...seen].filter((id) => RUN_CARD_CLASS[id] && RUN_CARD_CLASS[id] !== me)
+    const foreignClass = [...seen].filter((id) => ROSTER.some((c) => c.id !== me && c.cards.some((k) => k.id === id)))
+    check(`${me} — 다른 직업 런 카드가 안 나온다`, foreignRun, [])
+    check(`${me} — 다른 직업 카드가 안 나온다`, foreignClass, [])
+    check(`${me} — 자기 직업 런 카드는 나온다`, [...seen].some((id) => RUN_CARD_CLASS[id] === me), true)
+  }
 }
 
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)
