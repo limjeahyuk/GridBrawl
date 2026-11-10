@@ -267,6 +267,8 @@ export default function App() {
           width: stageFit.width,
           height: stageFit.height,
           transform: stageFit.transform,
+          // 화면 내용은 가운데 1280px, 배경만 양옆으로 번진다(`index.css`의 `.screen`).
+          ['--bleed' as string]: `${Math.max(0, (stageFit.width - 1280) / 2)}px`,
         }}
       >
         {screen}

@@ -9,8 +9,8 @@
 }
 
 .screen {
-  /* 무대 폭이 화면 비율에 따라 1280~1600으로 늘어나므로 100%로 따라간다 */
-  width: 100%;
+  /* 폭은 `index.css`의 left/right(`--bleed`)가 정한다 — 가운데 1280px. 여기서 100%를 주면 오른쪽으로 넘친다. */
+  width: auto;
   height: 100%;
   color: var(--text);
 }

@@ -196,7 +196,7 @@
    디자인 `Select`(2026-11-09). 고른 영웅의 일러스트가 화면 배경이고, 오른쪽에 얼굴 탭 · 정보 패널.
    배경 그림은 1280×720이라 무대가 그보다 넓으면(최대 1600) 오른쪽이 비는데, 같은 그림을
    늘려 흐린 층(`.artbg--fill`)을 밑에 깔아 그 틈을 그림의 색으로 메운다. */
-.runstart { display: block; padding: 0; overflow: hidden; background: #0c0a12; }
+.runstart { display: block; padding: 0; background: #0c0a12; }
 .artbg { position: absolute; inset: 0; background-repeat: no-repeat; background-size: auto 100%; background-position: left top; }
 /* 무대가 1280보다 넓을 때 오른쪽 틈을 메우는 층 — 같은 그림을 늘려 흐린다. */
 .artbg--fill { inset: -20px; background-size: 100% 100%; filter: blur(18px) brightness(0.7); }
@@ -2579,7 +2579,7 @@
 }
 
 /* ---- 룰렛 카드 강화(디자인 `Upgrade`) ------------------------------------ */
-.screen.upg { display: block; padding: 0; position: relative; overflow: hidden; color: #efe9f5; }
+.screen.upg { display: block; padding: 0; color: #efe9f5; }
 .upg h1, .upg h2 { margin: 0; font-family: var(--font-display); font-weight: 400; color: #fff6dc; }
 .upg .panel { background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3a3150; box-sizing: border-box; }
 .upg .rise { animation: upg-rise .3s ease-out 1; }
@@ -2769,7 +2769,7 @@
 .event__resfoot span { flex: 1; font-size: 13px; color: #8a849a; }
 
 /* ---- 모닥불(디자인 `Rest`) · 보물 상자 ------------------------------------ */
-.screen.rest { display: block; padding: 0; position: relative; overflow: hidden; }
+.screen.rest { display: block; padding: 0; }
 .rest .scene { filter: brightness(0.38) saturate(0.65); }
 .rest__glow { position: absolute; left: 0; top: 180px; width: 720px; height: 432px; background: url('/redesign/ui/rest/campfire-glow.png') 0 0 / 720px 432px; image-rendering: pixelated; mix-blend-mode: screen; animation: rest-pulse 1.8s ease-in-out infinite; }
 @keyframes rest-pulse { 50% { opacity: .75; } }
@@ -2808,7 +2808,7 @@
 .fate__icon { width: 84px; height: 84px; background: center / 84px 84px no-repeat; image-rendering: pixelated; }
 
 /* ---- 고블린 장사꾼(디자인 `GoblinShop`) ---------------------------------- */
-.screen.gob { display: block; padding: 0; position: relative; overflow: hidden; color: #efe9f5; }
+.screen.gob { display: block; padding: 0; color: #efe9f5; }
 .gob .screenveil { background: rgba(10, 8, 16, 0.62); }
 .gob__where { color: #b6ea6a !important; }
 .gob__wealth { position: absolute; left: 40px; top: 92px; z-index: 1; width: 540px; padding: 10px 14px; box-sizing: border-box; background: rgba(18,15,26,0.9); border: 2px solid #0a0810; box-shadow: inset 0 0 0 2px #5a4a2a; display: flex; flex-direction: column; gap: 6px; }
@@ -2957,7 +2957,7 @@
 /* ---- 여관 · 대장간(디자인 `Inn` · `Blacksmith`, 2026-11-09 `INN_SMITH.md`) ------------
    여관 = 여관 그림 배경(마렌 왼쪽) + 오른쪽 대사창 · 선택지. 대장간 = 던전 벽 + 화덕 도트. */
 .screen.inn,
-.screen.smith { display: block; padding: 0; overflow: hidden; background: #1a100a; }
+.screen.smith { display: block; padding: 0; background: #1a100a; }
 .inn .shop__title,
 .smith .shop__title { margin: 0; font-size: 42px; text-shadow: 3px 3px 0 #0a0604; }
 .inn .shop__where span,

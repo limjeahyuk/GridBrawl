@@ -112,10 +112,15 @@ h3 {
   overflow: hidden;
 }
 
+/* 화면 내용은 **가운데 1280px**에 그대로 두고, 무대가 그보다 넓으면(폰 19.5:9 — 최대 1600)
+   배경 층만 양옆으로 번지게 한다(`--bleed` = (무대 폭 − 1280) / 2, App이 넣는다 · 2026-11-10).
+   화면들이 1280 기준 절대 좌표라 내용을 늘리면 한쪽으로 쏠린다(2026-07에 폐기했던 이유). */
 .screen {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  left: var(--bleed, 0px);
+  right: var(--bleed, 0px);
+  overflow: visible; /* 자르는 건 `.stage`가 한다 — 여기서 자르면 배경이 못 번진다 */
   isolation: isolate; /* 배경(`.grid-bg`)을 z-index -1로 내려도 무대 뒤로 안 빠지게 */
 }
 
@@ -187,4 +192,31 @@ h3 {
 
 .neon-text {
   text-shadow: none;
+}
+
+/* 양옆으로 번지는 층 — 배경·어둡게 덮는 막·전면 컷인. 좌우를 `--bleed`만큼 넓힌다. */
+.screen > .scene,
+.screen > .grid-bg,
+.screen > .screenveil,
+.screen > .artbg--fill,
+.screen > .artbg__veil,
+.screen > .shop__veil,
+.screen > .cutin,
+.screen > .bosscut,
+.screen > .tut__dim {
+  left: calc(-1 * var(--bleed, 0px));
+  right: calc(-1 * var(--bleed, 0px));
+}
+.screen > .artbg--fill { left: calc(-20px - var(--bleed, 0px)); right: calc(-20px - var(--bleed, 0px)); }
+/* 전투 손패 띠의 어두운 바탕도 양옆 끝까지 — 안 하면 가운데 1280px에서 띠가 뚝 끊긴다. */
+.cards::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * var(--bleed, 0px));
+  right: calc(-1 * var(--bleed, 0px));
+  z-index: -1;
+  pointer-events: none;
+  background: inherit;
 }

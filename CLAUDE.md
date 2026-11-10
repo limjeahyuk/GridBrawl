@@ -172,7 +172,9 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 
 - **판 크기를 바꾸지 말 것** — 칸 184×58 · 간격 7(`.gridboard` 1139×253). 함정·바위·안개 타일이 이 크기에 맞춰 그려져 있다. 판 좌표는 px(`cellX`·`cellY`).
 - **픽셀 그림은 정수 배율**(스프라이트 ×3/×2, 상태 아이콘 ×2, 지도 아이콘 14의 정수배). `.bhud` 높이 96px 고정.
-- 1280×720 그림 배경(영웅 선택 · 여관)은 무대가 넓으면 `.artbg--fill`이 오른쪽을 메운다. ⚠ 이 층을 `::before`로 만들면 페이드인이 쌓임 맥락을 만들어 선명한 그림 위로 덮인다.
+- **무대 폭은 화면 비율을 따라 늘어난다**(1280~1800, `useStageScale` · 2026-11-10 — 홈 화면 앱에서 양옆 검은 띠가 "비율이 이상하다"). **내용은 늘 가운데 1280px**(`.screen`의 left/right = `--bleed`)이고 배경 층(`.scene`·`.grid-bg`·`.screenveil`·`.artbg--fill`·컷인·손패 띠)만 양옆으로 번진다(`index.css` 맨 아래 목록). 무대는 노치 밑까지 깔리고 내용만 안전 영역을 피한다.
+  ⚠ 화면 루트(`.screen.X`)에 `overflow: hidden`·`position: relative`·`width: 100%`를 주지 말 것 — 배경이 못 번지거나 내용이 오른쪽으로 밀린다. 새 전면 배경·막을 만들면 그 목록에 넣는다.
+- 1280×720 그림 배경(영웅 선택 · 여관)은 무대가 넓으면 `.artbg--fill`이 양옆을 메운다. ⚠ 이 층을 `::before`로 만들면 페이드인이 쌓임 맥락을 만들어 선명한 그림 위로 덮인다.
 - **재생은 `await wait()` 사슬 하나** — `wait`이 `visibilitychange`에 반응한다(백그라운드에서 돌아왔을 때 굳지 않게). 연출 안에서 생 `setTimeout`으로 화면을 되돌리지 말 것. `submitPlan`은 try/catch로 복구한다.
 - 연출 두 모드(차근차근 기본 / 빠르게, `game/settings.ts`). 길이는 라운드 시작에 한 번 정한다(`paceRef`). `impactDelay`(스프라이트 실제 프레임)에는 배수를 안 건다. 카드 공개는 입력을 삼키지 않는다.
 - `Step.bits`(피해 내역)·`Step.slot`·`Step.slam`은 연출 전용 — 지워도 결과가 같다(`RULES_VERSION` 근거 아님). 단 내역 합 = 실제로 깎인 체력.
