@@ -542,7 +542,6 @@ export function BattleScreen({
   place,
   foeInfo,
   getOpponentPlan,
-  turnSeconds,
   onSlotsChange,
   tips = true,
   onEnd,
@@ -577,9 +576,6 @@ export function BattleScreen({
   /** 상대 정보 — 등급 표기 · 처음엔 ?로 가려지는 능력들. */
   foeInfo?: { tag?: string; abilities: FoeAbility[] };
   getOpponentPlan: OpponentPlanner;
-  /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
-   *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
-  turnSeconds?: number;
   /** 순서 칸이 바뀔 때마다(튜토리얼이 "카드를 놓았다"를 알아채는 자리). */
   onSlotsChange?: (slots: (CardDef | null)[]) => void;
   /** 첫 만남 팁(꾹 누르기 · 기력 부족 · 바위 · 붕괴 · 보스 · 상태이상). 튜토리얼만 끈다. */
@@ -694,8 +690,6 @@ export function BattleScreen({
   /** 이번 라운드에 실제로 일어난 일 — 무엇이 몇 대미지였는지 글로 남는다. */
   const [log, setLog] = useState<LogRow[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
-  /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
-  const [remain, setRemain] = useState<number | null>(null);
   const submittingRef = useRef(false);
   const cancelled = useRef(false);
   // bump to re-read cooldowns after a turn resolves
@@ -1530,48 +1524,6 @@ export function BattleScreen({
     void submitPlan(slots as CardDef[]);
   };
 
-  // 시간 초과 자동 제출 — 항상 유효한 플랜을 만들어 낸다.
-  // ① 지금 플랜이 완성·지불 가능하면 그대로 ② 아니면 빈 슬롯을 원기 회복으로
-  // 메우고 ③ 그래도 기력이 모자라면 원기 회복 3장(언제나 유효).
-  const autoSubmitRef = useRef<() => void>(() => {});
-  autoSubmitRef.current = () => {
-    if (phase !== "select" || submittingRef.current) return;
-    if (filled && affordable) {
-      void submitPlan(slots as CardDef[]);
-      return;
-    }
-    const energyCard = hand.find((c) => c.kind === "energy");
-    if (!energyCard) return;
-    const padded = slots.map((s) => s ?? energyCard) as CardDef[];
-    const ok = planAffordable(
-      padded,
-      battle.state.energy[localSide],
-      local.maxEnergy,
-      passiveEnergy,
-      freeCastOn,
-    );
-    void submitPlan(ok ? padded : [energyCard, energyCard, energyCard]);
-  };
-
-  // 턴 카운트다운(온라인 전용). 0이 되면 자동 제출해 상대 대기가 끝난다.
-  useEffect(() => {
-    if (!turnSeconds || phase !== "select") {
-      setRemain(null);
-      return;
-    }
-    const end = Date.now() + turnSeconds * 1000;
-    setRemain(turnSeconds);
-    const id = setInterval(() => {
-      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-      setRemain(left);
-      if (left <= 0) {
-        clearInterval(id);
-        autoSubmitRef.current();
-      }
-    }, 200);
-    return () => clearInterval(id);
-  }, [phase, turnSeconds]);
-
   useEffect(() => {
     cancelled.current = false;
     return () => {
@@ -1639,7 +1591,6 @@ export function BattleScreen({
         view={view}
         turn={battle.state.round}
         collapseTurn={collapseRound(battle.state)}
-        remain={remain}
         boss={boss}
         place={place}
         phase={phase === "select" ? "카드 선택" : "실행 중"}
@@ -2695,7 +2646,6 @@ function BattleHud({
   view,
   turn,
   collapseTurn,
-  remain,
   boss,
   place,
   phase,
@@ -2712,7 +2662,6 @@ function BattleHud({
   turn: number;
   /** 붕괴 시계 라운드(엘리트·보스는 `turn`보다 늦다). */
   collapseTurn: number;
-  remain: number | null;
   /** 상대가 스크립트 보스면 그 연출 데이터 — 칭호와 페이즈 문턱 눈금을 붙인다. */
   boss?: BossCinematic;
   place?: string;
@@ -2741,13 +2690,6 @@ function BattleHud({
         <div className="bhud__place">
           {[place, boss ? boss.title : phase].filter(Boolean).join(" · ")}
         </div>
-        {remain !== null && (
-          <div
-            className={`bhud__timer ${remain <= 5 ? "bhud__timer--urgent" : ""}`}
-          >
-            ⏱ {remain}s
-          </div>
-        )}
       </div>
       <BhudSide
         char={chars[oi]}

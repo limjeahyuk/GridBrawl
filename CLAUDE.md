@@ -23,10 +23,10 @@
 
 ## 1. 방침
 
-### 🚫 로그라이크가 완성될 때까지 PvP는 작업 대상이 아니다 (사용자 결정)
-- PvP 밸런스를 맞추지 않는다. `npm run sim`(1:1)을 밸런스 판단에 쓰지 않는다. 보고할 때 PvP 수치를 꺼내지 않는다.
-- 엔진 룰 변경이 PvP에 미치는 영향을 저울에 올리지 않는다 — 로그라이크에 옳은 결정을 그대로 한다.
-- 예외는 **깨짐**(크래시·매칭 불가·desync)이다. `RULES_VERSION`은 계속 규칙대로 올린다(락스텝 안전장치라 밸런스와 무관).
+### 🚫 PvP · 로그인은 main에 없다 (2026-11-10 사용자 결정)
+- PvP(봇전·온라인 멀티)·덱 만들기·로그인(Firebase Auth)·1:1 시뮬(`npm run sim`)은 **브랜치 `archive/pvp`**에 보존하고 main에서 뺐다. main은 로그라이크만 있고, 실행하면 로그인 없이 바로 타이틀이다.
+- 되살릴 땐 그 브랜치에서 꺼낸다 — main에 PvP 코드를 조금씩 다시 넣지 말 것.
+- **엔진은 그대로 뒀다.** `RULES_VERSION`·PvP 시작 위치·`ROSTER`의 PvP 기준 HP/패시브·`localSide` 좌우 반전·`npm run check`의 "PvP 불변" 검사는 남아 있다(런이 같은 엔진을 쓴다). 온라인이 없으므로 **`RULES_VERSION`은 지금 올릴 필요가 없다** — PvP를 되살릴 때 한 번 올린다.
 - **밸런스 기준은 `npm run sim:run -- --sweep`(런 클리어율·직업 밴드) 하나뿐이다.**
 
 ### 📏 용어 — 턴 ≠ 라운드
@@ -35,11 +35,11 @@
 | **턴** | 양쪽이 카드를 **한 장씩** 내는 것 | `slot` 0·1·2 |
 | **라운드** | 카드 3장을 고르고 다 쓰는 것 = 3턴 | `BattleState.round` · `resolveRound` |
 
-쿨타임·상태이상 지속·보호막·붕괴는 **전부 라운드 단위**다. ⚠ 아직 `turn`이라 불리는 것 둘 — 유물 훅 `turnEnergy`/`turnShield`(실제로는 라운드마다)와 온라인 프로토콜 `msg.turn`(라운드 번호). 새 글에서 이 둘을 근거로 "턴"을 쓰지 말 것.
+쿨타임·상태이상 지속·보호막·붕괴는 **전부 라운드 단위**다. ⚠ 아직 `turn`이라 불리는 것 — 유물 훅 `turnEnergy`/`turnShield`(실제로는 라운드마다). 새 글에서 이걸 근거로 "턴"을 쓰지 말 것.
 
 ## 2. 무엇을 만드는가
 
-**1:1 카드 전투 로그라이크.** 직업을 고르고 15층 지도를 오르며 전투·이벤트·여관·대장간을 지나 보스를 잡는다. 한 라운드에 카드 3장을 골라 순서대로 실행한다. PvP 단판(봇전·온라인)은 PVP 버튼 아래에 남아 있다.
+**1:1 카드 전투 로그라이크.** 직업을 고르고 15층 지도를 오르며 전투·이벤트·여관·대장간을 지나 보스를 잡는다. 한 라운드에 카드 3장을 골라 순서대로 실행한다.
 세계관·그림은 **2026-11 리디자인**(지역 둘: 초원 1~7층 · 던전 8~15층). 에셋 `public/redesign/`, 스타일 맨 뒤 층 `src/ui/redesign.css`.
 
 ### 로스터 — 3직업 (HP·패시브는 PvP 기준 값, 런은 **직업 패시브(런)**가 대신한다)
@@ -191,15 +191,13 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - `public/sprites/`에 남은 옛 시트는 아직 리디자인 그림이 없는 몬스터용(철퇴병 · 감시안 · 버서커 · 뱀파이어 · 가디언 · 석궁병 · 주술사 · 기사 · 암살자 — `medieval-warrior`·`flying-eye`·`martial-hero`·`mimic`·`angel`·`church-wizard`)과 `rat`(미사용, 원본이 없어 보존) · `hero-knight`(앱 아이콘 원본 — `npm run icon`)뿐이다. 옛 배경 `public/bg`·바위 `public/terrain`은 2026-11-09에 지웠다(리디자인으로 대체).
 - 시트 `facesRight`는 **몸이 향한 쪽**(공격 프레임의 타격 방향)으로 판정. 모든 시트에 명시.
 
-## 8. 온라인 멀티 · 버전 게이트
+## 8. 온라인 멀티 · 로그인 — main에 없음
 
-- 게임 데이터는 P2P(WebRTC), 시그널링만 Firebase RTDB(REST, SDK 0). 방 만들기 · 방 찾기(빠른 대전은 `QUICK_MATCH_ENABLED`로 내림). 호스트 = side0 고정, 매 라운드 카드 id만 교환하는 결정론 락스텝. 화면은 로컬 시점으로 좌우 반전.
-- **`RULES_VERSION`(현재 9)** — `resolveRound` 출력에 닿는 변경(엔진·룰 상수·PvP에서 쓰는 카드 수치/사거리/능력·카드 id 증감)을 하면 같은 커밋에서 올린다. 런 전용(`BattleOpts`의 hazards·startStatus·obstacles, 강화, 유물 전용 훅)·연출·AI 판단은 안 올린다. 게이트는 온라인 매칭에만(앱 진입을 막으면 오프라인에서 죽는다).
-- 턴 제한 30초(온라인만).
+2026-11-10에 뺐다(§1). 코드와 옛 규칙(P2P 락스텝 · `RULES_VERSION` 게이트 · 턴 제한 30초 · RTDB 규칙)은 브랜치 `archive/pvp`의 CLAUDE.md §8에 있다. 런 기록은 원래부터 기기 로컬(`progress.ts`)이라 로그인이 필요 없다.
 
 ## 9. 배포 · 네이티브
 
-- 웹: Firebase Hosting `npm run build && npx firebase deploy --only hosting,database`. `.env`(`VITE_FIREBASE_DB_URL`·`VITE_FIREBASE_API_KEY`)는 gitignore이고 빌드 시점에 박힌다 — 새 머신에선 먼저 복사.
+- 웹: Firebase Hosting `npm run build && npx firebase deploy --only hosting`. 빌드에 필요한 환경 변수는 없다(`.env` 불필요).
 - 앱(Capacitor, appId `com.imjaehyeog.GridBrawl`): `npm run build && npx cap sync`(⚠ `ios/App/App/public`은 cap sync가 굽는 사본·gitignore — 안 돌리면 옛 웹 빌드가 담긴다). 가로 고정, **iPhone 전용**(iPad는 세로 레이아웃이 먼저 필요). Xcode 26 이상(Capacitor 8.4.1).
 - 네이티브에선 Firebase Auth를 시작하지 않는다(`capacitor://`에서 콜백이 안 와 "접속 중…"에 멈춘다, 3초 안전망 있음). **게스트 버튼은 어떤 조건에서도 사라지면 안 된다**(오프라인 첫 실행이 잠기면 심사 반려). 네이티브 구글 로그인을 붙이면 Sign in with Apple·앱 내 계정 삭제가 의무.
 - 앱 아이콘 `npm run icon`(옛 전사 `hero-knight` 얼굴 클로즈업) — iOS 아이콘은 알파 없이, Android 적응형은 가운데 66%.
@@ -216,11 +214,10 @@ React 19 + TypeScript + Vite, 게임 엔진 없음. `npm run dev` · `build` · 
 | 화면 | `src/App.tsx`(페이즈) · `src/ui/screens/*` — 여관·대장간 `InnScreen.tsx` · 상점 `ShopScreen.tsx` · 모닥불/보물 `RestScreen.tsx` · ? 칸 `QuestionScreen.tsx` · 강화 `UpgradeScreen.tsx` · 고블린 `GoblinScreen.tsx` |
 | UI 부품 | `CardFace.tsx` · `CardDetail.tsx` · `cardAbility.ts` · `SceneLayers.tsx` · `FirstTip.tsx` · `relicFx.ts` · `sfx.ts`(효과음 합성, 파일 0) |
 | 그림 | `src/art/sprites.ts`(`SHEETS`) · `art/relicAtlas.ts` · `scripts/packsprites.mjs` · `scripts/makeicon.mjs` |
-| 온라인 / 로그인 | `src/net/*` · `src/ui/useAuth.ts` · `LoginScreen.tsx` |
 
 ## 11. 해야 할 일 (디자인 대기)
 
-`docs/redesign/PROGRESS.md` 2-bis가 기준이다 — 사슬 이벤트 그림 4장·늑대 도트 · 불사조 보스 · 도감 도움말(튜토리얼·팁 다시 보기) · 로그인 약관/개인정보 링크 · 보물 화면 시안 · 대장간 배경 그림 · 전사 방패 도트 · 마법사 직업 패시브 마법서 아이콘.
+`docs/redesign/PROGRESS.md` 2-bis가 기준이다 — 사슬 이벤트 그림 4장·늑대 도트 · 불사조 보스 · 도감 도움말(튜토리얼·팁 다시 보기) · 보물 화면 시안 · 대장간 배경 그림 · 전사 방패 도트 · 마법사 직업 패시브 마법서 아이콘.
 
 ## 컨벤션
 

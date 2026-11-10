@@ -3,429 +3,9 @@
    1280x720 .stage surface (which is uniformly scaled to the viewport).
    =========================================================================== */
 
-/* ---- 덱 화면 공통 -------------------------------------------------------- */
-.deckmgr,
-.deckbuild,
-.deckselect,
-.modeselect {
-  display: flex;
-  flex-direction: column;
-}
-.deckmgr__bar,
-.deckbuild__bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 26px 10px;
-  z-index: 2;
-}
-.deckmgr__bar h2,
-.deckbuild__bar h2 {
-  font-size: 20px;
-}
-.deckbuild__name {
-  flex: 1;
-  max-width: 320px;
-  margin: 0 auto;
-  padding: 8px 14px;
-  background: rgba(10, 16, 28, 0.8);
-  border: 1px solid var(--panel-edge);
-  border-radius: 0;
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 16px;
-  text-align: center;
-}
-/* 저장은 이 화면의 주 동작 — 눌리는 영역을 크게 */
-.btn.deckbuild__save {
-  padding: 18px 34px;
-  font-size: 18px;
-  border-width: 2px;
-  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-.btn.deckbuild__save.is-disabled {
-  box-shadow: none;
-}
 .btn.is-disabled {
   opacity: 0.4;
   pointer-events: none;
-}
-
-/* 덱 매니저 */
-.deckmgr__list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 26px 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  z-index: 2;
-}
-.deckmgr__empty {
-  color: var(--text-dim);
-  text-align: center;
-  margin-top: 40px;
-}
-/* 저장 위치 안내(계정 동기화 / 이 기기 전용) */
-.deckmgr__sync {
-  margin: -6px 26px 8px;
-  text-align: center;
-  font-size: 12px;
-  letter-spacing: 0;
-  color: var(--text-faint);
-  z-index: 2;
-}
-.deckmgr__card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 18px;
-  background: rgba(12, 18, 32, 0.75);
-  border: 1px solid var(--panel-edge);
-  border-left: 4px solid var(--accent);
-  border-radius: 0;
-}
-.deckmgr__portrait {
-  width: 54px;
-  height: 54px;
-  flex: none;
-}
-.deckmgr__info {
-  flex: 1;
-}
-.deckmgr__name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 17px;
-  color: var(--accent);
-}
-.deckmgr__meta {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-.deckmgr__actions {
-  display: flex;
-  gap: 8px;
-}
-.deckmgr__del {
-  color: var(--neon-red);
-  border-color: color-mix(in srgb, var(--neon-red) 50%, transparent);
-}
-
-/* 덱 빌더 */
-.deckbuild__chars {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  padding: 4px 26px;
-  z-index: 2;
-}
-.deckbuild__char {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: 0;
-  background: rgba(12, 18, 32, 0.5);
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 700;
-}
-.deckbuild__char.is-active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-}
-.deckbuild__charart {
-  width: 40px;
-  height: 40px;
-}
-.deckbuild__tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-  padding: 8px 26px 4px;
-  z-index: 2;
-}
-.deckbuild__hint {
-  margin-left: 10px;
-  font-size: 12px;
-  color: var(--text-faint);
-}
-/* 위: 고를 카드 풀 (남은 카드만, 세로 스크롤) */
-.deckbuild__poolwrap {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  z-index: 2;
-}
-.deckbuild__pool {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  align-content: flex-start;
-  padding: 8px 26px 14px;
-}
-.deckbuild__poolempty {
-  color: var(--text-faint);
-  margin-top: 24px;
-}
-.deckcard {
-  position: relative;
-  width: 132px;
-  height: 182px;
-  padding: 0;
-  border: none;
-  background: none;
-  transition: transform 0.1s ease;
-}
-.deckcard:not(:disabled):hover {
-  transform: translateY(-4px);
-}
-.deckcard.is-blocked {
-  opacity: 0.4;
-}
-.deckcard__badge {
-  position: absolute;
-  top: -8px;
-  right: -6px;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 0;
-  z-index: 1;
-}
-.deckcard__badge--fixed {
-  background: var(--bg-2);
-  color: var(--text-dim);
-}
-.deckcard__badge--add {
-  background: var(--accent);
-  color: var(--ink);
-}
-.deckcard__badge--rm {
-  background: var(--neon-red);
-  color: #1a0508;
-}
-
-/* 아래: 내 덱 트레이 (고정+고른 카드, 이동→공격→지원 순, 가로 스크롤) */
-.deckbuild__tray {
-  flex: none;
-  border-top: 1px solid var(--panel-edge);
-  background: linear-gradient(0deg, rgba(6, 9, 16, 0.97), rgba(6, 9, 16, 0.5));
-  padding: 8px 20px 12px;
-  z-index: 3;
-}
-.deckbuild__trayhead {
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0;
-  color: var(--text-dim);
-  margin: 0 6px 6px;
-}
-.deckbuild__trayhead b {
-  color: var(--accent);
-}
-.deckbuild__trayrow {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  /* overflow-x:auto는 세로도 클리핑하므로, 카드 위로 튀어나온 배지(top:-8px)가
-     잘리지 않도록 위쪽 여백을 충분히 준다 */
-  padding: 14px 6px 6px;
-  align-items: flex-start;
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent) rgba(255, 255, 255, 0.08);
-}
-.deckbuild__trayrow::-webkit-scrollbar {
-  height: 8px;
-}
-.deckbuild__trayrow::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 0;
-}
-.deckbuild__trayrow::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--accent) 70%, transparent);
-  border-radius: 0;
-}
-.traycard {
-  position: relative;
-  flex: none;
-  width: 116px;
-  height: 158px;
-}
-/* 아이폰 편집 모드처럼 살짝 흔들흔들 — 뺄 수 있는 카드만 */
-@keyframes jiggle {
-  0% {
-    transform: rotate(-1.15deg) translateY(-0.4px);
-  }
-  100% {
-    transform: rotate(1.15deg) translateY(0.4px);
-  }
-}
-.traycard:not(.traycard--fixed) {
-  animation: jiggle 0.28s ease-in-out infinite alternate;
-  transform-origin: 50% 55%;
-}
-/* 카드마다 위상을 조금씩 어긋나게 해 자연스럽게 */
-.traycard:not(.traycard--fixed):nth-child(2n) {
-  animation-duration: 0.32s;
-  animation-delay: -0.11s;
-}
-.traycard:not(.traycard--fixed):nth-child(3n) {
-  animation-duration: 0.26s;
-  animation-delay: -0.19s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .traycard:not(.traycard--fixed) {
-    animation: none;
-  }
-}
-/* 트레이는 훑어보는 용도 — 설명은 2줄까지만 */
-.traycard .cardface__desc {
-  font-size: 10.5px;
-  line-height: 1.3;
-  -webkit-line-clamp: 2;
-}
-.traycard__btn {
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  transition: transform 0.1s ease;
-}
-.traycard:not(.traycard--fixed) .traycard__btn:hover {
-  transform: translateY(-3px);
-}
-.traycard--fixed {
-  opacity: 0.66;
-}
-
-/* 덱 선택 */
-.deckselect__body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 26px 26px;
-  z-index: 2;
-}
-.deckselect__label {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--text-dim);
-  font-size: 13px;
-  margin: 14px 4px 8px;
-}
-.deckselect__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.deckpick {
-  width: 150px;
-  padding: 14px 10px;
-  border: 1px solid var(--panel-edge);
-  border-top: 3px solid var(--accent);
-  border-radius: 0;
-  background: rgba(12, 18, 32, 0.75);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  transition: transform 0.1s ease, border-color 0.1s ease;
-}
-.deckpick:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent);
-}
-.deckpick__portrait {
-  width: 64px;
-  height: 64px;
-}
-.deckpick__name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--accent);
-  text-align: center;
-}
-.deckpick__meta {
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-/* 모드 선택 */
-.modeselect__deck {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  justify-content: center;
-  padding: 10px;
-  z-index: 2;
-}
-.modeselect__portrait {
-  width: 60px;
-  height: 60px;
-}
-.modeselect__deckname {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 20px;
-}
-.modeselect__meta {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-.modeselect__options {
-  flex: 1;
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-.mode-card {
-  width: 260px;
-  height: 220px;
-  border: 1px solid var(--panel-edge);
-  border-radius: 0;
-  background: rgba(12, 18, 32, 0.8);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  transition: transform 0.12s ease, border-color 0.12s ease;
-}
-.mode-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--neon-cyan);
-}
-.mode-card--online:hover {
-  border-color: var(--neon-magenta);
-}
-.mode-card__icon {
-  font-size: 44px;
-}
-.mode-card__title {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 22px;
-  color: var(--text);
-}
-.mode-card__desc {
-  font-size: 13px;
-  color: var(--text-dim);
 }
 
 .screen {
@@ -437,13 +17,7 @@
 
 /* Make every inlined portrait SVG fill its frame */
 .avatar-card__art svg,
-.detail__portrait svg,
-.mp__me-art svg,
-.result__portrait svg,
-.deckbuild__charart svg,
-.deckmgr__portrait svg,
-.deckpick__portrait svg,
-.modeselect__portrait svg {
+.detail__portrait svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -468,171 +42,12 @@
   line-height: 0.86;
 }
 
-
-
 .title__tag {
   margin: 26px auto 34px;
   max-width: 620px;
   color: var(--text-dim);
   font-size: 19px;
   font-weight: 600;
-}
-
-
-/* ---- Login gate ---------------------------------------------------------- */
-.login {
-  display: grid;
-  place-items: center;
-}
-.login__content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-}
-.login__lead {
-  margin: 28px auto 30px;
-  color: var(--text-dim);
-  font-size: 19px;
-  font-weight: 600;
-}
-.login__google {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: #fff;
-  color: #1f2330;
-  border: none;
-  font-weight: 700;
-}
-.login__google:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.login__gmark {
-  flex: none;
-}
-.login__error {
-  margin-top: 18px;
-  color: var(--neon-red, #ff4d5e);
-  font-size: 15px;
-}
-.login__actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-.login__guest {
-  min-width: 220px;
-}
-.login__guest-note {
-  color: var(--text-faint);
-  font-size: 13px;
-  margin: 0;
-}
-.login__setup {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 22px 26px;
-  border: 1px solid var(--panel-edge);
-  border-radius: 0;
-  background: var(--panel);
-}
-.login__setup-title {
-  color: var(--neon-cyan);
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-.login__hint {
-  color: var(--text-dim);
-  font-size: 14px;
-  line-height: 1.7;
-}
-.login__hint code {
-  background: var(--bg-2);
-  border: 1px solid var(--panel-edge);
-  border-radius: 0;
-  padding: 1px 6px;
-  font-size: 13px;
-}
-
-/* ---- Signed-in user chip (title) ----------------------------------------- */
-.userchip {
-  position: absolute;
-  top: 22px;
-  right: 26px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px 6px 6px;
-  border: 1px solid var(--panel-edge);
-  border-radius: 0;
-  background: rgba(8, 12, 20, 0.7);
-}
-.userchip__avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: grid;
-  place-items: center;
-}
-.userchip__avatar--fallback {
-  background: var(--neon-cyan);
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 14px;
-}
-.userchip__name {
-  font-size: 14px;
-  font-weight: 600;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* 아이콘만 있는 로그아웃 버튼 — 테두리·배경 없음 */
-.userchip__logout {
-  border: none;
-  background: none;
-  padding: 4px 6px;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--text-dim, #8fa0c0);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.userchip__logout:hover {
-  color: var(--neon-red, #ff4d5e);
-}
-
-/* ---- 턴 제한 카운트다운(온라인) ------------------------------------------- */
-.bhud__timer {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 15px;
-  letter-spacing: 0;
-  color: var(--neon-cyan);
-  padding: 2px 10px;
-  border: 1px solid var(--neon-cyan);
-  border-radius: 0;
-  background: rgba(8, 12, 20, 0.75);
-}
-.bhud__timer--urgent {
-  color: #ff4d5e;
-  border-color: #ff4d5e;
-  animation: timerpulse 0.7s ease-in-out infinite;
-}
-@keyframes timerpulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
 }
 
 /* ---- 튜토리얼 코치 배너 --------------------------------------------------- */
@@ -705,7 +120,6 @@
   letter-spacing: 0;
 }
 
-
 .key {
   min-width: 52px;
   text-align: center;
@@ -746,7 +160,6 @@
   font-size: 26px;
 }
 
-
 .avatar-card {
   position: relative;
   border: 1px solid var(--panel-edge);
@@ -785,7 +198,6 @@
 .avatar-card.is-active .avatar-card__name {
   color: var(--accent);
 }
-
 
 .detail__portrait {
   width: 210px;
@@ -878,50 +290,12 @@
   background: var(--accent);
 }
 
-
 /* ---- Bracket / ladder ---------------------------------------------------- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ---- Fight screen + HUD -------------------------------------------------- */
 .fight {
   background: var(--bg-0);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 .hud__hpfill--left {
   right: 0;
@@ -930,30 +304,17 @@
   left: 0;
 }
 
-
-
-
-
-
 @keyframes soft-pulse {
   50% {
     opacity: 0.5;
   }
 }
 
-
-
-
-
 @keyframes combo-pop {
   from {
     transform: scale(1.4);
   }
 }
-
-
-
-
 
 @keyframes banner-pop {
   from {
@@ -962,65 +323,11 @@
   }
 }
 
-/* ---- Result -------------------------------------------------------------- */
-.result {
-  display: grid;
-  place-items: center;
-}
-.result__content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.result__sub {
-  font-family: var(--font-display);
-  letter-spacing: 0;
-  color: var(--accent);
-  font-size: 18px;
-  margin-bottom: 4px;
-}
-.result__title {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 96px;
-  line-height: 1;
-  margin-bottom: 10px;
-  color: #fff;
-  text-shadow: 0 0 30px color-mix(in srgb, var(--accent) 60%, transparent);
-}
-.result--loss .result__title {
-  color: var(--neon-red);
-  text-shadow: 0 0 30px rgba(255, 77, 94, 0.55);
-}
-/* `.result--champ`·`.result__crown`(건틀릿 전원 격파)은 2026-08-05에 걷어냈다 —
-   모드가 사라진 뒤로 아무도 붙이지 않는 클래스였다. */
-.result__portrait {
-  width: 260px;
-  height: 300px;
-  margin: 8px 0;
-  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--accent) 50%, transparent));
-}
-.result__name {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 36px;
-  color: var(--accent);
-  margin-bottom: 22px;
-}
-.result__buttons {
-  display: flex;
-  gap: 16px;
-}
-
 /* ---- Loading ------------------------------------------------------------- */
 .loading {
   display: grid;
   place-items: center;
 }
-
 
 /* ===========================================================================
    Card battle screen
@@ -1057,7 +364,6 @@
   margin-bottom: 5px;
 }
 
-
 /* HP/기력 바 — 가독성 우선: 단색 채움 + 크고 뚜렷한 숫자(현재/최대) */
 .bhud__hp {
   position: relative;
@@ -1093,8 +399,6 @@
   right: 0;
 }
 
-
-
 .bhud__energy {
   position: relative;
   height: 18px;
@@ -1116,8 +420,6 @@
 .bhud__energyfill--right {
   right: 0;
 }
-
-
 
 .bhud__turn {
   display: flex;
@@ -2441,8 +1743,6 @@
   font-size: 12px;
 }
 
-
-
 .codex__relic-icon { font-size: 18px; }
 .codex__relic b { color: #e8eef8; }
 .codex__relic-rarity {
@@ -2481,223 +1781,6 @@
   font-size: 10px;
   line-height: 1.3;
   color: var(--text-faint);
-}
-
-/* ---- Online multiplayer (invite-code lobby) ------------------------------ */
-.btn--online {
-  --accent: var(--neon-magenta);
-}
-
-.mp {
-  display: flex;
-  flex-direction: column;
-}
-.mp__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px 36px 8px;
-}
-.mp__header h2 {
-  color: var(--neon-magenta);
-  letter-spacing: 0;
-  font-size: 26px;
-}
-.mp__me {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 90px;
-  justify-content: flex-end;
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--accent);
-}
-.mp__me-art {
-  width: 38px;
-  height: 38px;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--accent) 8%, var(--bg-1));
-}
-.mp__body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 10px 36px 30px;
-  min-height: 0;
-}
-.mp__lead {
-  color: var(--text-dim);
-  font-weight: 600;
-  font-size: 17px;
-  text-align: center;
-  max-width: 640px;
-}
-.mp__choose {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 26px;
-}
-.mp__roles {
-  display: flex;
-  gap: 22px;
-}
-.mp__rolebtn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  width: 320px;
-  padding: 22px 26px;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 19px;
-}
-.mp__roleicon {
-  font-size: 26px;
-}
-.mp__rolehint {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--text-dim);
-  text-transform: none;
-}
-.mp__flow {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 760px;
-  max-width: 100%;
-}
-.mp__go {
-  align-self: center;
-  min-width: 220px;
-}
-.mp__go.is-disabled,
-.mp__go:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.mp__status {
-  color: var(--neon-cyan);
-  font-weight: 600;
-  text-align: center;
-}
-.mp__error {
-  color: var(--neon-red);
-  font-weight: 700;
-  text-align: center;
-}
-
-/* short room-code host/guest panels */
-.mp__flow {
-  align-items: center;
-  width: auto;
-}
-/* quick-match searching indicator */
-.mp__searching {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 28px;
-  border: 2px solid var(--neon-cyan);
-  border-radius: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--neon-cyan);
-}
-.mp__searching-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--neon-cyan);
-  animation: mm-pulse 1.1s ease-in-out infinite;
-}
-@keyframes mm-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-}
-.mp__codelabel {
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--text-dim);
-  font-size: 15px;
-}
-.mp__code {
-  min-width: 360px;
-  padding: 18px 28px;
-  border: 2px solid var(--neon-magenta);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--neon-magenta) 8%, var(--bg-1));
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 64px;
-  letter-spacing: 0;
-  text-align: center;
-  color: #ffe6fb;
-  text-shadow: 0 0 24px color-mix(in srgb, var(--neon-magenta) 60%, transparent);
-}
-.mp__copy {
-  padding: 8px 18px;
-  font-size: 12px;
-}
-.mp__codeinput {
-  width: 360px;
-  box-sizing: border-box;
-  padding: 16px 20px;
-  border: 2px solid var(--panel-edge);
-  border-radius: 0;
-  background: var(--bg-1);
-  color: #ffe6fb;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 44px;
-  letter-spacing: 0;
-  text-align: center;
-  text-transform: uppercase;
-}
-.mp__codeinput:focus {
-  outline: none;
-  border-color: var(--neon-magenta);
-}
-.mp__codeinput::placeholder {
-  color: var(--text-faint);
-  letter-spacing: 0;
-}
-.mp__notice {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  max-width: 680px;
-  text-align: center;
-}
-.mp__notice-detail {
-  color: var(--text-dim);
-  font-weight: 600;
-  line-height: 1.9;
-}
-.mp__notice-detail code {
-  padding: 2px 7px;
-  border-radius: 0;
-  background: rgba(255, 61, 240, 0.12);
-  border: 1px solid color-mix(in srgb, var(--neon-magenta) 35%, transparent);
-  color: #ffd2f6;
-  font-size: 13px;
 }
 
 /* ---- 독안개 (장기전 억제) -------------------------------------------------- */
@@ -2763,8 +1846,6 @@
    로그라이크 (2026-07-24) — 런 화면들. 1280x720 .screen 안에서 flex 레이아웃.
    =========================================================================== */
 
-
-
 /* ---- 공용 런 바 + 유물 칩 ------------------------------------------------- */
 .runbar {
   display: flex;
@@ -2805,7 +1886,6 @@
   font-size: 12px; color: #d9c2ff; white-space: nowrap;
 }
 
-
 /* ---- 런 시작 화면 --------------------------------------------------------- */
 .runstart { display: flex; flex-direction: column; padding: 18px 30px; gap: 14px; }
 .runstart__head { display: flex; align-items: center; justify-content: space-between; }
@@ -2815,26 +1895,10 @@
    ⚠ 잠긴 칸도 **읽을 수는 있어야** 하므로 흐리게만 하고 `disabled`는 걸지 않는다. */
 .runstart__diffs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 .runstart__foot { display: flex; justify-content: center; }
 
 /* ---- 런 지도 ------------------------------------------------------------- */
 .runmap { display: flex; flex-direction: column; padding: 16px 30px; gap: 18px; }
-
-
-
 
 /* ---- 간선 (2026-08-05) ------------------------------------------------------
    칸과 칸을 잇는 선. **칸 뒤에 깔린다**(z-index 0 + 칸은 position: relative).
@@ -2842,32 +1906,6 @@
    격자가 균일하다는 전제라, 층 수(LADDER_FLOORS)나 줄 수(LANES)를 바꾸면 그쪽
    상수도 같이 고쳐야 선이 칸 중심에서 어긋나지 않는다. `preserveAspectRatio:
    none`이라 세로/가로 비율이 달라도 칸 중심을 그대로 따라간다. */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ---- 보상 화면 ----------------------------------------------------------- */
 .reward,

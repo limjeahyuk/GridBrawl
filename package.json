@@ -8,7 +8,6 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "sim": "esbuild scripts/simulate.ts --bundle --platform=node --outfile=node_modules/.cache/sim.cjs --log-level=error && node node_modules/.cache/sim.cjs",
     "sim:run": "esbuild scripts/simrun.ts --bundle --platform=node --outfile=node_modules/.cache/simrun.cjs --log-level=error && node node_modules/.cache/simrun.cjs",
     "check": "esbuild scripts/checkhooks.ts --bundle --platform=node --outfile=node_modules/.cache/check.cjs --log-level=error && node node_modules/.cache/check.cjs",
     "sprites": "node scripts/packsprites.mjs",
@@ -17,7 +16,6 @@
   "dependencies": {
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.4.1",
-    "firebase": "^12.15.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
