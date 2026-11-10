@@ -354,6 +354,11 @@ export interface CardDef {
   // visuals / flavour
   accent?: string
   signature?: boolean
+  /**
+   * **전설 카드**(표시 전용, 2026-11-10 사용자 지정) — 이벤트로만 얻는다(보상·상점·고블린·거래 풀에 없다).
+   * 엔진은 안 본다 → `RULES_VERSION` 무관. 지금은 「세계수의 가호」 한 장.
+   */
+  legend?: boolean
   fx?: 'slash' | 'bolt' | 'orb' | 'quake' | 'flame' | 'shield' | 'rush' | 'punch'
 
   /**

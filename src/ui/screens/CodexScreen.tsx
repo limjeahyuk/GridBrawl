@@ -8,7 +8,7 @@ import { FOE_ATLAS, RELIC_ATLAS } from '../../art/relicAtlas'
 import { RELICS, type Rarity } from '../../game/relics'
 import { seenFoeAbilities, seenFoes, seenRelics } from '../../game/progress'
 import { FoeIcon, RARITY_LABEL, RelicIcon } from '../RelicIcon'
-import { RUN_CARDS } from '../../game/runcards'
+import { EVENT_CARDS, RUN_CARDS } from '../../game/runcards'
 import { PortraitSvg } from '../PortraitSvg'
 import { CardFace, cardAccent } from '../CardFace'
 import { statBars } from '../statBars'
@@ -51,6 +51,7 @@ function RelicCodex() {
               <div className="relictip__name">
                 <b>{known ? relic.name : '???'}</b>
                 {known && <span className={`relictip__rarity is-${relic.rarity}`}>{RARITY_LABEL[relic.rarity]}</span>}
+                {known && relic.eventOnly && <span className="relictip__rarity is-legend">이벤트 전용</span>}
               </div>
               <p>{known ? relic.desc : '아직 얻지 못한 유물이다. 처음 얻는 순간 실루엣이 걷힌다.'}</p>
             </div>
@@ -309,6 +310,16 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
               <div className="codex__cards-title">로그라이크 전용 카드 (런 보상·상점)</div>
               <div className="codex__deck">
                 {RUN_CARDS.map((c) => (
+                  <div className="codex__card" key={c.id}>
+                    <CardFace card={c} accent={cardAccent(c, sel.accent)} />
+                    <p className="codex__card-desc">{c.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="codex__cards-title">전설 카드 (중립 · 이벤트로만 얻는다)</div>
+              <div className="codex__deck">
+                {EVENT_CARDS.map((c) => (
                   <div className="codex__card" key={c.id}>
                     <CardFace card={c} accent={cardAccent(c, sel.accent)} />
                     <p className="codex__card-desc">{c.desc}</p>

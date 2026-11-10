@@ -1496,6 +1496,27 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   const water = resolveEventChoice(at(12, ['seed', 'nutrient']), startEvent('worldtree'), 'wt-water')!
   check('세계수 — 물을 주면 씨앗·영양가루 → 가지', ['seed', 'nutrient', 'worldbranch'].map((id) => water.run.relicIds.includes(id)), [false, false, true])
   check('가지·깃털은 보상 풀에 없다', REWARD_RELICS.some((x) => x.id === 'worldbranch' || x.id === 'phoenixfeather'), false)
+  // 세계수의 가호 = 중립 · 전설 · 이벤트 전용 / 세계수의 가지 = 전설 · 이벤트 전용(2026-11-10 사용자 지정).
+  // 보상 · 상점 · 고블린(부자 = 전설 확률 최대) · 무작위 유물 어디서도 안 나온다.
+  check('세계수의 가호 — 전설 · 중립', [RUN_CARD_BY_ID[WORLDTREE_CARD].legend, RUN_CARD_CLASS[WORLDTREE_CARD]], [true, undefined])
+  {
+    const seenCards = new Set<string>()
+    const seenRelics = new Set<string>()
+    for (const me of ['warrior', 'archer', 'mage']) {
+      const r: RunState = { ...startRun(me), floor: 15 }
+      for (let i = 0; i < 300; i++) {
+        cardRewardPool(r).forEach((id) => seenCards.add(id))
+        for (const it of [...rollGoblinShop(r, 'rich'), ...rollShop(r)]) {
+          if (it.kind === 'card') seenCards.add(it.cardId)
+          if (it.kind === 'relic') seenRelics.add(it.relicId)
+        }
+        for (const rw of rollRewards(r)) if (rw.kind === 'relic') seenRelics.add(rw.relicId)
+      }
+    }
+    check('세계수의 가호는 보상·상점·고블린에 안 나온다', seenCards.has(WORLDTREE_CARD), false)
+    check('세계수의 가지는 보상·상점·고블린에 안 나온다', seenRelics.has('worldbranch'), false)
+    check('가지 — 전설 · 이벤트 전용', [RELIC_BY_ID['worldbranch'].rarity, RELIC_BY_ID['worldbranch'].eventOnly], ['legend', true])
+  }
   check('영양가루 — 최대 기력 +10이 전투에 실린다', runFightProps(at(3, ['nutrient'])).battleOpts.chars![0].maxEnergy, getChar('warrior').maxEnergy + 10)
   {
     const b = battleWith({})

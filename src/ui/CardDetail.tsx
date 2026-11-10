@@ -166,6 +166,7 @@ export function CardDetail({
           <span className="cardzoom__kinds">
             <em>{KIND_LABEL[card.kind]}</em>
             {card.signature && <em className="is-sig">시그니처</em>}
+            {card.legend && <em className="is-legend">전설 · 중립 · 이벤트 전용</em>}
             {card.upgraded && <em className="is-up">강화</em>}
           </span>
         </article>

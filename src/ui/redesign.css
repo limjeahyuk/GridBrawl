@@ -1480,6 +1480,10 @@
   overflow: hidden;
 }
 .cardface--compact.cardface--sig { background: #1e2a46; border-color: #8fb6ff; }
+/* 전설 카드(이벤트 전용) — 금빛 테두리. 강화 테두리(금색)와 겹쳐도 빛으로 갈린다. */
+.cardface.cardface--legend { border-color: #ffd24a; box-shadow: inset 0 0 0 1px #ffd24a, 0 0 12px rgba(255, 210, 74, 0.5); }
+.cardface__legend { padding: 0 6px; font-family: var(--font-display); font-size: 12px; color: #1d1408; background: #ffd24a; }
+.cardzoom__kinds .is-legend { color: #1d1408; background: #ffd24a; }
 .cardface--compact.cardface--move { background: #14243a; border-color: #3a6aa8; }
 .cardface--compact.cardface--guard { background: #122a2a; border-color: #3c9c98; }
 .cardface--compact.cardface--energy { background: #2a2410; border-color: #a08a30; }
