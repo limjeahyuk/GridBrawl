@@ -23,8 +23,9 @@
 
 ## 1. 방침
 
-### 🚫 PvP · 로그인은 main에 없다 (2026-11-10 사용자 결정)
+### 🚫 PvP · 로그인 · 네이티브 앱은 main에 없다 (2026-11-10 사용자 결정)
 - PvP(봇전·온라인 멀티)·덱 만들기·로그인(Firebase Auth)·1:1 시뮬(`npm run sim`)은 **브랜치 `archive/pvp`**에 보존하고 main에서 뺐다. main은 로그라이크만 있고, 실행하면 로그인 없이 바로 타이틀이다.
+- 네이티브 앱(Capacitor)은 **브랜치 `archive/native-app`**에 보존하고 뺐다(§9). main은 웹만 배포한다.
 - 되살릴 땐 그 브랜치에서 꺼낸다 — main에 PvP 코드를 조금씩 다시 넣지 말 것.
 - **엔진은 그대로 뒀다.** `RULES_VERSION`·PvP 시작 위치·`ROSTER`의 PvP 기준 HP/패시브·`localSide` 좌우 반전·`npm run check`의 "PvP 불변" 검사는 남아 있다(런이 같은 엔진을 쓴다). 온라인이 없으므로 **`RULES_VERSION`은 지금 올릴 필요가 없다** — PvP를 되살릴 때 한 번 올린다.
 - **밸런스 기준은 `npm run sim:run -- --sweep`(런 클리어율·직업 밴드) 하나뿐이다.**
@@ -188,19 +189,18 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - 게임이 쓰는 그림은 `public/`만. **원본·안 쓰는 그림을 `public/`에 두지 않는다**(배포된다).
 - 사용자가 준 원본 일러스트는 **`docs/redesign/2dImg/`**(`cairn`·`sable`·`dirge`·`inn.png` — 버전 관리 · 배포 안 됨). 배경은 `docs/redesign/tools/hero-bg`·`inn-bg/build.py`로 굽는다.
 - 서드파티 스프라이트 팩 원본은 `assets-raw/`(**gitignore** — EULA상 커밋 금지), `npm run sprites`로 `public/sprites/`에 굽는다. 리디자인 시트는 `public/redesign/sprites/`(`docs/redesign/tools/`가 생성).
-- `public/sprites/`에 남은 옛 시트는 아직 리디자인 그림이 없는 몬스터용(철퇴병 · 감시안 · 버서커 · 뱀파이어 · 가디언 · 석궁병 · 주술사 · 기사 · 암살자 — `medieval-warrior`·`flying-eye`·`martial-hero`·`mimic`·`angel`·`church-wizard`)과 `rat`(미사용, 원본이 없어 보존) · `hero-knight`(앱 아이콘 원본 — `npm run icon`)뿐이다. 옛 배경 `public/bg`·바위 `public/terrain`은 2026-11-09에 지웠다(리디자인으로 대체).
+- `public/sprites/`에 남은 옛 시트는 아직 리디자인 그림이 없는 몬스터용(철퇴병 · 감시안 · 버서커 · 뱀파이어 · 가디언 · 석궁병 · 주술사 · 기사 · 암살자 — `medieval-warrior`·`flying-eye`·`martial-hero`·`mimic`·`angel`·`church-wizard`)과 `rat`(미사용, 원본이 없어 보존) · `hero-knight`(웹 아이콘 원본 — `npm run icon`)뿐이다. 옛 배경 `public/bg`·바위 `public/terrain`은 2026-11-09에 지웠다(리디자인으로 대체).
 - 시트 `facesRight`는 **몸이 향한 쪽**(공격 프레임의 타격 방향)으로 판정. 모든 시트에 명시.
 
 ## 8. 온라인 멀티 · 로그인 — main에 없음
 
 2026-11-10에 뺐다(§1). 코드와 옛 규칙(P2P 락스텝 · `RULES_VERSION` 게이트 · 턴 제한 30초 · RTDB 규칙)은 브랜치 `archive/pvp`의 CLAUDE.md §8에 있다. 런 기록은 원래부터 기기 로컬(`progress.ts`)이라 로그인이 필요 없다.
 
-## 9. 배포 · 네이티브
+## 9. 배포
 
 - 웹: Firebase Hosting `npm run build && npx firebase deploy --only hosting`. 빌드에 필요한 환경 변수는 없다(`.env` 불필요).
-- 앱(Capacitor, appId `com.imjaehyeog.GridBrawl`): `npm run build && npx cap sync`(⚠ `ios/App/App/public`은 cap sync가 굽는 사본·gitignore — 안 돌리면 옛 웹 빌드가 담긴다). 가로 고정, **iPhone 전용**(iPad는 세로 레이아웃이 먼저 필요). Xcode 26 이상(Capacitor 8.4.1).
-- 네이티브에선 Firebase Auth를 시작하지 않는다(`capacitor://`에서 콜백이 안 와 "접속 중…"에 멈춘다, 3초 안전망 있음). **게스트 버튼은 어떤 조건에서도 사라지면 안 된다**(오프라인 첫 실행이 잠기면 심사 반려). 네이티브 구글 로그인을 붙이면 Sign in with Apple·앱 내 계정 삭제가 의무.
-- 앱 아이콘 `npm run icon`(옛 전사 `hero-knight` 얼굴 클로즈업) — iOS 아이콘은 알파 없이, Android 적응형은 가운데 66%.
+- **네이티브 앱(Capacitor · `ios/` · `android/`)은 main에 없다**(2026-11-10 사용자 결정 — 앱 출시 중단). 브랜치 `archive/native-app`에 보존했고, 앱 규칙(cap sync · iPhone 전용 · 게스트 버튼 · 심사 주의점)은 그 브랜치의 CLAUDE.md §9에 있다.
+- 웹 아이콘(PWA) `npm run icon`(옛 전사 `hero-knight` 얼굴 클로즈업) — `public/icon-*.png` · `apple-touch-icon.png`.
 
 ## 10. 기술 스택 · 명령어 · 코드 지도
 
