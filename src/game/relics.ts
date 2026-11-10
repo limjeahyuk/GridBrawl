@@ -243,13 +243,13 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'firstguard', name: '선제 방벽', icon: '🚧', rarity: 'common',
-    desc: '전투 첫 라운드에 보호막 +40.',
-    effect: { openingShield: 40 },
+    desc: '전투 첫 라운드에 보호막 +20.',
+    effect: { openingShield: 20 },
   },
   {
     id: 'warmup', name: '불씨 지피기', icon: '🔥', rarity: 'common',
-    desc: '전투 첫 라운드에 보호막 +20, 매 라운드 기력 +3.',
-    effect: { openingShield: 20, turnEnergy: 3 },
+    desc: '전투 첫 라운드에 보호막 +10, 매 라운드 기력 +3.',
+    effect: { openingShield: 10, turnEnergy: 3 },
   },
 
   // --- 확장 세트 2 (2026-07-31) — 빈 메커니즘 보강(기절·반사·관통·저체력·지속회복) --
@@ -296,7 +296,7 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'vanguard', name: '선봉대장', icon: '🎖', rarity: 'rare',
-    desc: '전투 첫 라운드에 보호막 +30. 내 공격 피해 +3.', effect: { openingShield: 30, attackBonus: 3 },
+    desc: '전투 첫 라운드에 보호막 +15. 내 공격 피해 +3.', effect: { openingShield: 15, attackBonus: 3 },
   },
   {
     id: 'meditation', name: '명상의 룬', icon: '🧘', rarity: 'common',
@@ -407,7 +407,7 @@ const genericRelics: Relic[] = [
   { id: 'buckler', name: '단단한 손잡이', icon: '🛡', rarity: 'common', desc: '수비 카드의 흡수량 +35%.', effect: { guardPowerPct: 35 } },
   { id: 'towershield', name: '탑 방패', icon: '🗼', rarity: 'rare', desc: '수비 카드의 흡수량 +60%.', effect: { guardPowerPct: 60 } },
   { id: 'rampart', name: '성벽의 맹세', icon: '🧱', rarity: 'epic', desc: '수비 카드의 흡수량 +80%, 최대 체력 +13.', effect: { guardPowerPct: 80, maxHpBonus: 13 } },
-  { id: 'aegisoath', name: '불괴의 서약', icon: '⚜️', rarity: 'legend', desc: '수비 카드의 흡수량 +120%, 첫 라운드 보호막 +40, 받는 피해 -3.', effect: { guardPowerPct: 120, openingShield: 40, damageReduction: 3 } },
+  { id: 'aegisoath', name: '불괴의 서약', icon: '⚜️', rarity: 'legend', desc: '수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.', effect: { guardPowerPct: 120, openingShield: 20, damageReduction: 3 } },
   { id: 'spiked-boss', name: '가시 방패심', icon: '🔩', rarity: 'rare', desc: '수비 카드의 흡수량 +40%, 피격 시 5 반사.', effect: { guardPowerPct: 40, thorns: 5 } },
 
   // --- 치유 증폭 계열 -------------------------------------------------------
@@ -419,10 +419,10 @@ const genericRelics: Relic[] = [
 
   // --- 시작 기력 계열 -------------------------------------------------------
   { id: 'primer', name: '점화약', icon: '🧨', rarity: 'common', desc: '전투 시작 기력 +13.', effect: { startEnergyBonus: 13 } },
-  { id: 'kindling', name: '마른 장작', icon: '🪵', rarity: 'common', desc: '전투 시작 기력 +8, 첫 라운드 보호막 +15.', effect: { startEnergyBonus: 8, openingShield: 15 } },
+  { id: 'kindling', name: '마른 장작', icon: '🪵', rarity: 'common', desc: '전투 시작 기력 +8, 첫 라운드 보호막 +8.', effect: { startEnergyBonus: 8, openingShield: 8 } },
   { id: 'jumpstart', name: '출진의 북', icon: '🥁', rarity: 'rare', desc: '전투 시작 기력 +20.', effect: { startEnergyBonus: 20 } },
   { id: 'bigbang', name: '개전의 봉화', icon: '🧨', rarity: 'epic', desc: '전투 시작 기력 +28, 내 공격 피해 +3.', effect: { startEnergyBonus: 28, attackBonus: 3 } },
-  { id: 'firstlight', name: '여명의 불꽃', icon: '🌅', rarity: 'legend', desc: '전투 시작 기력 +35, 첫 라운드 보호막 +45, 매 라운드 기력 +4.', effect: { startEnergyBonus: 35, openingShield: 45, turnEnergy: 4 } },
+  { id: 'firstlight', name: '여명의 불꽃', icon: '🌅', rarity: 'legend', desc: '전투 시작 기력 +35, 첫 라운드 보호막 +23, 매 라운드 기력 +4.', effect: { startEnergyBonus: 35, openingShield: 23, turnEnergy: 4 } },
 
   // --- 처형 계열 ------------------------------------------------------------
   { id: 'finisher', name: '마무리 칼', icon: '🔪', rarity: 'common', desc: '상대 체력이 절반 이하면 내 공격 피해 +25%.', effect: { executeBonusPct: 25 } },
@@ -443,7 +443,7 @@ const genericRelics: Relic[] = [
   { id: 'secondwind', name: '두 번째 숨', icon: '🌬', rarity: 'epic', desc: '전투당 한 번 체력 23로 되살아나고, 되살아날 힘으로 매 라운드 체력 +3.', effect: { revive: 23, regen: 3 } },
   { id: 'stoneskin', name: '돌갗', icon: '🗿', rarity: 'epic', desc: '받는 피해 -7.', effect: { damageReduction: 7 } },
   { id: 'adamant', name: '금강석 갑주', icon: '💎', rarity: 'legend', desc: '받는 피해 -9, 최대 체력 +13.', effect: { damageReduction: 9, maxHpBonus: 13 } },
-  { id: 'warhorn', name: '전쟁 나팔', icon: '📯', rarity: 'common', desc: '내 공격 피해 +2, 첫 라운드 보호막 +18.', effect: { attackBonus: 2, openingShield: 18 } },
+  { id: 'warhorn', name: '전쟁 나팔', icon: '📯', rarity: 'common', desc: '내 공격 피해 +2, 첫 라운드 보호막 +9.', effect: { attackBonus: 2, openingShield: 9 } },
   { id: 'duelist', name: '결투가의 검', icon: '🤺', rarity: 'epic', desc: '내 공격 피해 +8.', effect: { attackBonus: 8 } },
   { id: 'godslayer', name: '신살자의 창', icon: '🔱', rarity: 'legend', desc: '내 공격 피해 +10, 보호막을 무시한다. 최대 체력 -10.', effect: { attackBonus: 10, alwaysPierce: true, maxHpBonus: -10 } },
   { id: 'gluttony', name: '탐식의 이빨', icon: '😋', rarity: 'legend', desc: '피해를 주면 체력 8 회복. 최대 체력 -10.', effect: { lifesteal: 8, maxHpBonus: -10 } },
