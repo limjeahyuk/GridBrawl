@@ -34,6 +34,7 @@ import {
   currentNode,
   currentOptions,
   grantCard,
+  replaceCandidates,
   grantRelic,
   isLockedCard,
   upgradableDeckCards,
@@ -152,6 +153,7 @@ function cardScore(id: string, deck: string[], _run?: RunState): number {
 function worstCard(deck: string[]): string {
   const pool = deck.filter((id) => !isLockedCard(id))
   const target = pool.length ? pool : deck
+  if (!target.length) return ''
   return target.reduce((lo, id) => (cardScore(id, []) < cardScore(lo, []) ? id : lo), target[0])
 }
 
@@ -222,7 +224,10 @@ function applyReward(run: RunState, r: Reward): RunState {
   }
   const res = grantCard(run, r.cardId)
   if (!res.needsReplace) return res.run
-  return grantCard(run, r.cardId, worstCard(run.deck)).run // 덱 상한 → 최약 카드와 교체
+  // 칸(공격 5 · 보조 5)이 꽉 찼다 → 같은 칸의 최약 카드보다 나을 때만 바꾼다(2026-11-10 칸별 상한).
+  const worst = worstCard(replaceCandidates(run, r.cardId))
+  if (!worst || rawScore(cardById(worst)!) >= rawScore(cardById(r.cardId)!)) return run
+  return grantCard(run, r.cardId, worst).run
 }
 
 // --- 룰렛 강화 정책 --------------------------------------------------------
@@ -325,7 +330,11 @@ function doInn(run: RunState): RunState {
   const wantRest = () => POLICY === 'random' ? Math.random() < 0.5 : cur.hp / cur.maxHp < 0.8
   const buy = (item: ShopItem) => {
     let res = buyShopItem(cur, item)
-    if (res.needsCardPick) res = buyShopItem(cur, item, worstCard(cur.deck))
+    if (res.needsCardPick && item.kind === 'card') {
+      const worst = worstCard(replaceCandidates(cur, item.cardId))
+      if (!worst || rawScore(cardById(worst)!) >= rawScore(cardById(item.cardId)!)) return
+      res = buyShopItem(cur, item, worst)
+    }
     if (res.ok) {
       cur = res.run
       if (item.kind === 'relic') relicPick[item.relicId] = (relicPick[item.relicId] ?? 0) + 1

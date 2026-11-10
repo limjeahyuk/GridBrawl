@@ -24,8 +24,6 @@ export interface RunMods {
   healBonusPct?: number
   /** 일반 전투 보상에 유물이 섞일 확률 +N포인트(0.01 = +1%p). */
   relicChanceBonus?: number
-  /** 덱 상한 +N장. */
-  deckCapBonus?: number
   /** 상점 진열 +N칸(카드 칸이 늘어난다). */
   shopExtraItems?: number
 }
@@ -337,7 +335,8 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'satchel', name: '확장 가방', icon: '🎒', rarity: 'common',
-    desc: '덱 상한 +4장.', effect: {}, mods: { deckCapBonus: 4 },
+    // 2026-11-10: 덱 상한이 칸마다 5장으로 고정되며(손패 한 쪽에 들어갈 만큼) "덱 상한 +N"이 사라졌다 → 보상 칸으로.
+    desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 },
   },
   {
     id: 'balm', name: '치유 향유', icon: '🧴', rarity: 'rare',
@@ -353,7 +352,7 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'lockpick', name: '만능 열쇠', icon: '🗝', rarity: 'epic',
-    desc: '상점 가격 30% 할인, 덱 상한 +3장.', effect: {}, mods: { shopDiscountPct: 30, deckCapBonus: 3 },
+    desc: '상점 가격 30% 할인, 상점 진열 +1칸.', effect: {}, mods: { shopDiscountPct: 30, shopExtraItems: 1 },
   },
 
   // --- 상태이상 계열 (2026-08-01, 3직업 개편) -------------------------------
@@ -561,8 +560,8 @@ const genericRelics: Relic[] = [
   { id: 'ledger', name: '상인의 장부', icon: '📒', rarity: 'common', desc: '상점 가격 12% 할인, 골드 +15%.', effect: {}, mods: { shopDiscountPct: 12, goldBonusPct: 15 } },
   { id: 'caravan', name: '행상 마차', icon: '🛒', rarity: 'rare', desc: '상점 진열 +2칸.', effect: {}, mods: { shopExtraItems: 2 } },
   { id: 'bazaar', name: '암시장 통로', icon: '🏮', rarity: 'epic', desc: '상점 진열 +3칸, 가격 25% 할인.', effect: {}, mods: { shopExtraItems: 3, shopDiscountPct: 25 } },
-  { id: 'saddlebag', name: '안장 가방', icon: '👜', rarity: 'common', desc: '덱 상한 +2장.', effect: {}, mods: { deckCapBonus: 2 } },
-  { id: 'librarian', name: '사서의 색인', icon: '📚', rarity: 'rare', desc: '승리 보상 선택지 +1칸, 덱 상한 +2장.', effect: {}, mods: { rewardOptions: 1, deckCapBonus: 2 } },
+  { id: 'saddlebag', name: '안장 가방', icon: '👜', rarity: 'common', desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 } },
+  { id: 'librarian', name: '사서의 색인', icon: '📚', rarity: 'rare', desc: '승리 보상 선택지 +2칸.', effect: {}, mods: { rewardOptions: 2 } },
   { id: 'saltpouch', name: '소금 주머니', icon: '🧂', rarity: 'common', desc: '모든 회복 효과 +25%.', effect: {}, mods: { healBonusPct: 25 } },
   { id: 'grailshard', name: '성배 조각', icon: '🏆', rarity: 'epic', desc: '모든 회복 효과 +80%, 회복 카드 회복량 +30%.', effect: { healPowerPct: 30 }, mods: { healBonusPct: 80 } },
   { id: 'ravenomen', name: '까마귀의 전조', icon: '🐦‍⬛', rarity: 'epic', desc: '일반 전투 보상에 유물이 섞일 확률 +18%p.', effect: {}, mods: { relicChanceBonus: 0.18 } },

@@ -26,7 +26,11 @@ import {
   currentNode,
   currentOptionIndices,
   currentOptions,
-  deckCap,
+  ATTACK_CAP,
+  SUPPORT_CAP,
+  slotCount,
+  slotOfId,
+  replaceCandidates,
   grantCard,
   grantRelic,
   healHp,
@@ -292,7 +296,7 @@ console.log('\n런 진행 규칙')
   const discounted = rollShop(grantRelic(run, 'coupon')).find((i) => i.kind === 'card')!
   check('상인의 인증패(20%) → 카드 가격 35 → 28', [plain.price, discounted.price], [35, 28])
 
-  check('확장 가방 → 덱 상한 +4', deckCap(grantRelic(run, 'satchel')), deckCap(run) + 4)
+  check('확장 가방 → 보상 선택지 +1(덱 상한 유물은 2026-11-10에 없앴다)', rollRewards(grantRelic(run, 'satchel')).length, rollRewards(run).length + 1)
   const hurt = { ...run, hp: 10 }
   check(
     '치유 향유(+50%) → 회복량도 1.5배',
@@ -308,12 +312,20 @@ console.log('\n런 진행 규칙')
   check('잠기지 않은 카드는 제거된다', removeCard(run, 'c-brace').deck.includes('c-brace'), false)
   // 나중에 주운 대시·대각 이동은 잠기지 않는다 — 꽉 찬 덱에서 바꿀 길을 막으면 안 된다.
   check('대시·대각 이동은 잠기지 않는다', ['m-right2', 'm-ur'].some(isLockedCard), false)
-  // 꽉 찬 덱 + 잠긴 카드를 버리려 하면 "안 고른 것"과 같다(상한을 넘겨 담으면 안 된다).
-  const full = { ...run, deck: [...run.deck, ...Array(deckCap(run) - run.deck.length).fill('c-strike')] }
-  check('덱이 꽉 찼다', full.deck.length, deckCap(run))
-  check('꽉 찬 덱 + 잠긴 카드 지정 → 교체 요구', grantCard(full, 'war-cleave', 'm-up').needsReplace, true)
-  check('꽉 찬 덱 + 잠긴 카드 지정 → 상한을 넘기지 않는다', grantCard(full, 'war-cleave', 'm-up').run.deck.length, deckCap(run))
-  check('꽉 찬 덱 + 일반 카드 지정 → 교체된다', grantCard(full, 'war-cleave', 'c-strike').run.deck.length, deckCap(run))
+  // --- 칸별 상한(2026-11-10 사용자 지정) — 공격 5 · 보조(수비·회복·기력·강화) 5 · 이동은 끝없음 ----
+  check('시작 덱 — 공격 3 · 보조 2', [slotCount(run, 'attack'), slotCount(run, 'support')], [3, 2])
+  const atk5 = { ...run, deck: [...run.deck, 'arc-shot', 'arc-kite'] } // 공격 5장(궁수)
+  check('공격 칸이 꽉 찼다', slotCount(atk5, 'attack'), ATTACK_CAP)
+  check('공격 칸이 차면 공격 카드는 교체를 요구', grantCard(atk5, 'arc-pin').needsReplace, true)
+  check('공격 칸이 차도 보조 카드는 그냥 들어온다', grantCard(atk5, 'c-guard').run.deck.includes('c-guard'), true)
+  check('공격 칸이 차도 이동 카드는 그냥 들어온다', grantCard(atk5, 'm-right2').run.deck.includes('m-right2'), true)
+  check('잠긴 카드를 버리려 하면 교체 요구 그대로', grantCard(atk5, 'arc-pin', 'm-up').needsReplace, true)
+  check('다른 칸 카드를 버리려 해도 교체 요구 그대로', grantCard(atk5, 'arc-pin', 'c-brace').needsReplace, true)
+  check('같은 칸 카드와는 바뀐다', (() => { const d = grantCard(atk5, 'arc-pin', 'arc-kite').run.deck; return [d.includes('arc-pin'), d.includes('arc-kite'), slotCount({ ...atk5, deck: d }, 'attack')] })(), [true, false, ATTACK_CAP])
+  check('교체 후보 = 같은 칸 카드만', replaceCandidates(atk5, 'arc-pin').every((id) => slotOfId(atk5, id) === 'attack'), true)
+  const sup5 = { ...run, deck: [...run.deck, 'c-guard', 'c-repair', 'r-medkit'] } // 보조 5장(버티기·원기·방패·봉합·성수)
+  check('보조 칸이 차면 보조 카드는 교체를 요구', grantCard(sup5, 'r-transfuse').needsReplace, true)
+  check('상한은 5 · 5', [ATTACK_CAP, SUPPORT_CAP], [5, 5])
   // 유료 "카드 1장 제거"는 뺐다 — 덱=손패라 얇게 만들 이득이 0인 함정 칸이었다.
   check('상점에 카드 제거 서비스가 없다', rollShop(run).some((i) => !['card', 'relic'].includes(i.kind)), false)
 }

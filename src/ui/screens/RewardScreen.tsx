@@ -9,7 +9,7 @@ import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
 import { resolveRunCard } from '../../game/runcards'
 import {
-  advanceFloor, deckCap, goblinItemName, goldForWin, WIN_HEAL, grantCard, grantRelic, GOBLIN_LOOT, healHp, regionOf,
+  advanceFloor, ATTACK_CAP, DECK_SLOT_LABEL, replaceCandidates, slotCount, slotOfId, SUPPORT_CAP, goblinItemName, goldForWin, WIN_HEAL, grantCard, grantRelic, GOBLIN_LOOT, healHp, regionOf,
   rollRewards, runCard, sceneFor, skipReward, type Reward, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
@@ -70,11 +70,13 @@ export function RewardScreen({
     return (
       <div className="screen reward">
         <div className="grid-bg" />
-        <h2 className="reward__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
-        {/* 강화가 얹힌 사본을 넘긴다 — 안 넘기면 목록만 원본 수치를 보여 준다 */}
+        <h2 className="reward__title">
+          {DECK_SLOT_LABEL[slotOfId(run, replaceCard)]} 카드가 가득 찼습니다 — 바꿀 카드를 고르세요
+        </h2>
+        {/* 같은 칸(공격 / 보조)의 카드만 늘어놓는다. 강화가 얹힌 사본을 넘긴다 */}
         <DeckPicker
           charId={run.charId}
-          deck={run.deck}
+          deck={replaceCandidates(run, replaceCard)}
           zoom={zoom}
           onPick={confirmReplace}
           cardOf={(id) => runCard(run, id)}
@@ -173,7 +175,7 @@ export function RewardScreen({
           </button>
         )}
         <span className="reward__deckcount">
-          덱 {run.deck.length} / {deckCap(run)}장
+          공격 {slotCount(run, 'attack')}/{ATTACK_CAP} · 보조 {slotCount(run, 'support')}/{SUPPORT_CAP}
         </span>
       </footer>
       {zoom.sheet}

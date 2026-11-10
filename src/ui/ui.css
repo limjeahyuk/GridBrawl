@@ -2071,33 +2071,24 @@
   box-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 30%, transparent);
 }
 
-/* 탭을 없앤 뒤로는 공격+수비가 **한 줄에 모두** 온다(2026-08-03).
-   ⚠ `flex-wrap: wrap`이면 안 된다 — 넘치는 순간 두 번째 줄이 생기고 그대로
-   `.cards`(높이 고정) 밖으로 잘려 나간다. 줄바꿈 대신 가로 스크롤로 받는다. */
+/* 손패는 **두 쪽**이다(2026-11-10 사용자 지정) — 공격 / 이동·보조를 오른쪽 ⇅ 버튼으로 넘긴다.
+   **가로 스크롤은 없다**: 런은 쪽마다 5장 상한이라 늘 들어가고, 그보다 많은 PvP 덱은 카드가
+   줄어들어 들어간다(`.handcard`의 flex-shrink). ⚠ `flex-wrap: wrap`도 안 된다 — 두 번째 줄이
+   `.cards`(높이 고정) 밖으로 잘려 나간다. */
 .cards__hand {
   display: flex;
   gap: 8px;
-  /* ⚠ `center`만 쓰면 넘칠 때 **양쪽 끝이 잘려** 스크롤로도 못 본다.
-     `safe`는 넘치는 순간 시작 정렬로 떨어뜨려 준다. */
-  justify-content: safe center;
+  justify-content: flex-start;
   flex-wrap: nowrap;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
   padding-bottom: 4px;
-  scrollbar-width: thin;
 }
-.cards__hand::-webkit-scrollbar {
-  height: 6px;
-}
-.cards__hand::-webkit-scrollbar-thumb {
-  background: var(--panel-edge);
-  border-radius: 0;
-}
-/* 로그라이크에서 덱이 커지면 10장을 넘길 수 있어 줄어들지 않게 고정폭을 준다 */
+/* 쪽마다 5장까지는 제 폭 그대로. 그보다 많으면(PvP 덱) 줄어들어 한 줄에 든다 — 스크롤은 없다. */
 .handcard {
   width: 104px;
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 56px;
+  overflow: hidden;
   height: 146px; /* 설명 없는 압축 카드 기준 — 이름·수치·사거리만 들어간다 */
   padding: 0;
   border: none;

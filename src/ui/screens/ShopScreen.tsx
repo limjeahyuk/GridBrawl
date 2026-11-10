@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
-import { buyShopItem, regionOf, runCard, type RunState, type ShopItem } from '../../game/run'
+import { buyShopItem, regionOf, replaceCandidates, runCard, type RunState, type ShopItem } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
@@ -51,10 +51,10 @@ export function ShopScreen({
     return (
       <div className="screen shop shop--pick">
         <div className="grid-bg" />
-        <h2 className="shop__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
+        <h2 className="shop__title">덱의 그 칸이 가득 찼습니다 — 바꿀 카드를 고르세요</h2>
         <DeckPicker
           charId={cur.charId}
-          deck={cur.deck}
+          deck={pending.kind === 'card' ? replaceCandidates(cur, pending.cardId) : cur.deck}
           zoom={zoom}
           onPick={pickCard}
           cardOf={(id) => runCard(cur, id)}

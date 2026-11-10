@@ -1064,6 +1064,11 @@ export function BattleScreen({
   const moveDeck = useMemo(() => hand.filter((c) => c.kind === "move"), [hand]);
   const [tray, setTray] = useState(false);
   /**
+   * 손패 쪽 — 기본은 **공격**, ⇅로 **이동·보조**(이동 묶음 · 수비 · 회복 · 기력 · 강화)로 넘긴다
+   * (2026-11-10 사용자 지정). 가로 스크롤을 없애려고 나눴다 — 런은 쪽마다 5장 상한이라 늘 들어간다.
+   */
+  const [handPage, setHandPage] = useState<"attack" | "support">("attack");
+  /**
    * 묶음 앞면 — 3×3 나침반과 준비·쿨 개수. 색의 뜻은 디자인 그대로다:
    * 파랑 = 그 방향 준비 · 주황 테 = 대시도 준비 · 어두움+숫자 = 쿨 · 금 = 순서 칸에
    * 담김 · 빈 칸 = 그 방향 카드 없음.
@@ -2025,7 +2030,7 @@ export function BattleScreen({
               (2026-08-05), 숨기기만 하면 ① 보상·상점에서 산 이동 카드가 전투에서
               안 보이고 ② 칸이 안 밝혀질 때 쿨·막힘·속박이 구분되지 않고 ③ 꾹 눌러
               읽을 곳이 없다. 묶음이 그 셋을 받는다. */}
-          {moveDeck.length > 0 && (
+          {handPage === "support" && moveDeck.length > 0 && (
             <div className="bundlewrap">
               {tray && (
                 <section className="tray" aria-label="이동 카드 목록">
@@ -2147,7 +2152,7 @@ export function BattleScreen({
             )}
             <div className="cards__hand">
               {hand
-                .filter((c) => c.kind !== "move")
+                .filter((c) => c.kind !== "move" && (handPage === "attack") === (c.kind === "attack"))
                 .map((c) => {
                   const onCd = cdLeft(c.id) > 0;
                   const locked = onCd || placedNoRepeat(c);
@@ -2220,6 +2225,20 @@ export function BattleScreen({
                 })}
             </div>
           </div>
+          <button
+            className="cards__swap"
+            onClick={() => {
+              setHandPage((p) => (p === "attack" ? "support" : "attack"));
+              setTray(false);
+            }}
+            aria-label={handPage === "attack" ? "이동·보조 카드로 넘기기" : "공격 카드로 넘기기"}
+            title={handPage === "attack" ? "이동·보조 카드 보기" : "공격 카드 보기"}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M8,13V5.82L5.43,8.4L4,7L9,2l5,5L12.58,8.4L10,5.82V13H8Zm7,9l-5-5l1.43-1.4L14,18.18V11h2v7.18l2.57-2.58L20,17l-5,5Z" />
+            </svg>
+            <span>{handPage === "attack" ? "공격" : "보조"}</span>
+          </button>
           <div className="cards__actions">
             <button
               className="btn btn--ghost cards__reset"
