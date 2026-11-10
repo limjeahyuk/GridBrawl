@@ -116,6 +116,7 @@
 - **방향은 위치 기준**(`facingBetween` 한 곳). 같은 열이면 좌석으로. ⚠ UI 재생은 `battle.facing()`이 아니라 그 스텝의 스냅샷으로 잰다.
 - **넉백 3원칙**(사용자 확정): 상대가 내 오른쪽 → 오른쪽 / 왼쪽 → 왼쪽 / **같은 칸 → 오른쪽**. ③을 임시 폴백으로 읽고 고치지 말 것.
 - **처박기**: 넉백이 벽·바위에 막히면 못 간 칸당 5 + 그 라운드 기절(부분 차단도). 처박기 기절은 연장 유물을 안 탄다.
+  **같은 슬롯의 반격도 막힌다**(2026-11-10) — 밀려난 쪽이 기절했으면 그 슬롯 공격은 기절 스텝이 된다. 넉백 없는 기절끼리의 같은 슬롯 트레이드는 여전히 동시.
 - 밀착: 두 파이터는 같은 칸에 설 수 있고, 겹친 상대는 `CardDef.pointBlank`로 판정. 공격 사거리는 대부분 **앞뒤 대칭**.
 - 기력: 라운드마다 +10(`cards.ts`의 `ENERGY_REGEN`). 버프 카드(`atkUp`·`defUp`·`freeCast`) · 이동공격(`dashForward`, facing 기준). ⚠ `freeCast`는 엔진 `costOf`·UI `planAffordable`·AI 예산 세 곳이 같아야 한다(`baseCostOf`).
 
@@ -153,7 +154,7 @@
 ```bash
 npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=12345
 ```
-- **현재(2026-11-09, 최고급 기본) 3시드(12345·777·2026) 평균 클리어율 ≈ 26.1% · 밴드 2.2~4.1%p**(전사가 약간 앞선다).
+- **현재(2026-11-10, 최고급 기본) 3시드(12345·777·2026) 평균 클리어율 ≈ 25.9% · 밴드 3.7~9.0%p**(전사 28.9 · 마법사 25.1 · 궁수 23.5 — 궁수가 처진다). 이벤트 사슬(+2.1%p)과 처박기 반격 차단(−2.5%p)을 거친 값이다.
 - ⚠ 단일 시드로 판정하지 말 것 — 같은 수치에서도 밴드가 몇 %p씩 널뛴다. 여러 시드 평균.
 - ⚠ 직업 조정은 **직업 패시브(`SIGNATURE.runEffect`)의 `maxHpBonus`로만**(1HP 단위). 수치가 ÷2 스케일이라 DR·regen·thorns는 정수 1이 수십 %p를 흔든다. `turnEnergy`로 조정하지 말 것(AI 기력 문턱 인공물).
 - 민감도(대략): 궁수 ≈0.64 · 마법사 ≈0.23 · 전사 ≈0.16 %p/HP. 전사의 병목은 HP가 아니라 사거리다.
@@ -170,7 +171,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - `Step.bits`(피해 내역)·`Step.slot`·`Step.slam`은 연출 전용 — 지워도 결과가 같다(`RULES_VERSION` 근거 아님). 단 내역 합 = 실제로 깎인 체력.
 - 유물 발동·적 능력 공개는 엔진이 안 알려 준다 — `ui/relicFx.ts`가 스텝 결과에서 추정한다.
 - **카드 UI**: 전투·보상·상점은 압축 카드(`CardFace compact`), 설명은 꾹 눌러 여는 `CardDetail`(380ms, 10px 움직이면 취소, 연 뒤 click 삼킴, contextmenu 차단). ⚠ 못 쓰는 카드에 `disabled`를 걸지 말 것(꾹 눌러 읽을 수도 없어진다) — `aria-disabled`. 능력의 뜻은 `cardAbility.ts` 한 곳.
-- 이동은 판의 칸을 눌러서 한다(호박색 칸 = 갈 수 있는 곳, 이동 묶음 `MoveBundle`). 이동 칸과 공격 사거리(붉은색)의 색을 섞지 말 것. 판 위 연출 레이어는 `pointer-events: none`.
+- 이동은 판의 칸을 눌러서 한다(호박색 칸 = 갈 수 있는 곳, 이동 묶음 `MoveBundle`). 칸에는 **화살표만** 찍는다 — 카드 이름("오른쪽" 등)은 빼라는 사용자 지정(2026-11-10), 이름은 title에만. 이동 칸과 공격 사거리(붉은색)의 색을 섞지 말 것. 판 위 연출 레이어는 `pointer-events: none`.
 - 스프라이트 좌우 반전은 두 겹(`--flip` = 방향, `--artflip` = 시트 원본 방향) — 합치지 말 것. `fighter--{face}`(방향)·`--seat-{side}`·`--stacked-{side}`(자리)를 구분.
 - 튜토리얼 9단계(실제 전투 위 스포트라이트, `onSlotsChange`) · 첫 만남 팁 9종(`ui/FirstTip.tsx`, `gb-tips-seen`, 팁 id `shop`은 여관에서 뜬다).
 - 개발 빌드 콘솔 `__gb.setRun(__gb.startRun('warrior')); __gb.setPhase('run-inn')`로 화면에 바로 뛴다.
@@ -186,7 +187,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 ## 8. 온라인 멀티 · 버전 게이트
 
 - 게임 데이터는 P2P(WebRTC), 시그널링만 Firebase RTDB(REST, SDK 0). 방 만들기 · 방 찾기(빠른 대전은 `QUICK_MATCH_ENABLED`로 내림). 호스트 = side0 고정, 매 라운드 카드 id만 교환하는 결정론 락스텝. 화면은 로컬 시점으로 좌우 반전.
-- **`RULES_VERSION`(현재 6)** — `resolveRound` 출력에 닿는 변경(엔진·룰 상수·PvP에서 쓰는 카드 수치/사거리/능력·카드 id 증감)을 하면 같은 커밋에서 올린다. 런 전용(`BattleOpts`의 hazards·startStatus·obstacles, 강화, 유물 전용 훅)·연출·AI 판단은 안 올린다. 게이트는 온라인 매칭에만(앱 진입을 막으면 오프라인에서 죽는다).
+- **`RULES_VERSION`(현재 7)** — `resolveRound` 출력에 닿는 변경(엔진·룰 상수·PvP에서 쓰는 카드 수치/사거리/능력·카드 id 증감)을 하면 같은 커밋에서 올린다. 런 전용(`BattleOpts`의 hazards·startStatus·obstacles, 강화, 유물 전용 훅)·연출·AI 판단은 안 올린다. 게이트는 온라인 매칭에만(앱 진입을 막으면 오프라인에서 죽는다).
 - 턴 제한 30초(온라인만).
 
 ## 9. 배포 · 네이티브

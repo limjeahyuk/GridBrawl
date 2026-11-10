@@ -969,6 +969,26 @@ console.log('\n넉백 재판정 — 밀려나면 그 슬롯 공격은 새 자리
   check('서로 밀면 둘 다 그대로 맞는다', [hp[0] - b.state.hp[0], hp[1] - b.state.hp[1]], [7, 7])
 }
 
+{
+  // 처박혀 기절하면 같은 슬롯 공격도 못 한다(2026-11-10 신고: "기절인데 스킬 쓰고 기절").
+  // 벽에 붙은 상대를 밀면 한 칸도 안 밀려 자리는 그대로라 "닿느냐"만 보면 반격이 나갔다.
+  const shove: CardDef = {
+    id: 'test-wallshove', name: '테스트 벽밀치기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 1, cooldown: 0,
+  }
+  const jab: CardDef = {
+    id: 'test-walljab', name: '테스트 반격', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 30, energyCost: 0, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }] // 상대가 판 끝 벽에 붙어 있다
+  const hp0 = b.state.hp[0]
+  const steps = b.resolveRound([shove, card('c-energy'), card('c-energy')], [jab, card('c-energy'), card('c-energy')])
+  check('처박힌 쪽은 그 자리에 남는다', b.state.pos[1].col, 5)
+  check('처박혀 기절하면 같은 슬롯 반격이 안 나간다', hp0 - b.state.hp[0], 0)
+  check('반격 대신 기절 스텝이 뜬다', steps.filter((st) => st.slot === 0 && st.actor === 1).map((st) => st.result), ['stun'])
+}
+
 // --- 쓰러진 뒤엔 못 때린다(2026-08-04) ---------------------------------------
 console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다')
 {
@@ -1726,7 +1746,8 @@ console.log('\n지형 — 바위')
     const st = b.resolveRound([shove, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-strike'), card('c-strike')])
     check('바위에 막히면 한 칸도 안 밀린다', b.state.pos[1].col, 2)
     check('바위에 처박히면 2칸분 피해(1 + 5×2)', hp - b.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE * 2)
-    check('바위에 처박히면 그 라운드 기절', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+    // 슬롯 1의 반격도 막힌다(2026-11-10) — 전엔 같은 슬롯 공격이 그대로 나가 기절 스텝이 2개(슬롯 2·3)였다.
+    check('바위에 처박히면 그 라운드 기절(같은 슬롯 반격까지)', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 3)
 
     // 벽도 같다 — 판 끝에 몰린 상대는 밀려날 곳이 없어 그대로 부딪힌다.
     const w = withRocks([])

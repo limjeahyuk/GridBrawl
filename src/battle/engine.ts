@@ -1323,6 +1323,27 @@ export class CardBattle {
         for (const i of order) {
           const e = banked[i]
           if (!mutual && s.hp[e.p] <= 0) continue
+          /**
+           * **처박혀 기절했으면 그 슬롯 공격도 못 한다**(2026-11-10 신고: "벽 뒤로 맞으면
+           * 기절인데 스킬 쓰고 기절하는 것 같다"). 밀려난 쪽은 위에서 닿느냐만 다시 봤고
+           * 기절은 안 봐서, 벽에 처박혀 기절한 쪽의 공격이 같은 슬롯에서 그대로 나갔다.
+           * 밀어내기가 순서를 정한 경우에만 건다 — 순서가 넉백으로 정해졌으니 비대칭이
+           * 아니다(서로 밀면 `crossShove`라 여기 안 온다). 낸 대가(기력)는 이미 치렀다.
+           */
+          if (!crossShove && shoved.has(e.p) && this.lockedThisRound(e.p)) {
+            steps.push({
+              phase: 'stun',
+              actor: e.p,
+              card: STUN_CARD,
+              result: 'stun',
+              damage: 0,
+              heal: 0,
+              drain: 0,
+              recoil: 0,
+              snapshot: this.snapshot(),
+            })
+            continue
+          }
           if (!crossShove && shoved.has(e.p) && !connectsNow(e.p, e.card)) {
             // 밀려나서 빗나갔다 — 피해·넉백·상태이상이 전부 사라지고 반동만 남는다.
             // ⚠ **바위 피해는 그대로 남긴다** — 빗나간 건 상대가 자리를 뜬 탓이고,

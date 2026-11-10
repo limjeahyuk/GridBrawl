@@ -1706,7 +1706,6 @@ export function BattleScreen({
               // 같은 색이면 "왜 여기까지 가지"가 된다.
               const face = faceCard(mv);
               const dash = (mv.steps ?? 1) > 1 || (mv.cooldown ?? 0) > 0;
-              const cd = (mv.cooldown ?? 0) > 0 ? ` · CD${mv.cooldown}` : "";
               return (
                 <button
                   key={i}
@@ -1720,10 +1719,9 @@ export function BattleScreen({
                       붕괴 → {collapseDamageAt(turn + 1)} 피해
                     </span>
                   )}
-                  <span className="cell__movelab">
-                    {moveIcon(face.dir, face.steps ?? 1)} {face.name}
-                    {cd}
-                  </span>
+                  {/* 화살표만 — 카드 이름("오른쪽" · "아래")은 칸 위에서 군더더기였다(2026-11-10 사용자 지정).
+                      이름은 title·aria-label에 남는다. 대시는 칸 색(주황)으로 가른다. */}
+                  <span className="cell__movelab">{moveIcon(face.dir, face.steps ?? 1)}</span>
                 </button>
               );
             }

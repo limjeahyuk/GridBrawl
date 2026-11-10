@@ -54,7 +54,9 @@
 //     RULES_VERSION을 안 올려도 됐던 근거였다. 이제 카드 두 장이 그 전제를 깬다.
 //     같은 커밋에서 `RockPlan.where`에 `'ahead'`가 생기고, 공격 카드의 바위 세우기가
 //     **넉백 뒤**로 옮겨졌다(`settleAttack`) — 둘 다 `resolveRound` 출력에 닿는다.
-export const RULES_VERSION = 6
+// 7 (2026-11-10): 같은 슬롯 트레이드에서 **넉백에 처박혀 기절한 쪽은 그 슬롯 공격도
+//     못 한다**(전엔 새 자리에서 닿기만 하면 그대로 나갔다). `resolveRound` 출력이 바뀐다.
+export const RULES_VERSION = 7
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
