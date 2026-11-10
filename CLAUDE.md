@@ -176,7 +176,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
   ⚠ 화면 루트(`.screen.X`)에 `overflow: hidden`·`position: relative`·`width: 100%`를 주지 말 것 — 배경이 못 번지거나 내용이 오른쪽으로 밀린다. 새 전면 배경·막을 만들면 그 목록에 넣는다.
 - 1280×720 그림 배경(영웅 선택 · 여관)은 무대가 넓으면 `.artbg--fill`이 양옆을 메운다. ⚠ 이 층을 `::before`로 만들면 페이드인이 쌓임 맥락을 만들어 선명한 그림 위로 덮인다.
 - **재생은 `await wait()` 사슬 하나** — `wait`이 `visibilitychange`에 반응한다(백그라운드에서 돌아왔을 때 굳지 않게). 연출 안에서 생 `setTimeout`으로 화면을 되돌리지 말 것. `submitPlan`은 try/catch로 복구한다.
-- 연출 두 모드(차근차근 기본 / 빠르게, `game/settings.ts`). 길이는 라운드 시작에 한 번 정한다(`paceRef`). `impactDelay`(스프라이트 실제 프레임)에는 배수를 안 건다. 카드 공개는 입력을 삼키지 않는다.
+- 전투 재생은 **한 가지 속도뿐**이다(2026-11-10 사용자 결정 — 슬롯마다 카드를 펼치던 "차근차근" 모드는 "최악의 경험"이라 지웠다). 같은 슬롯의 양쪽 이동은 기다리지 않고 **함께** 움직인다. "뭐였지?"는 나중에 디자인의 **히스토리 버튼**이 맡는다 — 카드 공개·전투 기록을 되살리지 말 것.
 - `Step.bits`(피해 내역)·`Step.slot`·`Step.slam`은 연출 전용 — 지워도 결과가 같다(`RULES_VERSION` 근거 아님). 단 내역 합 = 실제로 깎인 체력.
 - 유물 발동·적 능력 공개는 엔진이 안 알려 준다 — `ui/relicFx.ts`가 스텝 결과에서 추정한다.
 - **카드 UI**: 전투·보상·상점은 압축 카드(`CardFace compact`), 설명은 꾹 눌러 여는 `CardDetail`(380ms, 10px 움직이면 취소, 연 뒤 click 삼킴, contextmenu 차단). ⚠ 못 쓰는 카드에 `disabled`를 걸지 말 것(꾹 눌러 읽을 수도 없어진다) — `aria-disabled`. 능력의 뜻은 `cardAbility.ts` 한 곳.
@@ -212,7 +212,7 @@ React 19 + TypeScript + Vite, 게임 엔진 없음. `npm run dev` · `build` · 
 | --- | --- |
 | 전투 타입·상수 / 엔진 / AI | `src/battle/types.ts` · `engine.ts` · `ai.ts` |
 | 카드 | `src/battle/cards.ts`(공용) · `src/data/roster.ts`(직업) · `src/game/runcards.ts`(런) · `src/game/bosscards.ts`(보스) |
-| 런 | `src/game/run.ts` · `events.ts` · `upgrades.ts` · `relics.ts` · `monsters.ts` · `bosses.ts` · `runbattle.ts` · `progress.ts` · `settings.ts` |
+| 런 | `src/game/run.ts` · `events.ts` · `upgrades.ts` · `relics.ts` · `monsters.ts` · `bosses.ts` · `runbattle.ts` · `progress.ts` |
 | 화면 | `src/App.tsx`(페이즈) · `src/ui/screens/*` — 여관·대장간 `InnScreen.tsx` · 상점 `ShopScreen.tsx` · 모닥불/보물 `RestScreen.tsx` · ? 칸 `QuestionScreen.tsx` · 강화 `UpgradeScreen.tsx` · 고블린 `GoblinScreen.tsx` |
 | UI 부품 | `CardFace.tsx` · `CardDetail.tsx` · `cardAbility.ts` · `SceneLayers.tsx` · `FirstTip.tsx` · `relicFx.ts` · `sfx.ts`(효과음 합성, 파일 0) |
 | 그림 | `src/art/sprites.ts`(`SHEETS`) · `art/relicAtlas.ts` · `scripts/packsprites.mjs` · `scripts/makeicon.mjs` |
