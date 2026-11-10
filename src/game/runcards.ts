@@ -69,8 +69,8 @@ export const RUN_CARDS: CardDef[] = [
     fx: 'rush', desc: '앞 2~3칸의 상대를 두 칸 끌어당긴다. 도망치는 원거리형을 사거리로 끌어온다.',
   }),
   atk({
-    id: 'r-tether', name: '혼백의 손아귀', range: barBoth(2), damage: 11, energyCost: 11, pull: 1, pointBlank: false,
-    fx: 'orb', desc: '앞 두 칸째 세 줄을 훑어 한 칸 끌어당긴다.',
+    id: 'r-tether', name: '혼백의 손아귀', range: [...barBoth(2), ...barBoth(3)], damage: 12, energyCost: 11, bind: 1, cooldown: 1, pointBlank: false,
+    fx: 'orb', accent: '#b98cff', desc: '앞뒤 2~3칸째 세 줄에서 망령의 손이 발목을 잡는다 — 이 라운드 속박. 붙은 상대는 못 잡는다. 쿨타임 1라운드.',
   }),
 
   // --- 기력 순환 — 누적 기력 트리거 유물과 맞물린다 --------------------------

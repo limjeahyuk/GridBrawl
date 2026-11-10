@@ -78,8 +78,8 @@ const SIGNATURE: Record<
     //   사거리 1칸이라 붙는 동안 통째로 얻어맞는데, 몬스터가 이제 걸어오는 나를
     //   정확히 조준한다(원거리 hard 몬스터에 특히 약하다 — 팬텀 45.8% · 화염군주
     //   52.7%). 56 → 107로 되돌렸다. 민감도 ≈ **0.16%p/HP**로 셋 중 가장 둔하다.
-    runEffect: { damageReduction: 2, regen: 2, thorns: 2, maxHpBonus: 107 },
-    desc: '서약의 돌무덤: 최대 체력 +107, 받는 공격 피해 -2, 매 라운드 체력 +2, 피격 시 2 반사.',
+    runEffect: { damageReduction: 2, regen: 2, thorns: 2, maxHpBonus: 97 },
+    desc: '서약의 돌무덤: 최대 체력 +97, 받는 공격 피해 -2, 매 라운드 체력 +2, 피격 시 2 반사.',
   },
   archer: {
     id: 'sig-archer', name: '독니 화살통', icon: '🏹',
@@ -101,8 +101,8 @@ const SIGNATURE: Record<
     //   지금은 **≈0.64%p/HP**로 셋 중 압도적으로 민감하다. 거리를 벌고 싸우는 쪽이라
     //   AI 예측 개편의 타격이 제일 적었고(24.7%), 그래서 18 → 16으로 **내려서** 맞췄다.
     //   전사·마법사와 달리 궁수는 몇 포인트로 밴드가 통째로 움직인다.
-    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 7, lifesteal: 2 },
-    desc: '독니 화살통: 최대 체력 +7, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 체력 2 흡수 + 중독 2라운드.',
+    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 19, lifesteal: 2 },
+    desc: '독니 화살통: 최대 체력 +19, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 체력 2 흡수 + 중독 2라운드.',
   },
   mage: {
     id: 'sig-mage', name: '혼백의 마법서', icon: '📖',
@@ -110,8 +110,13 @@ const SIGNATURE: Record<
     // ⚠ turnEnergy는 봇 인공물을 만들어 측정이 튄다(GDD ⑪) — 조정은 체력·보호막으로
     // 하고 이 값은 고정해 둘 것. 실제로 turnEnergy 10은 최대체력 14와 맞먹었다.
     // ⚠ AI 예측 개편(2026-08-10)으로 57 → 80. 민감도 ≈ **0.23%p/HP**.
-    runEffect: { turnEnergy: 5, turnShield: 3, burnOnHit: 2, damageReduction: 2, maxHpBonus: 110 },
-    desc: '혼백의 마법서: 최대 체력 +110, 받는 피해 -2. 매 라운드 기력 +5·보호막 +3, 피해를 주면 화상 2라운드를 묻힌다.',
+    // 2026-11-10 사용자 지정: 런 시작 체력은 **전사 200 · 궁수 100 · 마법사 100**으로 못 박는다
+    //   (마법사가 전사만큼 단단한 건 이상하다). 마법사는 대신 **전투 시작 보호막 +30**.
+    //   ⚠ 그래서 직업 밴드를 더는 maxHpBonus로 못 맞춘다. 체력 100 + 시작 보호막만으로는 5%였고
+    //   (카드를 원거리·속박으로 바꾼 뒤에도), **매 라운드 보호막(turnShield) 3 → 13**으로 메웠다 —
+    //   7 = 11.9% · 11 = 20.4% · 13 = 26.6%(≈2.1%p/점). 마법사의 손잡이는 이제 이 값이다.
+    runEffect: { turnEnergy: 5, turnShield: 13, burnOnHit: 2, damageReduction: 2, maxHpBonus: 22, openingShield: 30 },
+    desc: '혼백의 마법서: 최대 체력 +22, 전투 시작 보호막 +30, 받는 피해 -2. 매 라운드 기력 +5·보호막 +13, 피해를 주면 화상 2라운드를 묻힌다.',
   },
 }
 

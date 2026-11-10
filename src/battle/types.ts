@@ -57,7 +57,8 @@
 // 7 (2026-11-10): 같은 슬롯 트레이드에서 **넉백에 처박혀 기절한 쪽은 그 슬롯 공격도
 //     못 한다**(전엔 새 자리에서 닿기만 하면 그대로 나갔다). `resolveRound` 출력이 바뀐다.
 // 8 (2026-11-10): 붕괴 **안전지대** — 가운데 4칸은 끝까지 안 무너진다(`isCollapseSafe`).
-export const RULES_VERSION = 8
+// 9 (2026-11-10): 마법사 직업 카드 재설계(원거리·속박·화상 — 사거리·능력 변경).
+export const RULES_VERSION = 9
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 

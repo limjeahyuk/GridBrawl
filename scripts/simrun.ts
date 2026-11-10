@@ -190,7 +190,8 @@ async function playFight(run: RunState): Promise<FightResult> {
   const battle = new CardBattle(fp.p0CharId, fp.p1CharId, fp.battleOpts)
   const pChar = fp.battleOpts.chars![0]
   while (!battle.state.over && battle.state.round <= MAX_TURNS) {
-    const p0 = decideAI(battle.state, 0, pChar, SKILL, fp.deck)
+    // 마법사는 **거리를 두고** 싸운다(2026-11-10 — 원거리 직업, 붙으면 진다). 봇도 그렇게 굴린다.
+    const p0 = decideAI(battle.state, 0, pChar, SKILL, fp.deck, pChar.id === 'mage' ? { archetype: 'kiter', moodAgg: 0 } : undefined)
     const p1 = (await fp.getOpponentPlan(p0, battle)) ?? []
     battle.resolveRound(p0, p1)
   }
