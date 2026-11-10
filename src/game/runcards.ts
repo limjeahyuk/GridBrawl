@@ -309,6 +309,32 @@ export const RUN_CARDS: CardDef[] = [
     id: 'r-retreat', name: '급후퇴', kind: 'move', dir: 'left', steps: 2, cooldown: 0,
     desc: '왼쪽으로 두 칸. **쿨타임이 없다** — 붙는 족족 빠져나오는 궁수의 발.',
   },
+
+  // --- 마법사 전용 고화력(2026-11-10) ----------------------------------------
+  // 런 카드에 직업을 매기자(`RUN_CARD_CLASS`) 마법사가 26 → 9%로 무너졌다 — 전사풍 고화력 카드
+  // (광폭 난타 29 · 파멸의 일격 26 · 돌격창 23)로 골렘·가디언 같은 단단한 엘리트를 뚫어 왔는데
+  // 자기 풀엔 「소멸 포격」(33 · 기력 29) 하나뿐이었다. 마법사다운 모양(길고 넓게 · 관통 · 화상)으로
+  // 같은 구멍을 메운다. 값은 전사 카드보다 **기력이 비싸게** — 마법사는 기력이 넉넉한 직업이다.
+  atk({
+    id: 'r-arcanelance', name: '비전의 창', range: beamBoth(1, 3), damage: 22, energyCost: 16, pierce: true, cooldown: 1,
+    fx: 'orb', accent: '#8a7cff',
+    desc: '앞뒤 1~3칸을 꿰뚫는 마력의 창. 보호막과 바위를 무시한다 — 쿨타임 1라운드.',
+  }),
+  atk({
+    id: 'r-meteor', name: '운석 낙하', range: barBoth(2), damage: 28, energyCost: 20, burn: 1, cooldown: 2, pointBlank: false,
+    fx: 'flame', accent: '#ff7a3a',
+    desc: '앞뒤 2칸째 세로 세 줄에 운석을 떨어뜨린다. 맞으면 화상 1라운드. 붙은 상대는 못 맞힌다 — 쿨타임 2라운드.',
+  }),
+  atk({
+    id: 'r-icespike', name: '얼음 송곳', range: beamBoth(1, 2), damage: 16, energyCost: 9,
+    fx: 'orb', accent: '#7fd0ff',
+    desc: '앞뒤 1~2칸에 얼음 송곳을 꽂는다. 싸고 쿨타임이 없어 매 라운드 쓸 수 있다.',
+  }),
+  atk({
+    id: 'r-soulpyre', name: '혼불 흡수', range: CROSS, damage: 18, energyCost: 13, leech: 5, cooldown: 1,
+    fx: 'flame', accent: '#d45fae',
+    desc: '십자 네 칸을 혼불로 태우고, 피해를 주면 체력 5를 빨아온다 — 쿨타임 1라운드.',
+  }),
 ]
 
 /**
@@ -342,11 +368,12 @@ export const RUN_CARD_CLASS: Record<string, 'warrior' | 'archer' | 'mage'> = {
   'r-hook': 'archer', 'r-railgun': 'archer', 'r-plaguebolt': 'archer', 'r-blightwave': 'archer',
   'r-witherpulse': 'archer', 'r-scattershot': 'archer', 'r-gale': 'archer', 'r-vault': 'archer',
   'r-retreat': 'archer', 'r-executioner': 'archer',
-  // 마법사 13
+  // 마법사 17(고화력 4장 2026-11-10 추가)
   'r-stunrod': 'mage', 'r-tether': 'mage', 'r-overclock': 'mage', 'r-resonance': 'mage',
   'r-rupture': 'mage', 'r-annihilate': 'mage', 'r-blink': 'mage', 'r-backblink': 'mage',
   'r-freerein': 'mage', 'r-emberburst': 'mage', 'r-frostnova': 'mage', 'r-arcburn': 'mage',
   'r-shockwave': 'mage',
+  'r-arcanelance': 'mage', 'r-meteor': 'mage', 'r-icespike': 'mage', 'r-soulpyre': 'mage',
 }
 /** 이 직업이 보상·상점·거래로 받을 수 있는 런 카드(공용 + 자기 직업). */
 export const runCardsFor = (charId: string): CardDef[] =>
