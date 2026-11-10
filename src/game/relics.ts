@@ -101,8 +101,8 @@ const SIGNATURE: Record<
     //   지금은 **≈0.64%p/HP**로 셋 중 압도적으로 민감하다. 거리를 벌고 싸우는 쪽이라
     //   AI 예측 개편의 타격이 제일 적었고(24.7%), 그래서 18 → 16으로 **내려서** 맞췄다.
     //   전사·마법사와 달리 궁수는 몇 포인트로 밴드가 통째로 움직인다.
-    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 19, lifesteal: 2 },
-    desc: '독니 화살통: 최대 체력 +19, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 체력 2 흡수 + 중독 2라운드.',
+    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 19 }, // 흡혈 2는 2026-11-10 사용자 지정으로 뺐다(체력 100 고정 뒤 궁수가 앞서서)
+    desc: '독니 화살통: 최대 체력 +19, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 중독 2라운드.',
   },
   mage: {
     id: 'sig-mage', name: '혼백의 마법서', icon: '📖',
