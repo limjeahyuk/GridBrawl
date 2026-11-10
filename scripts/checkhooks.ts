@@ -59,6 +59,7 @@ import {
   currentEnemy,
   afterWin,
   WIN_HEAL,
+  ELITE_COLLAPSE_DELAY,
   TERRAIN,
   type NodeType,
   type RunDifficulty,
@@ -75,6 +76,9 @@ import { getMonster, MONSTERS } from '../src/game/monsters'
 import {
   BURN_HIT_DAMAGE,
   COLLAPSE_START_ROUND,
+  COLLAPSE_STEP_ROUNDS,
+  isCollapsedCell,
+  isCollapseSafe,
   FOG_DAMAGE,
   FREEZE_SHATTER_BONUS,
   GRID_COLS,
@@ -2255,6 +2259,43 @@ console.log('\n피해 내역(Step.bits) · 슬롯 번호(Step.slot)')
       true,
     )
   }
+}
+
+// --- 붕괴 늦추기 · 안전지대(2026-11-10 사용자 지정) ------------------------------
+console.log('\n붕괴 — 가운데 4칸은 끝까지 · 엘리트·보스는 늦게')
+{
+  const late = COLLAPSE_START_ROUND + COLLAPSE_STEP_ROUNDS * 5 // 마지막 단계를 한참 지난 라운드
+  const safe: string[] = []
+  for (let col = 0; col < GRID_COLS; col++)
+    for (let row = 0; row < GRID_ROWS; row++) if (!isCollapsedCell({ col, row }, late)) safe.push(`${col},${row}`)
+  check('마지막 단계에도 가운데 4칸만 남는다', safe, ['2,1', '2,2', '3,1', '3,2'])
+  check('안전지대 판정 = 그 4칸', safe.every((k) => isCollapseSafe({ col: +k[0], row: +k[2] })), true)
+
+  // 안전지대에 서 있으면 붕괴 피해가 없다.
+  const b = battleWith({})
+  b.state.round = late
+  b.state.pos = [{ col: 2, row: 1 }, { col: 0, row: 0 }]
+  const steps = b.resolveRound(HOLD, HOLD)
+  check('안전지대는 붕괴 피해 없음 · 밖은 있음', ['0', '1'].map((p) => steps.some((s) => s.phase === 'collapse' && s.actor === +p)), [false, true])
+
+  // 엘리트·보스는 4라운드 늦게 무너진다(런 전용 — PvP는 지연 0).
+  const elite = new CardBattle('warrior', 'warrior', { collapseDelay: ELITE_COLLAPSE_DELAY })
+  elite.state.round = COLLAPSE_START_ROUND
+  elite.state.pos = [{ col: 0, row: 1 }, { col: 5, row: 1 }]
+  check('엘리트 — 6라운드엔 아직 안 무너진다', elite.resolveRound(HOLD, HOLD).some((s) => s.phase === 'collapse'), false)
+  elite.state.round = COLLAPSE_START_ROUND + ELITE_COLLAPSE_DELAY
+  check('엘리트 — 4라운드 뒤엔 무너진다', elite.resolveRound(HOLD, HOLD).some((s) => s.phase === 'collapse'), true)
+  check('PvP 전투는 지연 0', new CardBattle('warrior', 'warrior').state.collapseDelay, 0)
+  const eliteRun: RunState = { ...startRun('warrior'), special: { kind: 'spirit', monsterId: 'wolf', elite: true } }
+  check('엘리트 전투에 지연이 실린다', runFightProps(eliteRun).battleOpts.collapseDelay, ELITE_COLLAPSE_DELAY)
+  check('일반 매복은 지연 없음', runFightProps({ ...startRun('warrior'), special: { kind: 'ambush', monsterId: 'slime' } }).battleOpts.collapseDelay, 0)
+
+  // AI는 마지막 단계에도 안전지대로 피한다(위아래까지 본다).
+  const ai = battleWith({})
+  ai.state.round = late
+  ai.state.pos = [{ col: 0, row: 0 }, { col: 3, row: 0 }] // 몬스터가 안전지대 바로 위 무너진 칸
+  const plan = decideAI(ai.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.filter((c) => c.kind === 'move'))
+  check('AI는 안전지대로 피한다', plan[0]?.kind === 'move' && plan[0].dir?.includes('down'), true)
 }
 
 console.log(`\n${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}\n`)

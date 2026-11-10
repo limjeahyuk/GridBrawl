@@ -56,7 +56,8 @@
 //     **넉백 뒤**로 옮겨졌다(`settleAttack`) — 둘 다 `resolveRound` 출력에 닿는다.
 // 7 (2026-11-10): 같은 슬롯 트레이드에서 **넉백에 처박혀 기절한 쪽은 그 슬롯 공격도
 //     못 한다**(전엔 새 자리에서 닿기만 하면 그대로 나갔다). `resolveRound` 출력이 바뀐다.
-export const RULES_VERSION = 7
+// 8 (2026-11-10): 붕괴 **안전지대** — 가운데 4칸은 끝까지 안 무너진다(`isCollapseSafe`).
+export const RULES_VERSION = 8
 
 export type Difficulty = 'easy' | 'normal' | 'hard'
 
@@ -510,8 +511,23 @@ export const COLLAPSE_STEP_ROUNDS = 3
 /** 단계별 **라운드당** 피해(실드 무시). 단계가 오를수록 버티는 값이 커진다. */
 export const COLLAPSE_DAMAGE: readonly number[] = [5, 8, 12]
 
-/** 마지막 단계 = 모든 열이 무너지는 단계. 6열이면 stage 2에서 col 0~5 전부. */
+/** 마지막 단계 = 안전지대 밖이 전부 무너지는 단계. 6열이면 stage 2. */
 export const COLLAPSE_MAX_STAGE = Math.ceil(GRID_COLS / 2) - 1
+
+/**
+ * **안전지대 — 판 한가운데 4칸(가운데 2열 × 가운데 2줄)은 끝까지 안 무너진다**(2026-11-10 사용자 지정:
+ * "발판이 줄어드는 게 너무 빠르다 · 마지막 4칸 정도는 계속 있도록"). 예전엔 마지막 단계에 판 전체가
+ * 무너져 설 자리가 0이었다. 마지막 단계의 압박은 그대로고(밖은 전부 12씩), 버틸 섬 하나가 남는다.
+ */
+export const isCollapseSafe = (c: Cell): boolean =>
+  Math.abs(c.col * 2 - (GRID_COLS - 1)) <= 1 && Math.abs(c.row * 2 - (GRID_ROWS - 1)) <= 1
+
+/**
+ * 붕괴 시계가 보는 라운드 — 전투마다 붕괴를 늦출 수 있다(`BattleOpts.collapseDelay`, 런 전용:
+ * 엘리트·보스는 시간을 더 준다). 엔진·AI·화면이 모두 이걸 거쳐 같은 값을 본다.
+ */
+export const collapseRound = (s: { round: number; collapseDelay?: number }): number =>
+  s.round - (s.collapseDelay ?? 0)
 
 /** 해당 라운드의 붕괴 단계. 시작 전 -1, 시작 라운드 0, 이후 COLLAPSE_STEP_ROUNDS마다 +1(cap). */
 export const collapseStageAt = (round: number): number =>
@@ -525,7 +541,7 @@ export const collapseStageAt = (round: number): number =>
 /** 해당 라운드에 이 셀이 무너져 있는가 — 양 끝 열부터 안쪽으로 무너진다. */
 export const isCollapsedCell = (c: Cell, round: number): boolean => {
   const stage = collapseStageAt(round)
-  return stage >= 0 && (c.col <= stage || c.col >= GRID_COLS - 1 - stage)
+  return stage >= 0 && !isCollapseSafe(c) && (c.col <= stage || c.col >= GRID_COLS - 1 - stage)
 }
 
 /** 그 라운드에 무너진 칸에 서 있으면 받는 피해. 단계 밖이면 0. */
@@ -534,10 +550,6 @@ export const collapseDamageAt = (round: number): number => {
   if (stage < 0) return 0
   return COLLAPSE_DAMAGE[Math.min(stage, COLLAPSE_DAMAGE.length - 1)]
 }
-
-/** 판 전체가 무너졌는가 — 이때는 도망칠 칸이 없다(AI가 이걸 봐야 한다). */
-export const isFullyCollapsed = (round: number): boolean =>
-  collapseStageAt(round) >= COLLAPSE_MAX_STAGE
 
 /** 다음 라운드에 붕괴가 시작되거나 한 단계 더 번지는가(경고용). */
 export const collapseEscalatesNext = (round: number): boolean =>

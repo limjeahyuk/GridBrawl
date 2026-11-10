@@ -22,6 +22,7 @@ import {
   difficultyDef,
   runCard,
   terrainFor, hazardsFor,
+  isEliteFight, ELITE_COLLAPSE_DELAY,
   type RunState,
 } from './run'
 
@@ -69,6 +70,8 @@ export function runFightProps(run: RunState): RunFightProps {
     obstacles: terrainFor(run),
     // 함정(2026-11) — 일반 전투의 일부에만. 전투 시작 때 한 번 굴린다.
     hazards: hazardsFor(run),
+    // 엘리트·보스는 붕괴를 늦게 시작한다(2026-11-10 사용자 지정 — "엘리트는 시간을 훨씬 더").
+    collapseDelay: isEliteFight(run) ? ELITE_COLLAPSE_DELAY : 0,
     // 항아리 이벤트 — 중독 한 겹을 안고 시작한다(겹 위력은 고정값).
     startStatus: run.special?.startPoison
       ? [[{ kind: 'poison', rounds: run.special.startPoison, power: POISON_TICK_DAMAGE, since: 0 }], undefined]

@@ -17,6 +17,7 @@ import {
   STATUS_STACK_CAP,
   canStand,
   collapseDamageAt,
+  collapseRound,
   facingBetween,
   fogAt,
   inBounds,
@@ -94,6 +95,8 @@ export interface BattleState {
   hazards: Hazard[]
   /** 지금 몇 **라운드**인가(1부터). 한 라운드 = 카드 3장 = 3턴. */
   round: number
+  /** 붕괴를 몇 라운드 늦추는가(런 전용 — 엘리트·보스). 붕괴 판정은 `collapseRound(state)`로. */
+  collapseDelay: number
   over: boolean
   winner: number | null
 }
@@ -131,6 +134,8 @@ export interface BattleOpts {
   startStatus?: [StatusEffect[] | undefined, StatusEffect[] | undefined]
   /** 함정(**런 전용**, 2026-11). 시작 칸·바위와 겹치는 건 버린다. PvP는 안 넘긴다. */
   hazards?: readonly Hazard[]
+  /** 붕괴를 N라운드 늦춘다(**런 전용**, 2026-11-10 — 엘리트·보스). PvP는 안 넘기므로 0. */
+  collapseDelay?: number
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -212,6 +217,7 @@ export class CardBattle {
         .filter((h) => inBounds(h.cell) && !sameCell(h.cell, p0) && !sameCell(h.cell, p1) && !rockAt(obstacles, h.cell))
         .map((h) => ({ ...h, cell: cloneCell(h.cell), rounds: h.kind === 'fire' ? (h.rounds ?? FIRE_ROUNDS) : h.rounds })),
       round: 1,
+      collapseDelay: Math.max(0, Math.round(opts?.collapseDelay ?? 0)),
       over: false,
       winner: null,
     }
@@ -770,7 +776,7 @@ export class CardBattle {
         if (!inBounds(cell)) continue
         if (sameCell(cell, s.pos[0]) || sameCell(cell, s.pos[1])) continue
         if (rockAt(s.obstacles, cell)) continue
-        if (isCollapsedCell(cell, s.round)) continue
+        if (isCollapsedCell(cell, collapseRound(s))) continue
         const hp = Math.max(1, Math.round(plan.hp))
         s.obstacles.push({ cell, hp, maxHp: hp })
         made.push(cell)
@@ -1407,17 +1413,18 @@ export class CardBattle {
     // 전장 붕괴: COLLAPSE_START_ROUND부터, 라운드 종료 시 무너진 칸에 서 있으면 피해.
     // 실드는 무시하지만 유물의 `collapseResist`만큼은 줄어든다(발판 유물).
     // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
-    if (!s.over && s.round >= COLLAPSE_START_ROUND) {
+    const cr = collapseRound(s)
+    if (!s.over && cr >= COLLAPSE_START_ROUND) {
       // 무너진 칸의 **바위도 같이 무너진다**. 남겨 두면 판이 좁아지는 속도에 지형이
       // 곱해져, 마지막 단계에서 "무너진 칸에도 들어갈 수 있다"는 안전판(붕괴 설계의
       // 핵심)이 바위 때문에 사라진다 — 밀려날 곳도 도망칠 곳도 없는 판이 된다.
-      s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, s.round))
+      s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, cr))
       // 안개도 같은 이유로 무너진 칸에서는 사라진다(그 칸 자체가 없어진다).
-      s.fog = s.fog.filter((f) => !isCollapsedCell(f.cell, s.round))
-      s.hazards = s.hazards.filter((h) => !isCollapsedCell(h.cell, s.round))
-      const base = collapseDamageAt(s.round)
+      s.fog = s.fog.filter((f) => !isCollapsedCell(f.cell, cr))
+      s.hazards = s.hazards.filter((h) => !isCollapsedCell(h.cell, cr))
+      const base = collapseDamageAt(cr)
       for (let p = 0; p < 2; p++) {
-        if (!isCollapsedCell(s.pos[p], s.round)) continue
+        if (!isCollapsedCell(s.pos[p], cr)) continue
         const dmg = Math.max(0, base - (this.passive[p].collapseResist ?? 0))
         if (dmg <= 0) continue
         const dealt = Math.min(s.hp[p], dmg)

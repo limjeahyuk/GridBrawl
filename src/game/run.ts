@@ -679,6 +679,15 @@ export function chooseBranch(run: RunState, index: number): RunState {
   picked[run.floor - 1] = idxs[at]
   return { ...run, picked, status: statusForNode(node) }
 }
+/**
+ * 엘리트·보스의 붕괴 지연(라운드). 일반 전투는 6라운드부터 무너지고 엘리트·보스는 10라운드부터 —
+ * 체력이 많아 6라운드면 아직 판이 한창이라 "너무 빠르다"는 신고(2026-11-10).
+ */
+export const ELITE_COLLAPSE_DELAY = 4
+/** 이 전투가 엘리트·보스인가 — 지도 칸, 또는 이벤트가 연 엘리트 전투(초록 정령의 늑대). */
+export function isEliteFight(run: RunState): boolean {
+  return run.special ? !!run.special.elite : isEliteFloor(run)
+}
 export function isEliteFloor(run: RunState): boolean {
   const t = currentNode(run).type
   return t === 'elite' || t === 'boss'

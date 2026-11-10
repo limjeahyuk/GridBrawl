@@ -21,7 +21,7 @@ import type { CardDef, Difficulty } from '../src/battle/types'
 import { ROSTER, getChar } from '../src/data/roster'
 import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
-import { RUN_CARDS } from '../src/game/runcards'
+import { EVENT_CARDS, RUN_CARDS } from '../src/game/runcards'
 import { ROULETTE_VALUE, spinRoulette } from '../src/game/upgrades'
 import { applySpecialWin, eventChoices, resolveEventChoice, startEvent, tradeList, type EventOutcome } from '../src/game/events'
 import {
@@ -125,6 +125,7 @@ const ALL_CARDS: CardDef[] = [
   ...ROSTER.flatMap((c) => c.basics),
   ...ROSTER.flatMap((c) => c.cards),
   ...RUN_CARDS,
+  ...EVENT_CARDS, // 세계수의 가호 — 이게 없으면 강화 정책이 undefined를 집고 시뮬이 죽는다
 ]
 const cardById = (id: string): CardDef | undefined => ALL_CARDS.find((c) => c.id === id)
 

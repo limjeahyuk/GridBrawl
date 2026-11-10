@@ -48,6 +48,7 @@ import {
   COLLAPSE_START_ROUND,
   LOW_HP_FRAC,
   collapseDamageAt,
+  collapseRound,
   collapseEscalatesNext,
   GRID_COLS,
   GRID_ROWS,
@@ -1609,7 +1610,7 @@ export function BattleScreen({
           view.status[localSide].some((e) => e.kind === "poison" || e.kind === "burn" || e.kind === "frozen") && "status",
           !!boss && "boss",
           battle.state.obstacles.length > 0 && "elite",
-          battle.state.round >= COLLAPSE_START_ROUND && "collapse",
+          collapseRound(battle.state) >= COLLAPSE_START_ROUND && "collapse",
           hand.some((c) => c.kind !== "move" && selectable(c) && !canAfford(c)) && "energy",
           "longpress",
         ]
@@ -1632,6 +1633,7 @@ export function BattleScreen({
         localSide={localSide}
         view={view}
         turn={battle.state.round}
+        collapseTurn={collapseRound(battle.state)}
         remain={remain}
         boss={boss}
         place={place}
@@ -1682,7 +1684,8 @@ export function BattleScreen({
             //   예전엔 이동 강조가 붕괴 표시를 통째로 덮어써서, 갈 수 있는 칸은 전부
             //   멀쩡해 보였고 "이동하면 안개에 안 들어간다"로 읽혔다.
             const cell = { col: ccol, row };
-            const turn = battle.state.round;
+            // 붕괴 시계 — 엘리트·보스는 늦게 시작한다(`collapseRound`).
+            const turn = collapseRound(battle.state);
             const hazard = isCollapsedCell(cell, turn)
               ? " cell--fog"
               : isCollapsedCell(cell, turn + 1)
@@ -2672,6 +2675,7 @@ function BattleHud({
   localSide,
   view,
   turn,
+  collapseTurn,
   remain,
   boss,
   place,
@@ -2687,6 +2691,8 @@ function BattleHud({
   localSide: 0 | 1;
   view: View;
   turn: number;
+  /** 붕괴 시계 라운드(엘리트·보스는 `turn`보다 늦다). */
+  collapseTurn: number;
   remain: number | null;
   /** 상대가 스크립트 보스면 그 연출 데이터 — 칭호와 페이즈 문턱 눈금을 붙인다. */
   boss?: BossCinematic;
@@ -2737,16 +2743,16 @@ function BattleHud({
       />
       {/* 라운드 판 아래 보조 줄 — 붕괴 경고와 소리·종료 버튼. */}
       <div className="bhud__tools">
-        {collapseEscalatesNext(turn) && (
+        {collapseEscalatesNext(collapseTurn) && (
           <div className="bhud__fog bhud__fog--warn">
-            {turn < COLLAPSE_START_ROUND
+            {collapseTurn < COLLAPSE_START_ROUND
               ? "⚠ 다음 라운드부터 전장이 무너진다!"
               : "⚠ 다음 라운드 붕괴 확대!"}
           </div>
         )}
-        {turn >= COLLAPSE_START_ROUND && (
+        {collapseTurn >= COLLAPSE_START_ROUND && (
           <div className="bhud__fog">
-            무너진 칸 라운드당 -{collapseDamageAt(turn)}
+            무너진 칸 라운드당 -{collapseDamageAt(collapseTurn)}
           </div>
         )}
         <SfxToggle />
