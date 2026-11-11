@@ -2,7 +2,8 @@
 The illustration is kept untouched at full screen height on the left. The scene is
 continued to the right by ping-pong mirroring a clean strip from the picture's right
 edge, then blurred progressively (depth of field) and dimmed for the UI.
-usage: python build.py   (expects cairn.png, sable.png, dirge.png, all 832x1216)"""
+usage: python build.py   (expects cairn.png, sable.png, magision.png, all 832x1216 — docs/redesign/2dImg)
+The mage is drawn from magision.png (2026-11-11) but still saved as bg-dirge.png, the name the game loads."""
 import numpy as np
 import cv2
 from PIL import Image, ImageFilter
@@ -47,8 +48,18 @@ def strip_knight(a):
     return st
 
 
-def build(name, strip, keep_first=None):
-    a = load(name)
+def strip_witch(a, x0=796, y0=870, y1=1165):
+    """the staff and the candles run off the right edge: refill those rows with the shelf rows
+    above them, re-lit with the hole's own (inpainted) low-frequency colour so the candle glow stays."""
+    st = strip_simple(a, x0, holes=[(y0, y1, x0, W)]).astype(np.float32)
+    src = a[y0 - (y1 - y0):y0, x0:].astype(np.float32)
+    lo = lambda m: cv2.GaussianBlur(m, (0, 0), 12)
+    st[y0:y1] = np.clip(src * lo(st[y0:y1]) / np.maximum(lo(src), 1), 0, 255)
+    return st.astype(np.uint8)
+
+
+def build(name, strip, keep_first=None, src=None):
+    a = load(src or name)
     seg = np.concatenate([strip[:, ::-1], strip], axis=1)
     need = round((1280 - PW) / S) + 8
     ext = np.concatenate([seg] * (need // seg.shape[1] + 2), axis=1)[:, :need]
@@ -77,7 +88,7 @@ def build(name, strip, keep_first=None):
 
 
 if __name__ == '__main__':
-    build('dirge', strip_simple(load('dirge'), 808))
+    build('dirge', strip_witch(load('magision')), src='magision')
     build('sable', strip_simple(load('sable'), 795, holes=[(650, 700, 795, 832)]))
     build('cairn', strip_knight(load('cairn')), keep_first=(44, (600, 960)))
     im = Image.new('RGB', (1280, 2160))

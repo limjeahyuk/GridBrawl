@@ -1,7 +1,9 @@
-"""DIRGE — Azure Witch (mage). v2 = matches the select illustration:
-wide blue witch hat with a gold band, long black hair, blue robe with gold trim, brown corset,
-wooden staff with a blue gem; arcane-blue magic."""
+"""DIRGE — Azure Witch (mage). v3 = matches the select illustration `2dImg/magision.png`:
+wide blue witch hat with a gold brooch and a hanging blue crystal, long black hair, warm skin,
+blue robe with gold trim and an open chest, laced brown corset, slit skirt,
+dark staff with a gold band and a blue gem; arcane-blue magic."""
 from rig import *
+from pix import _pack
 
 W, H = 96, 64
 AX, GY = 34, 62
@@ -13,15 +15,15 @@ PAL = dict(
     e='#efe0ff', E='#b48cff',
     w='#e8e4f0', s='#8a8296', S='#4a4458',
     b='#4a3020', n='#7a5236',
-    j='#3aa8ff', z='#1c1c30', k='#f2dce4', K='#c8a6b8', i='#b060ff', r='#d0203c',
+    j='#3aa8ff', z='#1c1c30', k='#f6d2b8', K='#cf9a80', d='#2a1a14', i='#b060ff', r='#d0203c',
     B='#141a46', u='#22307a', U='#3446a8', W='#5a70d0',
 )
 
 HOOD = sprite('''
 ....uu..........
 ...Buuu.........
-....BuUU........
-.....BUUU.......
+...gBuUU........
+...j.BUUU.......
 .....BuUUU......
 ....BugyjygB....
 ...BuuUUUUUU....
@@ -30,7 +32,7 @@ BBBuuuuUUUUUWWUU
 ..OOzzkkkkikk...
 ..OOzzkkkkkkK...
 ..OOzOkkkrkK....
-..OOz..kkkK.....
+..OOzj.kkkK.....
 ..OO..ugyjgu....
 ''', PAL)
 HOOD_PV = (8, 13)
@@ -38,12 +40,12 @@ HOOD_PV = (8, 13)
 TORSO = sprite('''
 ...gjg...
 ..uUgUUB.
-.BuUUUUU.
-.BuUUUUW.
-.BuUUUWU.
-.Bbbnnbb.
-.BbnyynB.
-.Bbbnnbb.
+.BuUkkkU.
+.BuUkkKW.
+.BuUgggU.
+.BbbnGbb.
+.BbbGnbb.
+.BbbnGbb.
 ..BuUUUU.
 ''', PAL)
 TORSO_PV = (4, 8)
@@ -54,27 +56,27 @@ gy.yg
 g...g
 .gyg.
 ..y..
-..n..
+.gjg.
+..g..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
+..d..
 ..b..
-..n..
 ..g..
 ''', PAL)
 STAFF_PV = (2, 14)
@@ -84,8 +86,8 @@ ROBE = ramp('#141a46', '#22307a', '#3446a8')
 ROBE_F = ramp('#0e1232', '#18225a', '#26347e')
 SLEEVE = ROBE
 SLEEVE_F = ROBE_F
-HAND = ramp('#a888a0', '#f2dce4', '#fff2f6')
-HAND_F = ramp('#80687c', '#c4aab8', '#dcc8d2')
+HAND = ramp('#b07e68', '#f6d2b8', '#ffeadb')
+HAND_F = ramp('#8a6454', '#c9a48e', '#e0c2ae')
 BOOT = ramp('#120c18', '#261a30', '#3c2c48')
 SOUL = hx('#8fd8ff')
 SOUL_CORE = hx('#ffffff')
@@ -143,6 +145,9 @@ class Dirge(Humanoid):
         for i in range(len(pts) - 3):
             a, b2 = pts[2 + i], pts[3 + i]
             trim.line((a[0], a[1] - 1), (b2[0], b2[1] - 1), hx('#c9952f'))
+        # v3: 옆트임 — 앞쪽 다리가 허리 아래부터 드러난다
+        trim.line((waist[0] + 2, waist[1] + 4), (na[0] + 1, na[1] - 1), hx('#f6d2b8'))
+        trim.line((waist[0] + 3, waist[1] + 5), (na[0] + 2, na[1] - 1), hx('#cf9a80'))
         over(body.a, trim.a)
         body.part(TORSO, TORSO_PV, hp, deg=t)
         body.part(HOOD, HOOD_PV, J['neck'], deg=t + pose.get('hd', 0))
@@ -163,7 +168,14 @@ class Dirge(Humanoid):
         for f in fxs + pose.get('fx', []):
             arr = f(J)
             fxa = arr if fxa is None else blend_over(fxa, arr)
-        return self.compose([back, body, front], fx=fxa)
+        out = self.compose([back, body, front], fx=fxa)
+        if fxa is not None:
+            # v3: 살색은 푸른 빛무리에 물들면 잿빛이 된다 — 반투명 빛무리 밑의 얼굴·손·다리는 원래 색으로
+            base = self.compose([back, body, front])
+            skin = np.isin(_pack(base), [_pack(np.array(hx(h), np.uint8)) for h in ('#f6d2b8', '#cf9a80', '#ffeadb')])
+            m = skin & (fxa[..., 3] < 200)
+            out[m] = base[m]
+        return out
 
 
 R = Dirge()

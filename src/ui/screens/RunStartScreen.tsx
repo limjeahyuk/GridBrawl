@@ -42,7 +42,7 @@ const TIER_UI: Record<RunDifficulty, { no: string; color: string }> = {
  * 탭에 보일 얼굴 자리 — 배경 그림(1280×720) 위 좌표. 탭은 그 그림을 `FACE_ZOOM`배로
  * 키워 이 점이 탭 가운데(위에서 46px)에 오게 자른다. 그림을 갈면 여기를 다시 맞춘다.
  */
-const HERO_FACE: Record<string, [number, number]> = { warrior: [240, 140], archer: [215, 212], mage: [262, 186] }
+const HERO_FACE: Record<string, [number, number]> = { warrior: [240, 140], archer: [215, 212], mage: [243, 172] }
 const FACE_ZOOM = 1.2
 
 /** 시작 체력 — 시그니처 유물의 최대 체력까지 반영한 실제 값(`startRun`과 같다). */
