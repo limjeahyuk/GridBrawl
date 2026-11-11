@@ -19,6 +19,10 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .f2{animation:f2 .9s steps(2) infinite}@keyframes f2{to{background-position:200% 0}}
 .f4{animation:f4 .9s steps(4) infinite}@keyframes f4{to{background-position:133.333% 0}}
 .f6{animation:f6 .66s steps(6) infinite}@keyframes f6{to{background-position:120% 0}}
+.ebg{position:absolute;inset:0;background-size:1280px 720px;background-repeat:no-repeat}
+.eb-forge{background-image:url(/redesign/cutscene/events/forge.png)}
+.eb-spring{background-image:url(/redesign/cutscene/events/spring.png)}
+.eb-trade{background-image:url(/redesign/cutscene/events/trader.png)}
 .a-forge{background-image:url(/redesign/ui/events/forge.png)}
 .a-trader{background-image:url(/redesign/ui/events/trader.png)}
 .a-hotspring{background-image:url(/redesign/ui/events/hotspring.png)}
@@ -63,6 +67,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   <div class="layer l-wall" aria-hidden="true"></div>
   <div class="layer l-floor" aria-hidden="true"></div>
   <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,6,12,0.72)"></div>
+  <div class="ebg {{bgCls}}" role="img" aria-label="{{ev.name}}" style="display: {{bgD}}"></div>
+  <div aria-hidden="true" style="display: {{bgD}}; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,6,12,0.78) 0%, rgba(8,6,12,0) 20%)"></div>
+  <div aria-hidden="true" style="display: {{bgD}}; position: absolute; top: 0; bottom: 0; right: 0; width: 820px; background: linear-gradient(90deg, rgba(8,6,12,0) 0%, rgba(8,6,12,0.55) 40%)"></div>
 
   <header style="position: absolute; left: 32px; right: 32px; top: 16px; display: flex; justify-content: space-between; align-items: center">
     <div style="display: flex; gap: 12px; align-items: baseline"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">? 칸 · 이벤트</h1><span style="font-size: 13px; color: #c9c4ee">위 탭으로 이벤트를 바꿔 본다 — 실제 게임에선 ? 칸에서 하나가 뽑힌다</span></div>
@@ -76,14 +83,14 @@ a{color:#f4d470}a:hover{color:#fff1b8}
     <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><button type="button" class="tab {{t.cls}}" onClick="{{t.onTap}}">{{t.label}}</button></sc-for>
   </nav>
 
-  <div style="position: absolute; left: 60px; top: 120px; width: 380px; height: 470px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; background: radial-gradient(ellipse at 50% 72%, {{glow}} 0%, rgba(12,10,18,0) 66%); border: 2px solid #3a3150">
+  <div style="position: absolute; left: 60px; top: 120px; width: 380px; height: 470px; box-sizing: border-box; display: {{artD}}; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; background: radial-gradient(ellipse at 50% 72%, {{glow}} 0%, rgba(12,10,18,0) 66%); border: 2px solid #3a3150">
     <div class="px {{ev.artCls}} {{ev.anim}} {{artFx}}" role="img" aria-label="{{ev.name}}" style="width: {{ev.aw}}px; height: {{ev.ah}}px; background-size: {{ev.abs}}"></div>
     <span style="position: absolute; left: 14px; top: 12px; font-family: 'Silkscreen', monospace; font-size: 11px; letter-spacing: 3px; color: #6a6478">{{ev.code}}</span>
   </div>
 
-  <section style="position: absolute; left: 480px; top: 130px; width: 740px; display: flex; flex-direction: column; gap: 12px">
+  <section style="position: absolute; left: {{secL}}px; top: {{secT}}px; width: {{secW}}px; box-sizing: border-box; padding: {{secPad}}; background: {{secBg}}; border: {{secBorder}}; box-shadow: {{secSh}}; display: flex; flex-direction: column; gap: 12px">
     <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{ev.tagCol}}">EVENT · {{ev.kindTxt}}</span>
-    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 42px; color: #fff6dc">{{ev.name}}</h2>
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">{{ev.name}}</h2>
     <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{ev.text}}</p>
 
     <sc-if value="{{showChoices}}" hint-placeholder-val="{{true}}">
@@ -156,7 +163,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
     </sc-if>
   </section>
 
-  <aside style="position: absolute; left: 60px; top: 606px; width: 380px; display: flex; flex-direction: column; gap: 6px">
+  <aside style="position: absolute; left: 60px; top: 606px; width: 380px; display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; background: {{asideBg}}">
     <span style="font-size: 11px; color: #8a849a">시안 조작</span>
     <div style="display: flex; gap: 6px; flex-wrap: wrap">
       <sc-for list="{{demo}}" as="d" hint-placeholder-count="2"><button type="button" class="fbtn {{d.cls}}" onClick="{{d.onTap}}">{{d.t}}</button></sc-for>
@@ -233,7 +240,7 @@ class Component extends DCLogic {
       forge: {
         name: '빈 대장간', code: 'EV-FORGE', kindTxt: '한 번', tagCol: '#ff8a5a', glow: 'rgba(255,138,58,0.32)',
         text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
-        art: ['a-forge', 'f6', 64, 52, 6],
+        art: ['a-forge', 'f6', 64, 52, 6], bg: 'eb-forge',
         choices: [
           { label: '카드라도 두들긴다', chips: [], onTap: () => done(bigRes('▲', '#ffd86a', '불 앞에 카드를 올렸다', '카드 강화 화면으로 넘어간다 — 룰렛으로 수치나 범위를 올린다.', '#ffd86a'), { exit: 'upgrade' }) },
           { label: '주변에 쇠라도 챙긴다', chips: [], onTap: () => done(relicRes('coldiron', '{r}를 주웠다', '불이 이렇게 뜨거운데도 이상하게 차갑다.'), { iron: true }) },
@@ -244,7 +251,7 @@ class Component extends DCLogic {
       trade: {
         name: '거래', code: 'EV-TRADE', kindTxt: '한 번', tagCol: '#c48aff', glow: 'rgba(196,138,255,0.25)',
         text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.',
-        art: ['a-trader', 'bob', 52, 60, 1],
+        art: ['a-trader', 'bob', 52, 60, 1], bg: 'eb-trade',
         choices: [
           { label: '내 카드 한 장 ↔ 다른 카드', chips: [tag('카드 1장')], onTap: () => set({ phase: 'pick', pickFor: 'card2card' }) },
           { label: '내 카드 한 장 ↔ 유물', chips: [tag('카드 1장')], onTap: () => set({ phase: 'pick', pickFor: 'card2relic' }) },
@@ -254,7 +261,7 @@ class Component extends DCLogic {
       spring: {
         name: '온천', code: 'EV-SPRING', kindTxt: '한 번', tagCol: '#6ae0e0', glow: 'rgba(106,224,224,0.25)',
         text: '김이 모락모락 나는 아주 뜨끈한 온천을 발견했다.\n당장 쉬고 싶어진다.',
-        art: ['a-hotspring', 'f4', 76, 48, 4],
+        art: ['a-hotspring', 'f4', 76, 48, 4], bg: 'eb-spring',
         choices: [
           { label: '휴식', chips: [], onTap: () => { const n = healBy(Math.round(st.maxHp * 0.3)); done(bigRes(`+${n}`, '#b6ea6a', '몸이 사르르 녹는다', `체력이 ${n} 회복됐다.`, '#6ae0e0'), { hp: st.hp + n }); } },
         ],
@@ -336,7 +343,7 @@ class Component extends DCLogic {
         ],
       },
     };
-    const ORDER = [['forge', '낡은 대장간'], ['trade', '거래'], ['spring', '온천'], ['apothecary', '약방'], ['jar', '항아리'], ['gacha', '갓챠'], ['mole', '두더지'], ['surgery', '수술실']];
+    const ORDER = [['forge', '대장장이'], ['trade', '거래'], ['spring', '온천'], ['apothecary', '약방'], ['jar', '항아리'], ['gacha', '갓챠'], ['mole', '두더지'], ['surgery', '수술실']];
     const ev = E[st.ev];
     const [artCls, anim, aw, ah, nf] = ev.art;
     const S4 = 4;
@@ -388,6 +395,11 @@ class Component extends DCLogic {
       gold: String(st.gold), hp: String(st.hp), maxHp: String(st.maxHp), tabs,
       ev: { name: ev.name, code: ev.code, kindTxt: ev.kindTxt, tagCol: ev.tagCol, text: ev.text, artCls, anim, aw: aw * S4, ah: ah * S4, abs: `${aw * S4 * nf}px ${ah * S4}px` },
       glow: ev.glow, artFx: st.fx || '',
+      // 일러스트가 있는 이벤트(대장간 · 거래 · 온천)는 여관처럼 그림을 통째로 깔고 글과 선택지를 오른쪽 패널에 올린다
+      bgCls: ev.bg || '', bgD: ev.bg ? 'block' : 'none', artD: ev.bg ? 'none' : 'flex', asideBg: ev.bg ? 'rgba(8,6,12,0.7)' : 'transparent',
+      secL: ev.bg ? 600 : 480, secT: ev.bg ? 116 : 130, secW: ev.bg ? 644 : 740,
+      secPad: ev.bg ? '18px 22px 20px' : '0', secBg: ev.bg ? 'rgba(16,10,8,0.88)' : 'transparent',
+      secBorder: ev.bg ? '3px solid #0a0604' : '0', secSh: ev.bg ? 'inset 0 0 0 2px ' + ev.tagCol + ', 0 8px 0 rgba(0,0,0,0.4)' : 'none',
       showChoices: st.phase === 'choose', choices,
       showPicker: st.phase === 'pick', pickTitle, pickItems, cancelPick: () => set({ phase: 'choose', pickFor: null }),
       showBattle: st.phase === 'battle',

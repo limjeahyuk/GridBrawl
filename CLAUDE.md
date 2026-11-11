@@ -178,7 +178,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 ## 7. 에셋 규칙
 
 - 게임이 쓰는 그림은 `public/`만. **원본·안 쓰는 그림을 `public/`에 두지 않는다**(배포된다).
-- 사용자가 준 원본 일러스트는 **`docs/redesign/2dImg/`**(`cairn`·`sable`·`dirge`·`inn.png` — 버전 관리 · 배포 안 됨). 배경은 `docs/redesign/tools/hero-bg`·`inn-bg/build.py`로 굽는다.
+- 사용자가 준 원본 일러스트는 **`docs/redesign/2dImg/`**(`cairn`·`sable`·`dirge`·`inn.png`·`대장간`·`대장장이`·`온천`·`거래상.png` — 버전 관리 · 배포 안 됨). 배경은 `docs/redesign/tools/hero-bg`·`inn-bg/build.py`로 굽는다.
 - 서드파티 스프라이트 팩 원본은 `assets-raw/`(**gitignore** — EULA상 커밋 금지), `npm run sprites`로 `public/sprites/`에 굽는다. 리디자인 시트는 `public/redesign/sprites/`(`docs/redesign/tools/`가 생성).
 - `public/sprites/`에 남은 옛 시트는 아직 리디자인 그림이 없는 몬스터용(철퇴병 · 감시안 · 버서커 · 뱀파이어 · 가디언 · 석궁병 · 주술사 · 기사 · 암살자 — `medieval-warrior`·`flying-eye`·`martial-hero`·`mimic`·`angel`·`church-wizard`)과 `rat`(미사용, 원본이 없어 보존) · `hero-knight`(앱 아이콘 원본 — `npm run icon`)뿐이다. 옛 배경 `public/bg`·바위 `public/terrain`은 2026-11-09에 지웠다(리디자인으로 대체).
 - 시트 `facesRight`는 **몸이 향한 쪽**(공격 프레임의 타격 방향)으로 판정. 모든 시트에 명시.
@@ -212,7 +212,7 @@ React 19 + TypeScript + Vite, 게임 엔진 없음. `npm run dev` · `build` · 
 
 ## 11. 해야 할 일 (디자인 대기)
 
-`docs/redesign/PROGRESS.md` 2-bis가 기준이다 — 사슬 이벤트 그림 4장·늑대 도트 · 불사조 보스 · 도감 도움말(튜토리얼·팁 다시 보기) · 로그인 약관/개인정보 링크 · 보물 화면 시안 · 대장간 배경 그림 · 전사 방패 도트 · 마법사 직업 패시브 마법서 아이콘.
+`docs/redesign/PROGRESS.md` 2-bis가 기준이다 — 사슬 이벤트 그림 4장·늑대 도트 · 불사조 보스 · 도감 도움말(튜토리얼·팁 다시 보기) · 로그인 약관/개인정보 링크 · 보물 화면 시안 · 대장간 화면 · 이벤트 3종 일러스트 배경 · 고블린 상점 새 시안(코드 반영) · 전사 방패 도트 · 마법사 직업 패시브 마법서 아이콘.
 
 ## 컨벤션
 
