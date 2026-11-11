@@ -1,7 +1,18 @@
 # 고블린 장사꾼
 
 시안: `screens/GoblinShop.dc.html`(고블린 상점, 눌러 볼 수 있음), `screens/Merchants.dc.html`(스프라이트 전체).
-스프라이트: `public/redesign/sprites/{goblin-poor, goblin-mid, goblin-rich}/` — `meta.json` 값은 `sprites-v2.ts`에 들어 있다.
+스프라이트(전투용): `public/redesign/sprites/{goblin-poor, goblin-mid, goblin-rich}/` — `meta.json` 값은 `sprites-v2.ts`에 들어 있다.
+
+**상점 화면 그림(여관과 같은 배치)**: 화면 왼쪽에 단계별 일러스트를 통째로 두고, 오른쪽에 대사창 · 선택지(또는 진열 · 습격 패널)를 올린다. 이 화면에는 도트 스프라이트를 쓰지 않는다 — 스프라이트는 덮쳤을 때의 전투에서만 나온다.
+
+| 단계 | 배경(1280×720) | 원본 일러스트 |
+| --- | --- | --- |
+| 가난한 고블린 (쓴 돈 0~79) | `public/redesign/cutscene/goblin/bg-poor.png` | `docs/redesign/2dImg/goblin_2.png` (두건 망토 · 맨발) |
+| 중간 고블린 (80~199) | `public/redesign/cutscene/goblin/bg-mid.png` | `docs/redesign/2dImg/goblin_1.png` (안경 · 조끼) |
+| 부자 고블린 (200 이상) | `public/redesign/cutscene/goblin/bg-rich.png` | `docs/redesign/2dImg/goblin_3.png` (왕좌) |
+
+- 배경은 `tools/event-bg/build.py <원본> <결과>`로 만든다: 그림은 왼쪽에 그대로 두고, 오른쪽은 **같은 그림을 크게 늘려 강하게 흐리고 어둡게 한 색 배경**이다(지어낸 풍경 없음). 그림의 오른쪽 가장자리는 그 배경으로 부드럽게 녹아든다. 다른 ? 이벤트도 일러스트가 생기면 같은 스크립트와 배치를 쓴다.
+- **고블린 재산은 화면에 보여 주지 않는다**(2026-11-12 사용자 지정) — 게이지 · 쓴 돈 · "N 더 쓰면 ○○" · 단계 얼굴 표시는 전부 없다. `goblinSpent`는 안에서만 세고, 플레이어에게는 고블린 그림과 진열이 달라지는 것으로만 드러난다. 세 단계 시안은 `screens/GoblinTiers.dc.html`.
 
 > ⚠ 아래 숫자(체력·가격·문턱·보상)는 **시안에서 임의로 정한 값**이다. 규칙의 모양만 지키면 밸런스는 바꿔도 된다.
 
@@ -21,8 +32,8 @@ export const goblinTier = (spent: number): GoblinTier =>
   spent >= GOBLIN_TIER_AT.rich ? 'rich' : spent >= GOBLIN_TIER_AT.mid ? 'mid' : 'poor'
 ```
 
-- 물건을 살 때마다 `goblinSpent += price`를 하고 `cheer`를 재생한다. 문턱을 넘으면 그 자리에서 스프라이트를 다음 단계로 바꾼다. 이때 번쩍임(`flash`)과 토스트를 띄운다: "돈맛을 봤다 — 중간 고블린이 됐다!" / "금니까지 했다 — 부자 고블린이 됐다!"
-- 상점 화면 위쪽 게이지에는 쓴 돈, 문턱 80 · 200, "N 더 쓰면 ○○"를 보여 준다.
+- 물건을 살 때마다 `goblinSpent += price`를 하고 `cheer`를 재생한다. 문턱을 넘으면 그 자리에서 **배경 그림을 다음 단계로 바꾼다**(0.6초 겹쳐 넘김). 이때 번쩍임(`flash`)과 토스트를 띄운다: "돈맛을 봤다 — 중간 고블린이 됐다!" / "왕좌까지 샀다 — 부자 고블린이 됐다!"
+- ~~상점 화면 위쪽 게이지~~ — 없앴다(2026-11-12). 쓴 돈과 문턱은 화면 어디에도 나오지 않는다.
 - **덮쳐서 이기면(고블린을 쓰러뜨리면) `goblinSpent = 0`**으로 돌아간다. **그 뒤에 나오는 고블린 상점은 전부 가난한 고블린부터 다시 시작**한다(사용자 확정). 다시 키우려면 처음부터 돈을 써야 한다.
   - 그래서 "키워서 턴다"는 선택이 생긴다. 많이 사서 부자로 만든 다음 덮치면 보상이 크지만, 그만큼 세다.
 

@@ -1,4 +1,4 @@
-"""DIRGE — Azure Witch (mage). v2 = matches the select illustration:
+"""DIRGE — Hollow Oracle (mage). v2 = matches the select illustration:
 wide blue witch hat with a gold band, long black hair, blue robe with gold trim, brown corset,
 wooden staff with a blue gem; arcane-blue magic."""
 from rig import *
@@ -13,7 +13,7 @@ PAL = dict(
     e='#efe0ff', E='#b48cff',
     w='#e8e4f0', s='#8a8296', S='#4a4458',
     b='#4a3020', n='#7a5236',
-    j='#3aa8ff', z='#1c1c30', k='#f2dce4', K='#c8a6b8', i='#b060ff', r='#d0203c',
+    j='#3aa8ff', z='#1c1c30', k='#e8bfae', K='#b88a84', i='#b060ff', r='#d0203c',
     B='#141a46', u='#22307a', U='#3446a8', W='#5a70d0',
 )
 
@@ -26,11 +26,11 @@ HOOD = sprite('''
 ....BugyjygB....
 ...BuuUUUUUU....
 BBBuuuuUUUUUWWUU
-..zOOzzkkkkk....
-..OOzzkkkkikk...
-..OOzzkkkkkkK...
-..OOzOkkkrkK....
-..OOz..kkkK.....
+..zOOOOOOOkk....
+..OOOOOOkkik....
+..OOOOOzkkkkK...
+..OOOOOzkkrk....
+..OOOOz.kkK.....
 ..OO..ugyjgu....
 ''', PAL)
 HOOD_PV = (8, 13)
@@ -84,7 +84,7 @@ ROBE = ramp('#141a46', '#22307a', '#3446a8')
 ROBE_F = ramp('#0e1232', '#18225a', '#26347e')
 SLEEVE = ROBE
 SLEEVE_F = ROBE_F
-HAND = ramp('#a888a0', '#f2dce4', '#fff2f6')
+HAND = ramp('#b88a84', '#e8bfae', '#f6d8cc')
 HAND_F = ramp('#80687c', '#c4aab8', '#dcc8d2')
 BOOT = ramp('#120c18', '#261a30', '#3c2c48')
 SOUL = hx('#8fd8ff')
@@ -121,7 +121,7 @@ class Dirge(Humanoid):
         hair = [(nk[0] - 2, nk[1] - 4), (nk[0] - 6, nk[1] - 3), (nk[0] - 7 - hw * 1.5, nk[1] + 4),
                 (nk[0] - 6 - hw * 2.5 + math.sin(hph) * 0.6, hp[1] + 3), (nk[0] - 3 - hw * 1.5, hp[1] + 4),
                 (nk[0] - 2, nk[1] + 3)]
-        back.poly(hair, ramp('#06060c', '#14142a', '#2a2a48'), True, light='left')
+        back.poly(hair, ramp('#040408', '#0c0c14', '#1a1a26'), True, light='left')
         # robe skirt from waist to hem following the feet
         wv = pose.get('wind', 0.5); ph = pose.get('cph', 0)
         up = J['up']
