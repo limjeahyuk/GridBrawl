@@ -9,6 +9,16 @@
 
 그림은 `public/redesign/ui/events/`에 있다(×4로 쓴다). 뱀은 `public/redesign/sprites/snake/`에 있다.
 
+**일러스트가 있는 이벤트는 여관처럼 그림을 화면 전체 배경으로 깔고**, 이벤트 이름 · 글 · 선택지를 오른쪽 패널(x 600~1244)에 올린다(2026-11-12). 도트 그림 틀(왼쪽 380×470)은 그 이벤트에서 뺀다.
+
+| 이벤트 | 배경(1280×720) | 원본 |
+| --- | --- | --- |
+| 낡은 대장간 `forge` | `public/redesign/cutscene/events/forge.png` | `2dImg/대장간.png` — 화면을 그대로 채움 |
+| 거래 `trade` | `public/redesign/cutscene/events/trader.png` | `2dImg/거래상.png` — 거래상은 왼쪽, 오른쪽은 같은 그림을 흐린 색 배경 |
+| 온천 `spring` | `public/redesign/cutscene/events/spring.png` | `2dImg/온천.png` — 화면을 그대로 채움 |
+
+배경은 `tools/event-bg/build_wide.py`(가로 그림용: `full` = 화면 채우기, `shift` = 높이에 맞추고 끝을 흐린 배경으로 녹임)로 만든다. 나머지 이벤트(약방 · 항아리 · 갓챠 · 두더지 · 수술실)는 그림이 올 때까지 도트 틀 그대로.
+
 ## 공통 규칙 (모든 이벤트)
 
 1. **선택지에는 "대가"만 보인다.** `라벨 / 대가 - 결과`에서 `- 결과`는 **화면에 절대 안 나온다.** 고른 뒤 결과 패널에서 처음 공개된다.
