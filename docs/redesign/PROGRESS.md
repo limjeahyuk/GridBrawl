@@ -144,7 +144,7 @@
 
 ## 3. 기록
 
-- 2026-11-12 — 앱 아이콘 캐시 무효화: `index.html`·`manifest.webmanifest`의 아이콘 주소에 `?v=2`. 새 거래상 아이콘(`5a31d13`)은 저장소에만 있고 **배포된 사이트는 아직 옛 전사 아이콘**이었다(배포 필요). 룰 변경 없음.
+- 2026-11-12 — 앱 아이콘 캐시 무효화: `index.html`·`manifest.webmanifest`의 아이콘 주소에 `?v=2`. 새 거래상 아이콘(`5a31d13`)이 저장소에만 있고 사이트는 옛 전사 아이콘이었다 → 같은 날 Firebase Hosting에 배포해 새 아이콘이 나오는 것을 확인했다. 룰 변경 없음.
 
 - 2026-11-12 — **앱 아이콘 교체**(사용자 선택): 옛 전사(`hero-knight`) 얼굴 → **? 칸 거래상** 일러스트(`2dImg/거래상.png`). 시안 넷(전투판 격자 · 영웅 얼굴 · 영웅 얼굴 어두운 배경 · 영웅 도트)을 48px까지 줄여 비교한 뒤 "얼굴 + 어두운 배경"을 거래상으로 다시 구웠다. 후드가 짙어 어두운 배경에 묻히므로 **머리 뒤 빛무리 + 실루엣 테두리 빛**(등불 색)으로 띄웠다 — 48px에서 형태를 읽히게 하는 건 이 대비다. `scripts/makeicon.mjs`는 이제 구운 마스터 한 장(`docs/redesign/tools/icon/master-1024.png`)을 줄이기만 한다(의존성 0, `--preview` 그대로). 구도를 바꾸려면 `tools/icon/build.py`(pillow · rembg). `apple-touch-icon.png`는 알파를 빼고 낸다(iOS). ⚠ 이로써 `public/sprites/hero-knight/`는 쓰는 곳이 없다.
 - 2026-11-12 — 대장간 시안 `Blacksmith.dc.html`(저장소 사본)을 새 규칙으로 고침: 선택지 셋(강화 맡기기 80G → `Upgrade.dc.html` · 직접 강화 무료 → `Upgrade.dc.html` · 나가기 → `RunMap.dc.html`), 쉬어 가기 · 회복 연출 삭제, 대사 갱신, "골드 부족 보기(시안)" 버튼. 룰 변경 없음.
