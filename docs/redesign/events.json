@@ -531,7 +531,7 @@
      }
     },
     {
-     "label": "땅에 심고 물을 준다",
+     "label": "땅에 심고 영양분을 뿌린다",
      "hidden": {
       "needRelic": "nutrient"
      },

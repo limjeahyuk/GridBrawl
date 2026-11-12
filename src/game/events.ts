@@ -269,7 +269,7 @@ export function eventChoices(run: RunState, st: EventState): EventChoice[] {
       return [
         { key: 'wt-plant', label: '땅에 심는다', cost: [item(relicName(SEED))] },
         hasNutrient
-          ? { key: 'wt-water', label: '땅에 심고 물을 준다', cost: [item(relicName(SEED)), item(relicName(NUTRIENT))], hidden: 'open', sub: `히든 · 「${relicName(NUTRIENT)}」이 있어서 열렸다` }
+          ? { key: 'wt-water', label: '땅에 심고 영양분을 뿌린다', cost: [item(relicName(SEED)), item(relicName(NUTRIENT))], hidden: 'open', sub: `히든 · 「${relicName(NUTRIENT)}」이 있어서 열렸다` }
           : { key: 'wt-water', label: '???', cost: [], hidden: 'locked', sub: '잠겨 있다 — 무언가 필요해 보인다', off: '잠김' },
         { key: 'leave', label: '그냥 간다', cost: [], leave: true },
       ]

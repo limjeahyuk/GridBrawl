@@ -1484,9 +1484,9 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
     check(`화상 면역 ${immune ? '있음 → 화상 없음' : '없음 → 화상'}`, b.state.status[1].some((e) => e.kind === 'burn'), !immune)
   }
 
-  // 세계수 — 심기는 카드를 고르게 하고, 물 주기는 영양가루가 있어야 열린다.
+  // 세계수 — 심기는 카드를 고르게 하고, 영양분 뿌리기는 영양가루가 있어야 열린다.
   const wt = at(12, ['seed'])
-  check('세계수 — 영양가루가 없으면 물 주기가 잠긴다', eventChoices(wt, startEvent('worldtree')).find((c) => c.key === 'wt-water')?.hidden, 'locked')
+  check('세계수 — 영양가루가 없으면 영양분 뿌리기가 잠긴다', eventChoices(wt, startEvent('worldtree')).find((c) => c.key === 'wt-water')?.hidden, 'locked')
   const plant = resolveEventChoice(wt, startEvent('worldtree'), 'wt-plant')!
   check('세계수 — 심으면 씨앗을 잃고 카드를 보여 준다', [plant.run.relicIds.includes('seed'), plant.cardId, plant.done], [false, WORLDTREE_CARD, false])
   const take = resolveEventChoice(plant.run, plant.st, 'wt-take')!
@@ -1494,7 +1494,7 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   check('세계수 — 두고 갈 수도 있다', eventChoices(plant.run, plant.st).some((c) => c.leave), true)
   check('세계수의 가호는 보상 풀에 없다', RUN_CARDS.some((c) => c.id === WORLDTREE_CARD), false)
   const water = resolveEventChoice(at(12, ['seed', 'nutrient']), startEvent('worldtree'), 'wt-water')!
-  check('세계수 — 물을 주면 씨앗·영양가루 → 가지', ['seed', 'nutrient', 'worldtree'].map((id) => water.run.relicIds.includes(id)), [false, false, true])
+  check('세계수 — 영양분을 뿌리면 씨앗·영양가루 → 가지', ['seed', 'nutrient', 'worldtree'].map((id) => water.run.relicIds.includes(id)), [false, false, true])
   check('가지·깃털은 보상 풀에 없다', REWARD_RELICS.some((x) => x.id === 'worldtree' || x.id === 'phoenixfeather'), false)
   // 세계수의 가호 = 중립 · 전설 · 이벤트 전용 / 세계수의 가지 = 전설 · 이벤트 전용(2026-11-10 사용자 지정).
   // 보상 · 상점 · 고블린(부자 = 전설 확률 최대) · 무작위 유물 어디서도 안 나온다.
