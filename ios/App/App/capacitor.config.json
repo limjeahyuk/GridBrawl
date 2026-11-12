@@ -1,0 +1,8 @@
+{
+	"appId": "com.imjaehyeog.GridBrawl",
+	"appName": "GridBrawl",
+	"webDir": "dist",
+	"packageClassList": [
+		"AppPlugin"
+	]
+}
