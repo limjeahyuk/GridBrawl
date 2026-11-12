@@ -18,6 +18,17 @@ import { sheetFor } from '../../art/sprites'
 import { UpgradeScreen } from './UpgradeScreen'
 import { WORLDTREE_CARD } from '../../game/runcards'
 
+/**
+ * 일러스트가 있는 이벤트(디자인 `EventScenes`) — 그림을 화면 전체에 깔고 이름 · 글 · 선택지를
+ * 오른쪽 패널에 올린다(여관과 같은 배치). 색은 패널 테두리 · 종류 글자.
+ * 그림이 없는 이벤트는 지금처럼 지역 배경 + 왼쪽 도트 그림.
+ */
+const EVENT_SCENE: Partial<Record<EventId, string>> = {
+  forge: '#ff8a5a',
+  trade: '#c48aff',
+  spring: '#6ae0e0',
+}
+
 export function EventScreen({
   run,
   eventId,
@@ -66,10 +77,25 @@ export function EventScreen({
   const foe = out?.fight ? currentEnemy({ ...cur, special: out.fight }) : null
   const foeSheet = foe ? sheetFor(foe.spriteId ?? foe.id) : null
 
+  const scene = EVENT_SCENE[st.id]
+
   return (
-    <div className="screen event">
-      <SceneLayers scene={regionOf(cur.floor)} />
-      <div className="screenveil" />
+    <div
+      className={`screen event ${scene ? 'event--scene' : ''}`}
+      style={scene ? { ['--evcol' as string]: scene } : undefined}
+    >
+      {scene ? (
+        <>
+          <div className={`artbg artbg--fill artbg--ev-${st.id}`} aria-hidden="true" />
+          <div className={`artbg artbg--ev-${st.id}`} role="img" aria-label={def.name} />
+          <i className="event__sceneveil" aria-hidden="true" />
+        </>
+      ) : (
+        <>
+          <SceneLayers scene={regionOf(cur.floor)} />
+          <div className="screenveil" />
+        </>
+      )}
       <header className="event__head">
         <div className="shop__where">
           <h1 className="shop__title">? 칸 · 이벤트</h1>
@@ -88,7 +114,7 @@ export function EventScreen({
         </div>
       </header>
 
-      <div className="event__stage">
+      {!scene && <div className="event__stage">
         <i
           className={`evart ${a.frames > 1 ? 'evart--anim' : ''}`}
           role="img"
@@ -104,7 +130,7 @@ export function EventScreen({
           }}
         />
         <span className="event__code">{def.code}</span>
-      </div>
+      </div>}
 
       <section className="event__panel">
         <span className="event__kicker">

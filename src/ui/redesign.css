@@ -205,6 +205,15 @@
 .artbg--mage { background-image: url('/redesign/heroes/bg-dirge.png'); }
 /* 여관(상점) — 마렌은 왼쪽 그림 그대로, 오른쪽은 이어 그리고 흐리게(`docs/redesign/tools/inn-bg/build.py`). */
 .artbg--inn { background-image: url('/redesign/cutscene/inn/inn-bg.png'); }
+/* 대장간 · 고블린 상점 단계별 · 그림 있는 ? 이벤트(2026-11-12, 디자인 `Blacksmith` · `GoblinTiers` · `EventScenes`).
+   전부 1280×720 한 장 — 인물은 왼쪽, 오른쪽은 이어 그리고 흐리게(`docs/redesign/tools/event-bg/build.py`). */
+.artbg--smith { background-image: url('/redesign/cutscene/smith/smith-bg.png'); }
+.artbg--goblin-poor { background-image: url('/redesign/cutscene/goblin/bg-poor.png'); }
+.artbg--goblin-mid { background-image: url('/redesign/cutscene/goblin/bg-mid.png'); }
+.artbg--goblin-rich { background-image: url('/redesign/cutscene/goblin/bg-rich.png'); }
+.artbg--ev-forge { background-image: url('/redesign/cutscene/events/forge.png'); }
+.artbg--ev-trade { background-image: url('/redesign/cutscene/events/trade.png'); }
+.artbg--ev-spring { background-image: url('/redesign/cutscene/events/spring.png'); }
 .artbg--in { animation: artbg-in 0.5s ease-out both; }
 @keyframes artbg-in { from { opacity: 0; transform: translateX(-24px); } }
 .artbg__veil {
@@ -2810,53 +2819,17 @@
 /* ---- 고블린 장사꾼(디자인 `GoblinShop`) ---------------------------------- */
 .screen.gob { display: block; padding: 0; color: #efe9f5; }
 .gob .screenveil { background: rgba(10, 8, 16, 0.62); }
-.gob__where { color: #b6ea6a !important; }
-.gob__wealth { position: absolute; left: 40px; top: 92px; z-index: 1; width: 540px; padding: 10px 14px; box-sizing: border-box; background: rgba(18,15,26,0.9); border: 2px solid #0a0810; box-shadow: inset 0 0 0 2px #5a4a2a; display: flex; flex-direction: column; gap: 6px; }
-.gob__wealthhead { display: flex; justify-content: space-between; align-items: baseline; }
-.gob__wealthhead > b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: #ffd86a; }
-.gob__wealthhead span { font-size: 12px; color: #c9c2d6; }
-.gob__wealthhead span b { font-family: var(--font-px); color: #ffd86a; }
-.gob__bar { position: relative; height: 14px; background: #0a0810; border: 2px solid #3a3150; }
-.gob__bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a3a, #c9952f, #ffd24a); transition: width .4s; }
-.gob__bar em { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #efe9f5; }
-.gob__marks { position: relative; height: 16px; font-size: 11px; color: #b9b1c9; }
-.gob__marks span { position: absolute; }
-.gob__rug { position: absolute; left: 70px; top: 418px; width: 400px; height: 46px; border-radius: 50%; box-shadow: 0 0 0 4px rgba(0,0,0,0.25); background: #4e3420; }
-.gob__rug--mid { background: #5a3418; } .gob__rug--rich { background: #4a1458; }
-.gob__spr { position: absolute; left: 96px; top: 200px; width: 336px; height: 232px; display: flex; justify-content: center; align-items: flex-end; z-index: 1; }
-.gob__spr.is-flash { animation: gob-flash .9s ease-out 1; }
-@keyframes gob-flash { 0% { filter: brightness(3) } 100% { filter: none } }
-.gob__toast { position: absolute; left: 310px; top: 168px; z-index: 3; transform: translateX(-50%); padding: 10px 20px; background: #2a1c08; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #ffd24a, 0 0 30px rgba(255,210,74,0.5); white-space: nowrap; display: flex; gap: 10px; align-items: center; font-family: var(--font-display); font-size: 22px; color: #ffd86a; animation: gob-toast 2s ease-out 1 forwards; }
 @keyframes gob-toast { 0% { opacity: 0; transform: translate(-50%, 10px) } 15% { opacity: 1; transform: translate(-50%, 0) } 80% { opacity: 1 } 100% { opacity: 0 } }
-.gob__intro { position: absolute; left: 40px; top: 486px; z-index: 1; width: 540px; display: flex; flex-direction: column; gap: 10px; }
-.gob__name { display: flex; gap: 8px; align-items: center; }
-.gob__name b { font-family: var(--font-display); font-weight: 400; font-size: 26px; color: #fff6dc; }
-.gob__name small { font-size: 12px; color: #c9c2d6; }
 .gob__tag { font-family: var(--font-px); font-size: 12px; padding: 2px 8px; background: #4e3420; color: #e8d0a0; }
 .gob__tag--mid { background: #3e5a6a; color: #e4f0f8; } .gob__tag--rich { background: #c9952f; color: #1d1408; }
-.gob__say { position: relative; padding: 12px 16px; background: #e8dcc0; color: #2a1c14; border: 3px solid #0a0810; }
-.gob__say::before { content: ''; position: absolute; left: 160px; top: -11px; width: 14px; height: 14px; background: #e8dcc0; transform: rotate(45deg); border-left: 3px solid #0a0810; border-top: 3px solid #0a0810; }
-.gob__say p { margin: 0; font-size: 15px; line-height: 1.55; }
-.gob__panel { position: absolute; left: 620px; top: 100px; z-index: 1; width: 620px; display: flex; flex-direction: column; gap: 10px; }
 .gob .rise { animation: upg-rise .3s ease-out 1; }
-.gob__panel h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 36px; color: #fff6dc; }
-.gob__panel > p { margin: 0; font-size: 15px; line-height: 1.6; color: #e4def0; }
 .gob__kicker { font-family: var(--font-px); font-size: 13px; letter-spacing: 4px; color: #b6ea6a; }
 .gob__kicker.is-red { color: #ff8a7a; }
-.gob__opts { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-.gob__opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 16px; box-sizing: border-box; background: #1a1626; border: 2px solid #4a4058; color: #efe9f5; font: inherit; text-align: left; cursor: pointer; flex-wrap: wrap; }
-.gob__opt:hover { border-color: #f4d470; background: #221c30; }
-.gob__opt > span { font-family: var(--font-display); font-size: 23px; flex-grow: 1; }
-.gob__opt i { font-style: normal; }
-.gob__opt--fight > span { color: #ffb0b0; }
-.gob__opt--fight:hover { border-color: #ff6a5a; background: #2a1418; }
 .gob__tradehead { display: flex; justify-content: space-between; align-items: baseline; }
-.gob__tradehead h2 { font-size: 30px; }
 .gob__tradehead > span:last-child { font-size: 13px; color: #c9c2d6; }
 .gob__row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #1a1626; border: 2px solid #3a3150; }
 .gob__row.is-owned { opacity: .45; }
 .gob__thumb { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #120f1a; border: 2px solid #2a2438; overflow: hidden; }
-.gob__card { zoom: 0.4; }
 .gob__info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 .gob__iname { display: flex; gap: 6px; align-items: center; font-family: var(--font-display); font-size: 19px; }
 .gob__iname em { font-style: normal; font-family: var(--font-body); }
@@ -2880,11 +2853,6 @@
 .gob__stats dd { margin: 2px 0 0; font-family: var(--font-px); font-size: 22px; }
 .gob__stats .is-red { color: #ff9a9a; } .gob__stats .is-blue { color: #8ad0ff; } .gob__stats .is-gold { color: #ffd86a; font-family: var(--font-body); font-size: 20px; }
 .gob__stats .is-text { font-family: var(--font-display); font-size: 20px; }
-.gob__sub { display: flex; flex-direction: column; gap: 6px; }
-.gob__sub > span { font-size: 12px; color: #b9b1c9; }
-.gob__sub > div { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.gob__sub i { font-style: normal; }
-.gob__sub small { font-size: 12px; color: #c9c2d6; }
 .gob__q { width: 32px; height: 32px; display: flex !important; align-items: center; justify-content: center; background: #2a1620; border: 2px solid #8a3040; font-family: var(--font-px); font-size: 16px; color: #ff9a9a; }
 .gob__loot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 10px; border-top: 2px solid #2a2438; }
 .gob__loot > span { font-size: 12px; color: #b9b1c9; }
@@ -3036,17 +3004,90 @@
 .inn__optbody span.is-heal { color: #b6ea6a; }
 .inn__optbody span.is-mute { color: #b9a89a; }
 .inn__chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-family: var(--font-px); font-size: 14px; white-space: nowrap; background: #2a1c08; color: #ffd86a; border: 1px solid #c9952f; }
-/* 대장간 — 시안처럼 대사창은 왼쪽 아래, 선택지는 오른쪽 아래. */
-.smith__glow { position: absolute; left: 60px; top: 120px; width: 700px; height: 560px; pointer-events: none; background: radial-gradient(ellipse at 45% 60%, rgba(255, 138, 58, 0.55) 0%, rgba(255, 138, 58, 0.15) 40%, rgba(0, 0, 0, 0) 70%); animation: smith-glow 1.6s ease-in-out infinite; }
-@keyframes smith-glow { 50% { opacity: 0.7; } }
-.smith__vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 35% 55%, rgba(0, 0, 0, 0) 30%, rgba(8, 4, 4, 0.75) 100%); }
-/* 화덕 도트 64×52 × 6프레임을 정수 7배로(448×364). */
-.smith__forge { position: absolute; left: 150px; top: 150px; width: 448px; height: 364px; background: url('/redesign/ui/events/forge.png') 0 0 / 2688px 364px; image-rendering: pixelated; animation: smith-f6 0.66s steps(6) infinite; }
-@keyframes smith-f6 { to { background-position: -2688px 0; } }
-.smith__say.inn__say { left: 36px; top: auto; bottom: 30px; width: 700px; min-height: 148px; padding: 32px 26px 18px; box-shadow: inset 0 0 0 2px #ff8a3a, 0 8px 0 rgba(0, 0, 0, 0.4); }
-.smith__say.inn__say::before { display: none; }
-.smith__say p { font-size: 20px; }
-.smith__say .inn__name { left: 20px; }
+/* 대장간 — 여관과 같은 배치. 대사창 테두리·이름표만 화덕 빛(주황). */
+.smith__say.inn__say { box-shadow: inset 0 0 0 2px #ff8a3a, 0 8px 0 rgba(0, 0, 0, 0.4); }
+.smith__say.inn__say::before { border-right-color: #ff8a3a; }
 .smith__say .inn__name b { background: #5a3018; }
 .smith__say .inn__name span { color: #ff8a3a; }
-.smith .inn__opts { left: auto; right: 36px; width: 440px; }
+
+/* ---- 그림 있는 ? 이벤트(디자인 `EventScenes`, 2026-11-12) -------------------------
+   그림을 깔고 이름 · 글 · 선택지를 오른쪽 패널 한 장에 올린다. 패널 테두리 색 = `--evcol`. */
+.event__sceneveil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8, 6, 12, 0.78) 0%, rgba(8, 6, 12, 0) 20%),
+    linear-gradient(90deg, rgba(8, 6, 12, 0) 460px, rgba(8, 6, 12, 0.55) 788px);
+}
+.event--scene .event__panel {
+  left: 600px;
+  right: auto;
+  top: 116px;
+  width: 644px;
+  max-height: 580px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 18px 22px 20px;
+  gap: 12px;
+  background: rgba(16, 10, 8, 0.88);
+  border: 3px solid #0a0604;
+  box-shadow: inset 0 0 0 2px var(--evcol), 0 8px 0 rgba(0, 0, 0, 0.4);
+}
+.event--scene .event__kicker { color: var(--evcol); }
+.event--scene .event__name { font-size: 40px; }
+.event--scene .event .event__options,
+.event--scene .event__options { margin-top: 10px; gap: 8px; }
+
+/* ---- 고블린 상점(디자인 `GoblinShop` · `GoblinTiers`, 2026-11-12) ------------------
+   여관과 같은 배치 — 단계별 그림(왼쪽 고블린) + 오른쪽 대사창 · 선택지 · 진열 · 습격 예고.
+   ⚠ 쓴 돈(재산) 게이지는 없다 — 시안이 "화면에 안 보임"으로 정했다. */
+.screen.gob { display: block; padding: 0; background: #14100c; }
+.gob .shop__title { margin: 0; font-size: 42px; text-shadow: 3px 3px 0 #0a0604; }
+.gob__where { color: #d8f0a8 !important; text-shadow: 2px 2px 0 #0a0604; }
+/* 단계가 오르면 새 그림이 0.6초 겹쳐 들어오며 번쩍인다. */
+.gob__bgin { animation: gob-bgin 0.9s ease-out both; }
+@keyframes gob-bgin { 0% { opacity: 0; filter: brightness(2.6); } 66% { opacity: 1; } 100% { filter: none; } }
+.gob__say.inn__say { top: 104px; padding: 26px 24px 16px; }
+.gob__say.inn__say::before { top: 30px; }
+.gob__say p { font-size: 18px; line-height: 1.55; animation-duration: 1.2s; }
+.gob__say .inn__name { top: -20px; }
+.gob__say .inn__name b.gob__tag { padding: 3px 14px; font-family: var(--font-display); font-size: 21px; }
+.gob__tag--poor { background: #4e3420 !important; color: #e8d0a0 !important; }
+.gob__tag--mid { background: #3e5a6a !important; color: #e4f0f8 !important; }
+.gob__tag--rich { background: #c9952f !important; color: #1d1408 !important; }
+.inn__opt--fight { border-color: #8a3040; }
+.inn__opt--fight:hover:not(.is-off) { border-color: #ff6a5a; background: rgba(58, 16, 22, 0.94); }
+.inn__opt--fight .inn__optbody b { color: #ffb0b0; }
+.inn__opt--fight .inn__optbody span { color: #ffb8a8; }
+.inn__chip--fight { background: #3a1016; color: #ff9a9a; border-color: #e0485a; }
+.gob__toast {
+  position: absolute; left: 246px; top: 96px; z-index: 3; transform: translateX(-50%);
+  padding: 10px 20px; background: #2a1c08; border: 3px solid #0a0810;
+  box-shadow: inset 0 0 0 2px #ffd24a, 0 0 30px rgba(255, 210, 74, 0.5);
+  white-space: nowrap; display: flex; gap: 10px; align-items: center;
+  font-family: var(--font-display); font-size: 22px; color: #ffd86a;
+  animation: gob-toast 2s ease-out 1 forwards;
+}
+.gob__panel { position: absolute; left: 600px; top: 222px; bottom: 30px; z-index: 1; width: 644px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
+.gob__row { height: 58px; box-sizing: border-box; padding: 0 10px; gap: 10px; background: rgba(20, 14, 12, 0.9); border-color: #5a3e2a; }
+.gob__row.is-legend { border-color: #ffd86a; }
+.gob__thumb { width: 40px; height: 40px; }
+.gob__thumb .rangechart { width: 36px; gap: 1px; }
+.gob__iname { font-size: 19px; }
+.gob__idesc { color: #d8c8b8; }
+.gob__mul s { color: #9a8c80; }
+.gob__buy { min-width: 86px; justify-content: center; font-size: 14px; }
+.relictip__rarity.is-potion { background: #e0485a; color: #fff6dc; }
+.gob__foot { margin-top: auto; }
+.gob__note { flex-grow: 1; font-size: 12px; color: #d8c8b8; text-align: right; }
+.gob__panel--fight { padding: 14px 18px; gap: 10px; background: rgba(20, 14, 16, 0.94); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px #e0485a; }
+.gob__tradehead h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 26px; color: #fff6dc; }
+.gob__tradehead h2 .gob__kicker { margin-right: 10px; font-size: 12px; letter-spacing: 3px; }
+.gob__tradehead > span:last-child { font-size: 12px; }
+.gob__stats dd { font-size: 20px; }
+.gob__line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.gob__line > span { width: 64px; font-size: 12px; color: #b9b1c9; }
+.gob__line i { font-style: normal; }
+.gob__line small { font-size: 12px; color: #c9c2d6; }
+.gob__q { width: 28px; height: 28px; font-size: 14px; }
