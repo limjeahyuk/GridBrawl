@@ -1,5 +1,5 @@
 // 룰렛 카드 강화(디자인 `Upgrade` · 규칙 `docs/redesign/CARD_UPGRADE.md`).
-// 카드 → 강화 종류(수치/범위) → 60칸 룰렛 → (범위면 붙일 칸 / 뺄 칸 고르기) → 저장.
+// 카드 → 강화 종류(수치/범위) → 10칸 룰렛 → (범위면 붙일 칸 / 뺄 칸 고르기) → 저장.
 // 대장간(지도 칸 · ? 칸 — 맡기기 `paid` / 직접 `free`)·낡은 대장간(이벤트 — `paid`)이 같은 화면을 쓴다.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CardDef, Offset } from '../../battle/types'
@@ -45,31 +45,26 @@ function RangeGrid({ range, extra = [], cell, gone = [] }: { range: Offset[]; ex
   )
 }
 
-/** 60칸 배치 — 숫자마다 원 둘레에 등간격으로 흩뿌리고 같은 숫자가 붙은 자리를 바꾼다(시안 `seq`). */
-function wheelSeq(table: RouletteTable): number[] {
-  const ent: [number, number][] = []
-  table.forEach(([v, p], j) => {
-    const n = Math.round(p * 0.6)
-    for (let k = 0; k < n; k++) ent.push([(k + ((j * 0.37 + 0.11) % 1)) / n, v])
-  })
-  const out = ent.sort((a, b) => a[0] - b[0]).map((e) => e[1])
-  const L = out.length
-  for (let pass = 0; pass < 4; pass++)
-    for (let i = 0; i < L; i++) {
-      const a = out[(i - 1 + L) % L]
-      if (out[i] !== a) continue
-      for (let d = 1; d < L; d++) {
-        const j = (i + d) % L
-        const b = out[j]
-        if (b !== a && out[(j - 1 + L) % L] !== out[i] && out[(j + 1) % L] !== out[i] && out[(i + 1) % L] !== b) {
-          out[j] = out[i]
-          out[i] = b
-          break
-        }
-      }
-    }
+/**
+ * 룰렛 칸 — **숫자마다 2칸, 칸 폭 = 확률의 절반**(2026-11-12 사용자 — 60칸은 너무 잘아 숫자가 겹쳤다).
+ * 5개 숫자 판이면 10칸이고, 그림의 넓이가 곧 확률이다. 같은 숫자가 붙지 않게 한 칸씩 건너 배치한다.
+ */
+interface Slice { v: number; a: number; b: number }
+function wheelSlices(table: RouletteTable): Slice[] {
+  const n = table.length
+  const order = n % 2 ? Array.from({ length: n }, (_, i) => (i * 2) % n) : table.map((_, i) => i)
+  const out: Slice[] = []
+  let a = 0
+  for (const i of [...order, ...order]) {
+    const [v, p] = table[i]
+    const w = (p / 2) * 3.6
+    out.push({ v, a, b: a + w })
+    a += w
+  }
   return out
 }
+/** 받침 조사 — "피해가" · "방어량이". */
+const iga = (w = '') => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? '이' : '가')
 const TONE = [
   ['#3a3448', '#2e2a3a', '#b9b1c9'], ['#3a6aa8', '#2e5690', '#e4f0ff'], ['#3c9c98', '#2e8480', '#e4fffc'],
   ['#6ab83a', '#58a02e', '#f0ffe4'], ['#a46ae0', '#8c56c8', '#f6ecff'], ['#ffd24a', '#e8b830', '#1d1408'],
@@ -125,14 +120,10 @@ export function UpgradeScreen({
   const range = card.range ?? []
   const rangeOk = canUpgradeRange(card)
   const table: RouletteTable = ROULETTES[tier][path]
-  const seq = useMemo(() => wheelSeq(table), [table])
+  const slices = useMemo(() => wheelSlices(table), [table])
   const tone = useMemo(() => toneMap(table), [table])
-  const SL = 360 / seq.length
-  const wheelBg = `conic-gradient(from 0deg, ${seq
-    .map((v, i) => {
-      const a = i * SL, b = (i + 1) * SL
-      return `#0a0810 ${a}deg ${a + 0.5}deg, ${tone[v][i % 2]} ${a + 0.5}deg ${b}deg`
-    })
+  const wheelBg = `conic-gradient(from 0deg, ${slices
+    .map(({ v, a, b }, i) => `#0a0810 ${a}deg ${a + 0.8}deg, ${tone[v][i % 2]} ${a + 0.8}deg ${b}deg`)
     .join(', ')})`
 
   const isSmith = source === 'smith'
@@ -142,9 +133,9 @@ export function UpgradeScreen({
 
   const spin = () => {
     const v = spinRoulette(table)
-    const idxs = seq.map((x, i) => (x === v ? i : -1)).filter((i) => i >= 0)
-    const k = idxs[Math.floor(Math.random() * idxs.length)]
-    const target = -((k + 0.5) * SL + (Math.random() - 0.5) * SL * 0.6)
+    const mine = slices.filter((x) => x.v === v)
+    const sl = mine[Math.floor(Math.random() * mine.length)]
+    const target = -((sl.a + sl.b) / 2 + (Math.random() - 0.5) * (sl.b - sl.a) * 0.6)
     const curMod = ((rot % 360) + 360) % 360
     const tgtMod = ((target % 360) + 360) % 360
     setRot(rot + 360 * 7 + ((tgtMod - curMod + 360) % 360))
@@ -189,7 +180,7 @@ export function UpgradeScreen({
   // 판 미리보기: 나 = 2열(col 1, row 1), 적 둘.
   const foes = [{ c: 3, r: 1 }, { c: 4, r: 2 }]
   const hits = foes.filter(({ c, r }) => has(allCells, c - 1, 1 - r)).length
-  const fmt = (v: number) => (path === 'value' || v < 0 ? signed(v) : String(v))
+  const fmt = (v: number) => (path === 'value' || table.some(([x]) => x < 0) ? signed(v) : String(v))
   const maxP = Math.max(...table.map(([, p]) => p))
   const best = table[table.length - 1][0]
 
@@ -323,7 +314,7 @@ export function UpgradeScreen({
                 })}
               </span>
               <span className="upg__tiledesc">
-                룰렛에 걸린 숫자만큼 {stat.word}이(가) {free ? '오르거나 내린다' : '오른다'}.
+                룰렛에 걸린 숫자만큼 {stat.word}{iga(stat.word)} {free ? '오르거나 내린다' : '오른다'}.
                 <br />
                 바로 적용 — 고를 것 없음.
               </span>
@@ -385,9 +376,9 @@ export function UpgradeScreen({
                 transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.08, 0.72, 0.08, 1)` : 'none',
               }}
             >
-              {seq.map((v, i) => (
-                <span key={i} className="upg__lab" style={{ transform: `rotate(${(i + 0.5) * SL}deg) translateY(-168px)`, color: tone[v][2] }}>
-                  {v < 0 ? signed(v) : v}
+              {slices.map(({ v, a, b }, i) => (
+                <span key={i} className="upg__lab" style={{ transform: `rotate(${(a + b) / 2}deg) translateY(-160px)`, color: tone[v][2] }}>
+                  {fmt(v)}
                 </span>
               ))}
             </div>
@@ -400,7 +391,7 @@ export function UpgradeScreen({
                   : undefined
               }
             >
-              {spinning ? '…' : result == null ? '?' : result < 0 ? signed(result) : result}
+              {spinning ? '…' : result == null ? '?' : fmt(result)}
             </div>
           </div>
           <section className="upg__spinpanel panel rise">
@@ -409,7 +400,7 @@ export function UpgradeScreen({
             </span>
             <h2>
               {path === 'value'
-                ? `${stat?.word}이(가) 얼마나 ${free ? '바뀔까' : '오를까'}?`
+                ? `${stat?.word}${iga(stat?.word)} 얼마나 ${free ? '바뀔까' : '오를까'}?`
                 : free ? '범위가 넓어질까, 좁아질까?' : '범위가 몇 칸 넓어질까?'}
             </h2>
             <div className="upg__probs">
@@ -425,7 +416,7 @@ export function UpgradeScreen({
               ))}
             </div>
             <span className="upg__hint">
-              60칸 룰렛 — {table.map(([v, p]) => `${fmt(v)} ${Math.round(p * 0.6)}칸`).join(' · ')}이 섞여 있다.
+              10칸 룰렛 — 숫자마다 2칸씩, 칸이 넓을수록 잘 나온다(넓이 = 확률).
             </span>
             <div className="upg__foot">
               <span className="upg__resline">

@@ -2663,7 +2663,7 @@
 .is-spinning .upg__bulb { animation-duration: .18s; }
 .is-spinning .upg__bulb.b2 { animation-delay: .09s; }
 .upg__wheel { position: absolute; left: 30px; top: 30px; width: 380px; height: 380px; border-radius: 50%; overflow: hidden; box-shadow: inset 0 0 0 3px #0a0810; }
-.upg__lab { position: absolute; left: 50%; top: 50%; width: 22px; height: 14px; margin: -7px 0 0 -11px; text-align: center; font-family: var(--font-px); font-size: 11px; line-height: 14px; }
+.upg__lab { position: absolute; left: 50%; top: 50%; width: 48px; height: 20px; margin: -10px 0 0 -24px; text-align: center; font-family: var(--font-px); font-size: 17px; line-height: 20px; text-shadow: 0 2px 0 rgba(0,0,0,0.45); }
 .upg__hub { position: absolute; left: 175px; top: 175px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff1b8, #c9952f 55%, #7a5418); border: 4px solid #2a1c10; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: var(--font-px); font-size: 38px; color: #1d1408; box-shadow: 0 4px 0 rgba(0,0,0,0.4); }
 .upg__ptr { position: absolute; left: 204px; top: -6px; width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 44px solid #e0485a; filter: drop-shadow(0 3px 0 #2a1c10); transform-origin: 50% 0; }
 .is-spinning .upg__ptr { animation: upg-flap .09s ease-in-out infinite alternate; }
