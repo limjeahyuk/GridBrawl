@@ -15,7 +15,7 @@ public/redesign/
   terrain/{grass-tile,dirt-tile,dungeon-tile}.png   ← 판 칸 32×32, 이음매 없음
   heroes/bg-{cairn,sable,dirge}.png   ← 영웅 선택 일러스트 배경(1280×720)
   cutscene/{inn,smith,goblin,events}/  ← 여관 · 대장간 · 고블린 3단계 · 이벤트 3종 일러스트 배경
-  ui/{map-icons,events,rest,move,relics,status}/  ← 지도 아이콘 · 이벤트 도트 · 모닥불 · 이동 묶음 · 유물 아틀라스 · 상태 아이콘
+  ui/{map-icons,events,rest,move,relics,status}/  ← 지도 아이콘 · 이벤트 도트 · 모루(rest/anvil — 모닥불은 11-12 삭제) · 이동 묶음 · 유물 아틀라스 · 상태 아이콘
 docs/redesign/
   sprites-v2.ts             ← SHEETS에 바로 붙일 수 있는 SheetDef 값 (자동 생성)
   previews/*.png            ← 시트별 전체 프레임 미리보기

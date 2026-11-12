@@ -13,7 +13,7 @@ import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { RewardScreen } from './ui/screens/RewardScreen'
 import { QuestionScreen } from './ui/screens/QuestionScreen'
 import { InnScreen, SmithScreen } from './ui/screens/InnScreen'
-import { TreasureScreen } from './ui/screens/RestScreen'
+import { TreasureScreen } from './ui/screens/TreasureScreen'
 import { RunEndScreen } from './ui/screens/RunEndScreen'
 import {
   startRun,

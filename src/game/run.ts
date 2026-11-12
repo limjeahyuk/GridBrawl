@@ -416,8 +416,22 @@ function combatMonster(floor: number, exclude?: string): string {
  * (지금은 여관 휴식) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
  * 그래야 15층 페이싱을 맞춰 둔 전투/지원 비율이 경로와 무관하게 유지된다.
  */
-/** 지원 칸 — 서로하고만 바꾼다(아래 ⚠). 2026-11: 보물 합류 · 상점·휴식 → 여관·대장간. */
-const SUPPORT_NODES: NodeType[] = ['event', 'inn', 'smith', 'treasure']
+/**
+ * 옆 칸(가운데가 아닌 줄)에 놓일 타입의 가중치 — 2026-11-12 사용자 지정: "?·여관·대장간·보물이
+ * 꼭 같은 줄(층)에 있지 않아도 된다". 그 전엔 지원 층 옆엔 지원 칸만, 전투 층 옆엔 전투만 놓여
+ * 지원 칸이 템플릿의 ? · 여관 층에 몰려 있었다. 이제 **어느 층이든 옆 칸은 섞인다**.
+ * ⚠ 옛 실패(지원 칸 대안을 전투로만 두자 클리어율 27% → 10%)는 지원 칸이 **줄기만** 했기 때문이다 —
+ * 지금은 전투 층 옆에도 지원 칸이 생겨 경로당 지원 칸 수가 비슷하다(`sim:run`으로 확인).
+ * 가운데 줄은 그대로 템플릿 타입이라 기준선 경로(`--path=template`)는 안 바뀐다.
+ */
+const SIDE_WEIGHTS: [NodeType, number][] = [['combat', 40], ['event', 30], ['inn', 10], ['smith', 10], ['treasure', 10]]
+function pickSide(used: NodeType[]): NodeType {
+  // 같은 층에 같은 지원 칸이 둘 놓이지 않게(전투는 몬스터가 달라 여럿 괜찮다).
+  const pool = SIDE_WEIGHTS.filter(([t]) => t === 'combat' || !used.includes(t))
+  let r = Math.random() * pool.reduce((a, [, w]) => a + w, 0)
+  for (const [t, w] of pool) if ((r -= w) < 0) return t
+  return 'combat'
+}
 function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode[] {
   const blank = (type: NodeType, monsterId?: string): RunNode => ({
     type,
@@ -433,16 +447,13 @@ function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode
   else out.push(blank(primary))
 
   while (out.length < count) {
-    if (SUPPORT_NODES.includes(primary)) {
-      // 지원 칸끼리만(2026-11: 휴식·보물이 합류) — 같은 층에 같은 종류가 겹치지 않게.
-      const used = out.map((n) => n.type)
-      out.push(blank(pick(SUPPORT_NODES.filter((t) => !used.includes(t)))))
-    } else {
-      // 전투·엘리트의 대안은 언제나 일반 전투다(엘리트는 이걸로 회피한다).
+    // 엘리트 층 옆은 일반 전투(엘리트를 피하는 길), 1층은 첫 전투라 전투끼리. 그 밖엔 섞는다.
+    const type = primary === 'elite' || floor === 1 ? 'combat' : pickSide(out.map((n) => n.type))
+    if (type === 'combat') {
       // 이미 나온 몬스터는 피해서 뽑는다 — 같은 얼굴 둘을 고르는 건 선택이 아니다.
-      const used = out.map((n) => n.monsterId)
+      const used = out.filter((n) => n.monsterId).map((n) => n.monsterId)
       out.push(blank('combat', combatMonster(floor, used[used.length - 1])))
-    }
+    } else out.push(blank(type))
   }
   return out
 }
@@ -1124,10 +1135,10 @@ export function advanceFloor(run: RunState): RunState {
 // --- ? 칸 정체 · 고블린 장사꾼(2026-11 리디자인 · `docs/redesign/GOBLIN_MERCHANT.md`) ---
 /**
  * ? 칸이 실제로 무엇인지 — 들어가 봐야 안다. 가중치는 시안에 없어 정한 값이다.
- * 2026-11-12 이벤트 55 → 70(사용자 "이벤트가 더 자주") — 이벤트 12종을 런당 1번꼴로는 거의 못 봤다.
+ * 2026-11-12(사용자): 이벤트가 더 자주 · **모닥불은 뺐다**("옛날 잔재") — ?는 이벤트(고블린 포함) 아니면 일반 몬스터 전투.
  */
-export type QuestionFate = 'event' | 'combat' | 'rest' | 'goblin'
-const FATE_WEIGHTS: [QuestionFate, number][] = [['event', 70], ['combat', 10], ['rest', 10], ['goblin', 10]]
+export type QuestionFate = 'event' | 'combat' | 'goblin'
+const FATE_WEIGHTS: [QuestionFate, number][] = [['event', 75], ['combat', 12], ['goblin', 13]]
 export function rollQuestionFate(rng: () => number = Math.random): QuestionFate {
   let r = rng() * 100
   for (const [f, w] of FATE_WEIGHTS) {
@@ -1208,13 +1219,7 @@ export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; reli
   rich: { gold: 140, pick: true, relic: true },
 }
 
-// --- 휴식 · 보물(2026-11 리디자인) ------------------------------------------
-/** 모닥불에서 쉬면 최대 체력의 30%(시안 임의값). 강화와 둘 중 하나. */
-export const REST_HEAL_PCT = 0.3
-export const restHealAmount = (run: RunState): number => Math.round(run.maxHp * REST_HEAL_PCT)
-export function restAtFire(run: RunState): RunState {
-  return advanceFloor(healHp(run, restHealAmount(run)))
-}
+// --- 보물(2026-11 리디자인) ----------------------------------------------------
 /** 보물 칸 — 유물 상자 하나. */
 export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
   return grantRandomRelic(run)

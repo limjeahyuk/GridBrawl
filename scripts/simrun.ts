@@ -38,7 +38,6 @@ import {
   isLockedCard,
   upgradableDeckCards,
   upgradeCard,
-  restAtFire,
   innRest,
   innLeave,
   innRestPrice,
@@ -289,11 +288,6 @@ function doEvent(run: RunState): RunState {
   return advanceFloor(cur)
 }
 
-/** 모닥불 — 체력이 60% 아래면 쉰다(random은 반반). */
-function doRest(run: RunState): RunState {
-  const rest = POLICY === 'random' ? Math.random() < 0.5 : run.hp / run.maxHp < 0.6
-  return rest || !upgradableDeckCards(run).length ? restAtFire(run) : advanceFloor(simUpgrade(run))
-}
 /** 고블린 상점 — greedy는 유물·회복만 사고 덮치지 않는다(random은 30%로 덮친다). */
 function doGoblin(run: RunState): RunState {
   const tier = goblinTier(run.goblinSpent ?? 0)
@@ -313,7 +307,6 @@ function doGoblin(run: RunState): RunState {
 function doQuestion(run: RunState): RunState {
   const fate = rollQuestionFate()
   if (fate === 'combat') return { ...run, special: ambushFight(run), status: 'fighting' }
-  if (fate === 'rest') return doRest(run)
   if (fate === 'goblin') return doGoblin(run)
   return doEvent(run)
 }

@@ -10,7 +10,7 @@ import {
 } from '../../game/upgrades'
 import { SceneLayers } from '../SceneLayers'
 
-export type UpgradeSource = 'rest' | 'smith' | 'event'
+export type UpgradeSource = 'smith' | 'event'
 type Step = 'pick' | 'path' | 'spin' | 'value' | 'range' | 'done'
 type Path = 'value' | 'range'
 
@@ -126,8 +126,8 @@ export function UpgradeScreen({
     .join(', ')})`
 
   const isSmith = source === 'smith'
-  const srcLabel = isSmith ? '대장간 · 강화' : source === 'rest' ? '휴식 · 모닥불' : '이벤트 · 낡은 대장간'
-  const leaveLabel = isSmith ? '← 대장간으로' : source === 'rest' ? '← 모닥불로' : '← 그만둔다'
+  const srcLabel = isSmith ? '대장간 · 강화' : '이벤트 · 낡은 대장간'
+  const leaveLabel = isSmith ? '← 대장간으로' : '← 그만둔다'
 
   const spin = () => {
     const v = spinRoulette(table)
@@ -219,9 +219,7 @@ export function UpgradeScreen({
             <div className="upg__note">
               {isSmith
                 ? '대장간 강화: 들를 때마다 한 장 · 한 번. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다.'
-                : source === 'rest'
-                  ? '모닥불에선 쉬기(체력 회복)와 강화 중 하나만 고를 수 있다. 결과가 0이면 그걸로 끝.'
-                  : '결과가 0이면 그걸로 끝.'}
+                : '결과가 0이면 그걸로 끝.'}
             </div>
           </section>
           <section className="upg__list rise">

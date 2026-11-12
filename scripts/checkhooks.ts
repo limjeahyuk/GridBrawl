@@ -43,7 +43,6 @@ import {
   terrainFor,
   upgradableDeckCards,
   upgradeCard,
-  restAtFire,
   openTreasure,
   innRest,
   innLeave,
@@ -1155,7 +1154,8 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
   // 무작위 생성이라 한 번으로는 못 잡는다. 여러 런을 훑어 불변식을 확인한다.
   const RUNS = 300
   let bossBranched = 0
-  let supportToCombat = 0
+  let supportToCombat = 0 // 같은 층에 같은 지원 칸이 겹친 수
+  let supportOnCombatFloor = 0
   let eliteShapeBad = 0
   let noCenter = 0
   let orphan = 0 // 들어오는 간선이 없는 칸
@@ -1175,12 +1175,12 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
       if (isBoss && nodes.length !== 1) bossBranched++
       // 가운데 줄은 **모든 층**에 있어야 한다 — 옛 사다리 경로가 거기로 이어진다.
       if (!center(f)) noCenter++
-      // ⚠ 핵심 회귀 검사. 지원 칸(이벤트·상점)의 대안을 전투로 뒀다가 클리어율이
-      //   27%→10%로 무너졌다(상점이 회복의 주 수단이라서). 지원 칸끼리만 바꾼다.
+      // 2026-11-12: 지원 칸(?·여관·대장간·보물)은 층에 몰리지 않고 어느 층 옆 칸에도 섞인다.
+      //   같은 층에 같은 지원 칸이 둘 놓이면 안 된다.
       const head = center(f)?.type
-      if (head === 'event' || head === 'inn') {
-        if (nodes.some((o) => !['event', 'inn', 'smith', 'treasure'].includes(o.type))) supportToCombat++
-      }
+      if (head === 'combat' && nodes.some((o) => ['event', 'inn', 'smith', 'treasure'].includes(o.type))) supportOnCombatFloor++
+      const sup = nodes.filter((o) => o.type !== 'combat').map((o) => o.type)
+      if (new Set(sup).size !== sup.length) supportToCombat++
       // 엘리트는 유일하게 "전투량"을 고르는 칸 — 엘리트 하나 + 나머지는 일반 전투.
       if (head === 'elite') {
         const elites = nodes.filter((o) => o.type === 'elite').length
@@ -1209,7 +1209,8 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
   }
   check('보스 층은 갈래가 없다', bossBranched, 0)
   check('모든 층에 가운데 줄이 있다', noCenter, 0)
-  check('지원 칸(이벤트·상점·휴식·보물)은 전투로 바뀌지 않는다', supportToCombat, 0)
+  check('지원 칸이 전투 층 옆에도 섞인다(2026-11-12)', supportOnCombatFloor > 0, true)
+  check('같은 층에 같은 지원 칸이 겹치지 않는다', supportToCombat, 0)
   check('엘리트 층은 엘리트 1 + 나머지 일반전투', eliteShapeBad, 0)
   check('막다른 칸이 없다(마지막 층 제외)', deadend, 0)
   check('들어오는 길이 없는 칸이 없다', orphan, 0)
@@ -1563,7 +1564,6 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   check('지도에 여관·대장간·보물 칸이 나온다', [inn > 0, smith > 0, treasure > 0], [true, true, true])
   check('지도에 옛 상점·휴식 칸이 없다', old, 0)
   const hurt = { ...startRun('warrior'), hp: 10, gold: 200 }
-  check('모닥불(? 칸) — 최대 체력 30% 회복 후 다음 층', [restAtFire(hurt).hp, restAtFire(hurt).floor], [10 + Math.round(hurt.maxHp * 0.3), 2])
   check('보물 — 유물 하나', openTreasure(hurt).run.relicIds.length, hurt.relicIds.length + 1)
   // 여관 — 휴식 50G · 50%, 나가기 20%. 대장간 — 지나가면 10%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
   const rested = innRest(hurt)!
@@ -1601,7 +1601,7 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   check('이기면 고블린 골드', won.gold >= 999 + 140, true)
   let fates = new Set<string>()
   for (let i = 0; i < 400; i++) fates.add(rollQuestionFate())
-  check('? 칸 정체는 넷', [...fates].sort(), ['combat', 'event', 'goblin', 'rest'])
+  check('? 칸 정체는 셋 — 모닥불 없음(2026-11-12)', [...fates].sort(), ['combat', 'event', 'goblin'])
 }
 {
   const leaked = ROSTER.flatMap((c) => deckFor(c)).filter((c) => c.upgraded !== undefined)
