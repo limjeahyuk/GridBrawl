@@ -21,7 +21,7 @@ import { ROSTER, getChar } from '../src/data/roster'
 import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
 import { EVENT_CARDS, RUN_CARDS } from '../src/game/runcards'
-import { ROULETTE_RANGE, ROULETTE_VALUE, canPickCell, canUpgradeRange, spinRoulette } from '../src/game/upgrades'
+import { ROULETTES, canPickCell, canUpgradeRange, spinRoulette, type UpgradeTier } from '../src/game/upgrades'
 import type { Offset } from '../src/battle/types'
 import { applySpecialWin, eventChoices, resolveEventChoice, rollQuestionFate, startEvent, tradeList, withEventSeen, type EventId, type EventOutcome } from '../src/game/events'
 import {
@@ -45,7 +45,6 @@ import {
   innLeave,
   innRestPrice,
   paySmith,
-  smithPass,
   ambushFight,
   goblinTier,
   goblinMonsterId,
@@ -234,8 +233,8 @@ function applyReward(run: RunState, r: Reward): RunState {
 }
 
 // --- 룰렛 강화 정책 --------------------------------------------------------
-/** 강화할 카드 — 덱에서 가장 센 카드에 수치 룰렛을 돌린다(+피해는 센 카드에 붙일수록 값이 크다). */
-function simUpgrade(run: RunState): RunState {
+/** 강화할 카드 — 덱에서 가장 센 카드에 수치 룰렛을 돌린다(+피해는 센 카드에 붙일수록 값이 크다). `tier` = 맡긴 / 직접 강화 판. */
+function simUpgrade(run: RunState, tier: UpgradeTier): RunState {
   const pool = upgradableDeckCards(run)
   if (!pool.length) return run
   const id = POLICY === 'random'
@@ -244,8 +243,11 @@ function simUpgrade(run: RunState): RunState {
   const card = runCard(run, id)
   // `--up=range`: 공격 카드면 범위(사거리) 강화 — 앞뒤로 멀리 닿는 칸부터 고른다(2026-11-12, 전사 사거리 실험용).
   if (UP === 'range' && card && canUpgradeRange(card)) {
-    const n = spinRoulette(ROULETTE_RANGE)
+    const n = spinRoulette(ROULETTES[tier].range)
     const range = card.range ?? []
+    const score = (o: Offset) => Math.abs(o.df) * 3 - Math.abs(o.du)
+    // 마이너스 — 제일 덜 아까운 칸(가까운 칸)부터 뺀다. 1칸은 남는다.
+    if (n < 0) return upgradeCard(run, id, { removed: [...range].sort((a, b) => score(a) - score(b)).slice(0, Math.min(-n, range.length - 1)) })
     const picks: Offset[] = []
     for (let k = 0; k < n; k++) {
       let best: Offset | null = null
@@ -259,7 +261,7 @@ function simUpgrade(run: RunState): RunState {
     }
     return upgradeCard(run, id, { cells: picks })
   }
-  return upgradeCard(run, id, { value: spinRoulette(ROULETTE_VALUE) })
+  return upgradeCard(run, id, { value: spinRoulette(ROULETTES[tier].value) })
 }
 
 // --- 이벤트 정책(2026-11 이벤트 8종) ---------------------------------------
@@ -303,7 +305,7 @@ function doEvent(run: RunState, eventId?: EventId): RunState {
     cur = o.run
     st = o.st
     if (o.relicId) relicPick[o.relicId] = (relicPick[o.relicId] ?? 0) + 1
-    if (o.upgrade) cur = simUpgrade(cur)
+    if (o.upgrade) cur = simUpgrade(cur, 'paid') // 낡은 대장간 = 맡긴 강화 판
     if (o.fight) return { ...cur, special: o.fight, status: 'fighting' }
     if (o.done) break
   }
@@ -372,10 +374,16 @@ function doInn(run: RunState): RunState {
   }
   return advanceFloor((wantRest() && innRest(cur)) || innLeave(cur))
 }
-/** 대장간 — 돈이 있으면 강화, 아니면 쉬어 간다(10%). random은 반반. */
+/**
+ * 대장간 — 돈이 있으면 맡기고(80G), 없으면 직접 강화(무료 · 기댓값 +1이라 손해는 아니다), 강화할 카드가 없으면 나간다.
+ * random은 셋 중 아무거나.
+ */
 function doSmith(run: RunState): RunState {
-  const paid = POLICY === 'random' && Math.random() < 0.5 ? null : paySmith(run)
-  return advanceFloor(paid ? simUpgrade(paid) : smithPass(run))
+  if (!upgradableDeckCards(run).length) return advanceFloor(run)
+  const r = POLICY === 'random' ? Math.floor(Math.random() * 3) : -1
+  if (r === 2) return advanceFloor(run)
+  const paid = r === 1 ? null : paySmith(run)
+  return advanceFloor(paid ? simUpgrade(paid, 'paid') : simUpgrade(run, 'free'))
 }
 
 /** `--path` 정책대로 이번 층의 갈래를 고른다(위 PATH 주석 참고). */

@@ -1417,6 +1417,9 @@
 .cardface--heal .cf__dm { color: var(--neon-green); }
 .cardface--buff .cf__dm { color: var(--neon-magenta); }
 .cf__en { color: #8ad0ff; }
+/* 강화 별(2026-11-12 — 0 · 마이너스가 나와도 강화 1번이면 별 하나). 이름 뒤 "+N"은 없앴다. */
+.cf__stars, .cardface__stars { color: var(--up); font-size: 10px; letter-spacing: -1px; line-height: 1; }
+.cardface__stars { font-size: 13px; }
 .cf__name {
   margin-top: auto;
   font-family: var(--font-display);

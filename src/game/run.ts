@@ -22,7 +22,7 @@ import {
 import { getMonster, monstersOfTier, type MonsterDef, type TerrainId } from './monsters'
 import { bossScene } from './bosses'
 import { resolveRunCard, runCardsFor } from './runcards'
-import { addUpgrade, upgradeBlock, upgradedCard, type CardUpgrade } from './upgrades'
+import { addUpgrade, upgradeBlock, upgradedCard, valueFieldOf, type CardUpgrade } from './upgrades'
 import { GRID_COLS, GRID_ROWS, ROCK_HP, type CardDef, type Difficulty, type Hazard, type HazardKind, type Obstacle, type Offset } from '../battle/types'
 
 // --- 런 난이도 4단계 (2026-08-11) -------------------------------------------
@@ -885,7 +885,7 @@ export function runCard(run: RunState, cardId: string): CardDef | undefined {
   const base = resolveRunCard(run.charId, cardId)
   return base && upgradedCard(base, run.upgrades[cardId])
 }
-/** 강화 못 하는 이유(이동 카드 · 최대 2/2 …). 할 수 있으면 null. */
+/** 강화 못 하는 이유(이동 카드 · 최대 3/3 …). 할 수 있으면 null. */
 export function upgradeBlockOf(run: RunState, cardId: string): string | null {
   const base = resolveRunCard(run.charId, cardId)
   return base ? upgradeBlock(base, run.upgrades[cardId]) : '알 수 없는 카드'
@@ -895,11 +895,17 @@ export const canUpgradeCard = (run: RunState, cardId: string): boolean => !upgra
 export function upgradableDeckCards(run: RunState): string[] {
   return run.deck.filter((id) => canUpgradeCard(run, id))
 }
-/** 룰렛 결과 적용. 꽝(0)이면 그대로. */
-export function upgradeCard(run: RunState, cardId: string, gain: { value?: number; cells?: Offset[] }): RunState {
+/** 룰렛 결과 적용 — 0 · 마이너스도 강화 1번(★)으로 센다. 수치는 카드 값이 0 아래로 안 내려간다. */
+export function upgradeCard(
+  run: RunState,
+  cardId: string,
+  gain: { value?: number; cells?: Offset[]; removed?: Offset[] },
+): RunState {
   if (!canUpgradeCard(run, cardId)) return run
-  const up = addUpgrade(run.upgrades[cardId], gain)
-  return up ? { ...run, upgrades: { ...run.upgrades, [cardId]: up } } : run
+  const base = resolveRunCard(run.charId, cardId)!
+  const f = valueFieldOf(base)
+  const up = addUpgrade(run.upgrades[cardId], gain, f ? -(base[f] ?? 0) : 0)
+  return { ...run, upgrades: { ...run.upgrades, [cardId]: up } }
 }
 
 /**
@@ -1093,7 +1099,7 @@ export function buyShopItem(
 
 // --- 여관 · 대장간(2026-11-09 · `docs/redesign/INN_SMITH.md`) --------------
 /**
- * 여관 — 휴식(50G · 최대 체력 50%) / 상점(다녀와도 방문이 안 끝난다) / 나가기(20%).
+ * 여관 — 휴식(80G · 최대 체력 50%) / 상점(다녀와도 방문이 안 끝난다) / 나가기(20%).
  * **휴식과 나가기는 둘 중 하나만** — 어느 쪽이든 그걸로 방문이 끝난다(사용자 지정).
  * 회복량은 `min(최대 − 현재, round(최대 × %))`. 시안은 20% / 5%였는데 모닥불 칸(무료 30%)과
  * 상점 물약이 빠진 만큼 회복이 모자라 50% / 20%로 올렸다(2026-11-09 사용자 지정).
@@ -1111,23 +1117,21 @@ export function innRest(run: RunState): RunState | null {
   if (run.gold < price) return null
   return healHp({ ...run, gold: run.gold - price }, innRestAmount(run))
 }
-/** 그냥 나간다 — 최대 체력의 5%. 층은 넘기지 않는다. */
+/** 그냥 나간다 — 최대 체력의 20%. 층은 넘기지 않는다. */
 export const innLeave = (run: RunState): RunState => healHp(run, innLeaveAmount(run))
 
 /**
- * 대장간(지도 칸 `smith`) — 50G에 룰렛 강화 **한 번**, 저장하면 바로 지도로(사용자 지정).
- * 강화하지 않고 지나가면 **최대 체력 10%**를 쉬어 간다(2026-11-09 사용자 지정) — 강화 또는 휴식.
+ * 대장간(지도 칸 `smith` · ? 칸) — 2026-11-12 사용자 지정. 선택지 셋, 강화는 한 번 들를 때 **한 장 · 한 번**:
+ * - **강화 맡기기** 80G — 맡긴 강화 룰렛(`ROULETTES.paid`, 반드시 오른다)
+ * - **직접 강화** 무료 — 직접 강화 룰렛(`ROULETTES.free`, 0 · 마이너스도 나온다)
+ * - **나가기** — 아무것도 없이 다음 층(옛 "쉬어 가기" 10% 회복은 없앴다)
  * ⚠ ? 이벤트 「낡은 대장간」(`events.ts`의 `forge`)과는 다른 곳이다 — 그쪽은 확률로 나오고
- *   카드 강화 또는 유물(차가운 쇠)을 준다.
- * 룰렛을 돌리면 결과가 0이어도 돈은 안 돌아온다 — 결제는 여기서, 강화는 UI가 이어서.
+ *   무료로 맡긴 강화 룰렛을 돌리거나 유물(차가운 쇠)을 준다.
+ * 룰렛을 돌리면 결과와 상관없이 돈은 안 돌아온다 — 결제는 여기서, 강화는 UI가 이어서.
  * 돌리기 전에 그만두면 화면이 결제 전 런으로 돌려준다.
  */
 export const SMITH_PRICE = 80 // 2026-11-12 50 → 80
 export const smithPrice = (run: RunState): number => shopPrice(run, SMITH_PRICE)
-export const SMITH_PASS_PCT = 0.1
-export const smithPassAmount = (run: RunState): number => healOf(run, SMITH_PASS_PCT)
-/** 강화 없이 지나간다 — 최대 체력 10%. 층은 넘기지 않는다. */
-export const smithPass = (run: RunState): RunState => healHp(run, smithPassAmount(run))
 export function paySmith(run: RunState): RunState | null {
   const price = smithPrice(run)
   if (run.gold < price || !upgradableDeckCards(run).length) return null

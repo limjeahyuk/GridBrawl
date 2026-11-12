@@ -50,7 +50,6 @@ import {
   innLeave,
   innRestPrice,
   paySmith,
-  smithPass,
   smithPrice,
   SHOP_RELIC_SLOTS,
   hazardsFor,
@@ -71,7 +70,7 @@ import {
   type RunState,
 } from '../src/game/run'
 import { runFightProps } from '../src/game/runbattle'
-import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
+import { MAX_UPGRADE, ROULETTES, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
 import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, questionFates, resolveEventChoice, rollQuestionFate, startEvent, withEventSeen } from '../src/game/events'
 import { RELIC_BY_ID } from '../src/game/relics'
 import { RUN_CARDS, RUN_CARD_BY_ID, RUN_CARD_CLASS, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
@@ -1344,13 +1343,15 @@ console.log('\n함정 — 불길 · 가시덫 · 가시덩굴 · 빙판')
 }
 
 // --- 룰렛 카드 강화(2026-11 리디자인) -----------------------------------------
-console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드당 2번 · 꽝은 안 셈')
+console.log('\n룰렛 카드 강화 — 맡긴 강화(반드시 오름) · 직접 강화(0 · 마이너스) · 카드당 3번 · 0도 셈')
 {
   const sum = (t: readonly (readonly [number, number])[]) => t.reduce((n, [, p]) => n + p, 0)
-  check('수치 룰렛 확률 합 100', sum(ROULETTE_VALUE), 100)
-  check('범위 룰렛 확률 합 100', sum(ROULETTE_RANGE), 100)
-  check('룰렛 결과는 판에 있는 값', [0, 0.15, 0.5, 0.99].map((r) => spinRoulette(ROULETTE_VALUE, () => r)), [0, 5, 10, 20])
-  check('최대 강화 2번', MAX_UPGRADE, 2)
+  for (const tier of ['paid', 'free'] as const)
+    for (const k of ['value', 'range'] as const) check(`${tier} ${k} 룰렛 확률 합 100`, sum(ROULETTES[tier][k]), 100)
+  check('맡긴 강화는 반드시 오른다', [...ROULETTES.paid.value, ...ROULETTES.paid.range].every(([v]) => v > 0), true)
+  check('직접 강화엔 마이너스가 있다', ROULETTES.free.value.some(([v]) => v < 0) && ROULETTES.free.range.some(([v]) => v < 0), true)
+  check('룰렛 결과는 판에 있는 값', [0, 0.2, 0.5, 0.99].map((r) => spinRoulette(ROULETTES.paid.value, () => r)), [5, 10, 15, 30])
+  check('최대 강화 3번', MAX_UPGRADE, 3)
 
   let run = grantCard(startRun('warrior'), 'war-cleave').run
   const plain = resolveRunCard('warrior', 'war-cleave')!
@@ -1359,14 +1360,23 @@ console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드�
   for (let i = 0; i < 300; i++) if (rollRewards(run).some((r) => r.kind === 'card' && r.cardId === 'war-cleave')) leaked++
   check('가진 카드는 보상에 안 나온다', leaked, 0)
 
-  check('꽝(0)은 횟수에 안 센다', upgradeCard(run, 'war-cleave', { value: 0 }).upgrades['war-cleave'], undefined)
+  const zero = upgradeCard(run, 'war-cleave', { value: 0 })
+  check('0도 횟수를 센다(별 하나)', [zero.upgrades['war-cleave']?.times, runCard(zero, 'war-cleave')!.upgraded], [1, 1])
+  check('0이면 수치는 그대로', runCard(zero, 'war-cleave')!.damage, plain.damage)
+  const sunk = upgradeCard(run, 'war-cleave', { value: -(plain.damage! + 10) })
+  check('마이너스는 0 아래로 안 내려간다', runCard(sunk, 'war-cleave')!.damage, 0)
+  check('바닥 밑 몫은 빚으로 안 남는다', runCard(upgradeCard(sunk, 'war-cleave', { value: 5 }), 'war-cleave')!.damage, 5)
   run = upgradeCard(run, 'war-cleave', { value: 10 })
   check('수치 강화 — 피해 +10', runCard(run, 'war-cleave')!.damage, plain.damage! + 10)
-  check('이름에 +1', runCard(run, 'war-cleave')!.name, `${plain.name}+1`)
+  check('이름은 그대로(별로 표시)', runCard(run, 'war-cleave')!.name, plain.name)
   run = upgradeCard(run, 'war-cleave', { cells: [{ df: 2, du: 0 }] })
   check('범위 강화 — 칸이 붙는다', runCard(run, 'war-cleave')!.range!.length, plain.range!.length + 1)
-  check('2번 하면 최대', canUpgradeCard(run, 'war-cleave'), false)
-  check('최대면 더 안 바뀐다', upgradeCard(run, 'war-cleave', { value: 20 }), run)
+  const cut = upgradeCard(run, 'war-cleave', { removed: [{ df: 2, du: 0 }, plain.range![0]] })
+  check('범위 마이너스 — 붙인 칸 · 원래 칸 둘 다 뺄 수 있다', runCard(cut, 'war-cleave')!.range!.length, plain.range!.length - 1)
+  check('뺀 원래 칸은 범위에 없다', runCard(cut, 'war-cleave')!.range!.some((o) => o.df === plain.range![0].df && o.du === plain.range![0].du), false)
+  check('3번 하면 최대', canUpgradeCard(cut, 'war-cleave'), false)
+  check('최대면 더 안 바뀐다', upgradeCard(cut, 'war-cleave', { value: 20 }), cut)
+  check('뺀 칸을 다시 붙이면 되살아난다', upgradedCard(plain, addUpgrade(addUpgrade(undefined, { removed: [plain.range![0]] }), { cells: [plain.range![0]] })).range!.length, plain.range!.length)
   check('원본은 그대로(PvP 카드 풀 불변)', [resolveRunCard('warrior', 'war-cleave')!.damage, resolveRunCard('warrior', 'war-cleave')!.range!.length], [plain.damage, plain.range!.length])
   const fightCard = runFightProps(run).deck.find((c) => c.id === 'war-cleave')
   check('전투 덱에 강화가 들어간다', fightCard?.damage, plain.damage! + 10)
@@ -1586,12 +1596,11 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   check('지도에 옛 상점·휴식 칸이 없다', old, 0)
   const hurt = { ...startRun('warrior'), hp: 10, gold: 200 }
   check('보물 — 유물 하나', openTreasure(hurt).run.relicIds.length, hurt.relicIds.length + 1)
-  // 여관 — 휴식 50G · 50%, 나가기 20%. 대장간 — 지나가면 10%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
+  // 여관 — 휴식 80G · 50%, 나가기 20%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
   const rested = innRest(hurt)!
-  check('여관 휴식 — 50골드 · 최대 체력 50%', [rested.gold, rested.hp, rested.floor], [200 - innRestPrice(hurt), 10 + Math.round(hurt.maxHp * 0.5), 1])
+  check('여관 휴식 — 80골드 · 최대 체력 50%', [rested.gold, rested.hp, rested.floor], [200 - innRestPrice(hurt), 10 + Math.round(hurt.maxHp * 0.5), 1])
   check('여관 휴식 — 골드가 모자라면 못 쉰다', innRest({ ...hurt, gold: innRestPrice(hurt) - 1 }), null)
   check('여관 나가기 — 최대 체력 20%', innLeave(hurt).hp, 10 + Math.round(hurt.maxHp * 0.2))
-  check('대장간을 그냥 지나가면 — 최대 체력 10%', smithPass(hurt).hp, 10 + Math.round(hurt.maxHp * 0.1))
   check('여관 회복은 최대 체력을 넘지 않는다', innRest({ ...hurt, hp: hurt.maxHp - 1 })!.hp, hurt.maxHp)
   // 여관 안 상점 — 카드 3 · 유물 2, 회복·강화 칸 없음.
   const stock = rollShop(hurt)

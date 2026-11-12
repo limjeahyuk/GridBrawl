@@ -66,7 +66,7 @@ export function EventScreen({
   }
 
   if (upgrading)
-    return <UpgradeScreen run={cur} source="event" onCancel={() => setUpgrading(false)} onDone={(next) => onDone(advanceFloor(next))} />
+    return <UpgradeScreen run={cur} source="event" tier="paid" onCancel={() => setUpgrading(false)} onDone={(next) => onDone(advanceFloor(next))} />
 
   const fight = (f: SpecialFight) => onFight({ ...cur, special: f })
   const relic = out?.relicId ? getRelic(out.relicId) : null

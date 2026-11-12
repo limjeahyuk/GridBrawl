@@ -3,10 +3,11 @@
 import { useMemo, useState } from 'react'
 import {
   advanceFloor, innLeave, innLeaveAmount, innRest, innRestAmount, innRestPrice, paySmith, placeLabel, rollShop,
-  smithPass, smithPassAmount, smithPrice, upgradableDeckCards, type RunState,
+  smithPrice, upgradableDeckCards, type RunState,
 } from '../../game/run'
 import { useFirstTip } from '../FirstTip'
 import { ShopScreen } from './ShopScreen'
+import type { UpgradeTier } from '../../game/upgrades'
 import { UpgradeScreen } from './UpgradeScreen'
 
 const where = (run: RunState) => `${placeLabel(run)}`
@@ -157,44 +158,40 @@ export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunSt
 }
 
 /**
- * 대장간(지도 칸) — 카드 강화 80G(한 번 · 저장하면 바로 지도로) / 쉬어 간다(최대 체력 10%).
- * ⚠ ? 이벤트 「낡은 대장간」과는 다른 곳이다(`EventScreen` — 강화 또는 유물).
+ * 대장간(지도 칸 · ? 칸) — 강화 맡기기 80G / 직접 강화 무료 / 나가기(2026-11-12 사용자 지정, 규칙은 `run.ts`).
+ * 강화는 한 번 · 한 장, 저장하면 바로 지도로. 나가기는 아무것도 없이 다음 층.
+ * ⚠ ? 이벤트 「낡은 대장간」과는 다른 곳이다(`EventScreen` — 맡긴 강화 룰렛 또는 유물).
  * 룰렛을 돌리기 전에 그만두면 결제 전 런으로 돌아온다(돈을 안 받는다).
  * 배경은 망치를 멘 대장장이 그림(`cutscene/smith/smith-bg.png`) — 여관과 같은 배치.
- * 쉬어 가면 대사가 바뀌고 "지도로" 하나만 남는다(여관과 같은 흐름).
  */
 export function SmithScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
-  const [paid, setPaid] = useState<RunState | null>(null)
-  const [rested, setRested] = useState<{ run: RunState; heal: number } | null>(null)
-  if (paid)
-    return <UpgradeScreen run={paid} source="smith" onCancel={() => setPaid(null)} onDone={(next) => onDone(advanceFloor(next))} />
+  const [up, setUp] = useState<{ run: RunState; tier: UpgradeTier } | null>(null)
+  if (up)
+    return (
+      <UpgradeScreen run={up.run} source="smith" tier={up.tier} onCancel={() => setUp(null)} onDone={(next) => onDone(advanceFloor(next))} />
+    )
 
-  const cur = rested?.run ?? run
   const price = smithPrice(run)
-  const passN = smithPassAmount(run)
   const canUp = upgradableDeckCards(run).length > 0
   const ok = canUp && run.gold >= price
-  const opts: Opt[] = rested
-    ? [{ label: '지도로', sub: '다음 칸을 고르러 간다', onTap: () => onDone(advanceFloor(rested.run)) }]
-    : [
-        {
-          label: '카드 강화',
-          sub: !canUp ? '강화할 카드가 없다' : run.gold < price ? '골드가 모자란다' : '카드 한 장 · 룰렛으로 수치 또는 범위 · 강화하면 대장간을 떠난다',
-          cost: price,
-          off: !ok,
-          tone: ok ? undefined : 'mute',
-          onTap: () => setPaid(paySmith(run)),
-        },
-        {
-          label: '쉬어 간다',
-          sub: `강화하지 않고 불 곁에서 쉰다 · 최대 체력의 10% 회복 (+${passN})`,
-          tone: 'heal',
-          onTap: () => {
-            const next = smithPass(run)
-            setRested({ run: next, heal: next.hp - run.hp })
-          },
-        },
-      ]
+  const opts: Opt[] = [
+    {
+      label: '강화 맡기기',
+      sub: !canUp ? '강화할 카드가 없다' : run.gold < price ? '골드가 모자란다' : '대장장이가 두들긴다 · 반드시 오른다 · 카드 한 장',
+      cost: price,
+      off: !ok,
+      tone: ok ? undefined : 'mute',
+      onTap: () => setUp({ run: paySmith(run)!, tier: 'paid' }),
+    },
+    {
+      label: '직접 강화',
+      sub: !canUp ? '강화할 카드가 없다' : '공짜 · 대신 그대로거나 오히려 나빠질 수도 있다 · 카드 한 장',
+      off: !canUp,
+      tone: canUp ? undefined : 'mute',
+      onTap: () => setUp({ run, tier: 'free' }),
+    },
+    { label: '나가기', sub: '아무것도 하지 않고 다음 층으로', onTap: () => onDone(advanceFloor(run)) },
+  ]
   return (
     <div className="screen smith">
       <div className="artbg artbg--fill artbg--smith" aria-hidden="true" />
@@ -205,20 +202,16 @@ export function SmithScreen({ run, onDone }: { run: RunState; onDone: (next: Run
           <h1 className="shop__title">대장간</h1>
           <span>{where(run)}</span>
         </div>
-        <Purse run={cur} heal={rested?.heal} />
+        <Purse run={run} />
       </header>
-      <section className="inn__say smith__say" key={rested ? 'rest' : 'hi'}>
+      <section className="inn__say smith__say">
         <div className="inn__name">
           <b>대장장이</b>
           <span>대장간 주인</span>
         </div>
-        <p>
-          {rested
-            ? '"그래, 몸부터 챙겨야지. 다음엔 카드도 들고 오게!"'
-            : `"어이, 어서 오게! 쇠든 카드든 두들기면 단단해지지. ${price}골드면 한 장 손봐 주겠네 — 딱 한 장이야."`}
-        </p>
+        <p>{`"어이, 어서 오게! ${price}골드면 내가 제대로 두들겨 주지. 돈이 아까우면 망치를 빌려줄 테니 직접 해 보든가 — 망쳐도 난 모르네!"`}</p>
       </section>
-      <Opts key={rested ? 'done' : 'open'} opts={opts} />
+      <Opts opts={opts} />
     </div>
   )
 }

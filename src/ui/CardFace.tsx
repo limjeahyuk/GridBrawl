@@ -161,6 +161,7 @@ export function CardFace({
       >
         <div className="cf__top">
           <span className="cf__dm">{statTag(card)}</span>
+          {!!card.upgraded && <span className="cf__stars" aria-label={`강화 ${card.upgraded}번`}>{'★'.repeat(card.upgraded)}</span>}
           <span className="cf__en">EN{cost}</span>
         </div>
         <RangeChart card={card} />
@@ -192,6 +193,7 @@ export function CardFace({
         <span className="cardface__icon">{kindIcon(card)}</span>
         {card.signature && <span className="cardface__sig">SP</span>}
         {card.legend && <span className="cardface__legend">전설</span>}
+        {!!card.upgraded && <span className="cardface__stars" aria-label={`강화 ${card.upgraded}번`}>{'★'.repeat(card.upgraded)}</span>}
         {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>
       <div className="cardface__name">{card.name}</div>
