@@ -22,7 +22,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..',
 SRC = os.path.join(ROOT, 'docs/redesign/2dImg/거래상.png')
 OUT = os.path.join(os.path.dirname(__file__), 'master-1024.png')
 
-BOX = (230, 20, 550, 340)   # 원본에서 잘라 낼 정사각 — 후드 꼭대기부터 망토 여밈까지
+BOX = (209, 20, 529, 340)   # 원본에서 잘라 낼 정사각 — 후드 꼭대기부터 망토 여밈까지 · 두 눈 사이 중점이 가운데(2026-11-12)
 N = 1024                    # 마스터 한 변
 HALO, RIM, BOOST, VIG = 0.9, 1.1, 1.16, 0.30
 
