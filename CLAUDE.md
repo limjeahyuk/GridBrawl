@@ -212,6 +212,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - 웹: Firebase Hosting `npm run build && npx firebase deploy --only hosting`. 빌드에 필요한 환경 변수는 없다(`.env` 불필요).
 - **네이티브 앱(Capacitor · `ios/` · `android/`)은 main에 없다**(2026-11-10 사용자 결정 — 앱 출시 중단). 브랜치 `archive/native-app`에 보존했고, 앱 규칙(cap sync · iPhone 전용 · 게스트 버튼 · 심사 주의점)은 그 브랜치의 CLAUDE.md §9에 있다.
 - 웹 아이콘(PWA) `npm run icon` — **? 칸 거래상 얼굴**(2026-11-12 사용자 선택). 구운 마스터 한 장(`docs/redesign/tools/icon/master-1024.png`)을 줄여 `public/icon-*.png` · `apple-touch-icon.png`를 만든다(의존성 0). 구도·빛을 바꾸려면 `docs/redesign/tools/icon/build.py`(pillow · rembg)로 마스터를 다시 굽는다. 전엔 `hero-knight` 도트에서 얼굴을 떼어 배경까지 코드로 그렸는데, 그 전사는 리디자인 뒤 **게임에 없는 캐릭터**였다.
+  ⚠ 아이콘 파일 이름은 그대로라 기기·브라우저가 옛 그림을 붙들고 있는다 — 그림을 바꾸면 `index.html` · `manifest.webmanifest`의 `?v=N`을 같이 올리고 **배포해야** 바뀐다. 이미 홈 화면에 추가한 아이콘은 지우고 다시 추가해야 새 그림이 된다(iOS는 추가할 때 한 번 저장한다).
 
 ## 10. 기술 스택 · 명령어 · 코드 지도
 
