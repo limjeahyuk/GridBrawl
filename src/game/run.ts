@@ -762,7 +762,7 @@ export function startRun(charId: string, difficulty: RunDifficulty = DEFAULT_DIF
 }
 
 // --- 유물의 전투 밖 효과 ----------------------------------------------------
-/** 장착 유물의 메타 효과 묶음(상점 할인·골드·보상 칸·회복량·덱 상한). */
+/** 장착 유물의 메타 효과 묶음(상점 할인·골드·보상 칸·진열 칸·회복량). */
 export function runMods(run: RunState): RunMods {
   return mergeRunMods(run.relicIds)
 }

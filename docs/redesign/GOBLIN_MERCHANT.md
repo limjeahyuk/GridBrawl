@@ -18,7 +18,7 @@
 
 ## 1. 누가 어디서 나오나
 
-`ClipName`에 `haggle` · `cheer`를 추가해야 한다. (여관 주인 마렌은 배경 그림 `public/redesign/cutscene/inn/inn-bg.png` — 원본 `docs/redesign/2dImg/inn.png`)
+`ClipName`에 `haggle` · `cheer`가 있지만 지금은 안 쓴다(이 화면은 일러스트라 도트가 없다). (여관 주인 마렌은 배경 그림 `public/redesign/cutscene/inn/inn-bg.png` — 원본 `docs/redesign/2dImg/inn.png`)
 
 ## 2. 고블린 재산 — 쓸수록 부자가 된다
 
@@ -54,24 +54,24 @@ const goblinPrice = (base: number, rng: () => number) => {
 
 | 단계 | 진열 |
 | --- | --- |
-| 가난 | 카드 2(일반) · 회복 1(HP +15) |
-| 중간 | 카드 2(일반~희귀) · 유물 1(일반~희귀) · 회복 1(HP +25) |
-| 부자 | 카드 2(희귀~영웅) · 유물 2(희귀 이상, **전설 확률**) · 회복 1(HP +40) |
+| 가난 | 카드 2 · 회복 1(HP +15) |
+| 중간 | 카드 2 · 유물 1(일반~희귀) · 회복 1(HP +25) |
+| 부자 | 카드 2 · 유물 2(희귀 이상, **전설 확률**) · 회복 1(HP +40) |
 
-정가는 기존 상점과 같다(카드 35, 유물 60/95/145/230, 회복 30). 진열은 `rollShop`을 단계별 인자로 돌리면 된다.
+정가는 여관 상점과 같다(카드 35, 유물 60/95/145/230) + 회복 물약 30(`PRICE_HEAL` — 물약은 고블린에만 있다). 진열은 `run.ts`의 `rollGoblinShop`(`GOBLIN_STOCK`). 카드는 등급 구분 없이 `cardRewardPool`(직업 · 미보유)에서 뽑는다.
 
-## 4. 단계별 전투 (`monsters.ts`에 추가할 모양)
+## 4. 단계별 전투 (`monsters.ts` — 구현됨)
 
 보스와 같은 규칙으로, 능력은 **? 칸으로 시작해 처음 발동할 때 공개**된다(`BossHUD.dc.html`). 판은 빈 판이다.
 
 ```ts
-{ id: 'goblin-poor', name: '가난한 고블린', baseArtId: 'mage', spriteId: 'goblin-poor', tier: 1,
+{ id: 'goblin-poor', name: '가난한 고블린', baseArtId: 'mage', spriteId: 'goblin-poor', tier: 0,
   maxHp: 28, startEnergy: 20, aiLevel: 'easy', behavior: 'skirmisher', passive: {},
   deckCardIds: ['c-shot', 'c-jab'], note: '가진 게 없어 돌을 던지며 도망친다.' },
-{ id: 'goblin-mid', name: '중간 고블린', baseArtId: 'mage', spriteId: 'goblin-mid', tier: 2,
+{ id: 'goblin-mid', name: '중간 고블린', baseArtId: 'mage', spriteId: 'goblin-mid', tier: 0,
   maxHp: 52, startEnergy: 26, aiLevel: 'normal', behavior: 'rusher', passive: { turnShield: 4 },
   deckCardIds: ['war-cleave', 'c-jab', 'c-guard'], note: '단골이 강도로 돌변하면 언월도를 뽑는다.' },
-{ id: 'goblin-rich', name: '부자 고블린', baseArtId: 'mage', spriteId: 'goblin-rich', tier: 3,
+{ id: 'goblin-rich', name: '부자 고블린', baseArtId: 'mage', spriteId: 'goblin-rich', tier: 0,
   maxHp: 88, startEnergy: 32, aiLevel: 'hard', behavior: 'balanced',
   passive: { damageReduction: 3, turnEnergy: 6, attackBonus: 3 },
   deckCardIds: ['war-bash', 'war-cleave', 'arc-shot', 'c-brace'], note: '돈으로 산 갑옷과 금화 세례. 엘리트급.' },
@@ -93,11 +93,11 @@ const goblinPrice = (base: number, rng: () => number) => {
 | 중간 | 골드 55 + 진열품 1개 **고르기** |
 | 부자 | 골드 140 + 진열품 1개 고르기 + 유물 확정 |
 
-보상을 받은 뒤 `goblinSpent = 0` → 다음 고블린 상점은 가난부터. 지면 일반 전투와 같다(런 종료).
+코드는 `run.ts`의 `GOBLIN_LOOT` · `events.ts`의 `applySpecialWin`. 보상을 받은 뒤 `goblinSpent = 0` → 다음 고블린 상점은 가난부터. 지면 일반 전투와 같다(런 종료).
 
 ## 6. ? 칸 흐름
 
-`? 칸 정체 공개(전투/휴식/고블린 상점/이벤트)` → 고블린 상점이면 `만남`(거래한다 · 덮친다 · 그냥 지나간다)으로 간다.
+`? 칸 정체 공개(이벤트 55 / 매복 15 / 모닥불 15 / 고블린 15)` → 고블린 상점이면 `만남`(거래한다 · 덮친다 · 그냥 지나간다)으로 간다.
 
 - 거래한다 → `거래` 화면(언제든 "마음이 바뀌었다 — 덮친다"로 전투에 들어갈 수 있다)
 - 덮친다 → `습격` 확인 패널(체력 · 기력 · 강함 · 내는 카드 · ? 능력 수 · 보상 · "지면 런이 끝난다") → 전투

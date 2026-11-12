@@ -1,7 +1,7 @@
 # GridBrawl — 프로젝트 가이드 (Claude용)
 
 > 이 파일은 매 세션 자동 로드된다. **여기 적힌 건 전부 "지금" 규칙이다**(2026-11-09 전면 재작성).
-> 옛 서술·밸런스 측정 경위·되돌린 시도는 [docs/HISTORY.md](docs/HISTORY.md)(옛 CLAUDE.md 원문)에 있다 — 거기 수치를 지금 규칙으로 읽지 말 것.
+> 옛 서술·밸런스 측정 경위·되돌린 시도는 [docs/HISTORY.md](docs/HISTORY.md)(옛 CLAUDE.md · GAME_DESIGN.md · ROGUELIKE.md 원문)에 있다 — 거기 수치를 지금 규칙으로 읽지 말 것.
 
 ## 0. 어떤 문서가 기준인가
 
