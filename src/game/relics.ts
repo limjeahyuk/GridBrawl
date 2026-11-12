@@ -298,7 +298,7 @@ const genericRelics: Relic[] = [
   // 세트를 짰다. 새 유물이 만드는 새 빌드는 이렇다:
   //   빙결 부여   freezeOnHit  — 그 라운드를 통째로 지운다(단, 때리면 깨진다)
   //   방벽 증폭   guardPowerPct— 수비 카드를 낸 턴만 보상. 버티기 연타 빌드
-  //   치유 증폭   healPowerPct — 회복 카드·regen을 함께 키운다. 장기전 빌드
+  //   치유 증폭   healPowerPct — 회복 카드만 키운다(regen은 안 탄다 — 2026-11-12). 장기전 빌드
   //   시작 기력   startEnergyBonus — 1턴부터 큰 카드. 짧고 굵게 끝내는 빌드
   //   처형        executeBonusPct — 상대가 반피 이하일 때 배율. 마무리 빌드
   //   발판        collapseResist  — 무너진 칸을 딛고 버틴다(전장 붕괴 대응)
@@ -318,7 +318,7 @@ const genericRelics: Relic[] = [
   { id: 'aegisoath', name: '불괴의 서약', icon: '⚜️', rarity: 'legend', desc: '수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.', effect: { guardPowerPct: 120, openingShield: 20, damageReduction: 3 } },
 
   // --- 치유 증폭 계열 -------------------------------------------------------
-  { id: 'poultice', name: '약초 습포', icon: '🌾', rarity: 'common', desc: '회복 카드와 매 라운드 체력 회복 +40%.', effect: { healPowerPct: 40 } },
+  { id: 'poultice', name: '약초 습포', icon: '🌾', rarity: 'common', desc: '회복 카드 회복량 +40%.', effect: { healPowerPct: 40 } },
 
   // --- 시작 기력 계열 -------------------------------------------------------
   { id: 'primer', name: '점화약', icon: '🧨', rarity: 'common', desc: '전투 시작 기력 +13.', effect: { startEnergyBonus: 13 } },
@@ -414,8 +414,8 @@ const genericRelics: Relic[] = [
   { id: 'fireegg', name: '타오르는 알', icon: '🥚', rarity: 'epic', desc: '화상에 걸리지 않는다.', effect: { burnImmune: true } },
   { id: 'nutrient', name: '영양가루', icon: '✨', rarity: 'rare', desc: '최대 체력 +10, 최대 기력 +10.', effect: { maxHpBonus: 10, maxEnergyBonus: 10 } },
   // 세계수의 가지 = 원래 보상 풀에 있던 전설 유물 「세계수 가지」(`worldtree`, 그림 있음)를 이벤트 전용으로 돌린 것이다
-  // (2026-11-12 사용자 지정 — "둘이 같은 것"). 같은 날 사용자 버프: 매 라운드 체력 +10 · 최대 체력 +15 · 최대 기력 +15(회복량 % 증폭은 사용자가 뺐다).
-  { id: 'worldtree', name: '세계수의 가지', icon: '🌳', rarity: 'legend', eventOnly: true, desc: '매 라운드 체력 +10, 최대 체력 +15, 최대 기력 +15.', effect: { regen: 10, maxHpBonus: 15, maxEnergyBonus: 15 } },
+  // (2026-11-12 사용자 지정 — "둘이 같은 것"). 같은 날 사용자 버프: 매 라운드 체력 +10 · 최대 체력 +15 · 최대 기력 +15+ 회복 카드 회복량 +200%(매 라운드 회복은 안 탄다 — 엔진 규칙).
+  { id: 'worldtree', name: '세계수의 가지', icon: '🌳', rarity: 'legend', eventOnly: true, desc: '회복 카드 회복량 +200%, 매 라운드 체력 +10, 최대 체력 +15, 최대 기력 +15.', effect: { healPowerPct: 200, regen: 10, maxHpBonus: 15, maxEnergyBonus: 15 } },
   // ⚠ 깃털의 효과는 기획서에 없어 정한 값이다 — 사슬에 들인 것(알)보다 세게.
   { id: 'phoenixfeather', name: '불사조의 깃털', icon: '🪶', rarity: 'legend', eventOnly: true, desc: '전투당 한 번, 체력 40으로 되살아난다. 화상에 걸리지 않는다.', effect: { revive: 40, burnImmune: true } },
 ]

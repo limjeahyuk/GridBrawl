@@ -398,11 +398,9 @@ export class CardBattle {
       s.energy[p] = clamp(s.energy[p] + bonus, 0, this.chars[p].maxEnergy)
       s.shield[p] += pas.turnShield ?? 0
       if (s.round === 1 && pas.openingShield) s.shield[p] += pas.openingShield
-      // 지속 회복도 `healPowerPct`로 증폭된다 — 힐 카드와 같은 손잡이를 쓴다.
-      if (pas.regen) {
-        const heal = Math.round(pas.regen * (1 + (pas.healPowerPct ?? 0) / 100))
-        s.hp[p] = Math.min(this.maxHp[p], s.hp[p] + heal)
-      }
+      // 지속 회복은 적힌 값 그대로다 — `healPowerPct`(회복량 %)는 회복 카드에만 붙는다
+      // (2026-11-12 사용자 지정: 세계수의 가지 +10이 회복량 +200%를 타 30이 되던 것).
+      if (pas.regen) s.hp[p] = Math.min(this.maxHp[p], s.hp[p] + pas.regen)
     }
 
     const emit = (

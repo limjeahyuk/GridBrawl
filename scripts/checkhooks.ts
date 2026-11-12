@@ -1073,7 +1073,7 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   check('guardPowerPct는 매 턴 보호막엔 안 붙는다', std2.state.shield[0], std.state.shield[0])
 }
 {
-  // healPowerPct — 힐 카드와 regen 둘 다 키운다.
+  // healPowerPct — 힐 카드만 키운다(regen은 그대로 — 2026-11-12).
   const b = battleWith({ healPowerPct: 100 })
   b.state.hp[0] = 50
   b.resolveRound([card('c-repair'), card('c-energy'), card('c-energy')], IDLE)
@@ -1081,7 +1081,7 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   const r = battleWith({ regen: 10, healPowerPct: 50 })
   r.state.hp[0] = 50
   r.resolveRound(IDLE, IDLE)
-  check('healPowerPct — regen 10 → 15', r.state.hp[0], 65)
+  check('healPowerPct는 regen을 안 키운다 — regen 10 그대로', r.state.hp[0], 60)
 }
 {
   const b = battleWith({ startEnergyBonus: 25 })
