@@ -181,7 +181,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 - 유물 발동·적 능력 공개는 엔진이 안 알려 준다 — `ui/relicFx.ts`가 스텝 결과에서 추정한다.
 - **카드 UI**: 전투·보상·상점은 압축 카드(`CardFace compact`), 설명은 꾹 눌러 여는 `CardDetail`(380ms, 10px 움직이면 취소, 연 뒤 click 삼킴, contextmenu 차단). ⚠ 못 쓰는 카드에 `disabled`를 걸지 말 것(꾹 눌러 읽을 수도 없어진다) — `aria-disabled`. 능력의 뜻은 `cardAbility.ts` 한 곳.
 - **손패는 두 쪽**(2026-11-10 사용자 지정) — 기본 **공격**, 손패 맨 오른쪽 ⇅(`.cards__swap`)로 **이동·보조**(이동 묶음 + 수비·회복·기력·강화). **가로 스크롤 없음**: 런은 쪽마다 5장이라 늘 들어가고, 그보다 많은 PvP 덱은 카드가 줄어든다(`.handcard` flex-shrink). 스크롤을 되살리지 말 것.
-- 이동은 판의 칸을 눌러서 한다(호박색 칸 = 갈 수 있는 곳, 이동 묶음 `MoveBundle`). 칸에는 **화살표만** 찍는다 — 카드 이름("오른쪽" 등)은 빼라는 사용자 지정(2026-11-10), 이름은 title에만. 이동 칸과 공격 사거리(붉은색)의 색을 섞지 말 것. 판 위 연출 레이어는 `pointer-events: none`.
+- 이동은 판의 칸을 눌러서 한다(호박색 칸 = 갈 수 있는 곳, 이동 묶음 `MoveBundle`). 칸에는 **아무 글자도 찍지 않는다** — 2026-11-10에 카드 이름을, 2026-11-12 디자인(`MoveBundle`)에서 화살표까지 뺐다. 색(노랑 1칸 · 주황 대시)과 깜빡임만, 이름은 title·aria-label에만. 이동 칸과 공격 사거리(붉은색)의 색을 섞지 말 것. 판 위 연출 레이어는 `pointer-events: none`.
 - 스프라이트 좌우 반전은 두 겹(`--flip` = 방향, `--artflip` = 시트 원본 방향) — 합치지 말 것. `fighter--{face}`(방향)·`--seat-{side}`·`--stacked-{side}`(자리)를 구분.
 - 튜토리얼 9단계(실제 전투 위 스포트라이트, `onSlotsChange`) · 첫 만남 팁 9종(`ui/FirstTip.tsx`, `gb-tips-seen`, 팁 id `shop`은 여관에서 뜬다).
 - 개발 빌드 콘솔 `__gb.setRun(__gb.startRun('warrior')); __gb.setPhase('run-inn')`로 화면에 바로 뛴다.

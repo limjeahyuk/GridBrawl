@@ -1562,7 +1562,6 @@ export function BattleScreen({
               // 대시·특수 이동은 **주황**이고 쿨을 라벨에 같이 적는다(디자인
               // `MoveBundleSpec`) — 칸 하나로 두세 칸을 가는 것과 한 칸짜리가
               // 같은 색이면 "왜 여기까지 가지"가 된다.
-              const face = faceCard(mv);
               const dash = (mv.steps ?? 1) > 1 || (mv.cooldown ?? 0) > 0;
               return (
                 <button
@@ -1577,9 +1576,8 @@ export function BattleScreen({
                       붕괴 → {collapseDamageAt(turn + 1)} 피해
                     </span>
                   )}
-                  {/* 화살표만 — 카드 이름("오른쪽" · "아래")은 칸 위에서 군더더기였다(2026-11-10 사용자 지정).
-                      이름은 title·aria-label에 남는다. 대시는 칸 색(주황)으로 가른다. */}
-                  <span className="cell__movelab">{moveIcon(face.dir, face.steps ?? 1)}</span>
+                  {/* 칸 위에는 아무 글자도 없다 — 화살표까지 뺐다(2026-11-12 디자인 `MoveBundle`).
+                      이름은 title·aria-label에, 대시는 칸 색(주황)으로 가른다. */}
                 </button>
               );
             }
