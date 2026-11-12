@@ -257,9 +257,10 @@ const GOLD_PER_FLOOR = 4
 const GOLD_ELITE_BONUS = 40
 /** 보스 골드 = 엘리트와 비슷하게(2026-11-12 사용자 지정 — 예전 80). */
 const GOLD_BOSS_BONUS = 40
-const PRICE_CARD = 35
+/** 가격은 2026-11-12에 올렸다(사용자 — 2막 × 20층이라 런당 골드가 2배 넘게 늘었다. 받는 골드는 그대로, 쓰는 곳을 비싸게). 카드 35 → 60. */
+const PRICE_CARD = 60
 /** 고블린 상점 물약의 정가(여관 상점엔 물약이 없다 — 회복은 여관 휴식이 맡는다). */
-const PRICE_HEAL = 30
+const PRICE_HEAL = 50
 
 /**
  * 시작 덱 — **공용 기본 카드 9장뿐**(이동4 + 약공3 + 버티기 + 원기). 2026-07-31에
@@ -405,12 +406,12 @@ function combatMonster(floor: number, exclude?: string): string {
 }
 
 /**
- * 칸 종류 가중치(1 · 19 · 20층과 보물 칸을 뺀 나머지 층) — 2026-11-12 사용자 지정 지도.
- * 엘리트는 6층부터, 대장간은 3층부터, 여관은 5 ~ 17층(19층이 전부 여관이라 18층엔 안 둔다).
+ * 칸 종류 가중치(1 · 20층과 보물 칸을 뺀 나머지 층) — 2026-11-12 사용자 지정 지도.
+ * 엘리트는 6층부터, 대장간은 3층부터, 여관은 5층부터. 보스 앞 여관 층은 없다(사용자 — "그 전에 알아서 체력을 챙겨야 한다").
  */
 const NODE_WEIGHTS: [NodeType, number][] = [['combat', 50], ['event', 22], ['elite', 10], ['inn', 10], ['smith', 8]]
 const allowedAt = (t: NodeType, floor: number): boolean =>
-  t === 'elite' ? floor >= 6 : t === 'inn' ? floor >= 5 && floor <= 17 : t === 'smith' ? floor >= 3 : true
+  t === 'elite' ? floor >= 6 : t === 'inn' ? floor >= 5 : t === 'smith' ? floor >= 3 : true
 /** 이어서 같은 걸 두 번 밟지 않게 하는 종류 — 엘리트 · 여관 · 대장간은 부모 칸과 겹치면 다시 뽑는다. */
 const NO_REPEAT: NodeType[] = ['elite', 'inn', 'smith']
 /** 지도를 그리는 길 수. 길이 겹치는 곳이 칸이 되고, 길이 안 지나간 곳은 비어 있다. */
@@ -428,7 +429,7 @@ const ACT_BOSSES: string[][] = [['warden', 'pyrelord'], ['overlord']]
  *    처음 두 길은 출발 줄이 다르다. 이미 난 간선과 **엇갈리는**(X자) 걸음은 피한다.
  * 2) 길이 지나간 자리가 칸, 걸음이 간선이다. 그래서 **한 칸에서 못 가는 칸이 생긴다**.
  * 3) 20층은 보스 하나 — 19층 칸이 전부 보스로 이어진다.
- * 4) 종류: 1층 = 전투, 19층 = 여관(보스 전 휴식), 보물 = 8 ~ 12층의 칸 하나, 나머지는 `NODE_WEIGHTS`.
+ * 4) 종류: 1층 = 전투, 보물 = 8 ~ 12층의 칸 하나, 나머지는 `NODE_WEIGHTS`(19층도 — 보스 앞 여관 층은 없다).
  */
 function buildMap(act: number): RunNode[][] {
   const F = LADDER_FLOORS
@@ -474,7 +475,6 @@ function buildMap(act: number): RunNode[][] {
     floors[f].forEach((n, i) => {
       let type: NodeType
       if (floor === 1) type = 'combat'
-      else if (floor === F - 1) type = 'inn'
       else if (floor === tFloor && i === tIdx) type = 'treasure'
       else {
         const parents = floors[f - 1].filter((p) => p.next.includes(i)).map((p) => p.type)
@@ -834,12 +834,12 @@ export function grantRelic(run: RunState, relicId: string): RunState {
 }
 /**
  * 등급 확률로 유물 하나(2026-11-12 사용자 지정 보상표). 그 등급에 남은 게 없으면 다른 등급에서.
- *   일반 전투 = 일반 · 엘리트 = 희귀(영웅 아주 낮게) · 보스 = 희귀 또는 영웅 · 보물 = 일반 · 희귀(영웅 아주 낮게)
+ *   일반 전투 = 일반 · 엘리트 = 희귀(영웅 아주 낮게) · 보스 = 영웅(전설 낮게) · 보물 = 일반 · 희귀(영웅 아주 낮게)
  */
 export type RarityOdds = [Rarity, number][]
 export const COMBAT_RELIC_ODDS: RarityOdds = [['common', 1]]
 export const ELITE_RELIC_ODDS: RarityOdds = [['rare', 0.94], ['epic', 0.06]]
-export const BOSS_RELIC_ODDS: RarityOdds = [['rare', 0.6], ['epic', 0.4]]
+export const BOSS_RELIC_ODDS: RarityOdds = [['epic', 0.88], ['legend', 0.12]] // 영웅, 낮은 확률로 전설(2026-11-12 사용자)
 export const TREASURE_RELIC_ODDS: RarityOdds = [['common', 0.55], ['rare', 0.4], ['epic', 0.05]]
 export const BOSS_RELIC_OPTIONS = 3
 export function rollRelicOf(run: RunState, odds: RarityOdds, exclude: string[] = []): string | undefined {
@@ -985,7 +985,7 @@ export function cardRewardPool(run: RunState): string[] {
  */
 export function rollRewards(run: RunState): Reward[] {
   const node = run.special ? null : currentNode(run)
-  // 보스(1막) — 희귀 · 영웅 유물 중 하나를 고른다(2026-11-12 사용자 지정). 카드는 없다.
+  // 보스(1막) — 영웅 유물(낮은 확률로 전설) 중 하나를 고른다(2026-11-12 사용자 지정). 카드는 없다.
   if (node?.type === 'boss') {
     const out: Reward[] = []
     for (let i = 0; i < BOSS_RELIC_OPTIONS; i++) {
@@ -1098,7 +1098,7 @@ export function buyShopItem(
  * 회복량은 `min(최대 − 현재, round(최대 × %))`. 시안은 20% / 5%였는데 모닥불 칸(무료 30%)과
  * 상점 물약이 빠진 만큼 회복이 모자라 50% / 20%로 올렸다(2026-11-09 사용자 지정).
  */
-export const INN_REST_PRICE = 50
+export const INN_REST_PRICE = 80 // 2026-11-12 50 → 80
 export const INN_REST_PCT = 0.5
 export const INN_LEAVE_PCT = 0.2
 const healOf = (run: RunState, pct: number) => Math.max(0, Math.min(run.maxHp - run.hp, Math.round(run.maxHp * pct)))
@@ -1122,7 +1122,7 @@ export const innLeave = (run: RunState): RunState => healHp(run, innLeaveAmount(
  * 룰렛을 돌리면 결과가 0이어도 돈은 안 돌아온다 — 결제는 여기서, 강화는 UI가 이어서.
  * 돌리기 전에 그만두면 화면이 결제 전 런으로 돌려준다.
  */
-export const SMITH_PRICE = 50
+export const SMITH_PRICE = 80 // 2026-11-12 50 → 80
 export const smithPrice = (run: RunState): number => shopPrice(run, SMITH_PRICE)
 export const SMITH_PASS_PCT = 0.1
 export const smithPassAmount = (run: RunState): number => healOf(run, SMITH_PASS_PCT)

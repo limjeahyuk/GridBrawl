@@ -58,7 +58,7 @@ const goblinPrice = (base: number, rng: () => number) => {
 | 중간 | 카드 2 · 유물 1(일반~희귀) · 회복 1(HP +25) |
 | 부자 | 카드 2 · 유물 2(희귀 이상, **전설 확률**) · 회복 1(HP +40) |
 
-정가는 여관 상점과 같다(카드 35, 유물 60/95/145/230) + 회복 물약 30(`PRICE_HEAL` — 물약은 고블린에만 있다). 진열은 `run.ts`의 `rollGoblinShop`(`GOBLIN_STOCK`). 카드는 등급 구분 없이 `cardRewardPool`(직업 · 미보유)에서 뽑는다.
+정가는 여관 상점과 같다(카드 60, 유물 100/160/250/600 — 2026-11-12 상향) + 회복 물약 50(`PRICE_HEAL` — 물약은 고블린에만 있다). 진열은 `run.ts`의 `rollGoblinShop`(`GOBLIN_STOCK`). 카드는 등급 구분 없이 `cardRewardPool`(직업 · 미보유)에서 뽑는다.
 
 ## 4. 단계별 전투 (`monsters.ts` — 구현됨)
 

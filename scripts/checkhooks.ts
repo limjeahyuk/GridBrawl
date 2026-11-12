@@ -294,7 +294,7 @@ console.log('\n런 진행 규칙')
   // 상점 할인 유물이 모든 가격에 반영된다.
   const plain = rollShop(run).find((i) => i.kind === 'card')!
   const discounted = rollShop(grantRelic(run, 'coupon')).find((i) => i.kind === 'card')!
-  check('상인의 인증패(20%) → 카드 가격 35 → 28', [plain.price, discounted.price], [35, 28])
+  check('상인의 인증패(20%) → 카드 가격 60 → 48', [plain.price, discounted.price], [60, 48])
 
   check('안장 가방 → 보상 선택지 +1(덱 상한 유물은 2026-11-10에 없앴다)', rollRewards(grantRelic(run, 'saddlebag')).length, rollRewards(run).length + 1)
   const hurt = { ...run, hp: 10 }
@@ -1155,7 +1155,6 @@ console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · �
   const RUNS = 300
   let bad20 = 0 // 20층이 보스 하나가 아님
   let bad1 = 0 // 1층에 전투 아닌 칸
-  let bad19 = 0 // 19층에 여관 아닌 칸
   let treasureBad = 0 // 보물이 딱 하나가 아님
   let orphan = 0 // 들어오는 간선이 없는 칸
   let deadend = 0 // 나가는 간선이 없는 칸(보스 제외)
@@ -1170,14 +1169,13 @@ console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · �
     if (map.length !== LADDER_FLOORS || map[LADDER_FLOORS - 1].length !== 1 || map[LADDER_FLOORS - 1][0].type !== 'boss') bad20++
     bosses.add(map[LADDER_FLOORS - 1][0].monsterId ?? '?')
     if (map[0].some((n) => n.type !== 'combat')) bad1++
-    if (map[LADDER_FLOORS - 2].some((n) => n.type !== 'inn')) bad19++
     if (map.flat().filter((n) => n.type === 'treasure').length !== 1) treasureBad++
     map.forEach((nodes, f) => {
       nodes.forEach((n, j) => {
         if (f < map.length - 1 && !n.next.length) deadend++
         if (f > 0 && !map[f - 1].some((a) => a.next.includes(j))) orphan++
         if (n.type === 'elite' && f + 1 < 6) earlyElite++
-        if (f > 0 && ['elite', 'inn', 'smith'].includes(n.type) && f + 1 !== LADDER_FLOORS - 1 && map[f - 1].some((a) => a.next.includes(j) && a.type === n.type)) repeatBad++
+        if (f > 0 && ['elite', 'inn', 'smith'].includes(n.type) && map[f - 1].some((a) => a.next.includes(j) && a.type === n.type)) repeatBad++
         if (f < map.length - 2)
           for (const k of n.next) {
             if (Math.abs(map[f + 1][k].lane - n.lane) > 1) farEdge++
@@ -1204,7 +1202,7 @@ console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · �
   }
   check('20층은 보스 하나', bad20, 0)
   check('1막 보스는 수호기사 · 화염군주 중 하나', [...bosses].every((b) => ['warden', 'pyrelord'].includes(b)), true)
-  check('1층은 전투 · 19층은 여관(보스 전 휴식)', [bad1, bad19], [0, 0])
+  check('1층은 전투', bad1, 0)
   check('보물은 지도 하나에 딱 하나', treasureBad, 0)
   check('막다른 칸이 없다(보스 제외)', deadend, 0)
   check('들어오는 길이 없는 칸이 없다', orphan, 0)
@@ -1224,7 +1222,7 @@ console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · �
   // 보상표(2026-11-12 사용자 지정)
   const rar = (id: string) => RELIC_BY_ID[id]?.rarity
   const bossR = rollRewards({ ...startRun('warrior'), floor: LADDER_FLOORS })
-  check('1막 보스 보상 — 희귀 · 영웅 유물 3개 중 고르기', [bossR.length, bossR.every((r) => r.kind === 'relic' && ['rare', 'epic'].includes(rar(r.relicId)!))], [3, true])
+  check('1막 보스 보상 — 영웅(드물게 전설) 유물 3개 중 고르기', [bossR.length, bossR.every((r) => r.kind === 'relic' && ['epic', 'legend'].includes(rar(r.relicId)!))], [3, true])
   const eliteRun = { ...startRun('warrior'), map: [[{ type: 'elite' as const, monsterId: 'ogre', lane: 0, next: [] }]] }
   let eliteOk = true
   for (let k = 0; k < 200; k++) {

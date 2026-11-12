@@ -56,7 +56,7 @@ const NODE_HINT: Record<RunNode['type'], string> = {
   elite: '강한 적 · 유물 보상',
   boss: '마지막 관문',
   event: '이벤트 · 무엇이 있을지 모른다',
-  inn: '휴식(골드 50%) · 카드 · 유물 구매 · 나가도 20%',
+  inn: '휴식(80골드 · 50%) · 카드 · 유물 구매 · 나가도 20%',
   smith: '골드로 카드 한 장 강화 · 그냥 지나가면 휴식',
   treasure: '유물 상자 하나',
 }

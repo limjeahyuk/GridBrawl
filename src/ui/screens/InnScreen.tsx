@@ -68,7 +68,7 @@ export function Purse({ run, heal }: { run: RunState; heal?: number }) {
 }
 
 /**
- * 여관 — 휴식(50G · 50%) / 상점 / 나가기(20%). 휴식이나 나가기를 고르면 그걸로 방문이 끝나고
+ * 여관 — 휴식(80G · 50%) / 상점 / 나가기(20%). 휴식이나 나가기를 고르면 그걸로 방문이 끝나고
  * "지도로" 하나만 남는다. 상점은 다녀와도 방문이 안 끝난다 — 진열·산 목록을 여기서 들고 있다.
  */
 export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
@@ -157,7 +157,7 @@ export function InnScreen({ run, onDone }: { run: RunState; onDone: (next: RunSt
 }
 
 /**
- * 대장간(지도 칸) — 카드 강화 50G(한 번 · 저장하면 바로 지도로) / 쉬어 간다(최대 체력 10%).
+ * 대장간(지도 칸) — 카드 강화 80G(한 번 · 저장하면 바로 지도로) / 쉬어 간다(최대 체력 10%).
  * ⚠ ? 이벤트 「낡은 대장간」과는 다른 곳이다(`EventScreen` — 강화 또는 유물).
  * 룰렛을 돌리기 전에 그만두면 결제 전 런으로 돌아온다(돈을 안 받는다).
  * 배경은 망치를 멘 대장장이 그림(`cutscene/smith/smith-bg.png`) — 여관과 같은 배치.

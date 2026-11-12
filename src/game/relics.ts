@@ -521,8 +521,9 @@ export function pickWeightedRelic(pool: Relic[], floor = 1): Relic | undefined {
 
 /** 상점 가격 기준(희귀도별). legend는 아주 비싸다. */
 export const RELIC_PRICE: Record<Rarity, number> = {
-  common: 60,
-  rare: 95,
-  epic: 145,
-  legend: 230,
+  // 2026-11-12 올림(사용자 — 런 골드가 늘었다 · 전설은 상점에서 아주 비싸게): 60 / 95 / 145 / 230 →
+  common: 100,
+  rare: 160,
+  epic: 250,
+  legend: 600,
 }
