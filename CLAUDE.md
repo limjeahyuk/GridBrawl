@@ -9,7 +9,7 @@
 | --- | --- | --- |
 | 화면 · 그림 · 리디자인 룰(여관·대장간·이벤트·고블린·강화·함정) | **`docs/redesign/*`** — 진행표 [PROGRESS.md](docs/redesign/PROGRESS.md), 시안 `screens/*.dc.html` | **가장 최신.** 다른 문서와 다르면 이쪽이 이긴다 |
 | 전투 규칙 상세 · 근거 | [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) ④ | 날짜 붙은 절은 그때의 기록. 숫자는 코드가 진실 |
-| 상태이상 개편(기획 · **미구현**) | [docs/redesign/STATUS.md](docs/redesign/STATUS.md) | 중독 · 화상(새 규칙) · 출혈(새 상태이상) 확정(11-12) · 이동불가(속박·기절·빙결) 받는 중 · 나머지 설명 대기. 구현 전까지 §4가 지금 규칙 |
+| 상태이상 개편(기획 · **미구현**) | [docs/redesign/STATUS.md](docs/redesign/STATUS.md) | 중독 · 화상(새 규칙) · 출혈(새 상태이상) · 이동불가(속박·기절·빙결) 확정(11-12) · 독안개·힘·버프 설명 대기. 구현 전까지 §4가 지금 규칙 |
 | 로그라이크 설계 · 밸런스 방법론 | [docs/ROGUELIKE.md](docs/ROGUELIKE.md) | 〃 |
 | 작업 경위 | [docs/HISTORY.md](docs/HISTORY.md) | 사실 아님 — "왜 이렇게 됐나"용 |
 
