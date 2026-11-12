@@ -396,7 +396,7 @@
     "maxFloor": 10,
     "notRelic": [
      "seed",
-     "worldbranch"
+     "worldtree"
     ]
    },
    "art": {
@@ -544,7 +544,7 @@
      },
      "effect": {
       "type": "gainRelic",
-      "id": "worldbranch"
+      "id": "worldtree"
      }
     },
     {
