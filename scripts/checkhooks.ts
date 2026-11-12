@@ -14,6 +14,8 @@ import { getChar, ROSTER, type CharacterDef, type Passive } from '../src/data/ro
 import { classPassive, mergeRelics, mergeRunMods, RELICS, REWARD_RELICS } from '../src/game/relics'
 import {
   LADDER_FLOORS,
+  regionOf,
+  runDepth,
   LOCKED_CARD_IDS,
   RUN_DIFFICULTIES,
   isDifficultyUnlocked,
@@ -57,7 +59,6 @@ import {
   cardRewardPool,
   buyGoblinItem,
   goblinMonsterId,
-  rollQuestionFate,
   buyShopItem,
   computeMaxHp,
   currentEnemy,
@@ -71,7 +72,7 @@ import {
 } from '../src/game/run'
 import { runFightProps } from '../src/game/runbattle'
 import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
-import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, resolveEventChoice, startEvent, withEventSeen } from '../src/game/events'
+import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, questionFates, resolveEventChoice, rollQuestionFate, startEvent, withEventSeen } from '../src/game/events'
 import { RELIC_BY_ID } from '../src/game/relics'
 import { RUN_CARDS, RUN_CARD_BY_ID, RUN_CARD_CLASS, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
@@ -1148,78 +1149,99 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   check('전면 붕괴 뒤 AI는 이동만 하지 않는다', plan.every((c) => c.kind === 'move'), false)
 }
 
-// --- 분기 지도 그래프(2026-08-05) --------------------------------------------
-console.log('\n분기 지도 — 간선으로 이어진 사다리')
+// --- 지도 — 길 그리기 · 2막 × 20층(2026-11-12) -----------------------------------
+console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · 끊긴 길')
 {
-  // 무작위 생성이라 한 번으로는 못 잡는다. 여러 런을 훑어 불변식을 확인한다.
   const RUNS = 300
-  let bossBranched = 0
-  let supportToCombat = 0 // 같은 층에 같은 지원 칸이 겹친 수
-  let supportOnCombatFloor = 0
-  let eliteShapeBad = 0
-  let noCenter = 0
+  let bad20 = 0 // 20층이 보스 하나가 아님
+  let bad1 = 0 // 1층에 전투 아닌 칸
+  let bad19 = 0 // 19층에 여관 아닌 칸
+  let treasureBad = 0 // 보물이 딱 하나가 아님
   let orphan = 0 // 들어오는 간선이 없는 칸
-  let deadend = 0 // 나가는 간선이 없는 칸(마지막 층 제외)
-  let farEdge = 0 // 줄을 두 칸 이상 건너뛰는 간선
-  let centerUnreachable = 0
-  const centerTypes = new Set<string>()
-  const widths = new Set<number>()
-
+  let deadend = 0 // 나가는 간선이 없는 칸(보스 제외)
+  let farEdge = 0 // 줄을 두 칸 이상 건너는 간선(보스로 가는 간선 제외)
+  let crossing = 0 // 엇갈린(X자) 간선
+  let repeatBad = 0 // 엘리트 · 여관 · 대장간이 부모와 같은 종류
+  let earlyElite = 0 // 6층 전 엘리트
+  let unreachable = 0 // 어떤 1층 칸에서 못 가는 칸이 있었던 지도 수
+  const bosses = new Set<string>()
   for (let i = 0; i < RUNS; i++) {
-    const run = startRun('warrior')
-    const center = (f: number) => run.map[f].find((n) => n.lane === 1)
-    centerTypes.add(run.map.map((nodes, f) => center(f)?.type ?? '?').join(','))
-    run.map.forEach((nodes, f) => {
-      widths.add(nodes.length)
-      const isBoss = nodes[0].type === 'boss'
-      if (isBoss && nodes.length !== 1) bossBranched++
-      // 가운데 줄은 **모든 층**에 있어야 한다 — 옛 사다리 경로가 거기로 이어진다.
-      if (!center(f)) noCenter++
-      // 2026-11-12: 지원 칸(?·여관·대장간·보물)은 층에 몰리지 않고 어느 층 옆 칸에도 섞인다.
-      //   같은 층에 같은 지원 칸이 둘 놓이면 안 된다.
-      const head = center(f)?.type
-      if (head === 'combat' && nodes.some((o) => ['event', 'inn', 'smith', 'treasure'].includes(o.type))) supportOnCombatFloor++
-      const sup = nodes.filter((o) => o.type !== 'combat').map((o) => o.type)
-      if (new Set(sup).size !== sup.length) supportToCombat++
-      // 엘리트는 유일하게 "전투량"을 고르는 칸 — 엘리트 하나 + 나머지는 일반 전투.
-      if (head === 'elite') {
-        const elites = nodes.filter((o) => o.type === 'elite').length
-        const rest = nodes.filter((o) => o.type !== 'elite')
-        if (elites !== 1 || rest.some((o) => o.type !== 'combat')) eliteShapeBad++
-      }
-      const last = f === run.map.length - 1
-      nodes.forEach((n) => {
-        if (!last && !n.next.length) deadend++
-        // 어느 칸에서든 **다음 층 가운데 칸**으로는 갈 수 있어야 한다(옛 사다리 경로).
-        if (!last) {
-          const centerIdx = run.map[f + 1].findIndex((m) => m.lane === 1)
-          if (centerIdx < 0 || !n.next.includes(centerIdx)) centerUnreachable++
-          for (const j of n.next) {
-            if (Math.abs(run.map[f + 1][j].lane - n.lane) > 1) farEdge++
+    const map = startRun('warrior').map
+    if (map.length !== LADDER_FLOORS || map[LADDER_FLOORS - 1].length !== 1 || map[LADDER_FLOORS - 1][0].type !== 'boss') bad20++
+    bosses.add(map[LADDER_FLOORS - 1][0].monsterId ?? '?')
+    if (map[0].some((n) => n.type !== 'combat')) bad1++
+    if (map[LADDER_FLOORS - 2].some((n) => n.type !== 'inn')) bad19++
+    if (map.flat().filter((n) => n.type === 'treasure').length !== 1) treasureBad++
+    map.forEach((nodes, f) => {
+      nodes.forEach((n, j) => {
+        if (f < map.length - 1 && !n.next.length) deadend++
+        if (f > 0 && !map[f - 1].some((a) => a.next.includes(j))) orphan++
+        if (n.type === 'elite' && f + 1 < 6) earlyElite++
+        if (f > 0 && ['elite', 'inn', 'smith'].includes(n.type) && f + 1 !== LADDER_FLOORS - 1 && map[f - 1].some((a) => a.next.includes(j) && a.type === n.type)) repeatBad++
+        if (f < map.length - 2)
+          for (const k of n.next) {
+            if (Math.abs(map[f + 1][k].lane - n.lane) > 1) farEdge++
+            // 엇갈림 — 이웃 칸 m이 n의 줄로 오는데 n은 m의 줄로 간다.
+            for (const m of nodes)
+              if (m !== n && m.next.some((x) => map[f + 1][x].lane === n.lane) && map[f + 1][k].lane === m.lane && m.lane !== n.lane) crossing++
           }
-        }
       })
-      if (f > 0 && !run.map[f - 1].some((a) => a.next.includes(nodes.indexOf(nodes[0]))))
-        void 0 // (아래에서 칸별로 본다)
-      if (f > 0)
-        nodes.forEach((_, j) => {
-          if (!run.map[f - 1].some((a) => a.next.includes(j))) orphan++
-        })
     })
+    // 1층 칸마다 갈 수 있는 칸을 모아, 어느 1층 칸에서든 못 가는 칸이 있는지.
+    const reach = (start: number) => {
+      let cur = new Set([start])
+      let total = 1
+      for (let f = 0; f < map.length - 1; f++) {
+        const nx = new Set<number>()
+        cur.forEach((j) => map[f][j].next.forEach((k) => nx.add(k)))
+        total += nx.size
+        cur = nx
+      }
+      return total
+    }
+    const all = map.reduce((a, n) => a + n.length, 0)
+    if (map[0].some((_, j) => reach(j) < all)) unreachable++
   }
-  check('보스 층은 갈래가 없다', bossBranched, 0)
-  check('모든 층에 가운데 줄이 있다', noCenter, 0)
-  check('지원 칸이 전투 층 옆에도 섞인다(2026-11-12)', supportOnCombatFloor > 0, true)
-  check('같은 층에 같은 지원 칸이 겹치지 않는다', supportToCombat, 0)
-  check('엘리트 층은 엘리트 1 + 나머지 일반전투', eliteShapeBad, 0)
-  check('막다른 칸이 없다(마지막 층 제외)', deadend, 0)
+  check('20층은 보스 하나', bad20, 0)
+  check('1막 보스는 수호기사 · 화염군주 중 하나', [...bosses].every((b) => ['warden', 'pyrelord'].includes(b)), true)
+  check('1층은 전투 · 19층은 여관(보스 전 휴식)', [bad1, bad19], [0, 0])
+  check('보물은 지도 하나에 딱 하나', treasureBad, 0)
+  check('막다른 칸이 없다(보스 제외)', deadend, 0)
   check('들어오는 길이 없는 칸이 없다', orphan, 0)
-  check('간선은 줄을 한 칸까지만 건넌다', farEdge, 0)
-  // 이게 밸런스 기준선(`sim:run --path=template`)이 성립하는 근거다.
-  check('어느 칸에서든 다음 층 가운데로 갈 수 있다', centerUnreachable, 0)
-  check('가운데 줄의 타입 열은 항상 같다(옛 사다리)', centerTypes.size, 1)
-  // 폭이 늘 같으면 "사다리"가 아니라 격자다 — 1~3이 섞여야 길이 모였다 갈라진다.
-  check('층 폭이 1~3으로 섞인다', [...widths].sort().join(','), '1,2,3')
+  check('간선은 옆 줄까지만', farEdge, 0)
+  check('간선이 엇갈리지 않는다', crossing, 0)
+  check('엘리트 · 여관 · 대장간은 연달아 안 나온다', repeatBad, 0)
+  check('엘리트는 6층부터', earlyElite, 0)
+  check('시작점에 따라 못 가는 칸이 생긴다(사용자 지정)', unreachable > RUNS / 2, true)
+  // 2막 — 1막 보스 층을 넘기면 던전 새 지도, 2막 보스 층을 넘기면 승리.
+  const r1 = { ...startRun('warrior'), floor: LADDER_FLOORS }
+  const r2 = advanceFloor(r1)
+  check('1막 보스 다음은 2막 1층 · 새 지도', [r2.act, r2.floor, r2.status, r2.map !== r1.map, r2.picked.length], [2, 1, 'choosing', true, 0])
+  check('2막 보스는 오버로드', r2.map[LADDER_FLOORS - 1][0].monsterId, 'overlord')
+  check('2막 보스 층 다음은 승리', advanceFloor({ ...r2, floor: LADDER_FLOORS }).status, 'won')
+  check('2막은 던전', [regionOf(r1), regionOf(r2)], ['grassland', 'dungeon'])
+  check('깊이 — 1막 1층 1 · 2막 20층 15', [runDepth(startRun('warrior')), runDepth({ act: 2, floor: LADDER_FLOORS })], [1, 15])
+  // 보상표(2026-11-12 사용자 지정)
+  const rar = (id: string) => RELIC_BY_ID[id]?.rarity
+  const bossR = rollRewards({ ...startRun('warrior'), floor: LADDER_FLOORS })
+  check('1막 보스 보상 — 희귀 · 영웅 유물 3개 중 고르기', [bossR.length, bossR.every((r) => r.kind === 'relic' && ['rare', 'epic'].includes(rar(r.relicId)!))], [3, true])
+  const eliteRun = { ...startRun('warrior'), map: [[{ type: 'elite' as const, monsterId: 'ogre', lane: 0, next: [] }]] }
+  let eliteOk = true
+  for (let k = 0; k < 200; k++) {
+    const rw = rollRewards(eliteRun)
+    const rel = rw.filter((r) => r.kind === 'relic')
+    if (rel.length !== 1 || !['rare', 'epic'].includes(rar(rel[0].kind === 'relic' ? rel[0].relicId : '')!)) eliteOk = false
+    if (rw.some((r) => r.kind === 'card' && ['m-right2', 'c-guard', 'c-repair'].includes(r.cardId))) eliteOk = false
+  }
+  check('엘리트 보상 — 좋은 카드 + 희귀(영웅) 유물 하나', eliteOk, true)
+  const tr = new Set<string>()
+  for (let k = 0; k < 400; k++) tr.add(rar(openTreasure(startRun('warrior')).relicId!)!)
+  check('보물 — 일반 · 희귀 · (드물게) 영웅만', [...tr].every((x) => ['common', 'rare', 'epic'].includes(x)), true)
+  let combatRelicBad = 0
+  for (let k = 0; k < 2000; k++)
+    for (const r of rollRewards({ ...startRun('warrior'), map: [[{ type: 'combat' as const, monsterId: 'grunt', lane: 0, next: [] }]] }))
+      if (r.kind === 'relic' && rar(r.relicId) !== 'common') combatRelicBad++
+  check('일반 전투 — 유물은 드물게 일반 등급만', combatRelicBad, 0)
 }
 {
   const run = startRun('mage')
@@ -1249,8 +1271,8 @@ console.log('\n분기 지도 — 간선으로 이어진 사다리')
   check('다음 층은 다시 choosing', next.status, 'choosing')
   check('층이 하나 올랐다', next.floor, picked.floor + 1)
 
-  // 마지막 층을 넘기면 승리.
-  const last = { ...run, floor: LADDER_FLOORS }
+  // 마지막 막의 마지막 층을 넘기면 승리(1막이면 2막으로 — 위 지도 검사).
+  const last = { ...run, act: 2, floor: LADDER_FLOORS }
   check('마지막 층 다음은 승리', advanceFloor(last).status, 'won')
 }
 
@@ -1456,14 +1478,15 @@ console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복
 console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
 {
   const at = (floor: number, relics: string[] = []) => {
-    let r: RunState = { ...startRun('warrior'), floor, hp: 150 }
+    // 사슬은 막으로 갈린다(2026-11-12) — 이 도우미는 10층 이하 = 1막, 11층 이상 = 2막으로 둔다.
+    let r: RunState = { ...startRun('warrior'), act: floor <= 10 ? 1 : 2, floor, hp: 150 }
     for (const id of relics) r = grantRelic(r, id)
     return r
   }
-  // 나오는 층 — "10턴"은 층이다(10층까지 / 11층부터).
-  check('정령·알은 10층까지', [eventEligible(at(10), 'spirit'), eventEligible(at(10), 'egg'), eventEligible(at(11), 'spirit'), eventEligible(at(11), 'egg')], [true, true, false, false])
-  check('세계수는 11층부터 · 씨앗이 있을 때만', [eventEligible(at(11), 'worldtree'), eventEligible(at(11, ['seed']), 'worldtree'), eventEligible(at(10, ['seed']), 'worldtree')], [false, true, false])
-  check('불사조는 11층부터', [eventEligible(at(10), 'phoenix'), eventEligible(at(11), 'phoenix')], [false, true])
+  // 나오는 막 — 1막 정령 · 알 / 2막 세계수 · 불사조(2026-11-12).
+  check('정령·알은 1막에서만', [eventEligible(at(10), 'spirit'), eventEligible(at(10), 'egg'), eventEligible(at(11), 'spirit'), eventEligible(at(11), 'egg')], [true, true, false, false])
+  check('세계수는 2막 · 씨앗이 있을 때만', [eventEligible(at(11), 'worldtree'), eventEligible(at(11, ['seed']), 'worldtree'), eventEligible(at(10, ['seed']), 'worldtree')], [false, true, false])
+  check('불사조는 2막', [eventEligible(at(10), 'phoenix'), eventEligible(at(11), 'phoenix')], [false, true])
   check('씨앗을 가지면 정령은 다시 안 나온다', eventEligible(at(3, ['seed']), 'spirit'), false)
   check('무작위로 열어도 조건 밖 이벤트는 안 나온다', Array.from({ length: 300 }, () => startEvent(undefined, Math.random, at(12)).id).some((id) => id === 'spirit' || id === 'egg' || id === 'worldtree'), false)
   check('런 없이 열면 사슬은 안 나온다', Array.from({ length: 300 }, () => startEvent().id).some((id) => ['spirit', 'egg', 'worldtree', 'phoenix'].includes(id)), false)
@@ -1599,9 +1622,11 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   check('이기면 재산 0', won.goblinSpent, 0)
   check('부자를 이기면 유물 확정', !!won.special?.wonRelicId, true)
   check('이기면 고블린 골드', won.gold >= 999 + 140, true)
-  let fates = new Set<string>()
-  for (let i = 0; i < 400; i++) fates.add(rollQuestionFate())
-  check('? 칸 정체는 셋 — 모닥불 없음(2026-11-12)', [...fates].sort(), ['combat', 'event', 'goblin'])
+  const fates = new Set<string>()
+  for (let i = 0; i < 600; i++) fates.add(rollQuestionFate(fightRun).kind)
+  check('? 칸 정체 — 전투 · 여관 · 대장간 · 고블린 · 이벤트(모닥불 없음)', [...fates].sort(), ['combat', 'event', 'goblin', 'inn', 'smith'])
+  const qf = questionFates({ ...fightRun, act: 1, seenEvents: [] })
+  check('? 칸 — 후보 하나하나가 같은 확률(이벤트는 종류마다 한 칸)', qf.filter((f) => f.kind === 'event').length, EVENT_DEFS.filter((e) => eventEligible({ ...fightRun, act: 1 }, e.id)).length)
 }
 {
   const leaked = ROSTER.flatMap((c) => deckFor(c)).filter((c) => c.upgraded !== undefined)

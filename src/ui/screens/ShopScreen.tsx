@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
-import { buyShopItem, regionOf, replaceCandidates, runCard, type RunState, type ShopItem } from '../../game/run'
+import { buyShopItem, placeLabel, replaceCandidates, runCard, type RunState, type ShopItem } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { DeckPicker } from '../DeckPicker'
@@ -101,7 +101,7 @@ export function ShopScreen({
         <div className="shop__where">
           <h1 className="shop__title">상점</h1>
           <span>
-            여관 · {regionOf(cur.floor) === 'grassland' ? '초원' : '던전'} {cur.floor}층
+            여관 · {placeLabel(cur)}
           </span>
         </div>
         <div className="shop__purse">

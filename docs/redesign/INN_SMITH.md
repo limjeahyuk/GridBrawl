@@ -10,7 +10,7 @@
 | 시안 화면 | `screens/Inn.dc.html` → `screens/Shop.dc.html` | `screens/Blacksmith.dc.html` → `screens/Upgrade.dc.html` |
 | 배경 | `public/redesign/cutscene/inn/inn-bg.png`(1280×720, 시안 C 확정). 받은 여관 그림(원본 `docs/redesign/2dImg/inn.png`)을 손대지 않고 **화면 높이에 맞춰 왼쪽**에 두어 마렌이 그림 전체로 보이고, 오른쪽은 그림 속 벽 · 술병 선반 · 바를 이어 붙여 넓힌 뒤 **점점 흐리게**(심도) 했다. 만드는 스크립트: `tools/inn-bg/build.py`(원본을 `src.png`로 두고 실행, `bgC.png`가 결과). 대사창과 선택지는 오른쪽 흐린 쪽에 올려 몸을 가리지 않는다 | `public/redesign/cutscene/smith/smith-bg.png`(2026-11-12, 원본 `docs/redesign/2dImg/대장장이.png`). 대장장이는 왼쪽, 오른쪽은 같은 그림을 흐리게 한 색 배경 — 대사창과 선택지는 오른쪽(`tools/event-bg/build_wide.py shift`) |
 
-`run.ts`의 `NodeType`은 `'inn'` · `'smith'`를 쓴다(옛 `'shop'` · 휴식 칸은 없다). ? 칸 모닥불도 2026-11-12에 없앴다(사용자 — "옛날 잔재").
+`run.ts`의 `NodeType`은 `'inn'` · `'smith'`를 쓴다(옛 `'shop'` · 휴식 칸은 없다). ? 칸 모닥불도 2026-11-12에 없앴다(사용자 — "옛날 잔재"). 같은 날부터 **? 칸에서도 여관 · 대장간이 나온다**(같은 화면 · 같은 규칙 — `QuestionScreen`).
 
 ## 여관 선택지
 

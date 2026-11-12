@@ -22,9 +22,10 @@ import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
 import { EVENT_CARDS, RUN_CARDS } from '../src/game/runcards'
 import { ROULETTE_VALUE, spinRoulette } from '../src/game/upgrades'
-import { applySpecialWin, eventChoices, resolveEventChoice, startEvent, tradeList, withEventSeen, type EventOutcome } from '../src/game/events'
+import { applySpecialWin, eventChoices, resolveEventChoice, rollQuestionFate, startEvent, tradeList, withEventSeen, type EventId, type EventOutcome } from '../src/game/events'
 import {
-  LADDER_FLOORS,
+  TOTAL_FLOORS,
+  globalFloor,
   advanceFloor,
   afterLoss,
   afterWin,
@@ -43,7 +44,6 @@ import {
   innRestPrice,
   paySmith,
   smithPass,
-  rollQuestionFate,
   ambushFight,
   goblinTier,
   goblinMonsterId,
@@ -161,7 +161,7 @@ const mon: Record<string, MonStat> = {}
 const monStat = (id: string): MonStat =>
   (mon[id] ??= { n: 0, wins: 0, turns: 0, dmgTaken: 0, kills: 0 })
 
-const zeros = () => new Array<number>(LADDER_FLOORS + 2).fill(0)
+const zeros = () => new Array<number>(TOTAL_FLOORS + 2).fill(0)
 const arrive = zeros() // 그 층에 도달한 런 수
 const cleared = zeros() // 그 층을 통과한 런 수
 const deaths = zeros() // 그 층에서 죽은 런 수
@@ -268,8 +268,8 @@ function eventPick(run: RunState, st: ReturnType<typeof startEvent>): string | n
       return has('ph-give') ? 'ph-give' : null
   }
 }
-function doEvent(run: RunState): RunState {
-  let st = startEvent(undefined, Math.random, run)
+function doEvent(run: RunState, eventId?: EventId): RunState {
+  let st = startEvent(eventId, Math.random, run)
   let cur = withEventSeen(run, st.id)
   for (let i = 0; i < 12; i++) {
     const key = eventPick(cur, st)
@@ -305,10 +305,12 @@ function doGoblin(run: RunState): RunState {
 }
 /** ? 칸 — 정체를 굴리고 그 칸처럼 처리한다. */
 function doQuestion(run: RunState): RunState {
-  const fate = rollQuestionFate()
-  if (fate === 'combat') return { ...run, special: ambushFight(run), status: 'fighting' }
-  if (fate === 'goblin') return doGoblin(run)
-  return doEvent(run)
+  const fate = rollQuestionFate(run)
+  if (fate.kind === 'combat') return { ...run, special: ambushFight(run), status: 'fighting' }
+  if (fate.kind === 'goblin') return doGoblin(run)
+  if (fate.kind === 'inn') return doInn(run)
+  if (fate.kind === 'smith') return doSmith(run)
+  return doEvent(run, fate.eventId)
 }
 
 // --- 여관 · 대장장이 정책(2026-11-09) -------------------------------------
@@ -377,8 +379,8 @@ async function playRun(charId: string): Promise<void> {
   const stat = (perChar[charId] ??= { runs: 0, clears: 0, floors: 0 })
   stat.runs++
   let guard = 0
-  while (run.status !== 'won' && run.status !== 'lost' && guard++ < 400) {
-    const floor = run.floor
+  while (run.status !== 'won' && run.status !== 'lost' && guard++ < 1200) {
+    const floor = globalFloor(run)
     if (run.status === 'fighting') {
       const enemyId = run.special?.monsterId ?? currentNode(run).monsterId ?? '?'
       const before = run.hp
@@ -452,7 +454,7 @@ async function playRun(charId: string): Promise<void> {
     const r = getRelic(id)
     if (r) rarityGot[r.rarity] = (rarityGot[r.rarity] ?? 0) + 1
   }
-  const reached = run.status === 'won' ? LADDER_FLOORS : run.floor
+  const reached = run.status === 'won' ? TOTAL_FLOORS : globalFloor(run)
   floorSum += reached
   stat.floors += reached
   if (run.status === 'won') {
@@ -505,11 +507,11 @@ async function main() {
     `\n=== GridBrawl 런 시뮬 (${RUNS}런 · ${CHAR === 'all' ? '전 캐릭터' : CHAR.toUpperCase()} · 봇 ${SKILL} · 정책 ${POLICY} · seed ${SEED}) ===\n`,
   )
   console.log(
-    `클리어율 ${pct(clears, RUNS)}%   평균 도달 층 ${(floorSum / RUNS).toFixed(2)} / ${LADDER_FLOORS}   전투당 평균 ${(turnsSum / Math.max(1, fightsSum)).toFixed(2)}턴   런당 획득 골드 ${(goldEarned / RUNS).toFixed(0)}`,
+    `클리어율 ${pct(clears, RUNS)}%   평균 도달 층 ${(floorSum / RUNS).toFixed(2)} / ${TOTAL_FLOORS}   전투당 평균 ${(turnsSum / Math.max(1, fightsSum)).toFixed(2)}턴   런당 획득 골드 ${(goldEarned / RUNS).toFixed(0)}`,
   )
 
   console.log('\n층별 관문 (도달 / 통과율 / 그 층에서 사망한 런 · 전투 진입 시 평균 체력비):')
-  for (let f = 1; f <= LADDER_FLOORS; f++) {
+  for (let f = 1; f <= TOTAL_FLOORS; f++) {
     if (!arrive[f]) continue
     const hp = hpN[f] ? `${pct(hpSum[f], hpN[f])}%` : '    -'
     console.log(

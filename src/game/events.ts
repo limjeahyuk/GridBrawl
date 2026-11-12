@@ -36,8 +36,6 @@ export interface EventDef {
   steps?: string[]
 }
 
-/** 이벤트 사슬의 층 경계 — 기획서의 "10턴"은 지도의 **층**이다. 10층까지 / 11층부터. */
-export const EVENT_EARLY_MAX_FLOOR = 10
 const SEED = 'seed'
 const FIRE_EGG = 'fireegg'
 const NUTRIENT = 'nutrient'
@@ -99,12 +97,13 @@ export const eventText = (st: EventState): string => {
 
 /**
  * 이 런에서 지금 나올 수 있는가 — 사슬 이벤트만 조건이 있다(나머지 8종은 언제나).
- * 정령·알은 10층까지, 세계수(씨앗이 있을 때)·불사조는 11층부터. 이미 끝을 본 사슬은 다시 안 나온다.
+ * **1막(초원) = 정령 · 알, 2막(던전) = 세계수(씨앗이 있을 때) · 불사조**(2026-11-12 사용자 지정 — 예전엔 10층 경계).
+ * 이미 끝을 본 사슬은 다시 안 나온다.
  * ⚠ 불사조는 기획상 "화산 지형에서만"인데 지금은 화산 지역이 없어 층 조건만 건다 — 화산이 생기면 여기에 더한다.
  */
 export function eventEligible(run: RunState, id: EventId): boolean {
   const has = (r: string) => run.relicIds.includes(r)
-  const early = run.floor <= EVENT_EARLY_MAX_FLOOR
+  const early = run.act <= 1
   switch (id) {
     case 'spirit': return early && !has(SEED) && !has(WORLD_BRANCH)
     case 'egg': return early && !has(FIRE_EGG) && !has(PHOENIX_FEATHER)
@@ -161,6 +160,27 @@ export function startEvent(id?: EventId, rng: () => number = Math.random, run?: 
   const fresh = pool.filter((e) => !run?.seenEvents?.includes(e.id))
   return { id: id ?? pickOne(fresh.length ? fresh : pool, rng).id, potions: fx, tries: 0, fails: 0, prizes: ['heal', 'relic'], step: 0 }
 }
+
+/**
+ * ? 칸의 정체 — **전부 같은 확률**(2026-11-12 사용자 지정: "일반 몬스터 전투 or 여관, 대장간, 그 외 여러
+ * 이벤트들이 모두 같은 확률로"). 후보 = 전투 · 여관 · 대장간 · 고블린 상점 + 지금 나올 수 있는 이벤트 하나하나.
+ * 이벤트는 한 런 안에서 겹치지 않는다(다 봤으면 다시 섞는다). 모닥불은 없다.
+ */
+export type QuestionFate =
+  | { kind: 'combat' | 'inn' | 'smith' | 'goblin' }
+  | { kind: 'event'; eventId: EventId }
+export function questionFates(run: RunState): QuestionFate[] {
+  const eligible = EVENT_DEFS.filter((e) => eventEligible(run, e.id))
+  const fresh = eligible.filter((e) => !run.seenEvents?.includes(e.id))
+  return [
+    { kind: 'combat' },
+    { kind: 'inn' },
+    { kind: 'smith' },
+    { kind: 'goblin' },
+    ...(fresh.length ? fresh : eligible).map((e) => ({ kind: 'event' as const, eventId: e.id })),
+  ]
+}
+export const rollQuestionFate = (run: RunState, rng: () => number = Math.random): QuestionFate => pickOne(questionFates(run), rng)
 
 /** 이 이벤트를 만났다고 런에 적는다 — 이벤트 화면이 열리자마자(그냥 떠나도 본 것이다). */
 export const withEventSeen = (run: RunState, id: EventId): RunState =>

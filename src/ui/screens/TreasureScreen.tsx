@@ -1,19 +1,19 @@
 // 보물 칸 = 유물 상자(2026-11 리디자인). ? 칸 모닥불은 2026-11-12에 없앴다(사용자 — "옛날 잔재").
 import { useState } from 'react'
 import { getRelic } from '../../game/relics'
-import { advanceFloor, openTreasure, regionOf, type RunState } from '../../game/run'
+import { advanceFloor, openTreasure, placeLabel, regionOf, type RunState } from '../../game/run'
 import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
 import { SceneLayers } from '../SceneLayers'
 
 const where = (run: RunState, what: string) =>
-  `${regionOf(run.floor) === 'grassland' ? '초원' : '던전'} · ${run.floor}층 · ${what}`
+  `${placeLabel(run)} · ${what}`
 
 export function TreasureScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
   const [opened, setOpened] = useState<{ run: RunState; relicId?: string } | null>(null)
   const relic = opened?.relicId ? getRelic(opened.relicId) : null
   return (
     <div className="screen event">
-      <SceneLayers scene={regionOf(run.floor)} />
+      <SceneLayers scene={regionOf(run)} />
       <div className="screenveil" />
       <header className="event__head">
         <div className="shop__where">

@@ -2,14 +2,14 @@
 // 시안 `Inn.dc.html` · `Blacksmith.dc.html`. 규칙(값·회복량)은 전부 `game/run.ts`에 있다.
 import { useMemo, useState } from 'react'
 import {
-  advanceFloor, innLeave, innLeaveAmount, innRest, innRestAmount, innRestPrice, paySmith, regionOf, rollShop,
+  advanceFloor, innLeave, innLeaveAmount, innRest, innRestAmount, innRestPrice, paySmith, placeLabel, rollShop,
   smithPass, smithPassAmount, smithPrice, upgradableDeckCards, type RunState,
 } from '../../game/run'
 import { useFirstTip } from '../FirstTip'
 import { ShopScreen } from './ShopScreen'
 import { UpgradeScreen } from './UpgradeScreen'
 
-const where = (run: RunState) => `${regionOf(run.floor) === 'grassland' ? '초원' : '던전'} · ${run.floor}층`
+const where = (run: RunState) => `${placeLabel(run)}`
 
 interface Opt {
   label: string

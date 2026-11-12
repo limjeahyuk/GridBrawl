@@ -9,16 +9,20 @@
 // 지도는 무엇을 고르든 다음 층이 똑같이 열려서, 고른 게 뒤에 아무 영향이 없었다("2가지
 // 중 하나를 고르는 느낌"). 이제 칸끼리 **선으로 이어져** 있고 이어진 칸만 다음 선택지가
 // 된다 — 갈래가 1~3개로 달라지고, 앞쪽 상점을 노리려면 몇 층 전부터 그 줄을 타야 한다.
-// ⚠ 2026-11(4차): 리디자인으로 세로 지도가 됐다 — 아래에서 위로 오르고, 15층이 한 화면에 안
-// 들어가 초원·던전 지역별로 나눠 본다. 고르는 건 칸을 눌러도, 오른쪽 목록을 눌러도 된다.
-import { useState } from 'react'
+// ⚠ 2026-11(4차): 리디자인으로 세로 지도가 됐다 — 아래에서 위로 오르고, 고르는 건 칸을 눌러도,
+// 오른쪽 목록을 눌러도 된다.
+// ⚠ 2026-11-12(5차): **지도 두 장(1막 초원 · 2막 던전), 막마다 20층 · 가로 5줄**. 20층이 한 화면에
+// 안 들어가 지도 안쪽을 **세로로 굴린다**(지금 층이 보이게 저절로 내려간다). 다음 막 지도는 보스를
+// 잡아야 생기므로 막 표시는 진행 상황만 보여 준다.
+import { useEffect, useRef } from 'react'
 import { sheetFor } from '../../art/sprites'
 import { getChar } from '../../data/roster'
 import {
   currentEnemy,
   currentOptionIndices,
-  GRASSLAND_LAST_FLOOR,
+  ACTS,
   LADDER_FLOORS,
+  MAP_COLS,
   regionOf,
   type RunNode,
   type RunState,
@@ -58,18 +62,16 @@ const NODE_HINT: Record<RunNode['type'], string> = {
 }
 const LEGEND: RunNode['type'][] = ['event', 'inn', 'treasure', 'smith', 'combat', 'elite', 'boss']
 
-const REGIONS = {
-  grassland: { label: '초원', from: 1, to: GRASSLAND_LAST_FLOOR },
-  dungeon: { label: '던전', from: GRASSLAND_LAST_FLOOR + 1, to: LADDER_FLOORS },
-} as const
-type Region = keyof typeof REGIONS
+const ACT_LABEL = ['초원', '던전']
 
-/** 지도 안쪽 좌표(836×680). 아래가 먼저 오르는 층이고 줄(lane)이 가로로 놓인다. */
+/** 지도 안쪽 좌표 — 폭 836, 높이는 층 수만큼(세로로 굴린다). 아래가 먼저 오르는 층이고 줄(lane)이 가로로 놓인다. */
 const MAP_W = 836
-const MAP_H = 680
-const laneX = (lane: number) => 110 + [0.18, 0.5, 0.82][lane] * 616
-const FLOOR_BOTTOM = 624
-const FLOOR_TOP = 108
+const ROW = 66
+const FLOOR_BOTTOM_PAD = 56
+const BOSS_PAD = 120
+const MAP_H = FLOOR_BOTTOM_PAD + (LADDER_FLOORS - 1) * ROW + BOSS_PAD
+const laneX = (lane: number) => 110 + (lane / (MAP_COLS - 1)) * 616
+const floorY = (floor: number) => MAP_H - FLOOR_BOTTOM_PAD - (floor - 1) * ROW - (floor === LADDER_FLOORS ? 30 : 0)
 
 /**
  * 지도 칸 아이콘. 원본이 14×14라 **그림은 늘 14의 정수배로** 그린다(칸 크기와 따로) —
@@ -103,10 +105,14 @@ export function RunMapScreen({
 }) {
   const char = getChar(run.charId)
   const sheet = sheetFor(run.charId)
-  const here = regionOf(run.floor)
-  /** 보고 있는 지역 — 층이 15개라 한 화면에 안 들어가 지역별로 나눠 보여 준다. */
-  const [region, setRegion] = useState<Region>(here)
-  const { label, from, to } = REGIONS[region]
+  const region = regionOf(run)
+  const label = `${run.act}막 ${ACT_LABEL[run.act - 1] ?? ''}`
+  // 지금 층이 지도 아래쪽 1/3쯤에 오게 굴려 둔다.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = Math.max(0, floorY(run.floor) - el.clientHeight * 0.66)
+  }, [run.act, run.floor])
 
   // 이번 층 적의 실제 체력은 층 스케일이 걸린 값이라 `currentEnemy`로 뽑는다.
   // ⚠ 앞으로의 층은 **숫자를 보여주지 않는다** — 스케일이 그 층 기준이라
@@ -118,15 +124,11 @@ export function RunMapScreen({
     return currentEnemy({ ...run, picked: withPick(run, nodeIdx) }).maxHp
   }
 
-  const step = (FLOOR_BOTTOM - FLOOR_TOP) / (to - from)
-  const floorY = (floor: number) => FLOOR_BOTTOM - (floor - from) * step
-  const inRegion = (floor: number) => floor >= from && floor <= to
-
-  // 내가 서 있는 칸 = 직전 층에서 고른 칸. 새 지역의 첫 층이면 지도 아래 출발점이다.
+  // 내가 서 있는 칸 = 직전 층에서 고른 칸. 막의 첫 층이면 지도 아래 출발점이다.
   const lastFloor = run.floor - 1
   const lastNode = run.map[lastFloor - 1]?.[run.picked[lastFloor - 1]]
-  const standing = lastNode && inRegion(lastFloor) ? { x: laneX(lastNode.lane), y: floorY(lastFloor) } : null
-  const atStart = !standing && region === here
+  const standing = lastNode ? { x: laneX(lastNode.lane), y: floorY(lastFloor) } : null
+  const atStart = !standing
   const tip = useFirstTip(['map'])
 
   return (
@@ -147,12 +149,12 @@ export function RunMapScreen({
           런 포기
         </button>
 
+        <div className="worldmap__scroll" ref={scrollRef}>
+        <div className="worldmap__canvas" style={{ height: MAP_H }}>
         {/* 간선 — 칸 뒤에 깔린다. 밟은 길은 금 실선, 지금 고를 길은 밝게, 나머지는 흐린 점선. */}
         <svg className="worldmap__edges" viewBox={`0 0 ${MAP_W} ${MAP_H}`} aria-hidden="true">
           {run.map.flatMap((nodes, f) =>
-            !inRegion(f + 1) || !inRegion(f + 2)
-              ? []
-              : nodes.flatMap((n, i) =>
+            nodes.flatMap((n, i) =>
                   n.next.map((j) => {
                     const dest = run.map[f + 1]?.[j]
                     if (!dest) return null
@@ -171,19 +173,18 @@ export function RunMapScreen({
                       />
                     )
                   }),
-                ),
+            ),
           )}
         </svg>
 
         {run.map.flatMap((nodes, f) => {
           const floor = f + 1
-          if (!inRegion(floor)) return []
           return nodes.map((n, j) => {
             const taken = run.picked[f] === j && floor < run.floor
             const pickable = floor === run.floor && optionIdx.includes(j)
             const passed = floor <= run.floor && !taken && !pickable
             const boss = n.type === 'boss'
-            const size = boss ? 96 : 54
+            const size = boss ? 96 : 50
             const name = n.monsterId ? getMonster(n.monsterId).name : NODE_LABEL[n.type]
             const cls = `mapnode ${taken ? 'mapnode--taken' : ''} ${pickable ? 'mapnode--reach' : ''} ${
               passed ? 'mapnode--passed' : ''
@@ -213,8 +214,8 @@ export function RunMapScreen({
           })
         })}
 
-        {region === 'dungeon' && (
-          <span className="worldmap__bossname" style={{ top: FLOOR_TOP + 50 }}>
+        {(
+          <span className="worldmap__bossname" style={{ top: floorY(LADDER_FLOORS) + 54 }}>
             {LADDER_FLOORS}층 보스 ·{' '}
             {run.map[LADDER_FLOORS - 1]?.[0]?.monsterId
               ? getMonster(run.map[LADDER_FLOORS - 1][0].monsterId!).name
@@ -222,32 +223,29 @@ export function RunMapScreen({
           </span>
         )}
 
-        {sheet && (standing || atStart) && (
+        {sheet && (
           <div
             className="maphero"
             aria-label="현재 위치"
-            style={standing ? { left: standing.x - 36, top: standing.y - 86 } : { left: 30, top: 586 }}
+            style={standing ? { left: standing.x - 36, top: standing.y - 86 } : { left: 10, top: floorY(1) - 40 }}
           >
             <SpriteClip sheet={sheet} clip="idle" scale={1} />
           </div>
         )}
-        {atStart && <span className="worldmap__start">출발 — {run.floor}층 칸을 고르세요</span>}
+        </div>
+        </div>
+        {atStart && <span className="worldmap__start">출발 — 1층 칸을 골라 시작점을 정하세요(못 가는 곳도 있다)</span>}
       </section>
 
       <aside className="mapside">
         <div className="mapside__regions">
-          {(Object.keys(REGIONS) as Region[]).map((id) => (
-            <button
-              key={id}
-              className={`regiontab regiontab--${id} ${id === region ? 'is-on' : ''}`}
-              aria-pressed={id === region}
-              onClick={() => setRegion(id)}
-            >
-              <b>{REGIONS[id].label}</b>
-              <span>
-                {REGIONS[id].from}–{REGIONS[id].to}F{id === here ? ' · 진행 중' : ''}
-              </span>
-            </button>
+          {Array.from({ length: ACTS }, (_, i) => i + 1).map((act) => (
+            <div key={act} className={`regiontab regiontab--${act === 1 ? 'grassland' : 'dungeon'} ${act === run.act ? 'is-on' : ''}`}>
+              <b>
+                {act}막 {ACT_LABEL[act - 1]}
+              </b>
+              <span>{act < run.act ? '돌파' : act === run.act ? `${LADDER_FLOORS}층 · 진행 중` : `${LADDER_FLOORS}층`}</span>
+            </div>
           ))}
         </div>
 

@@ -8,7 +8,7 @@ import {
   eventChoices, eventDef, eventText, resolveEventChoice, startEvent, tradeList, withEventSeen, type EventChoice, type EventId,
   type EventOutcome,
 } from '../../game/events'
-import { advanceFloor, currentEnemy, regionOf, replaceCandidates, runCard, type RunState, type SpecialFight } from '../../game/run'
+import { advanceFloor, currentEnemy, placeLabel, regionOf, replaceCandidates, runCard, type RunState, type SpecialFight } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
@@ -92,7 +92,7 @@ export function EventScreen({
         </>
       ) : (
         <>
-          <SceneLayers scene={regionOf(cur.floor)} />
+          <SceneLayers scene={regionOf(cur)} />
           <div className="screenveil" />
         </>
       )}
@@ -100,7 +100,7 @@ export function EventScreen({
         <div className="shop__where">
           <h1 className="shop__title">? 칸 · 이벤트</h1>
           <span>
-            {regionOf(cur.floor) === 'grassland' ? '초원' : '던전'} · {cur.floor}층
+            {placeLabel(cur)}
           </span>
         </div>
         <div className="shop__purse">

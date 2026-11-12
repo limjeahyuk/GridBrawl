@@ -7,7 +7,7 @@ import { useMemo, useRef, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic, type Rarity } from '../../game/relics'
 import {
-  GOBLIN_LOOT, advanceFloor, currentEnemy, buyGoblinItem, goblinMonsterId, goblinTier, regionOf, rollGoblinShop,
+  GOBLIN_LOOT, advanceFloor, currentEnemy, buyGoblinItem, goblinMonsterId, goblinTier, placeLabel, rollGoblinShop,
   replaceCandidates, runCard, type GoblinItem, type GoblinTier, type RunState,
 } from '../../game/run'
 import { RangeChart } from '../CardFace'
@@ -119,7 +119,7 @@ export function GoblinScreen({
         <div className="shop__where">
           <h1 className="shop__title">고블린 상점</h1>
           <span className="gob__where">
-            ? 칸 · {regionOf(cur.floor) === 'grassland' ? '초원' : '던전'} · {cur.floor}층
+            ? 칸 · {placeLabel(cur)}
           </span>
         </div>
         <Purse run={cur} />

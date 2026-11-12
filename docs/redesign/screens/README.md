@@ -38,7 +38,7 @@
 | `Result.dc.html` | `screens/RunEndScreen.tsx`(런 클리어 · 실패), 전투 승리는 `RewardScreen.tsx` | 전투 승리 / 런 클리어(새 난이도 해금) / 런 실패(쓰러뜨린 적 · 다음 팁) |
 | `Codex.dc.html`, `Relics.dc.html` | `screens/CodexScreen.tsx` | 탭: 영웅 · 몬스터 · 유물. 미발견은 **검은 실루엣 + ???** (유물은 `atlas-silhouette-*.png`, 몬스터는 `filter: brightness(0)`) |
 | `Heroes.dc.html`, `Monsters.dc.html`, `Bosses.dc.html` | `art/sprites.ts` | 스프라이트 시트 참고용. 값은 `docs/redesign/sprites-v2.ts`에 이미 있다 |
-| `Maps.dc.html` | `battlefx.css`의 `.boardfloor--*`, `game/run.ts`의 `sceneFor` | 지역 2개: 초원(1–7층) · 던전(8–15층, 보스·스크립트 엘리트는 자기 무대) |
+| `Maps.dc.html` | `battlefx.css`의 `.boardfloor--*`, `game/run.ts`의 `sceneFor` | 지역 2개 = 지도 2장: 1막 초원(20층) · 2막 던전(20층, 2026-11-12 — 보스·스크립트 엘리트는 자기 무대) |
 
 ## 공통 디자인 값
 

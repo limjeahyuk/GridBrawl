@@ -179,7 +179,7 @@ export function UpgradeScreen({
 
   return (
     <div className="screen upg">
-      <SceneLayers scene={regionOf(run.floor)} />
+      <SceneLayers scene={regionOf(run)} />
       <div className="screenveil" />
       <header className="upg__head">
         <div className="upg__title">

@@ -21,8 +21,7 @@ import {
   afterLoss,
   chooseBranch,
   currentNode,
-  regionOf,
-  sceneFor,
+  placeLabel, sceneFor,
   type RunDifficulty,
   type RunState,
 } from './game/run'
@@ -211,7 +210,7 @@ export default function App() {
   } else if (phase === 'run-fight' && run && runFight) {
     screen = (
       <BattleScreen
-        key={`run-${run.floor}-${runFight.p1CharId}-${run.special?.kind ?? ''}`}
+        key={`run-${run.act}-${run.floor}-${runFight.p1CharId}-${run.special?.kind ?? ''}`}
         p0CharId={runFight.p0CharId}
         p1CharId={runFight.p1CharId}
         localSide={0}
@@ -221,7 +220,7 @@ export default function App() {
         boss={runFight.boss}
         scene={sceneFor(run)}
         relics={run.relicIds}
-        place={`${regionOf(run.floor) === 'grassland' ? '초원' : '던전'} · ${run.floor}층`}
+        place={`${placeLabel(run)}`}
         foeInfo={runFoeInfo(run)}
         getOpponentPlan={runFight.getOpponentPlan}
         onEnd={runFightEnd}

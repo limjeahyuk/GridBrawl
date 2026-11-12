@@ -21,7 +21,7 @@ export function RunBar({ run }: { run: RunState }) {
       <div className="runbar__stat">
         <span className="runbar__label">층</span>
         <span className="runbar__floor">
-          {run.floor} / {LADDER_FLOORS}
+          {run.act}막 {run.floor} / {LADDER_FLOORS}
         </span>
       </div>
       <div className="runbar__hp">

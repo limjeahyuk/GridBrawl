@@ -2,7 +2,7 @@
 // 두 판: 왼쪽에 도장 글씨와 영웅, 오른쪽에 이번 런의 기록이 선다.
 import { sheetFor } from '../../art/sprites'
 import { getChar } from '../../data/roster'
-import { slotCount, difficultyDef, regionOf, type RunDifficulty, type RunState } from '../../game/run'
+import { slotCount, difficultyDef, placeLabel, type RunDifficulty, type RunState } from '../../game/run'
 import { RelicIcon } from '../RelicIcon'
 import { SceneLayers } from '../SceneLayers'
 import { SpriteClip } from '../SpriteClip'
@@ -51,7 +51,7 @@ export function RunEndScreen({
           </div>
         )}
         <span className="runend__where">
-          {regionOf(run.floor) === 'grassland' ? '초원' : '던전'} {run.floor}층 · {diff.name}
+          {placeLabel(run)} · {diff.name}
         </span>
         {/* 해금은 **새로 열렸을 때만** 띄운다 — 같은 난이도를 다시 깰 때마다 축하가
             반복되면 그 자체로 의미가 없어진다(markCleared가 null을 준다). */}

@@ -154,30 +154,30 @@ export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'inn' | 'smith' |
 export interface RunNode {
   type: NodeType
   monsterId?: string // combat/elite/boss
-  /**
-   * 세로 위치(0=위, 1=가운데, 2=아래). 화면에서 어느 줄에 그릴지이자 **어디로
-   * 이어지는지의 근거**다 — 간선은 세로로 한 칸 안쪽(|Δlane| ≤ 1)으로만 난다.
-   */
+  /** 가로 줄(0 ~ `MAP_COLS - 1`). 화면에서 어느 열에 그릴지 — 간선은 옆 줄까지만(|Δlane| ≤ 1) 난다. */
   lane: number
   /** 다음 층에서 **이 칸에서 갈 수 있는** 노드들의 인덱스. 마지막 층은 빈 배열. */
   next: number[]
 }
-/** 노드 줄은 0·1·2 셋. 가운데(1)는 모든 층에 반드시 있다(아래 `buildMap` 주석). */
-const CENTER_LANE = 1
 /**
- * 층 구성(전투 위주에 이벤트·상점을 섞고, 엘리트 뒤 보스). 15층 = 전투 7 + 엘리트 2
- * + 보스 1 + 이벤트 3 + 상점 2. **12층에서 늘렸다(2026-07-30)**: 예전 구성은 전투가
- * 8판뿐이라 tier3 몬스터가 9층 한 칸에서만 나왔다(시뮬에서 팬텀·뱀파이어 조우 60회 vs
- * 잡졸 600회). 층을 늘려 각 티어에 제 몫의 자리를 준다.
- * 첫 엘리트(7층) **앞에 상점(5층)**을 둔 것도 시뮬 결과다 — 엘리트가 5층이던 배치에선
- * 체력 50%·유물 1개로 벽을 만나 그 층이 보스보다 어려웠다(통과 66% vs 보스 79%).
+ * **지도 두 장(막)** — 1막 초원 · 2막 던전, 막마다 20층이고 20층은 보스(2026-11-12 사용자 지정).
+ * 1막 보스를 잡으면 2막 지도로 넘어가고, 2막 보스를 잡으면 런 클리어.
+ * `RunState.floor`는 **그 막 안의 층**(1~20)이고 `act`가 막이다. 몬스터 세기 · 골드 · 유물 등급은
+ * 두 막을 이은 깊이(`runDepth` — 옛 15층 곡선에 맞춘 1~15)로 잰다.
  */
-const NODE_TEMPLATE: NodeType[] = [
-  'combat', 'combat', 'event', 'combat', 'inn', 'combat', 'elite',
-  'event', 'combat', 'elite', 'inn',
-  'event', 'combat', 'event', 'boss', // 12층 전투 → ?(2026-11-12 "이벤트가 더 자주")
-]
-export const LADDER_FLOORS = NODE_TEMPLATE.length
+export const LADDER_FLOORS = 20
+export const ACTS = 2
+export const TOTAL_FLOORS = LADDER_FLOORS * ACTS
+/** 지도 가로 줄 수. */
+export const MAP_COLS = 5
+/** 옛 곡선의 끝 깊이 — 몬스터 체력·공격 · 골드 · 유물 등급 가중은 1~15 위에서 튜닝됐다. */
+export const MAX_DEPTH = 15
+/** 두 막을 이은 층 번호(1 ~ 40). */
+export const globalFloor = (run: Pick<RunState, 'act' | 'floor'>): number => (run.act - 1) * LADDER_FLOORS + run.floor
+/** 막 · 층 → 깊이(1 ~ 15). 40층을 옛 15층 곡선에 펴서 얹는다 — 세기 곡선은 그대로, 걸음만 촘촘해진다. */
+export const depthAt = (act: number, floor: number): number =>
+  1 + (((act - 1) * LADDER_FLOORS + floor - 1) * (MAX_DEPTH - 1)) / (TOTAL_FLOORS - 1)
+export const runDepth = (run: Pick<RunState, 'act' | 'floor'>): number => depthAt(run.act, run.floor)
 
 // --- 덱 룰 ------------------------------------------------------------------
 /**
@@ -255,7 +255,8 @@ const BOSS_HP_SCALE_FACTOR = 0.4
 const GOLD_BASE = 15
 const GOLD_PER_FLOOR = 4
 const GOLD_ELITE_BONUS = 40
-const GOLD_BOSS_BONUS = 80
+/** 보스 골드 = 엘리트와 비슷하게(2026-11-12 사용자 지정 — 예전 80). */
+const GOLD_BOSS_BONUS = 40
 const PRICE_CARD = 35
 /** 고블린 상점 물약의 정가(여관 상점엔 물약이 없다 — 회복은 여관 휴식이 맡는다). */
 const PRICE_HEAL = 30
@@ -313,7 +314,10 @@ export interface RunState {
   hp: number
   maxHp: number
   gold: number
-  floor: number // 1-based
+  /** 몇 막인가(1 = 초원 · 2 = 던전). */
+  act: number
+  /** 그 막 안의 층(1 ~ `LADDER_FLOORS`). */
+  floor: number
   /**
    * 층별 노드와 그 사이의 간선(2026-08-05). `map[floor-1]`이 그 층에 놓인 칸들이고,
    * 각 칸의 `next`가 다음 층에서 갈 수 있는 칸이다. **고를 수 있는 건 직전 칸에서
@@ -359,7 +363,7 @@ const shuffle = <T>(arr: T[]): T[] => {
 }
 
 // --- 사다리 구성 ------------------------------------------------------------
-/** 일반 전투 몬스터 티어(층이 오를수록). 15층 구성 기준 t1: 1·2층, t2: 4·7층, t3: 9층 이후. */
+/** 일반 전투 몬스터 티어 — 깊이(`runDepth`, 1~15) 기준. 1막 앞쪽 t1 · 1막 나머지 t2 · 2막 t3(+ 깊은 곳 t4). */
 function combatTier(floor: number): number {
   if (floor <= 3) return 1
   if (floor <= 8) return 2
@@ -401,128 +405,89 @@ function combatMonster(floor: number, exclude?: string): string {
 }
 
 /**
- * 한 층에 놓을 칸들(줄 배정 전). 첫 칸은 **반드시 템플릿 타입**이고 가운데 줄로 간다.
- *
- * 대안 칸은 "무엇을 포기하고 무엇을 받나"가 한 줄로 설명되는 것만 뒀다:
- *   전투  → 다른 몬스터와의 전투 (어느 적을 상대할지 고른다)
- *   엘리트 → 일반 전투 (유물 확정을 포기하고 안전을 산다)
- *   이벤트 → 상점 (도박 대신 확실한 보급)
- *   상점  → 이벤트 (골드가 없을 때 차라리 도박)
- *   보스  → 없음 (마지막 층은 고를 게 없다)
- *
- * ⚠ **지원 칸(이벤트·상점)을 전투로 바꿀 수 있게 하면 안 된다.** 처음엔 모든 대안을
- * 전투로 뒀는데, 그러면 경로를 헤맬수록 이벤트·상점이 전투로 갈려 나가 **클리어율이
- * 27% → 10%로 무너졌다**(5시드 × 900런). 상점이 층 사이 회복의 주 수단이라
- * (지금은 여관 휴식) 그게 빠지면 회복이 끊긴다. 지원 칸은 **서로하고만** 바꾼다 —
- * 그래야 15층 페이싱을 맞춰 둔 전투/지원 비율이 경로와 무관하게 유지된다.
+ * 칸 종류 가중치(1 · 19 · 20층과 보물 칸을 뺀 나머지 층) — 2026-11-12 사용자 지정 지도.
+ * 엘리트는 6층부터, 대장간은 3층부터, 여관은 5 ~ 17층(19층이 전부 여관이라 18층엔 안 둔다).
  */
-/**
- * 옆 칸(가운데가 아닌 줄)에 놓일 타입의 가중치 — 2026-11-12 사용자 지정: "?·여관·대장간·보물이
- * 꼭 같은 줄(층)에 있지 않아도 된다". 그 전엔 지원 층 옆엔 지원 칸만, 전투 층 옆엔 전투만 놓여
- * 지원 칸이 템플릿의 ? · 여관 층에 몰려 있었다. 이제 **어느 층이든 옆 칸은 섞인다**.
- * ⚠ 옛 실패(지원 칸 대안을 전투로만 두자 클리어율 27% → 10%)는 지원 칸이 **줄기만** 했기 때문이다 —
- * 지금은 전투 층 옆에도 지원 칸이 생겨 경로당 지원 칸 수가 비슷하다(`sim:run`으로 확인).
- * 가운데 줄은 그대로 템플릿 타입이라 기준선 경로(`--path=template`)는 안 바뀐다.
- */
-const SIDE_WEIGHTS: [NodeType, number][] = [['combat', 40], ['event', 30], ['inn', 10], ['smith', 10], ['treasure', 10]]
-function pickSide(used: NodeType[]): NodeType {
-  // 같은 층에 같은 지원 칸이 둘 놓이지 않게(전투는 몬스터가 달라 여럿 괜찮다).
-  const pool = SIDE_WEIGHTS.filter(([t]) => t === 'combat' || !used.includes(t))
-  let r = Math.random() * pool.reduce((a, [, w]) => a + w, 0)
-  for (const [t, w] of pool) if ((r -= w) < 0) return t
-  return 'combat'
-}
-function nodesForFloor(floor: number, primary: NodeType, count: number): RunNode[] {
-  const blank = (type: NodeType, monsterId?: string): RunNode => ({
-    type,
-    monsterId,
-    lane: 0,
-    next: [],
-  })
-  if (primary === 'boss') return [blank('boss', 'overlord')]
-
-  const out: RunNode[] = []
-  if (primary === 'combat') out.push(blank('combat', combatMonster(floor)))
-  else if (primary === 'elite') out.push(blank('elite', pick(elitePool(floor)).id))
-  else out.push(blank(primary))
-
-  while (out.length < count) {
-    // 엘리트 층 옆은 일반 전투(엘리트를 피하는 길), 1층은 첫 전투라 전투끼리. 그 밖엔 섞는다.
-    const type = primary === 'elite' || floor === 1 ? 'combat' : pickSide(out.map((n) => n.type))
-    if (type === 'combat') {
-      // 이미 나온 몬스터는 피해서 뽑는다 — 같은 얼굴 둘을 고르는 건 선택이 아니다.
-      const used = out.filter((n) => n.monsterId).map((n) => n.monsterId)
-      out.push(blank('combat', combatMonster(floor, used[used.length - 1])))
-    } else out.push(blank(type))
-  }
-  return out
-}
+const NODE_WEIGHTS: [NodeType, number][] = [['combat', 50], ['event', 22], ['elite', 10], ['inn', 10], ['smith', 8]]
+const allowedAt = (t: NodeType, floor: number): boolean =>
+  t === 'elite' ? floor >= 6 : t === 'inn' ? floor >= 5 && floor <= 17 : t === 'smith' ? floor >= 3 : true
+/** 이어서 같은 걸 두 번 밟지 않게 하는 종류 — 엘리트 · 여관 · 대장간은 부모 칸과 겹치면 다시 뽑는다. */
+const NO_REPEAT: NodeType[] = ['elite', 'inn', 'smith']
+/** 지도를 그리는 길 수. 길이 겹치는 곳이 칸이 되고, 길이 안 지나간 곳은 비어 있다. */
+const MAP_PATHS = 6
+/** 보물 칸이 놓일 수 있는 층(지도 하나에 딱 하나). */
+const TREASURE_FLOORS: [number, number] = [8, 12]
+/** 막별 보스 — 1막은 수호기사 · 화염군주 중 하나, 2막은 오버로드. */
+const ACT_BOSSES: string[][] = [['warden', 'pyrelord'], ['overlord']]
 
 /**
- * 층 폭(그 층에 놓을 칸 수). **가운데 줄은 항상 있고**, 좌우로 늘어난다.
- * 1이 섞여야 길이 다시 모이는 "허리"가 생겨 지도가 사다리처럼 읽힌다.
- */
-function widthForFloor(floor: number, primary: NodeType): number {
-  if (primary === 'boss') return 1
-  if (floor === 1) return 2 // 첫 층부터 고를 게 있어야 한다
-  const r = Math.random()
-  return r < 0.18 ? 1 : r < 0.68 ? 2 : 3
-}
-
-/** 폭 n짜리 층이 쓸 줄 번호 — 가운데부터 채운다(1 → 1·0 → 0·1·2). */
-function lanesFor(width: number): number[] {
-  if (width <= 1) return [CENTER_LANE]
-  if (width === 2) return Math.random() < 0.5 ? [0, CENTER_LANE] : [CENTER_LANE, 2]
-  return [0, 1, 2]
-}
-
-/**
- * 분기 **그래프**(2026-08-05). 예전엔 층마다 독립된 2택이라 "무엇을 고르든 다음 층은
- * 다시 전부 열려" 있었다 — 고른 게 뒤에 아무 영향이 없으니 지도가 아니라 팝업 두 개였다.
- * 이제 칸마다 **이어지는 칸**이 정해져 있고, 다음 층에서는 **거기서 이어진 칸만** 고를
- * 수 있다. 그래서 선택지 수가 1~3개로 달라지고, 멀리 있는 상점을 노리려면 몇 층 전부터
- * 그쪽 줄을 타야 한다 — 사용자가 요청한 "더 나은 길을 찾아간다"가 이 규칙에서 나온다.
+ * 지도 한 장(막 하나) — **길 그리기 방식**(2026-11-12 사용자 지정: "어느 칸에서든 다음 층 가운데로
+ * 갈 수 없어도 괜찮다. 못 가는 곳이 있어야 시작점을 잘 고른다").
  *
- * ⚠ **가운데 줄(CENTER_LANE)은 모든 층에 있고 거기엔 항상 템플릿 타입이 놓인다.**
- * 어느 칸에서든 |Δlane| ≤ 1로 가운데에 닿으므로, **"매 층 가운데만 밟는 경로"가 늘
- * 존재하고 그게 곧 분기 이전의 선형 사다리**다. 시뮬로 맞춰 둔 밸런스 기준선이 지도
- * 안에 경로로 남아 있는 것이라(`--path=template`), 생성 규칙을 바꿔도 이건 지킬 것.
+ * 1) 길 `MAP_PATHS`개를 1층 무작위 줄에서 출발시켜 19층까지 한 층씩 옆 줄(−1 · 0 · +1)로 올린다.
+ *    처음 두 길은 출발 줄이 다르다. 이미 난 간선과 **엇갈리는**(X자) 걸음은 피한다.
+ * 2) 길이 지나간 자리가 칸, 걸음이 간선이다. 그래서 **한 칸에서 못 가는 칸이 생긴다**.
+ * 3) 20층은 보스 하나 — 19층 칸이 전부 보스로 이어진다.
+ * 4) 종류: 1층 = 전투, 19층 = 여관(보스 전 휴식), 보물 = 8 ~ 12층의 칸 하나, 나머지는 `NODE_WEIGHTS`.
  */
-function buildMap(): RunNode[][] {
-  const floors: RunNode[][] = NODE_TEMPLATE.map((type, i) => {
-    const nodes = nodesForFloor(i + 1, type, widthForFloor(i + 1, type))
-    const lanes = lanesFor(nodes.length)
-    // 템플릿 타입(0번)이 가운데 줄에 오도록 배치한다.
-    const centerAt = lanes.indexOf(CENTER_LANE)
-    const order = [...nodes]
-    if (centerAt > 0) {
-      ;[order[0], order[centerAt]] = [order[centerAt], order[0]]
+function buildMap(act: number): RunNode[][] {
+  const F = LADDER_FLOORS
+  const W = MAP_COLS
+  // edge[f][c] = f층 c줄에서 f+1층으로 가는 줄들 (f는 0부터)
+  const edge: Set<number>[][] = Array.from({ length: F }, () => Array.from({ length: W }, () => new Set<number>()))
+  const used: boolean[][] = Array.from({ length: F }, () => new Array<boolean>(W).fill(false))
+  let first = -1
+  for (let p = 0; p < MAP_PATHS; p++) {
+    let c = Math.floor(Math.random() * W)
+    if (p === 1) while (c === first) c = Math.floor(Math.random() * W)
+    if (p === 0) first = c
+    used[0][c] = true
+    for (let f = 0; f < F - 2; f++) {
+      // 엇갈림 = 옆 줄에서 이쪽으로 오는 간선이 이미 있다(c → n 과 n → c).
+      const cand = [c - 1, c, c + 1].filter((n) => n >= 0 && n < W && !(n !== c && edge[f][n].has(c)))
+      const n = cand.length ? pick(cand) : c
+      edge[f][c].add(n)
+      used[f + 1][n] = true
+      c = n
     }
-    return order.map((n, j) => ({ ...n, lane: lanes[j] }))
-  })
-
-  for (let f = 0; f < floors.length - 1; f++) {
-    const cur = floors[f]
-    const nxt = floors[f + 1]
-    cur.forEach((a) => {
-      a.next = nxt.map((_, j) => j).filter((j) => Math.abs(nxt[j].lane - a.lane) <= 1)
-      // 세로로 두 칸 넘게 떨어져 갈 곳이 없으면 가장 가까운 칸으로 잇는다.
-      if (!a.next.length) {
-        let best = 0
-        nxt.forEach((b, j) => {
-          if (Math.abs(b.lane - a.lane) < Math.abs(nxt[best].lane - a.lane)) best = j
-        })
-        a.next = [best]
-      }
+  }
+  const floors: RunNode[][] = []
+  const indexOf: number[][] = []
+  for (let f = 0; f < F - 1; f++) {
+    const cols = used[f].map((u, c) => (u ? c : -1)).filter((c) => c >= 0)
+    indexOf[f] = new Array<number>(W).fill(-1)
+    cols.forEach((c, i) => (indexOf[f][c] = i))
+    floors[f] = cols.map((c) => ({ type: 'combat' as NodeType, lane: c, next: [] }))
+  }
+  floors[F - 1] = [{ type: 'boss', monsterId: pick(ACT_BOSSES[Math.min(act, ACT_BOSSES.length) - 1]), lane: Math.floor(W / 2), next: [] }]
+  for (let f = 0; f < F - 1; f++)
+    floors[f].forEach((n) => {
+      n.next = f === F - 2 ? [0] : [...edge[f][n.lane]].sort((a, b) => a - b).map((c) => indexOf[f + 1][c])
     })
-    // 들어오는 길이 없는 칸을 남기지 않는다 — 화면에 그려 놓고 못 가는 칸은 거짓말이다.
-    nxt.forEach((b, j) => {
-      if (cur.some((a) => a.next.includes(j))) return
-      let best = 0
-      cur.forEach((a, i) => {
-        if (Math.abs(a.lane - b.lane) < Math.abs(cur[best].lane - b.lane)) best = i
-      })
-      cur[best].next = [...cur[best].next, j].sort((x, y) => x - y)
+
+  // 종류 — 아래층부터 정해야 부모 칸 종류를 볼 수 있다.
+  const tFloor = TREASURE_FLOORS[0] + Math.floor(Math.random() * (TREASURE_FLOORS[1] - TREASURE_FLOORS[0] + 1))
+  const tIdx = Math.floor(Math.random() * floors[tFloor - 1].length)
+  for (let f = 0; f < F - 1; f++) {
+    const floor = f + 1
+    const depth = depthAt(act, floor)
+    floors[f].forEach((n, i) => {
+      let type: NodeType
+      if (floor === 1) type = 'combat'
+      else if (floor === F - 1) type = 'inn'
+      else if (floor === tFloor && i === tIdx) type = 'treasure'
+      else {
+        const parents = floors[f - 1].filter((p) => p.next.includes(i)).map((p) => p.type)
+        const pool = NODE_WEIGHTS.filter(([t]) => allowedAt(t, floor) && !(NO_REPEAT.includes(t) && parents.includes(t)))
+        let r = Math.random() * pool.reduce((a, [, w]) => a + w, 0)
+        type = 'combat'
+        for (const [t, w] of pool) if ((r -= w) < 0) { type = t; break }
+      }
+      n.type = type
+      if (type === 'combat') {
+        const sib = floors[f][i - 1]?.monsterId
+        n.monsterId = combatMonster(depth, sib)
+      } else if (type === 'elite') n.monsterId = pick(elitePool(depth)).id
     })
   }
   return floors
@@ -543,9 +508,11 @@ export type BattleScene = 'grassland' | 'dungeon' | 'lava' | 'abyss' | 'sanctum'
  * 수호기사·화염군주는 `boss` 칸이 아니라 **엘리트 칸**으로 나오므로 종류로 판정하면
  * 둘은 영영 자기 무대를 못 본다. 배경이 곧 "지금 보스다"라는 신호가 되게 한다.
  */
-export const GRASSLAND_LAST_FLOOR = 7
-export const regionOf = (floor: number): 'grassland' | 'dungeon' =>
-  floor <= GRASSLAND_LAST_FLOOR ? 'grassland' : 'dungeon'
+/** 막 → 지역. 1막 초원 · 2막 던전(지도가 늘면 여기에 더한다). */
+export const regionOf = (run: Pick<RunState, 'act'>): 'grassland' | 'dungeon' => (run.act <= 1 ? 'grassland' : 'dungeon')
+export const regionName = (run: Pick<RunState, 'act'>): string => (regionOf(run) === 'grassland' ? '초원' : '던전')
+/** 화면 머리의 자리 표시 — "1막 초원 · 7층". */
+export const placeLabel = (run: Pick<RunState, 'act' | 'floor'>): string => `${run.act}막 ${regionName(run)} · ${run.floor}층`
 
 export function sceneFor(run: RunState): BattleScene {
   const node = currentNode(run)
@@ -553,7 +520,7 @@ export function sceneFor(run: RunState): BattleScene {
     const boss = bossScene(node.monsterId)
     if (boss) return boss
   }
-  return regionOf(run.floor)
+  return regionOf(run)
 }
 
 // --- 지형(바위) -------------------------------------------------------------
@@ -622,7 +589,7 @@ export function hazardsFor(run: RunState, rng: () => number = Math.random): Haza
   const sp = run.special
   const combat = sp ? sp.kind === 'ambush' : currentNode(run).type === 'combat'
   if (!combat || rng() >= HAZARD_CHANCE) return []
-  const kinds = REGION_HAZARDS[regionOf(run.floor)]
+  const kinds = REGION_HAZARDS[regionOf(run)]
   const cells: { col: number; row: number }[] = []
   for (let col = 1; col < GRID_COLS - 1; col++) for (let row = 0; row < GRID_ROWS; row++) cells.push({ col, row })
   const n = 2 + Math.floor(rng() * 2)
@@ -676,8 +643,13 @@ export function currentOptions(run: RunState): RunNode[] {
  */
 export function templateOptionIndex(run: RunState): number {
   const opts = currentOptions(run)
-  const at = opts.findIndex((n) => n.lane === CENTER_LANE)
-  return at < 0 ? 0 : at
+  // 길 그리기 지도(2026-11-12)엔 고정 뼈대가 없다 — 가운데 줄에 가장 가까운 칸을 고른다.
+  const mid = (MAP_COLS - 1) / 2
+  let at = 0
+  opts.forEach((n, i) => {
+    if (Math.abs(n.lane - mid) < Math.abs(opts[at].lane - mid)) at = i
+  })
+  return at
 }
 /** 이번 층에서 이미 골랐는가. `status === 'choosing'`과 짝이다. */
 export function hasPicked(run: RunState): boolean {
@@ -735,9 +707,10 @@ export function enemyForNode(run: RunState, node: RunNode): MonsterDef {
   const base = getMonster(node.monsterId ?? 'grunt')
   const elite = node.type === 'elite' && base.tier < 4
   const boss = node.type === 'boss'
-  const depth = (run.floor - 1) * (boss ? BOSS_HP_SCALE_FACTOR : 1)
+  const d = runDepth(run)
+  const depth = (d - 1) * (boss ? BOSS_HP_SCALE_FACTOR : 1)
   const hpScale = (1 + HP_SCALE_PER_FLOOR * depth) * (elite ? ELITE_HP_MULT : 1)
-  const atk = atkScaleAt(run.floor) + (elite ? ELITE_ATK_BONUS : 0)
+  const atk = atkScaleAt(d) + (elite ? ELITE_ATK_BONUS : 0)
   return {
     ...base,
     maxHp: Math.round(base.maxHp * hpScale),
@@ -766,8 +739,9 @@ export function startRun(charId: string, difficulty: RunDifficulty = DEFAULT_DIF
     hp: maxHp,
     maxHp,
     gold: 0,
+    act: 1,
     floor: 1,
-    map: buildMap(),
+    map: buildMap(1),
     picked: [],
     // 1층부터 고른다 — 어느 칸으로 들어갈지가 런의 첫 결정이다.
     status: 'choosing',
@@ -811,9 +785,10 @@ export function replaceCandidates(run: RunState, cardId: string): string[] {
  */
 export function goldForWin(run: RunState): number {
   const node = currentNode(run)
-  let g = GOLD_BASE + GOLD_PER_FLOOR * run.floor
+  let g = GOLD_BASE + GOLD_PER_FLOOR * runDepth(run)
   if (node.type === 'elite') g += GOLD_ELITE_BONUS
   if (node.type === 'boss') g += GOLD_BOSS_BONUS
+  if (run.special) g = GOLD_BASE + GOLD_PER_FLOOR * runDepth(run) + (run.special.elite ? GOLD_ELITE_BONUS : 0)
   const bonus = runMods(run).goldBonusPct ?? 0
   return Math.round(g * (1 + bonus / 100))
 }
@@ -826,7 +801,8 @@ export const WIN_HEAL = 10
 export function afterWin(run: RunState, hpLeft: number): RunState {
   const hp = clamp(Math.round(hpLeft) + WIN_HEAL, 0, run.maxHp)
   const gold = run.gold + goldForWin(run)
-  if (currentNode(run).type === 'boss') return { ...run, hp, gold, status: 'won' }
+  // 마지막 막의 보스만 런 클리어 — 1막 보스는 보상(희귀 · 영웅 유물 고르기)을 받고 2막으로 간다.
+  if (!run.special && currentNode(run).type === 'boss' && run.act >= ACTS) return { ...run, hp, gold, status: 'won' }
   return { ...run, hp, gold, status: 'reward' }
 }
 export function afterLoss(run: RunState): RunState {
@@ -845,7 +821,7 @@ function availableRelics(run: RunState): string[] {
  * 판을 부수는 조합은 깊이 살아남은 대가로 얻는다(relics.ts `rarityWeightAt`).
  */
 export function rollRelicId(run: RunState): string | undefined {
-  return pickWeightedRelic(availableRelicDefs(run), run.floor)?.id
+  return pickWeightedRelic(availableRelicDefs(run), runDepth(run))?.id
 }
 /** 유물 장착(최대체력 증가분만큼 현재 체력도 함께 오른다). */
 export function grantRelic(run: RunState, relicId: string): RunState {
@@ -855,6 +831,26 @@ export function grantRelic(run: RunState, relicId: string): RunState {
   const delta = maxHp - run.maxHp
   const hp = Math.min(run.hp + Math.max(0, delta), maxHp)
   return { ...run, relicIds, maxHp, hp: clamp(hp, 1, maxHp) }
+}
+/**
+ * 등급 확률로 유물 하나(2026-11-12 사용자 지정 보상표). 그 등급에 남은 게 없으면 다른 등급에서.
+ *   일반 전투 = 일반 · 엘리트 = 희귀(영웅 아주 낮게) · 보스 = 희귀 또는 영웅 · 보물 = 일반 · 희귀(영웅 아주 낮게)
+ */
+export type RarityOdds = [Rarity, number][]
+export const COMBAT_RELIC_ODDS: RarityOdds = [['common', 1]]
+export const ELITE_RELIC_ODDS: RarityOdds = [['rare', 0.94], ['epic', 0.06]]
+export const BOSS_RELIC_ODDS: RarityOdds = [['rare', 0.6], ['epic', 0.4]]
+export const TREASURE_RELIC_ODDS: RarityOdds = [['common', 0.55], ['rare', 0.4], ['epic', 0.05]]
+export const BOSS_RELIC_OPTIONS = 3
+export function rollRelicOf(run: RunState, odds: RarityOdds, exclude: string[] = []): string | undefined {
+  const avail = availableRelicDefs(run).filter((r) => !exclude.includes(r.id))
+  let r = Math.random() * odds.reduce((a, [, w]) => a + w, 0)
+  let rarity = odds[odds.length - 1][0]
+  for (const [k, w] of odds) if ((r -= w) < 0) { rarity = k; break }
+  const same = avail.filter((x) => x.rarity === rarity)
+  if (same.length) return pick(same).id
+  const near = avail.filter((x) => odds.some(([k]) => k === x.rarity))
+  return (near.length ? pick(near) : pickWeightedRelic(avail, runDepth(run)))?.id
 }
 /** 무작위(미보유) 유물 하나를 준다. 다 가졌으면 소량 회복으로 대체. */
 export function grantRandomRelic(run: RunState): { run: RunState; relicId?: string } {
@@ -970,8 +966,10 @@ function missingClassCards(run: RunState): string[] {
     .filter((id) => !run.deck.includes(id))
 }
 /** 보상·상점에 나올 수 있는 카드 전체 풀(공용 확장 + 직업 + 런 전용) — **가진 카드는 뺀다**. */
+/** 공용 보상 카드(이동 · 기본 수비 · 회복) — 엘리트 보상의 "좋은 카드"에선 뺀다. */
+const COMMON_REWARD_IDS = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
 export function cardRewardPool(run: RunState): string[] {
-  const commonPool = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
+  const commonPool = COMMON_REWARD_IDS
   const classCards = getChar(run.charId).cards.map((c) => c.id)
   // 런 카드는 공용 + 자기 직업 것만(2026-11-10 — 마법사 카드가 전사에게 나오던 문제).
   const all = [...commonPool, ...classCards, ...runCardsFor(run.charId).map((c) => c.id)]
@@ -986,16 +984,30 @@ export function cardRewardPool(run: RunState): string[] {
  * 덱에서 직업 카드를 뺀 뒤로는 그걸 못 주우면 런이 성립하지 않기 때문이다.
  */
 export function rollRewards(run: RunState): Reward[] {
+  const node = run.special ? null : currentNode(run)
+  // 보스(1막) — 희귀 · 영웅 유물 중 하나를 고른다(2026-11-12 사용자 지정). 카드는 없다.
+  if (node?.type === 'boss') {
+    const out: Reward[] = []
+    for (let i = 0; i < BOSS_RELIC_OPTIONS; i++) {
+      const relicId = rollRelicOf(run, BOSS_RELIC_ODDS, out.flatMap((r) => (r.kind === 'relic' ? [r.relicId] : [])))
+      if (relicId) out.push({ kind: 'relic', relicId })
+    }
+    if (out.length) return out
+  }
+  const elite = node?.type === 'elite'
   const slots = REWARD_OPTIONS + (runMods(run).rewardOptions ?? 0)
-  const cards = shuffle(cardRewardPool(run)).slice(0, slots)
+  // 엘리트는 "좋은 카드" — 이동 · 기본 수비 · 회복 같은 공용 칸을 뺀 직업 · 런 카드에서만.
+  const pool = elite ? cardRewardPool(run).filter((id) => !COMMON_REWARD_IDS.includes(id)) : cardRewardPool(run)
+  const cards = shuffle(pool).slice(0, slots)
   const out: Reward[] = cards.map((cardId) => ({ kind: 'card', cardId }))
 
   // ⚠ 유물 칸을 **직업 카드 보장보다 먼저** 확정한다. 순서를 뒤집으면(2026-08-01
   // 이전) 보장해 둔 직업 카드가 마지막 칸에 있을 때 유물이 그 칸을 덮어써서
   // 보장이 조용히 깨진다 — 20,000회 중 40여 회(0.2%)가 그랬다.
+  // 엘리트 = 희귀 유물(아주 낮은 확률로 영웅) 확정 · 일반 전투 = 아주 낮은 확률로 일반 유물(2026-11-12).
   const chance = RELIC_IN_REWARD + (runMods(run).relicChanceBonus ?? 0)
-  if (isEliteFloor(run) || Math.random() < chance) {
-    const relicId = rollRelicId(run)
+  if (elite || Math.random() < chance) {
+    const relicId = rollRelicOf(run, elite ? ELITE_RELIC_ODDS : COMBAT_RELIC_ODDS)
     if (relicId) out[out.length - 1] = { kind: 'relic', relicId }
   }
 
@@ -1129,27 +1141,16 @@ export function paySmith(run: RunState): RunState | null {
  */
 export function advanceFloor(run: RunState): RunState {
   const floor = run.floor + 1
-  if (floor > LADDER_FLOORS) return { ...run, special: undefined, status: 'won' }
-  return { ...run, floor, special: undefined, status: 'choosing' }
+  if (floor <= LADDER_FLOORS) return { ...run, floor, special: undefined, status: 'choosing' }
+  // 보스 층을 넘겼다 — 다음 막의 새 지도로(2026-11-12). 마지막 막이면 클리어.
+  if (run.act >= ACTS) return { ...run, special: undefined, status: 'won' }
+  const act = run.act + 1
+  return { ...run, act, floor: 1, map: buildMap(act), picked: [], special: undefined, status: 'choosing' }
 }
 // --- ? 칸 정체 · 고블린 장사꾼(2026-11 리디자인 · `docs/redesign/GOBLIN_MERCHANT.md`) ---
-/**
- * ? 칸이 실제로 무엇인지 — 들어가 봐야 안다. 가중치는 시안에 없어 정한 값이다.
- * 2026-11-12(사용자): 이벤트가 더 자주 · **모닥불은 뺐다**("옛날 잔재") — ?는 이벤트(고블린 포함) 아니면 일반 몬스터 전투.
- */
-export type QuestionFate = 'event' | 'combat' | 'goblin'
-const FATE_WEIGHTS: [QuestionFate, number][] = [['event', 75], ['combat', 12], ['goblin', 13]]
-export function rollQuestionFate(rng: () => number = Math.random): QuestionFate {
-  let r = rng() * 100
-  for (const [f, w] of FATE_WEIGHTS) {
-    if (r < w) return f
-    r -= w
-  }
-  return 'event'
-}
 /** ? 칸의 매복 전투 — 그 층의 일반 몬스터. */
 export function ambushFight(run: RunState): SpecialFight {
-  return { kind: 'ambush', monsterId: combatMonster(run.floor) }
+  return { kind: 'ambush', monsterId: combatMonster(runDepth(run)) }
 }
 
 export type GoblinTier = 'poor' | 'mid' | 'rich'
@@ -1179,7 +1180,7 @@ export function rollGoblinShop(run: RunState, tier: GoblinTier, rng: () => numbe
   )
   let pool = availableRelicDefs(run).filter((r) => cfg.rarities.includes(r.rarity))
   for (let i = 0; i < cfg.relics; i++) {
-    const r = pickWeightedRelic(pool, tier === 'rich' ? LADDER_FLOORS : run.floor) // 부자 = 전설 확률
+    const r = pickWeightedRelic(pool, tier === 'rich' ? MAX_DEPTH : runDepth(run)) // 부자 = 전설 확률
     if (!r) break
     pool = pool.filter((x) => x.id !== r.id)
     out.push({ id: `g-relic-${i}`, kind: 'relic', relicId: r.id, ...goblinPrice(RELIC_PRICE[r.rarity], rng) })
@@ -1222,7 +1223,10 @@ export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; reli
 // --- 보물(2026-11 리디자인) ----------------------------------------------------
 /** 보물 칸 — 유물 상자 하나. */
 export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
-  return grantRandomRelic(run)
+  // 지도 하나에 딱 하나 · 고르기 없이 하나(2026-11-12 사용자 지정).
+  const relicId = rollRelicOf(run, TREASURE_RELIC_ODDS)
+  if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
+  return { run: grantRelic(run, relicId), relicId }
 }
 /**
  * 보상을 건너뛰고 진행 — **회복은 없다**(2026-11-09 사용자 지정). 예전엔 체력 18을 줬는데,

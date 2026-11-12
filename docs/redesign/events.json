@@ -393,7 +393,7 @@
    "name": "초록 정령",
    "mode": "battle",
    "when": {
-    "maxFloor": 10,
+    "act": 1,
     "notRelic": [
      "seed",
      "worldtree"
@@ -435,7 +435,7 @@
    "name": "따뜻한 바람",
    "mode": "chain",
    "when": {
-    "maxFloor": 10,
+    "act": 1,
     "notRelic": [
      "fireegg",
      "phoenixfeather"
@@ -507,7 +507,7 @@
    "name": "세계수",
    "mode": "chain",
    "when": {
-    "minFloor": 11,
+    "act": 2,
     "needRelic": "seed"
    },
    "art": {
@@ -561,7 +561,7 @@
    "name": "불사조",
    "mode": "chain",
    "when": {
-    "minFloor": 11,
+    "act": 2,
     "notRelic": [
      "phoenixfeather"
     ],

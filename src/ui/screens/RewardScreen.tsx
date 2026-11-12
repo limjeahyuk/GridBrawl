@@ -9,8 +9,7 @@ import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
 import { resolveRunCard } from '../../game/runcards'
 import {
-  advanceFloor, ATTACK_CAP, DECK_SLOT_LABEL, replaceCandidates, slotCount, slotOfId, SUPPORT_CAP, goblinItemName, goldForWin, WIN_HEAL, grantCard, grantRelic, GOBLIN_LOOT, healHp, regionOf,
-  rollRewards, runCard, sceneFor, skipReward, type Reward, type RunState,
+  advanceFloor, ATTACK_CAP, DECK_SLOT_LABEL, replaceCandidates, slotCount, slotOfId, SUPPORT_CAP, goblinItemName, goldForWin, WIN_HEAL, grantCard, grantRelic, GOBLIN_LOOT, healHp, placeLabel, rollRewards, runCard, sceneFor, skipReward, type Reward, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
@@ -97,7 +96,7 @@ export function RewardScreen({
       <div className="screenveil" />
       <header className="reward__head">
         <span className="reward__kicker">
-          VICTORY · {regionOf(run.floor) === 'grassland' ? '초원' : '던전'} {run.floor}층
+          VICTORY · {placeLabel(run)}
         </span>
         <h1 className="reward__title">{goblin ? '고블린의 짐' : '보상'}</h1>
       </header>
