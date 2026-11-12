@@ -209,7 +209,7 @@ export const RUN_CARDS: CardDef[] = [
   // --- ② 상태이상 -----------------------------------------------------------
   atk({
     id: 'r-plaguebolt', name: '역병 화살', range: beamBoth(1, 2), damage: 10, energyCost: 9, poison: 2, fog: 1,
-    fx: 'bolt', accent: '#3cbf7a', desc: '앞뒤 1~2칸. 피해를 주면 중독 2라운드 + 맞은 자리에 독안개 1라운드. 서 있어도 아프고 비켜도 아프다.',
+    fx: 'bolt', accent: '#3cbf7a', desc: '앞뒤 1~2칸. 피해를 주면 중독 2겹 + 맞은 자리에 독안개 1라운드. 서 있어도 아프고 비켜도 아프다.',
   }),
   atk({
     id: 'r-emberburst', name: '불티 폭발', range: CROSS, damage: 11, energyCost: 10, burn: 1,
@@ -222,11 +222,11 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-blightwave', name: '역병의 물결', range: [...barBoth(1), ...both(2)], damage: 15, energyCost: 19,
     poison: 2, burn: 2, fx: 'quake', accent: '#8f6fb8',
-    desc: '앞뒤 세 줄 + 앞뒤 2칸째. 독 3과 화상 3을 함께 묻힌다.',
+    desc: '앞뒤 세 줄 + 앞뒤 2칸째. 중독 2겹과 화상 2라운드를 함께 묻힌다.',
   }),
   atk({
     id: 'r-witherpulse', name: '쇠약의 파동', range: barBoth(1), damage: 9, energyCost: 11, poison: 2, drain: 8,
-    fx: 'orb', accent: '#6fa88f', desc: '앞뒤 세 줄을 훑어 독 3을 묻히고 상대 기력을 8 빼앗는다.',
+    fx: 'orb', accent: '#6fa88f', desc: '앞뒤 세 줄을 훑어 중독 2겹을 묻히고 상대 기력을 8 빼앗는다.',
   }),
 
   // --- ③ 값싼 반복기 (누적 기력 트리거를 돌린다) -----------------------------

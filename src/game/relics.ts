@@ -101,8 +101,9 @@ const SIGNATURE: Record<
     //   지금은 **≈0.64%p/HP**로 셋 중 압도적으로 민감하다. 거리를 벌고 싸우는 쪽이라
     //   AI 예측 개편의 타격이 제일 적었고(24.7%), 그래서 18 → 16으로 **내려서** 맞췄다.
     //   전사·마법사와 달리 궁수는 몇 포인트로 밴드가 통째로 움직인다.
-    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 19 }, // 흡혈 2는 2026-11-10 사용자 지정으로 뺐다(체력 100 고정 뒤 궁수가 앞서서)
-    desc: '독니 화살통: 최대 체력 +19, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 중독 2라운드.',
+    // 흡혈 2는 2026-11-10, 중독 2는 2026-11-12(중독 개편 — `STATUS.md` 1절) 사용자 지정으로 뺐다.
+    runEffect: { attackBonus: 5, damageReduction: 2, maxHpBonus: 19 },
+    desc: '독니 화살통: 최대 체력 +19, 받는 피해 -2. 내 공격 피해 +5.',
   },
   mage: {
     id: 'sig-mage', name: '혼백의 마법서', icon: '📖',
@@ -283,12 +284,12 @@ const genericRelics: Relic[] = [
   //   ÷2 스케일)에 맞췄다. 이 훅은 **평면 가산**이라 기본 공격이 5~7인 지금 스케일에서
   //   +14는 기본기 두세 대 값이었다.
   //   ⚠ 값을 다시 만질 생각이면 반드시 `sim:run --sweep` 5시드로 전후를 재고 들어갈 것.
-  { id: 'venomflask', name: '독약 플라스크', icon: '🧪', rarity: 'common', desc: '공격으로 피해를 주면 중독 1라운드를 묻힌다.', effect: { poisonOnHit: 1 } },
+  { id: 'venomflask', name: '독약 플라스크', icon: '🧪', rarity: 'common', desc: '공격으로 피해를 주면 중독 1겹을 묻힌다.', effect: { poisonOnHit: 1 } },
   { id: 'emberbrand', name: '잉걸 낙인', icon: '🔥', rarity: 'common', desc: '공격으로 피해를 주면 화상 1라운드를 묻힌다.', effect: { burnOnHit: 1 } },
   { id: 'coldiron', name: '차가운 쇠', icon: '❄️', rarity: 'common', desc: '상태이상에 걸린 상대에게 주는 피해 +3.', effect: { bonusVsAfflicted: 3 } },
   { id: 'wickedmortar', name: '사악한 절구', icon: '⚗️', rarity: 'rare', desc: '내가 거는 중독·화상 위력 +40%.', effect: { statusPowerPct: 40 } },
   { id: 'hunterspite', name: '사냥꾼의 앙심', icon: '🎯', rarity: 'epic', desc: '상태이상에 걸린 상대에게 피해 +7. 보호막을 무시한다.', effect: { bonusVsAfflicted: 7, alwaysPierce: true } },
-  { id: 'rotcrown', name: '부패의 왕관', icon: '👑', rarity: 'legend', desc: '피해를 주면 중독 2라운드·화상 2라운드를 함께 묻히고, 중독·화상 위력 +50%, 상태이상 상대에게 피해 +5.', effect: { poisonOnHit: 2, burnOnHit: 2, statusPowerPct: 50, bonusVsAfflicted: 5 } },
+  { id: 'rotcrown', name: '부패의 왕관', icon: '👑', rarity: 'legend', desc: '피해를 주면 중독 2겹·화상 2라운드를 함께 묻히고, 중독·화상 위력 +50%, 상태이상 상대에게 피해 +5.', effect: { poisonOnHit: 2, burnOnHit: 2, statusPowerPct: 50, bonusVsAfflicted: 5 } },
 
   // =========================================================================
   // 확장 세트 3 (2026-08-05) — 유물 종류 2배
@@ -368,12 +369,12 @@ const genericRelics: Relic[] = [
   { id: 'phoenixrage', name: '잿불의 격정', icon: '🔥', rarity: 'legend', desc: '체력이 절반 이하면 피해 +80%. 전투당 한 번 체력 15으로 되살아난다.', effect: { lowHpBonusPct: 80, revive: 15 } },
 
   // --- 상태이상 보강 --------------------------------------------------------
-  { id: 'toxinvial', name: '맹독 병', icon: '🧫', rarity: 'rare', desc: '피해를 주면 중독 2라운드를 묻힌다.', effect: { poisonOnHit: 2 } },
+  { id: 'toxinvial', name: '맹독 병', icon: '🧫', rarity: 'rare', desc: '피해를 주면 중독 2겹을 묻힌다.', effect: { poisonOnHit: 2 } },
   { id: 'cinderbrand', name: '잿불 인장', icon: '🕯', rarity: 'rare', desc: '피해를 주면 화상 2라운드를 묻힌다.', effect: { burnOnHit: 2 } },
   { id: 'witchbrew', name: '마녀의 탕약', icon: '🍯', rarity: 'epic', desc: '내가 거는 중독·화상 위력 +65%.', effect: { statusPowerPct: 65 } },
   { id: 'bonepicker', name: '뼈 발라내기', icon: '🦴', rarity: 'rare', desc: '상태이상에 걸린 상대에게 피해 +5.', effect: { bonusVsAfflicted: 5 } },
-  { id: 'ashlung', name: '재의 폐', icon: '🌫', rarity: 'epic', desc: '피해를 주면 화상 2라운드·중독 1라운드를 함께 묻힌다.', effect: { burnOnHit: 2, poisonOnHit: 1 } },
-  { id: 'freezerot', name: '동사의 저주', icon: '🥶', rarity: 'legend', desc: '전투당 세 번 빙결을 걸고, 피해를 주면 중독 2라운드·화상 2라운드를 묻힌다.', effect: { freezeOnHit: 1, freezeCap: 3, poisonOnHit: 2, burnOnHit: 2 } },
+  { id: 'ashlung', name: '재의 폐', icon: '🌫', rarity: 'epic', desc: '피해를 주면 화상 2라운드·중독 1겹을 함께 묻힌다.', effect: { burnOnHit: 2, poisonOnHit: 1 } },
+  { id: 'freezerot', name: '동사의 저주', icon: '🥶', rarity: 'legend', desc: '전투당 세 번 빙결을 걸고, 피해를 주면 중독 2겹·화상 2라운드를 묻힌다.', effect: { freezeOnHit: 1, freezeCap: 3, poisonOnHit: 2, burnOnHit: 2 } },
 
   // --- 지속 연장 계열 (2026-08-07 2차) — **전부 legend, 런 전용** ------------
   //
@@ -392,7 +393,7 @@ const genericRelics: Relic[] = [
   //   PvP에 존재하지 않아 `RULES_VERSION`을 안 올려도 된다(`npm run check`가 단정한다).
   {
     id: 'sabbath', name: '마녀의 안식일', icon: '🌙', rarity: 'legend',
-    desc: '내가 거는 중독·화상이 각각 1라운드 더 간다.',
+    desc: '내가 거는 중독은 1겹 더, 화상은 1라운드 더 간다.',
     effect: { poisonRoundBonus: 1, burnRoundBonus: 1 },
   },
   {

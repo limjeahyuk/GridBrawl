@@ -64,17 +64,18 @@ export interface Passive {
   openingShield?: number
   // --- 상태이상 훅(2026-08-01) — 3직업 개편의 빌드 재료 ---
   /**
-   * 내 공격이 피해를 입히면 중독 **한 겹**을 더 건다 — 값은 그 겹의 **지속 라운드**다
-   * (위력이 아니다: 한 겹은 늘 이동 1칸당 `POISON_TICK_DAMAGE`). 카드의 `poison`과
-   * 겹치면 **지속이 긴 쪽**을 쓴다 — 한 대에 한 겹이 규칙이라 유물로 두 겹이 되면 안 된다.
+   * 내 공격이 피해를 입히면 중독 **N겹**을 더 건다(2026-11-12 개편 — 겹 = 남은 라운드).
+   * 카드의 `poison`과 **더해진다**(독니 화살 2 + 이 값 2 = 4겹).
+   * ⚠ PvP `ROSTER.passive` 궁수 1은 그대로 둔다(PvP는 보지 않는다 — 사용자 지정).
    */
   poisonOnHit?: number
   /** 같은 규칙의 화상판 — 값은 지속 라운드. */
   burnOnHit?: number
   /**
-   * 내가 거는 중독·화상 **한 겹의 위력** +N%(중독은 이동 1칸당, 화상은 피격 1회당).
-   * **거는 순간 한 번 계산해 박아 넣는다** — 매번 다시 계산하면 유물을 도중에 얻었을
-   * 때 이미 걸린 겹까지 소급돼 어긋난다.
+   * 내가 거는 중독·화상의 위력 +N%.
+   *   중독 = **아플 때** `round(겹 × (1 + N/100))` — 겹이 한 수라 거는 순간 박아 둘 곳이 없다
+   *          (거는 쪽 = 중독된 진영의 **상대** 유물을 본다. 2026-11-12 개편).
+   *   화상 = 거는 순간 한 겹의 위력(피격 1회당)에 한 번 박아 넣는다(옛 규칙 — 화상 개편 전).
    */
   statusPowerPct?: number
   /** 상대가 상태이상에 하나라도 걸려 있으면 내 공격 피해 +N(상태이상 시너지). */
@@ -116,7 +117,7 @@ export interface Passive {
   // ⚠ **봉인(기절·빙결·속박)을 늘리면 라운드를 넘어간다.** 무한 봉인이 안 되는 이유는
   //   `applyStatus`의 **재부여 가드**다 — 이미 걸려 있는 봉인은 다시 걸리지 않으므로
   //   "이번 라운드 + 다음 라운드"까지가 끝이고 그다음 라운드엔 반드시 일어난다.
-  /** 내가 거는 **중독**의 지속 +N라운드(중첩 상한은 그대로 3겹). */
+  /** 내가 거는 **중독**에 +N겹(걸 때마다 · 2026-11-12 개편). */
   poisonRoundBonus?: number
   /** 내가 거는 **화상**의 지속 +N라운드. */
   burnRoundBonus?: number
@@ -353,9 +354,9 @@ export const ROSTER: CharacterDef[] = [
     ],
     cards: [
       atk({ id: 'arc-shot', name: '잿빛 화살', range: [...beamBoth(1, 2), ...FORK], damage: 12, energyCost: 8, fx: 'bolt', desc: '앞뒤 1~2칸 + 앞뒤 대각 네 칸을 노리는 기본 사격. 한 줄 어긋난 상대도 대각으로 잡는다. 겹쳐 선 상대도 맞힌다.' }),
-      atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 11, energyCost: 10, poison: 2, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 중독 2라운드 — 중독은 움직일 때마다 갉으므로 거리를 벌리려는 상대에게 값을 물린다. 밀착 사각.' }),
+      atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 11, energyCost: 10, poison: 2, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 중독 2겹 — 중독은 움직이거나 때릴 때마다 겹만큼 갉으므로 거리를 벌리려는 상대에게 값을 물린다. 밀착 사각.' }),
       atk({ id: 'arc-pin', name: '말뚝 화살', range: beamBoth(1, 2), damage: 14, energyCost: 16, pierce: true, push: 1, fx: 'bolt', desc: '앞뒤 1~2칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
-      atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 20, energyCost: 23, poison: 3, fog: 2, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 중독 3라운드 + 맞은 자리에 독안개 2라운드. 서 있으면 안개가 갉고 비키면 중독이 갉는다. 밀착 사각.' }),
+      atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 20, energyCost: 23, poison: 3, fog: 2, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 중독 3겹 + 맞은 자리에 독안개 2라운드. 서 있으면 안개가 갉고 비키면 중독이 갉는다. 밀착 사각.' }),
       // ⚠ 궁수의 구조적 약점: 카드 대부분이 밀착 사각인데 몬스터가 접근한다.
       // 아래 두 장이 그 해법이다 — 물러나며 쏘고(카이팅), 붙은 적을 얼려 떼어낸다.
       atk({ id: 'arc-kite', name: '물러서며 쏘기', range: [...beamBoth(1, 2), ...FORK], damage: 11, energyCost: 10, dashForward: -1, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞뒤 1~2칸 + 앞뒤 대각 네 칸에 흩뿌린다. 빠지면서 어긋난 줄을 대각으로 쓸어 맞힌다 — 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),

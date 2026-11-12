@@ -333,65 +333,66 @@ console.log('\n런 진행 규칙')
 // 중독=움직이면 아프다 / 화상=맞으면 더 아프다 / 빙결=이 라운드 정지(맞으면 깨짐)
 // / 속박=이 라운드 이동 불가. 셋(빙결·기절·속박)은 라운드를 넘지 않는다.
 console.log('\n상태이상 — 중독(이동) · 화상(피격) · 빙결 · 속박 · 독안개')
+// 중독(2026-11-12 개편 · docs/redesign/STATUS.md 1절): 겹 수 하나 · 상한 없음 · 라운드 끝 −1 ·
+// 행동 한 번(이동 카드 · 공격 카드 · 밀려남)에 지금 겹 × 1 · 보호막 관통.
+const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poison: n })
 {
-  // 중독 — **움직인 칸마다** 3. 제자리에서 싸우면 아프지 않다.
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-poison', poison: 2 }
   const b = battleWith({}, {})
-  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  check('중독이 2라운드짜리 한 겹으로 걸린다', [b.stacksOf(1, 'poison'), b.statusOf(1, 'poison')?.rounds], [1, 1])
-  check('중독 한 겹의 위력 = 이동 1칸당 3', b.statusPower(1, 'poison'), POISON_TICK_DAMAGE)
+  b.resolveRound([pjab('test-poison', 2), card('c-energy'), card('c-energy')], HOLD)
+  check('중독 2겹 → 라운드 끝에 1겹', [b.stacksOf(1, 'poison'), b.state.status[1].filter((e) => e.kind === 'poison').length], [1, 1])
   const hp1 = b.state.hp[1]
   b.resolveRound(HOLD, HOLD) // 안 움직이면 아무 일도 없어야 한다
-  check('중독 — 안 움직이면 갉지 않는다', b.state.hp[1], hp1)
+  check('중독 — 수비 · 기력만 내면 안 아프다', b.state.hp[1], hp1)
+  check('중독 — 겹이 0이 되면 사라진다', b.statusOf(1, 'poison'), undefined)
 }
 {
-  // 한 칸 이동 = 3, 대시(2칸) = 6, 대각선 한 장 = 3.
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pmove', poison: 3 }
+  // 5겹 → 끝에 4. 이동 1칸 = 4 → 끝에 3. 두 칸 대시도 한 번 = 3 → 끝에 2. 대각선 = 2.
   const b = battleWith({}, {})
-  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([pjab('test-pmove', 5), card('c-energy'), card('c-energy')], HOLD)
+  let hp = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('중독 4겹 — 이동 카드 한 장에 4', hp - b.state.hp[1], 4)
+  hp = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-right2'), card('c-energy'), card('c-energy')])
+  check('중독 3겹 — 두 칸 대시도 한 번(3)', hp - b.state.hp[1], 3)
+  hp = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-ul'), card('c-energy'), card('c-energy')])
+  check('중독 2겹 — 대각선 한 장 = 2', hp - b.state.hp[1], 2)
+}
+{
+  // 벽에 막혀 한 칸도 못 움직이면 안 아프다(사용자 확인).
+  const b = battleWith({}, {})
+  b.resolveRound([pjab('test-pwall', 4), card('c-energy'), card('c-energy')], HOLD)
+  b.state.pos[1] = { col: GRID_COLS - 1, row: 1 }
+  const hp = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-right'), card('c-energy'), card('c-energy')])
+  check('중독 — 막혀 0칸이면 안 아프다', hp - b.state.hp[1], 0)
+}
+{
+  // 공격 카드도 한 장에 한 번(빗나가도).
+  const b = battleWith({}, {})
+  b.resolveRound([pjab('test-patk', 5), card('c-energy'), card('c-energy')], HOLD)
+  b.state.pos = [{ col: 0, row: 0 }, { col: GRID_COLS - 1, row: 3 }] // 멀리 — 빗나간다
+  const hp = b.state.hp[1]
+  b.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  check('중독 4겹 — 빗나간 공격 한 장에도 4', hp - b.state.hp[1], 4)
+}
+{
+  // 상한 없음 — 한 라운드에 세 대(3겹씩) = 9겹 → 끝에 8. 이동 한 번에 8.
+  const b = battleWith({}, {})
+  b.resolveRound([pjab('test-ps1', 3), pjab('test-ps2', 3), pjab('test-ps3', 3)], HOLD)
+  check('중독 — 걸 때마다 더한다 · 상한 없음(9 → 8)', b.stacksOf(1, 'poison'), 8)
   const hp0 = b.state.hp[1]
   b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('중독 — 한 칸 이동에 3', hp0 - b.state.hp[1], POISON_TICK_DAMAGE)
-  const hp1 = b.state.hp[1]
-  b.resolveRound(HOLD, [card('m-left2'), card('c-energy'), card('c-energy')])
-  check('중독 — 두 칸 대시는 두 번 움직인 것(6)', hp1 - b.state.hp[1], POISON_TICK_DAMAGE * 2)
+  check('중독 8겹 — 이동 한 번에 8', hp0 - b.state.hp[1], 8)
 }
 {
-  // 대각선 한 장은 **한 번 움직인 것**(사용자 확정) — 두 축을 한 번에 좁혀도 3.
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pdiag', poison: 3 }
-  const b = battleWith({}, {})
-  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  const hp0 = b.state.hp[1]
-  b.resolveRound(HOLD, [card('m-ur'), card('c-energy'), card('c-energy')])
-  check('중독 — 대각선은 한 번 움직인 것(3)', hp0 - b.state.hp[1], POISON_TICK_DAMAGE)
-}
-{
-  // 중첩 — 겹마다 따로 산다. 한 라운드에 세 대 맞으면 세 겹, 이동 1칸에 9.
-  const jab = (n: number): CardDef => ({ ...card('c-strike'), id: `test-ps${n}`, poison: 3 })
-  const b = battleWith({}, {})
-  b.resolveRound([jab(1), jab(2), jab(3)], HOLD)
-  check('중독 — 한 대에 한 겹씩 쌓인다', b.stacksOf(1, 'poison'), 3)
-  const hp0 = b.state.hp[1]
-  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('중독 3겹 — 한 칸 이동에 9', hp0 - b.state.hp[1], POISON_TICK_DAMAGE * 3)
-}
-{
-  // 중첩 상한 — 네 대를 맞아도 세 겹까지만.
-  const jab = (n: number): CardDef => ({ ...card('c-strike'), id: `test-pc${n}`, poison: 3 })
-  const b = battleWith({}, {})
-  b.resolveRound([jab(1), jab(2), jab(3)], HOLD)
-  b.resolveRound([jab(4), card('c-energy'), card('c-energy')], HOLD)
-  check('중독 중첩 상한 3겹', b.stacksOf(1, 'poison'), STATUS_STACK_CAP)
-}
-{
-  // 중독은 **보호막을 관통한다**(사용자 확정 예시2). 보호막은 라운드 시작에 다시
-  // 서므로 상시 보호막 패시브로 세워 둔다(직접 대입하면 라운드 시작에 지워진다).
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-ppierce', poison: 3, pierce: true }
+  // 중독은 **보호막을 관통한다**. 보호막은 라운드 시작에 다시 서므로 상시 보호막 패시브로 세운다.
   const b = battleWith({}, { turnShield: 50 })
-  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([{ ...pjab('test-ppierce', 4), pierce: true }, card('c-energy'), card('c-energy')], HOLD)
   const hp0 = b.state.hp[1]
   b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('중독 — 보호막을 관통한다', hp0 - b.state.hp[1], POISON_TICK_DAMAGE)
+  check('중독 — 보호막을 관통한다(3겹 = 3)', hp0 - b.state.hp[1], 3)
   check('중독 — 보호막은 안 깎인다', b.state.shield[1], 50)
 }
 {
@@ -489,25 +490,30 @@ console.log('\n상태이상 — 중독(이동) · 화상(피격) · 빙결 · �
   check('독안개 — 지속이 끝나면 걷힌다', hp2 - b.state.hp[1], 0)
 }
 {
-  // 유물 훅: poisonOnHit는 이제 **지속 라운드**다(위력이 아니다).
+  // 유물 훅: poisonOnHit = 평범한 카드에도 N겹.
   const b = battleWith({ poisonOnHit: 2 }, {})
   b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('poisonOnHit — 평범한 카드에도 중독 한 겹이 묻는다', b.stacksOf(1, 'poison'), 1)
-  check('poisonOnHit 2 → 2라운드(1라운드 소모 후 1 남음)', b.statusOf(1, 'poison')?.rounds, 1)
+  check('poisonOnHit 2 — 평범한 카드에도 2겹(끝에 1)', b.stacksOf(1, 'poison'), 1)
 }
 {
-  // statusPowerPct는 이제 **한 겹의 위력**을 키운다(이동 1칸당 피해).
-  const b = battleWith({ poisonOnHit: 2, statusPowerPct: 100 }, {})
-  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('statusPowerPct 100% — 이동 1칸당 3 → 6', b.statusPower(1, 'poison'), POISON_TICK_DAMAGE * 2)
+  // 카드 + 유물 + 안식일은 **다 더한다**(사용자 확인): 4 + 2 + 1 = 7 → 끝에 6.
+  const b = battleWith({ poisonOnHit: 2, poisonRoundBonus: 1 }, {})
+  b.resolveRound([pjab('test-pboth', 4), card('c-energy'), card('c-energy')], HOLD)
+  check('카드 + 유물 + 안식일 — 다 더한다(7 → 6)', b.stacksOf(1, 'poison'), 6)
 }
 {
-  // 카드와 유물이 둘 다 걸면 **지속이 긴 쪽** 한 겹(두 겹이 되면 안 된다).
-  const poisonJab: CardDef = { ...card('c-strike'), id: 'test-pboth', poison: 1 }
-  const b = battleWith({ poisonOnHit: 3 }, {})
-  b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  check('카드+유물 — 한 대에 한 겹만', b.stacksOf(1, 'poison'), 1)
-  check('카드+유물 — 지속은 긴 쪽', b.statusOf(1, 'poison')?.rounds, 2)
+  // 위력 % — **아플 때** round(겹 × (1 + %/100)), 거는 쪽(상대) 유물. 5겹 × 1.4 = 7.
+  const b = battleWith({ statusPowerPct: 40 }, {})
+  b.resolveRound([pjab('test-ppct', 6), card('c-energy'), card('c-energy')], HOLD)
+  const hp = b.state.hp[1]
+  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('statusPowerPct 40% — 5겹이 7(반올림)', hp - b.state.hp[1], 7)
+  // 중독된 쪽 자신의 % 유물은 안 본다.
+  const c = battleWith({}, { statusPowerPct: 100 })
+  c.resolveRound([pjab('test-ppct2', 6), card('c-energy'), card('c-energy')], HOLD)
+  const hp2 = c.state.hp[1]
+  c.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
+  check('statusPowerPct — 중독된 쪽 유물은 안 본다(5)', hp2 - c.state.hp[1], 5)
 }
 {
   // 이미 걸려 있는 상대에게만 보너스. 첫 타격은 아직 안 걸렸으므로 보너스 없음.
@@ -546,8 +552,8 @@ console.log('\n상태이상 — 중독(이동) · 화상(피격) · 빙결 · �
 
 // --- 넉백 × 중독 (2026-08-07 3차 · 사용자 예시 그대로) -------------------------
 // "중독에 걸린 유저를 넉백 3으로 밀었는데 벽이 2칸 뒤 → 2칸 밀리고 1칸 막힘 →
-//  5(넉백) + 6(중독 2칸) = 11 피해 + 기절"
-console.log('\n넉백 × 중독 — 밀려난 칸도 독이 문다')
+//  5(넉백) + 중독" — 2026-11-12 개편 뒤 밀려남은 몇 칸이든 **한 번**(지금 겹 × 1).
+console.log('\n넉백 × 중독 — 밀려나면 독이 한 번 문다')
 {
   const shove: CardDef = {
     id: 'test-poisonshove', name: '테스트 넉백3', kind: 'attack', desc: '',
@@ -555,9 +561,9 @@ console.log('\n넉백 × 중독 — 밀려난 칸도 독이 문다')
   }
   const poisonJab: CardDef = { ...card('c-strike'), id: 'test-psh', poison: 3 }
   const b = battleWith({}, {})
-  // 먼저 중독 한 겹을 묻힌다(붙어 선 상태에서).
+  // 먼저 중독 3겹을 묻힌다(붙어 선 상태에서) → 라운드 끝에 2겹.
   b.resolveRound([poisonJab, card('c-energy'), card('c-energy')], HOLD)
-  check('중독 한 겹이 걸렸다', b.statusPower(1, 'poison'), POISON_TICK_DAMAGE)
+  check('중독 2겹이 남았다', b.stacksOf(1, 'poison'), 2)
   // p1을 벽에서 두 칸 떨어진 자리(col 3)에 세우고 p0가 바로 왼쪽(col 2)에서 민다.
   // 오른쪽 벽은 col 5 → 3 → 4 → 5까지 두 칸 가고 세 번째가 막힌다.
   b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }]
@@ -568,9 +574,9 @@ console.log('\n넉백 × 중독 — 밀려난 칸도 독이 문다')
   )
   check('두 칸 밀리고 벽에 부딪힌다', b.state.pos[1].col, GRID_COLS - 1)
   check(
-    '넉백 5 + 중독 6 = 11',
+    '넉백 5 + 중독 2(한 번) = 7',
     hp - b.state.hp[1],
-    KNOCKBACK_BLOCK_DAMAGE + POISON_TICK_DAMAGE * 2,
+    KNOCKBACK_BLOCK_DAMAGE + 2,
   )
   check('그리고 기절한다', steps.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
 }
@@ -586,7 +592,7 @@ console.log('\n넉백 × 중독 — 밀려난 칸도 독이 문다')
   b.state.pos = [{ col: 1, row: 1 }, { col: 2, row: 1 }]
   const hp = b.state.hp[1]
   b.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
-  check('끝까지 밀리면 중독만(3×2)', hp - b.state.hp[1], POISON_TICK_DAMAGE * 2)
+  check('끝까지 두 칸 밀려도 중독은 한 번(2겹 = 2)', hp - b.state.hp[1], 2)
 }
 {
   // 중독이 없으면 밀려나도 아무 일 없다(회귀).

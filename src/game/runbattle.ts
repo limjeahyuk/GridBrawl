@@ -72,7 +72,7 @@ export function runFightProps(run: RunState): RunFightProps {
     hazards: hazardsFor(run),
     // 엘리트·보스는 붕괴를 늦게 시작한다(2026-11-10 사용자 지정 — "엘리트는 시간을 훨씬 더").
     collapseDelay: isEliteFight(run) ? ELITE_COLLAPSE_DELAY : 0,
-    // 항아리 이벤트 — 중독 한 겹을 안고 시작한다(겹 위력은 고정값).
+    // 항아리 이벤트 — 중독 N겹을 안고 시작한다(겹 = `rounds`).
     startStatus: run.special?.startPoison
       ? [[{ kind: 'poison', rounds: run.special.startPoison, power: POISON_TICK_DAMAGE, since: 0 }], undefined]
       : undefined,

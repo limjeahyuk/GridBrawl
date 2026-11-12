@@ -344,7 +344,7 @@ export interface SpecialFight {
   /** 고블린 습격 — 덮친 고블린의 단계와 그때 진열(이기면 여기서 전리품을 고른다). */
   goblinTier?: GoblinTier
   goblinStock?: GoblinItem[]
-  /** 플레이어가 중독 N라운드로 시작(항아리). */
+  /** 플레이어가 중독 N겹으로 시작(항아리). */
   startPoison?: number
   /** 이겨서 받은 덤 유물(보상 화면 안내용). */
   wonRelicId?: string

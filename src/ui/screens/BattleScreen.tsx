@@ -337,6 +337,20 @@ function statusChips(
   return out;
 }
 
+/**
+ * 칩의 숫자. 중독은 **겹 수 하나**(= 남은 라운드)라 `×N`만(2026-11-12 개편 · 임시 모양 —
+ * 아이콘 줄 시안은 사용자가 추후 준다). 나머지는 "한 번에 들어오는 피해 + 남은 라운드".
+ */
+function ChipNum({ chip }: { chip: { kind: string; power: number; rounds: number } }) {
+  if (chip.kind === "poison") return <b>×{chip.rounds}</b>;
+  return (
+    <>
+      {chip.power > 0 ? chip.power : ""}
+      <b>{chip.rounds}</b>
+    </>
+  );
+}
+
 const isAtk = (r: ActionResult) =>
   r === "hit" || r === "blocked" || r === "whiff";
 const STEP_MS: Record<Step["phase"], number> = {
@@ -2387,8 +2401,7 @@ function FighterSprite({
           {statusChips(v.status[idx]).map((c) => (
             <span key={c.kind} className={`stchip stchip--${c.kind}`}>
               <StatusGlyph kind={c.kind} />
-              {c.power > 0 ? c.power : ""}
-              <b>{c.rounds}</b>
+              <ChipNum chip={c} />
             </span>
           ))}
         </div>
@@ -2605,8 +2618,7 @@ function BhudSide({
                 className={`stchip stchip--hud stchip--${c.kind}`}
               >
                 <StatusGlyph kind={c.kind} />
-                {c.power > 0 ? c.power : ""}
-                <b>{c.rounds}</b>
+                <ChipNum chip={c} />
               </span>
             ))}
           </span>

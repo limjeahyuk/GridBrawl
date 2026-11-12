@@ -83,8 +83,8 @@ export interface BattleState {
    */
   empowered: [number, number]
   /**
-   * 걸려 있는 상태이상. 중독·화상은 **겹마다 한 칸**(최대 `STATUS_STACK_CAP`),
-   * 나머지는 종류당 한 칸. 라운드 한정 제약(빙결·기절·속박)은 라운드 시작에 지워진다.
+   * 걸려 있는 상태이상. 화상은 **겹마다 한 칸**(최대 `STATUS_STACK_CAP`), 중독은 한 칸의
+   * `rounds`가 겹 수(상한 없음), 나머지는 종류당 한 칸. 라운드 한정 제약(빙결·기절·속박)은 라운드 시작에 지워진다.
    */
   status: [StatusEffect[], StatusEffect[]]
   /** 판 위의 바위(지형). 비어 있으면 지형 규칙이 통째로 no-op — PvP·봇전이 그렇다. */
@@ -228,8 +228,12 @@ export class CardBattle {
     return this.state.status[p].find((e) => e.kind === kind)
   }
 
-  /** 이 종류가 몇 겹 걸려 있는가(중독·화상은 겹마다 따로 산다). */
+  /**
+   * 이 종류가 몇 겹 걸려 있는가. 화상은 겹마다 한 칸씩 따로 살고, **중독은 한 칸의
+   * `rounds`가 곧 겹 수**다(2026-11-12 개편 — 겹 = 남은 라운드).
+   */
   stacksOf(p: number, kind: StatusKind): number {
+    if (kind === 'poison') return this.statusOf(p, 'poison')?.rounds ?? 0
     return this.state.status[p].reduce((n, e) => (e.kind === kind ? n + 1 : n), 0)
   }
 
@@ -512,7 +516,7 @@ export class CardBattle {
       power: number,
       rounds: number,
       /**
-       * 지속 상한. 기본은 봉인 1라운드 / 중독·화상 `STATUS_MAX_ROUNDS`이고, 런 전용
+       * 지속 상한. 기본은 봉인 1라운드 / 화상 `STATUS_MAX_ROUNDS`이고(중독은 상한이 없어 안 본다), 런 전용
        * 전설 유물(`*RoundBonus`)이 이걸 밀어 올린다. 호출부가 이미 보너스를 더한
        * `rounds`를 넘기므로 상한도 같이 넘겨야 한다 — 안 그러면 유물이 무효가 된다.
        */
@@ -529,6 +533,17 @@ export class CardBattle {
       //   새로 채워지지 않으므로 "이번 + 다음 라운드"에서 반드시 끝난다.
       //   (빙결은 맞으면 먼저 깨지므로(`thaw`) 깨진 뒤 다시 거는 건 그대로 된다.)
       if (isRoundLock(kind) && s.status[p].some((e) => e.kind === kind)) return
+      // **중독**(2026-11-12 개편) — 한 칸에 겹 수(`rounds`)를 **더한다**. 상한 없음.
+      //   라운드 끝 `tickStatuses`가 1씩 깎으므로 "겹 = 남은 라운드"가 저절로 된다.
+      //   위력 %는 여기 박지 않는다 — 아플 때(`tickPoison`) 거는 쪽 유물로 계산한다.
+      if (kind === 'poison') {
+        const cur = s.status[p].find((e) => e.kind === 'poison')
+        if (cur) {
+          cur.rounds += rounds
+          cur.since = s.round
+        } else s.status[p].push({ kind, rounds, power: POISON_TICK_DAMAGE, since: s.round })
+        return
+      }
       if (isStacking(kind)) {
         const mine = s.status[p].filter((e) => e.kind === kind)
         if (mine.length >= STATUS_STACK_CAP) {
@@ -556,19 +571,22 @@ export class CardBattle {
     const buffPower = (p: number, kind: StatusKind): number => this.statusOf(p, kind)?.power ?? 0
 
     /**
-     * **중독 정산** — 이 진영이 `times`번 **행동**했다. 겹 수 × `POISON_TICK_DAMAGE`를
-     * 행동마다 물린다. 보호막을 관통하고(사용자 확정) KO도 낼 수 있다.
+     * **중독 정산**(2026-11-12 개편 · `docs/redesign/STATUS.md` 1절) — 이 진영이 **행동 한 번**
+     * 했다. `moved`는 실제로 옮겨진 칸 수이고 **0이면 안 아프다**(벽 · 바위 · 속박에 막힌
+     * 이동 · 처박혀 0칸). 몇 칸이든 한 번 = **지금 겹 × `POISON_TICK_DAMAGE`**.
+     * 보호막 · 경감을 관통하고 KO도 낼 수 있다.
      *
-     * 행동 = **이동 1칸** + **공격 카드 1장**(2026-08-07 2차 · 사용자 요청). 처음엔
-     * 이동만 셌는데, 붙어서 제자리 공격만 하는 몬스터에게 중독이 아무 일도 하지 않아
-     * 궁수 정체성이 성립하지 않았다. **수비·기력·회복·강화는 안 센다** — 중독에
-     * 걸리면 "버티는 것"만 공짜로 남는다는 게 이 규칙의 요점이다.
+     * 행동 = 이동 카드 1장 · 공격 카드 1장(빗나가도 · 이동공격은 움직임까지 합쳐 한 번)
+     * · 밀려나거나 끌려감. **수비 · 기력 · 회복 · 강화는 안 센다.**
+     * 위력 % = 거는 쪽(상대)의 `statusPowerPct`, **아플 때** 반올림.
      */
-    const tickPoison = (p: number, times: number) => {
-      if (times <= 0) return
-      const per = this.statusPower(p, 'poison')
-      if (per <= 0) return
-      const dealt = Math.min(s.hp[p], per * times)
+    const tickPoison = (p: number, moved: number) => {
+      if (moved <= 0) return
+      const stacks = this.stacksOf(p, 'poison')
+      if (stacks <= 0) return
+      const pct = this.passive[1 - p].statusPowerPct ?? 0
+      const per = Math.round(stacks * POISON_TICK_DAMAGE * (1 + pct / 100))
+      const dealt = Math.min(s.hp[p], per)
       if (dealt <= 0) return
       s.hp[p] -= dealt
       steps.push({
@@ -649,8 +667,8 @@ export class CardBattle {
           })
           return
         }
-        // 중독은 **움직인 칸마다** 갉는다 — 이동한 뒤에 정산해야 새 자리 스냅샷과
-        // 피해가 같은 순간으로 읽힌다.
+        // 중독은 이동 카드 **한 장에 한 번**(두 칸 · 빙판 미끄러짐 합쳐서, 0칸이면 안 아프다).
+        // 이동한 뒤에 정산해야 새 자리 스냅샷과 피해가 같은 순간으로 읽힌다.
         let moved = this.applyMove(p, c)
         if (moved) moved += enterHazard(p, ...MOVE_DELTA[c.dir ?? 'right'])
         emit(p, c, 'move')
@@ -833,10 +851,8 @@ export class CardBattle {
         pull: 0,
         stun: 0,
         bind: 0,
-        /** 중독 — 거는 겹의 지속 라운드(0이면 안 건다). */
+        /** 중독 — 거는 겹 수(0이면 안 건다). */
         poison: 0,
-        /** 그 겹이 이동 1칸당 주는 피해(`statusPowerPct` 반영 후). */
-        poisonPow: 0,
         burn: 0,
         burnPow: 0,
         freeze: 0,
@@ -856,14 +872,14 @@ export class CardBattle {
       // 쏘면서 움직이는 카드 — **사거리를 재기 전에** 옮긴다. 공격 페이즈라 상대가
       // 이미 이동을 끝낸 뒤이고, 빙결에도 막히지 않는다(이동 카드가 아니라 공격의
       // 일부다). 벽에 막히면 갈 수 있는 만큼만 간다.
-      // 중독 — **공격도 행동이다**(2026-08-07 2차). 기력을 낸 시점에 한 번 물린다:
-      // 빗나가도 휘두른 건 휘두른 것이고, 기력이 모자라 불발(`nofuel`)이면 위에서 이미
-      // 돌아갔으므로 여기 오지 않는다. 이동공격은 **거기에 더해** 움직인 칸만큼 더 문다.
+      // 중독 — **공격도 행동이다**. 기력을 낸 시점에 한 번 물린다: 빗나가도 휘두른 건
+      // 휘두른 것이고, 기력이 모자라 불발(`nofuel`)이면 위에서 이미 돌아갔으므로 여기
+      // 오지 않는다. 이동공격도 **움직임까지 합쳐 한 번**이다(2026-11-12 개편).
       tickPoison(p, 1)
       if (c.dashForward) {
         const dir = this.facing(p) * Math.sign(c.dashForward)
         const m = this.applyDash(p, c.dashForward)
-        tickPoison(p, m + (m ? enterHazard(p, dir, 0) : 0))
+        if (m) enterHazard(p, dir, 0)
       }
       // ⚠ 공격 카드의 바위는 여기서 세우지 않는다 — `settleAttack`이 **넉백 뒤에**
       //   세운다. 지형 카드는 "밀어내고 그 자리에 바위를 세운다"가 요점이라, 여기서
@@ -948,11 +964,10 @@ export class CardBattle {
         stun += onHit
       }
       // 상태이상 부여도 같은 규칙 — 가드에 완전히 막힌 타격으로는 아무것도 안 묻는다.
-      // 카드와 유물이 둘 다 걸면 **지속이 긴 쪽**을 쓴다(겹이 두 번 붙지는 않는다 —
-      // 한 대에 한 겹이 이 규칙의 골자라, 유물 하나로 두 겹이 되면 안 된다).
-      // 지속은 **런 전용 전설 유물**(`*RoundBonus`)만큼 늘어난다. 유물이 없으면 0이라
-      // 예전과 완전히 같다 — PvP·봇전에는 이 훅이 존재조차 하지 않는다.
-      const poisonBase = core > 0 ? Math.max(c.poison ?? 0, atkPas.poisonOnHit ?? 0) : 0
+      // **중독**(2026-11-12 개편)은 카드 + 유물 + 안식일(`poisonRoundBonus`)을 **다 더한
+      //   겹**이다(예: 독니 화살 2 + 맹독 병 2 + 안식일 1 = 5겹).
+      // **화상**은 아직 옛 규칙 — 카드와 유물 중 **지속이 긴 쪽** 한 겹(+ `burnRoundBonus`).
+      const poisonBase = core > 0 ? (c.poison ?? 0) + (atkPas.poisonOnHit ?? 0) : 0
       const burnBase = core > 0 ? Math.max(c.burn ?? 0, atkPas.burnOnHit ?? 0) : 0
       const poisonPlus = atkPas.poisonRoundBonus ?? 0
       const burnPlus = atkPas.burnRoundBonus ?? 0
@@ -985,7 +1000,6 @@ export class CardBattle {
         poison,
         // 겹의 위력(이동 1칸당 / 피격 1회당)은 **거는 순간** 확정한다 — 유물을
         // 나중에 얻어도 이미 걸린 겹까지 소급되지 않게.
-        poisonPow: scaledPower(p, POISON_TICK_DAMAGE),
         burn,
         burnPow: scaledPower(p, BURN_HIT_DAMAGE),
         freeze: freeze > 0 ? 1 + (atkPas.freezeRoundBonus ?? 0) : 0,
@@ -1093,7 +1107,7 @@ export class CardBattle {
       if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze, r.freeze)
       // 중독·화상 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤 함께 적용돼야
       // 선후가 안 생긴다.
-      if (r.poison) applyStatus(d, 'poison', r.poisonPow, r.poison, Math.max(STATUS_MAX_ROUNDS, r.poison))
+      if (r.poison) applyStatus(d, 'poison', POISON_TICK_DAMAGE, r.poison)
       if (r.burn) applyStatus(d, 'burn', r.burnPow, r.burn, Math.max(STATUS_MAX_ROUNDS, r.burn))
       if (r.fog) layFog(s.pos[d], r.fog)
       return { moved, slam: slamDir, dmgDealt, slamDealt, thornsDealt, recoilDealt }
@@ -1131,8 +1145,8 @@ export class CardBattle {
       bit('thorns', p, thornsDealt)
       bit('recoil', p, recoilDealt)
       emit(r.p, r.card, r.result, r.dmg, r.heal, r.drain, r.recoil, slam, bits)
-      // 넉백으로 옮겨진 칸도 중독이 문다 — 공격 스텝 **뒤에** 실어야
-      // "밀려났다 → 독이 퍼졌다"로 순서대로 읽힌다.
+      // 밀려나거나 끌려가면 중독이 **한 번** 문다(몇 칸이든 · 0칸이면 안 아프다) —
+      // 공격 스텝 **뒤에** 실어야 "밀려났다 → 독이 퍼졌다"로 순서대로 읽힌다.
       tickPoison(1 - r.p, shoved)
       if (r.rocks.length) damageRocks(r.p, r.rocks, r.rockDmg)
       // 지형 카드가 세우는 바위 — **넉백이 끝난 뒤**다(전사 「돌기둥 세우기」·마법사

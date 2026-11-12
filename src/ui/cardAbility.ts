@@ -51,13 +51,13 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '👊',
       label: `넉백 ${c.push}`,
-      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 밀려난 칸만큼 독도 함께 받는다.`,
+      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 밀려나면 독도 한 번 받는다.`,
     })
   if (c.pull)
     out.push({
       icon: '🪝',
       label: `끌어당김 ${c.pull}`,
-      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 끌려온 칸만큼 독도 함께 받는다.`,
+      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 끌려오면 독도 한 번 받는다.`,
     })
   if (c.stun)
     out.push({
@@ -81,8 +81,8 @@ export function abilityList(c: CardDef): AbilityInfo[] {
   if (c.poison)
     out.push({
       icon: '☠',
-      label: `중독 ${c.poison}라운드`,
-      meaning: `${c.poison}라운드 동안, 그 상대는 몸이 움직이거나 공격할 때마다 ${POISON_TICK_DAMAGE} 피해를 받는다 — 이동 한 칸, 공격 카드 한 장, 넉백으로 밀려난 한 칸 모두 한 번씩(보호막 무시). 겹쳐 걸면 그만큼 배가 된다. 수비·기력·회복은 아프지 않다.`,
+      label: `중독 ${c.poison}겹`,
+      meaning: `피해를 주면 중독 ${c.poison}겹을 더한다. 중독된 상대는 이동 카드 · 공격 카드를 한 장 낼 때마다, 밀려나거나 끌려갈 때마다 지금 겹 수 × ${POISON_TICK_DAMAGE} 피해를 받는다(보호막 무시). 겹은 라운드가 끝날 때마다 하나씩 줄고 상한은 없다. 수비 · 기력 · 회복은 아프지 않다.`,
     })
   if (c.burn)
     out.push({
