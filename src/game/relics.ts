@@ -157,29 +157,13 @@ const genericRelics: Relic[] = [
   { id: 'breaker', name: '파쇄 날', icon: '🪚', rarity: 'rare', desc: '공격이 적중하면 상대 보호막을 전부 없앤다.', effect: { shieldBreak: true } },
   { id: 'leech-rune', name: '흡성의 룬', icon: '🔮', rarity: 'rare', desc: '공격으로 피해를 주면 체력 5 회복.', effect: { lifesteal: 5 } },
   { id: 'bulwark', name: '가시 방패', icon: '🛡', rarity: 'rare', desc: '매 라운드 보호막 +4, 피격 시 3 반사.', effect: { turnShield: 4, thorns: 3 } },
-  { id: 'reactor', name: '작은 화로', icon: '⚗️', rarity: 'common', desc: '매 라운드 기력 +3, 보호막 +3.', effect: { turnEnergy: 3, turnShield: 3 } },
   { id: 'titanheart', name: '거인의 심장', icon: '🫀', rarity: 'epic', desc: '최대 체력 +30.', effect: { maxHpBonus: 30 } },
-  { id: 'berserk', name: '광기의 낙인', icon: '🩸', rarity: 'epic', desc: '내 공격 피해 +6, 최대 체력 -10.', effect: { attackBonus: 6, maxHpBonus: -10 } },
-  { id: 'phoenix2', name: '재의 부적', icon: '🕯', rarity: 'epic', desc: '전투당 한 번, 체력 15으로 되살아난다.', effect: { revive: 15 } },
   { id: 'aegis-core', name: '수호의 원석', icon: '💎', rarity: 'rare', desc: '매 라운드 보호막 +9.', effect: { turnShield: 9 } },
   { id: 'overdrive', name: '광휘의 각성', icon: '🌟', rarity: 'rare', desc: '매 라운드 기력 +8.', effect: { turnEnergy: 8 } },
   // --- 확장 세트(2026-07-24) ---
   { id: 'ironwill', name: '강철 의지', icon: '🪛', rarity: 'rare', desc: '받는 피해 -5.', effect: { damageReduction: 5 } },
-  { id: 'vitality', name: '활력의 정수', icon: '🌿', rarity: 'epic', desc: '최대 체력 +23, 매 라운드 체력 +2.', effect: { maxHpBonus: 23, regen: 2 } },
-  { id: 'spark-chip', name: '불티 부적', icon: '✨', rarity: 'common', desc: '매 라운드 기력 +6.', effect: { turnEnergy: 6 } },
-  { id: 'aegis-plate', name: '방벽판', icon: '🔰', rarity: 'rare', desc: '매 라운드 보호막 +10.', effect: { turnShield: 10 } },
   { id: 'greatfang', name: '대송곳니', icon: '🧛', rarity: 'epic', desc: '공격으로 피해를 주면 체력 6 회복.', effect: { lifesteal: 6 } },
-  { id: 'spikes', name: '대못 갑옷', icon: '🦔', rarity: 'rare', desc: '피해를 입으면 공격자에게 6 반사.', effect: { thorns: 6 } },
-  { id: 'eternal-ember', name: '영원의 불씨', icon: '🔆', rarity: 'epic', desc: '전투당 한 번, 체력 30으로 되살아난다.', effect: { revive: 30 } },
-  { id: 'brute', name: '괴력의 장갑', icon: '💪', rarity: 'rare', desc: '내 공격 피해 +5.', effect: { attackBonus: 5 } },
-  { id: 'regen-core', name: '재생의 씨앗', icon: '🌱', rarity: 'rare', desc: '매 라운드 체력 +4.', effect: { regen: 4 } },
-  { id: 'glasscannon', name: '유리 심장', icon: '🔻', rarity: 'epic', desc: '내 공격 피해 +9, 최대 체력 -20.', effect: { attackBonus: 9, maxHpBonus: -20 } },
-  { id: 'balance', name: '균형의 저울', icon: '⚖️', rarity: 'rare', desc: '매 라운드 기력 +3, 보호막 +3, 체력 +1.', effect: { turnEnergy: 3, turnShield: 3, regen: 1 } },
-  { id: 'fortress', name: '성채의 주춧돌', icon: '🏰', rarity: 'epic', desc: '최대 체력 +20, 받는 피해 -3.', effect: { maxHpBonus: 20, damageReduction: 3 } },
   { id: 'quickcharge', name: '성급한 각성', icon: '🌠', rarity: 'common', desc: '매 라운드 기력 +5, 내 공격 피해 +2.', effect: { turnEnergy: 5, attackBonus: 2 } },
-  { id: 'lifebloom', name: '생명꽃', icon: '🌸', rarity: 'rare', desc: '최대 체력 +10, 매 라운드 체력 +3.', effect: { maxHpBonus: 10, regen: 3 } },
-  { id: 'razor', name: '면도날 파편', icon: '🔪', rarity: 'rare', desc: '내 공격 피해 +3, 적중 시 상대 보호막 제거.', effect: { attackBonus: 3, shieldBreak: true } },
-  { id: 'juggernaut', name: '파성추', icon: '🐂', rarity: 'epic', desc: '최대 체력 +15, 내 공격 피해 +4.', effect: { maxHpBonus: 15, attackBonus: 4 } },
   { id: 'sanctuary', name: '성역의 문장', icon: '⛩', rarity: 'epic', desc: '매 라운드 보호막 +7, 체력 +3.', effect: { turnShield: 7, regen: 3 } },
 
   // --- 조합형 세트(2026-07-31) — 누적 기력 트리거 / 저체력 폭주 / 경제 -------
@@ -200,16 +184,6 @@ const genericRelics: Relic[] = [
     id: 'circuit', name: '순환의 매듭', icon: '🔗', rarity: 'rare',
     desc: '기력을 50 쓸 때마다 체력을 13 회복한다.',
     effect: { energyTriggers: [{ per: 50, heal: 13, label: '순환' }] },
-  },
-  {
-    id: 'condenser', name: '응결의 수정', icon: '🔆', rarity: 'rare',
-    desc: '기력을 40 쓸 때마다 보호막 +15.',
-    effect: { energyTriggers: [{ per: 40, shield: 15, label: '응결' }] },
-  },
-  {
-    id: 'flywheel', name: '쉼 없는 물레', icon: '🌀', rarity: 'epic',
-    desc: '기력을 45 쓸 때마다 기력 +23. 큰 카드를 계속 쏘게 해준다.',
-    effect: { energyTriggers: [{ per: 45, energy: 23, label: '물레 회전' }] },
   },
   {
     id: 'reservoir', name: '심층 저수조', icon: '🛢', rarity: 'legend',
@@ -237,52 +211,19 @@ const genericRelics: Relic[] = [
     effect: { alwaysPierce: true },
   },
   {
-    id: 'concussor', name: '강타의 인장', icon: '💥', rarity: 'epic',
-    desc: '전투당 두 번, 내 공격이 피해를 주면 상대를 그 라운드 기절시킨다.',
-    effect: { stunOnHit: 1, stunCap: 2 },
-  },
-  {
     id: 'firstguard', name: '선제 방벽', icon: '🚧', rarity: 'common',
     desc: '전투 첫 라운드에 보호막 +20.',
     effect: { openingShield: 20 },
   },
-  {
-    id: 'warmup', name: '불씨 지피기', icon: '🔥', rarity: 'common',
-    desc: '전투 첫 라운드에 보호막 +10, 매 라운드 기력 +3.',
-    effect: { openingShield: 10, turnEnergy: 3 },
-  },
 
   // --- 확장 세트 2 (2026-07-31) — 빈 메커니즘 보강(기절·반사·관통·저체력·지속회복) --
-  {
-    id: 'taser', name: '마비의 가시', icon: '🦂', rarity: 'rare',
-    desc: '기력을 75 쓸 때마다 상대를 그 라운드 기절시킨다.',
-    effect: { energyTriggers: [{ per: 75, stun: 1, label: '마비' }] },
-  },
-  {
-    id: 'dischargelens', name: '집광 수정', icon: '🔮', rarity: 'epic',
-    desc: '기력을 55 쓸 때마다 상대에게 18 고정 피해(보호막 무시).',
-    effect: { energyTriggers: [{ per: 55, damage: 18, label: '집광' }] },
-  },
   {
     id: 'thorncrown', name: '가시 왕관', icon: '👑', rarity: 'epic',
     desc: '피해를 입으면 공격자에게 8 반사.', effect: { thorns: 8 },
   },
   {
-    id: 'hedgehog', name: '고슴도치 갑주', icon: '🦔', rarity: 'rare',
-    desc: '받는 피해 -3, 피격 시 공격자에게 4 반사.', effect: { damageReduction: 3, thorns: 4 },
-  },
-  {
     id: 'sanctum', name: '재생의 성소', icon: '🌿', rarity: 'epic',
     desc: '매 라운드 체력 +6.', effect: { regen: 6 },
-  },
-  {
-    id: 'reaperscythe', name: '수확자의 낫', icon: '🌾', rarity: 'rare',
-    desc: '공격으로 피해를 주면 체력 3 회복. 내 공격 피해 +3.', effect: { lifesteal: 3, attackBonus: 3 },
-  },
-  {
-    id: 'lastresort', name: '배수진', icon: '🩸', rarity: 'epic',
-    desc: '체력이 절반 이하면 내 공격 피해 +40%. 피격 시 공격자에게 4 반사.',
-    effect: { lowHpBonusPct: 40, thorns: 4 },
   },
   {
     id: 'piercecore', name: '꿰뚫는 송곳', icon: '🪡', rarity: 'epic',
@@ -299,18 +240,6 @@ const genericRelics: Relic[] = [
     desc: '전투 첫 라운드에 보호막 +15. 내 공격 피해 +3.', effect: { openingShield: 15, attackBonus: 3 },
   },
   {
-    id: 'meditation', name: '명상의 룬', icon: '🧘', rarity: 'common',
-    desc: '매 라운드 체력 +3, 보호막 +3.', effect: { regen: 3, turnShield: 3 },
-  },
-  {
-    id: 'giantserum', name: '거인 혈청', icon: '🧪', rarity: 'legend',
-    desc: '최대 체력 +43.', effect: { maxHpBonus: 43 },
-  },
-  {
-    id: 'tinder', name: '불씨 심지', icon: '🪔', rarity: 'rare',
-    desc: '전투당 한 번 체력 13로 되살아난다. 매 라운드 체력 +2.', effect: { revive: 13, regen: 2 },
-  },
-  {
     id: 'bloodpact-relic', name: '피의 계약', icon: '🩸', rarity: 'legend',
     desc: '내 공격 피해 +6. 공격으로 피해를 주면 체력 4 회복. 최대 체력 -7.',
     effect: { attackBonus: 6, lifesteal: 4, maxHpBonus: -7 },
@@ -322,25 +251,11 @@ const genericRelics: Relic[] = [
     desc: '상점 가격 20% 할인.', effect: {}, mods: { shopDiscountPct: 20 },
   },
   {
-    id: 'blackcard', name: '암시장 카드', icon: '💳', rarity: 'epic',
-    desc: '상점 가격 40% 할인, 골드 획득 +20%.', effect: {}, mods: { shopDiscountPct: 40, goldBonusPct: 20 },
-  },
-  {
     id: 'purse', name: '두툼한 지갑', icon: '💰', rarity: 'common',
     desc: '전투 승리 골드 +35%.', effect: {}, mods: { goldBonusPct: 35 },
   },
   {
     id: 'compass', name: '탐색가의 나침반', icon: '🧭', rarity: 'rare',
-    desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 },
-  },
-  {
-    id: 'divining', name: '점술 수정구', icon: '🔮', rarity: 'legend',
-    desc: '승리 보상 선택지 +2칸, 일반 전투 보상에 유물이 섞일 확률 +12%p.',
-    effect: {}, mods: { rewardOptions: 2, relicChanceBonus: 0.12 },
-  },
-  {
-    id: 'satchel', name: '확장 가방', icon: '🎒', rarity: 'common',
-    // 2026-11-10: 덱 상한이 칸마다 5장으로 고정되며(손패 한 쪽에 들어갈 만큼) "덱 상한 +N"이 사라졌다 → 보상 칸으로.
     desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 },
   },
   {
@@ -354,10 +269,6 @@ const genericRelics: Relic[] = [
   {
     id: 'luckycharm', name: '행운의 편자', icon: '🍀', rarity: 'rare',
     desc: '일반 전투 보상에 유물이 섞일 확률 +8%p.', effect: {}, mods: { relicChanceBonus: 0.08 },
-  },
-  {
-    id: 'lockpick', name: '만능 열쇠', icon: '🗝', rarity: 'epic',
-    desc: '상점 가격 30% 할인, 상점 진열 +1칸.', effect: {}, mods: { shopDiscountPct: 30, shopExtraItems: 1 },
   },
 
   // --- 상태이상 계열 (2026-08-01, 3직업 개편) -------------------------------
@@ -376,8 +287,6 @@ const genericRelics: Relic[] = [
   { id: 'emberbrand', name: '잉걸 낙인', icon: '🔥', rarity: 'common', desc: '공격으로 피해를 주면 화상 1라운드를 묻힌다.', effect: { burnOnHit: 1 } },
   { id: 'coldiron', name: '차가운 쇠', icon: '❄️', rarity: 'common', desc: '상태이상에 걸린 상대에게 주는 피해 +3.', effect: { bonusVsAfflicted: 3 } },
   { id: 'wickedmortar', name: '사악한 절구', icon: '⚗️', rarity: 'rare', desc: '내가 거는 중독·화상 위력 +40%.', effect: { statusPowerPct: 40 } },
-  { id: 'plaguebearer', name: '역병 운반자', icon: '🐀', rarity: 'rare', desc: '피해를 주면 중독 2라운드를 묻히고, 내 중독·화상 위력 +20%.', effect: { poisonOnHit: 2, statusPowerPct: 20 } },
-  { id: 'pyremark', name: '화형의 표식', icon: '🕯', rarity: 'epic', desc: '피해를 주면 화상 2라운드를 묻히고, 상태이상에 걸린 상대에게 피해 +4.', effect: { burnOnHit: 2, bonusVsAfflicted: 4 } },
   { id: 'hunterspite', name: '사냥꾼의 앙심', icon: '🎯', rarity: 'epic', desc: '상태이상에 걸린 상대에게 피해 +7. 보호막을 무시한다.', effect: { bonusVsAfflicted: 7, alwaysPierce: true } },
   { id: 'rotcrown', name: '부패의 왕관', icon: '👑', rarity: 'legend', desc: '피해를 주면 중독 2라운드·화상 2라운드를 함께 묻히고, 중독·화상 위력 +50%, 상태이상 상대에게 피해 +5.', effect: { poisonOnHit: 2, burnOnHit: 2, statusPowerPct: 50, bonusVsAfflicted: 5 } },
 
@@ -398,7 +307,6 @@ const genericRelics: Relic[] = [
 
   // --- 빙결 부여 계열 -------------------------------------------------------
   { id: 'frostbite', name: '동상의 손', icon: '🧊', rarity: 'common', desc: '전투당 두 번, 피해를 주면 상대를 그 라운드 빙결.', effect: { freezeOnHit: 1 } },
-  { id: 'glacier', name: '빙하의 파편', icon: '❄️', rarity: 'rare', desc: '전투당 세 번, 피해를 주면 상대를 그 라운드 빙결. 받는 피해 -2.', effect: { freezeOnHit: 1, freezeCap: 3, damageReduction: 2 } },
   { id: 'permafrost', name: '만년설', icon: '🏔', rarity: 'epic', desc: '전투당 네 번, 피해를 주면 상대를 그 라운드 빙결. 내 공격 피해 +3.', effect: { freezeOnHit: 1, freezeCap: 4, attackBonus: 3 } },
   { id: 'rimeheart', name: '서릿발 심장', icon: '💙', rarity: 'legend', desc: '전투당 여섯 번, 피해를 주면 상대를 그 라운드 빙결. 상태이상 상대에게 피해 +6.', effect: { freezeOnHit: 1, freezeCap: 6, bonusVsAfflicted: 6 } },
   { id: 'coldsnap', name: '한파', icon: '🌨', rarity: 'rare', desc: '전투당 두 번 빙결을 걸고, 내가 거는 중독·화상 위력 +25%.', effect: { freezeOnHit: 1, statusPowerPct: 25 } },
@@ -408,18 +316,13 @@ const genericRelics: Relic[] = [
   { id: 'towershield', name: '탑 방패', icon: '🗼', rarity: 'rare', desc: '수비 카드의 흡수량 +60%.', effect: { guardPowerPct: 60 } },
   { id: 'rampart', name: '성벽의 맹세', icon: '🧱', rarity: 'epic', desc: '수비 카드의 흡수량 +80%, 최대 체력 +13.', effect: { guardPowerPct: 80, maxHpBonus: 13 } },
   { id: 'aegisoath', name: '불괴의 서약', icon: '⚜️', rarity: 'legend', desc: '수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.', effect: { guardPowerPct: 120, openingShield: 20, damageReduction: 3 } },
-  { id: 'spiked-boss', name: '가시 방패심', icon: '🔩', rarity: 'rare', desc: '수비 카드의 흡수량 +40%, 피격 시 5 반사.', effect: { guardPowerPct: 40, thorns: 5 } },
 
   // --- 치유 증폭 계열 -------------------------------------------------------
   { id: 'poultice', name: '약초 습포', icon: '🌾', rarity: 'common', desc: '회복 카드와 매 라운드 체력 회복 +40%.', effect: { healPowerPct: 40 } },
-  { id: 'elixir', name: '비약', icon: '⚗️', rarity: 'rare', desc: '회복량 +70%, 매 라운드 체력 +2.', effect: { healPowerPct: 70, regen: 2 } },
-  { id: 'lifewell', name: '생명의 우물', icon: '🕳', rarity: 'epic', desc: '회복량 +100%, 매 라운드 체력 +3.', effect: { healPowerPct: 100, regen: 3 } },
   { id: 'worldtree', name: '세계수 가지', icon: '🌳', rarity: 'legend', desc: '회복량 +140%, 매 라운드 체력 +4, 최대 체력 +15.', effect: { healPowerPct: 140, regen: 4, maxHpBonus: 15 } },
-  { id: 'bloodleaf', name: '피의 잎사귀', icon: '🍁', rarity: 'rare', desc: '회복량 +50%, 피해를 주면 체력 3 회복.', effect: { healPowerPct: 50, lifesteal: 3 } },
 
   // --- 시작 기력 계열 -------------------------------------------------------
   { id: 'primer', name: '점화약', icon: '🧨', rarity: 'common', desc: '전투 시작 기력 +13.', effect: { startEnergyBonus: 13 } },
-  { id: 'kindling', name: '마른 장작', icon: '🪵', rarity: 'common', desc: '전투 시작 기력 +8, 첫 라운드 보호막 +8.', effect: { startEnergyBonus: 8, openingShield: 8 } },
   { id: 'jumpstart', name: '출진의 북', icon: '🥁', rarity: 'rare', desc: '전투 시작 기력 +20.', effect: { startEnergyBonus: 20 } },
   { id: 'bigbang', name: '개전의 봉화', icon: '🧨', rarity: 'epic', desc: '전투 시작 기력 +28, 내 공격 피해 +3.', effect: { startEnergyBonus: 28, attackBonus: 3 } },
   { id: 'firstlight', name: '여명의 불꽃', icon: '🌅', rarity: 'legend', desc: '전투 시작 기력 +35, 첫 라운드 보호막 +23, 매 라운드 기력 +4.', effect: { startEnergyBonus: 35, openingShield: 23, turnEnergy: 4 } },
@@ -429,8 +332,6 @@ const genericRelics: Relic[] = [
   { id: 'headsman', name: '망나니의 도끼', icon: '🪓', rarity: 'rare', desc: '상대 체력이 절반 이하면 내 공격 피해 +45%.', effect: { executeBonusPct: 45 } },
   { id: 'guillotine', name: '단두대', icon: '⚰️', rarity: 'epic', desc: '상대 체력이 절반 이하면 내 공격 피해 +70%.', effect: { executeBonusPct: 70 } },
   { id: 'reaperveil', name: '사신의 장막', icon: '☠️', rarity: 'legend', desc: '상대 체력이 절반 이하면 내 공격 피해 +100%. 보호막을 무시한다.', effect: { executeBonusPct: 100, alwaysPierce: true } },
-  { id: 'vulture', name: '독수리 눈', icon: '🦅', rarity: 'rare', desc: '상대가 반피 이하면 피해 +30%, 피해를 주면 체력 3 회복.', effect: { executeBonusPct: 30, lifesteal: 3 } },
-  { id: 'closer', name: '숨통', icon: '🫁', rarity: 'epic', desc: '상대가 반피 이하면 피해 +40%, 내가 반피 이하면 피해 +40%.', effect: { executeBonusPct: 40, lowHpBonusPct: 40 } },
 
   // --- 발판 계열 (전장 붕괴 대응) -------------------------------------------
   { id: 'ironshoes', name: '무쇠 신발', icon: '🥾', rarity: 'common', desc: '무너진 칸에서 받는 피해 -4.', effect: { collapseResist: 8 } },
@@ -440,24 +341,14 @@ const genericRelics: Relic[] = [
 
   // --- 기존 훅 조합 보강 — 빈자리를 메우는 조합들 ---------------------------
   { id: 'gravepact', name: '무덤의 약조', icon: '⚱️', rarity: 'rare', desc: '전투당 한 번 체력 18로 되살아난다. 받는 피해 -2.', effect: { revive: 18, damageReduction: 2 } },
-  { id: 'secondwind', name: '두 번째 숨', icon: '🌬', rarity: 'epic', desc: '전투당 한 번 체력 23로 되살아나고, 되살아날 힘으로 매 라운드 체력 +3.', effect: { revive: 23, regen: 3 } },
   { id: 'stoneskin', name: '돌갗', icon: '🗿', rarity: 'epic', desc: '받는 피해 -7.', effect: { damageReduction: 7 } },
   { id: 'adamant', name: '금강석 갑주', icon: '💎', rarity: 'legend', desc: '받는 피해 -9, 최대 체력 +13.', effect: { damageReduction: 9, maxHpBonus: 13 } },
-  { id: 'warhorn', name: '전쟁 나팔', icon: '📯', rarity: 'common', desc: '내 공격 피해 +2, 첫 라운드 보호막 +9.', effect: { attackBonus: 2, openingShield: 9 } },
   { id: 'duelist', name: '결투가의 검', icon: '🤺', rarity: 'epic', desc: '내 공격 피해 +8.', effect: { attackBonus: 8 } },
   { id: 'godslayer', name: '신살자의 창', icon: '🔱', rarity: 'legend', desc: '내 공격 피해 +10, 보호막을 무시한다. 최대 체력 -10.', effect: { attackBonus: 10, alwaysPierce: true, maxHpBonus: -10 } },
-  { id: 'gluttony', name: '탐식의 이빨', icon: '😋', rarity: 'legend', desc: '피해를 주면 체력 8 회복. 최대 체력 -10.', effect: { lifesteal: 8, maxHpBonus: -10 } },
-  { id: 'moonwell', name: '달빛 샘', icon: '🌙', rarity: 'rare', desc: '매 라운드 체력 +2, 보호막 +5.', effect: { regen: 2, turnShield: 5 } },
-  { id: 'dynamo', name: '마력의 샘', icon: '💧', rarity: 'rare', desc: '매 라운드 기력 +6, 시작 기력 +10.', effect: { turnEnergy: 6, startEnergyBonus: 10 } },
-  { id: 'stormcell', name: '폭풍의 정수', icon: '🌩', rarity: 'epic', desc: '매 라운드 기력 +9, 시작 기력 +13.', effect: { turnEnergy: 9, startEnergyBonus: 13 } },
   { id: 'perpetual', name: '영원의 수레바퀴', icon: '☸️', rarity: 'legend', desc: '매 라운드 기력 +12, 보호막 +5.', effect: { turnEnergy: 12, turnShield: 5 } },
-  { id: 'barbwire', name: '가시철선', icon: '🪢', rarity: 'common', desc: '피격 시 공격자에게 3 반사.', effect: { thorns: 3 } },
   { id: 'retribution', name: '응보의 문장', icon: '⚖️', rarity: 'legend', desc: '피격 시 11 반사, 받는 피해 -2.', effect: { thorns: 11, damageReduction: 2 } },
   { id: 'oxheart', name: '황소 심장', icon: '🐂', rarity: 'rare', desc: '최대 체력 +19.', effect: { maxHpBonus: 19 } },
   { id: 'colossus', name: '거상의 뼈', icon: '🦴', rarity: 'legend', desc: '최대 체력 +35, 받는 피해 -3. 대신 내 공격 피해 -2.', effect: { maxHpBonus: 35, damageReduction: 3, attackBonus: -2 } },
-  { id: 'martyr', name: '순교자의 못', icon: '🩻', rarity: 'epic', desc: '최대 체력 -17, 받는 피해 -6, 피격 시 5 반사.', effect: { maxHpBonus: -17, damageReduction: 6, thorns: 5 } },
-  { id: 'hollowking', name: '공허의 왕관', icon: '👑', rarity: 'legend', desc: '보호막을 무시하고, 상대가 반피 이하면 피해 +55%.', effect: { alwaysPierce: true, executeBonusPct: 55 } },
-  { id: 'shatterfang', name: '파쇄 송곳니', icon: '🦈', rarity: 'epic', desc: '적중 시 상대 보호막을 없애고, 피해를 주면 체력 4 회복.', effect: { shieldBreak: true, lifesteal: 4 } },
   { id: 'punisher', name: '처벌자의 손', icon: '✊', rarity: 'rare', desc: '전투당 두 번, 피해를 주면 상대를 그 라운드 기절시킨다. 받는 피해 -2.', effect: { stunOnHit: 1, stunCap: 2, damageReduction: 2 } },
   { id: 'oblivion', name: '망각의 종', icon: '🔔', rarity: 'legend', desc: '전투당 다섯 번, 피해를 주면 상대를 그 라운드 기절시킨다.', effect: { stunOnHit: 1, stunCap: 5 } },
 
@@ -468,40 +359,13 @@ const genericRelics: Relic[] = [
     effect: { energyTriggers: [{ per: 70, shield: 13, label: '불붙이기' }] },
   },
   {
-    id: 'siphonring', name: '흡혈의 반지', icon: '💍', rarity: 'rare',
-    desc: '기력을 65 쓸 때마다 체력 +15.',
-    effect: { energyTriggers: [{ per: 65, heal: 15, label: '반지의 갈증' }] },
-  },
-  {
-    id: 'turbine', name: '질풍의 고동', icon: '🌬', rarity: 'rare',
-    desc: '기력을 60 쓸 때마다 기력 +25.',
-    effect: { energyTriggers: [{ per: 60, energy: 25, label: '질풍' }] },
-  },
-  {
-    id: 'sunforge', name: '태양의 화로', icon: '☀️', rarity: 'epic',
-    desc: '기력을 50 쓸 때마다 상대에게 15 고정 피해, 내 보호막 +8.',
-    effect: { energyTriggers: [{ per: 50, damage: 15, shield: 8, label: '화로 폭발' }] },
-  },
-  {
     id: 'doomclock', name: '종말의 모래시계', icon: '⏳', rarity: 'legend',
     desc: '기력을 38 쓸 때마다 상대에게 20 고정 피해.',
     effect: { energyTriggers: [{ per: 38, damage: 20, label: '모래 한 알' }] },
   },
-  {
-    id: 'gearbox', name: '운명의 톱니', icon: '⚙️', rarity: 'epic',
-    desc: '기력을 43 쓸 때마다 기력 +15, 체력 +8.',
-    effect: { energyTriggers: [{ per: 43, energy: 15, heal: 8, label: '톱니 맞물림' }] },
-  },
-  {
-    id: 'coldengine', name: '동토의 숨결', icon: '🧊', rarity: 'epic',
-    desc: '기력을 48 쓸 때마다 상대를 그 라운드 기절시키고 내 보호막 +10.',
-    effect: { energyTriggers: [{ per: 48, stun: 1, shield: 10, label: '동토의 한기' }] },
-  },
 
   // --- 저체력 폭주 보강 -----------------------------------------------------
   { id: 'cornered', name: '궁지의 이빨', icon: '🐺', rarity: 'common', desc: '체력이 절반 이하면 내 공격 피해 +20%.', effect: { lowHpBonusPct: 20 } },
-  { id: 'painengine', name: '고통의 제단', icon: '🖤', rarity: 'rare', desc: '체력이 절반 이하면 피해 +35%, 매 라운드 기력 +3.', effect: { lowHpBonusPct: 35, turnEnergy: 3 } },
-  { id: 'ragebrand', name: '격노의 낙인', icon: '🥵', rarity: 'epic', desc: '체력이 절반 이하면 피해 +60%, 피해를 주면 체력 3 회복.', effect: { lowHpBonusPct: 60, lifesteal: 3 } },
   { id: 'phoenixrage', name: '잿불의 격정', icon: '🔥', rarity: 'legend', desc: '체력이 절반 이하면 피해 +80%. 전투당 한 번 체력 15으로 되살아난다.', effect: { lowHpBonusPct: 80, revive: 15 } },
 
   // --- 상태이상 보강 --------------------------------------------------------
@@ -509,13 +373,13 @@ const genericRelics: Relic[] = [
   { id: 'cinderbrand', name: '잿불 인장', icon: '🕯', rarity: 'rare', desc: '피해를 주면 화상 2라운드를 묻힌다.', effect: { burnOnHit: 2 } },
   { id: 'witchbrew', name: '마녀의 탕약', icon: '🍯', rarity: 'epic', desc: '내가 거는 중독·화상 위력 +65%.', effect: { statusPowerPct: 65 } },
   { id: 'bonepicker', name: '뼈 발라내기', icon: '🦴', rarity: 'rare', desc: '상태이상에 걸린 상대에게 피해 +5.', effect: { bonusVsAfflicted: 5 } },
-  { id: 'blightlord', name: '역병군주의 인장', icon: '🪱', rarity: 'legend', desc: '피해를 주면 중독 2라운드를 묻히고, 상태이상 상대에게 피해 +7, 중독·화상 위력 +30%.', effect: { poisonOnHit: 2, bonusVsAfflicted: 7, statusPowerPct: 30 } },
   { id: 'ashlung', name: '재의 폐', icon: '🌫', rarity: 'epic', desc: '피해를 주면 화상 2라운드·중독 1라운드를 함께 묻힌다.', effect: { burnOnHit: 2, poisonOnHit: 1 } },
   { id: 'freezerot', name: '동사의 저주', icon: '🥶', rarity: 'legend', desc: '전투당 세 번 빙결을 걸고, 피해를 주면 중독 2라운드·화상 2라운드를 묻힌다.', effect: { freezeOnHit: 1, freezeCap: 3, poisonOnHit: 2, burnOnHit: 2 } },
 
   // --- 지속 연장 계열 (2026-08-07 2차) — **전부 legend, 런 전용** ------------
   //
-  // 다른 상태이상 유물은 **위력**이나 **부여 확률**을 사지만, 이 여섯은 **시간**을 산다.
+  // 다른 상태이상 유물은 **위력**이나 **부여 확률**을 사지만, 이 둘은 **시간**을 산다
+  // (2026-11-12 유물 100종 정리로 여섯에서 둘이 됐다 — 기절·빙결 연장 유물은 없다. 훅은 엔진에 남아 있다).
   // 시간은 다른 모든 훅과 곱해지므로(중독 1라운드가 늘면 그 라운드의 모든 행동이 아프고,
   // 화상 1라운드가 늘면 그 라운드의 모든 피격이 아프다) 값이 작아도 판을 바꾼다.
   // 그래서 **전부 `legend`**로만 낸다 — 층 1에서 ≈6%, 층 15에서 ≈17%로 뽑히고 상점가 230이라
@@ -528,32 +392,9 @@ const genericRelics: Relic[] = [
   // ⚠ **`ROSTER.passive`·몬스터에 이 훅을 넣지 말 것.** 유물에만 있는 한 규칙 자체가
   //   PvP에 존재하지 않아 `RULES_VERSION`을 안 올려도 된다(`npm run check`가 단정한다).
   {
-    id: 'hourglass', name: '썩어드는 모래시계', icon: '⏳', rarity: 'legend',
-    desc: '내가 거는 중독이 1라운드 더 간다. 중독·화상 위력 +25%.',
-    effect: { poisonRoundBonus: 1, statusPowerPct: 25 },
-  },
-  {
-    id: 'everember', name: '꺼지지 않는 잉걸', icon: '🔥', rarity: 'legend',
-    desc: '내가 거는 화상이 1라운드 더 간다. 상태이상에 걸린 상대에게 피해 +6.',
-    effect: { burnRoundBonus: 1, bonusVsAfflicted: 6 },
-  },
-  {
     id: 'sabbath', name: '마녀의 안식일', icon: '🌙', rarity: 'legend',
     desc: '내가 거는 중독·화상이 각각 1라운드 더 간다.',
     effect: { poisonRoundBonus: 1, burnRoundBonus: 1 },
-  },
-  {
-    id: 'silentbell', name: '침묵의 종', icon: '🔕', rarity: 'legend',
-    // ⚠ 이 게임에서 가장 위험한 유물이다 — 기절은 상대의 라운드를 통째로 지운다.
-    //   재부여 가드가 없으면 그대로 무한 봉인이 되므로, 설명에도 "그다음 라운드엔
-    //   깨어난다"를 명시해 플레이어가 기대치를 잘못 잡지 않게 한다.
-    desc: '내가 거는 기절이 다음 라운드까지 이어진다. 단, 기절 중에는 다시 걸리지 않아 그다음 라운드엔 깨어난다.',
-    effect: { stunRoundBonus: 1 },
-  },
-  {
-    id: 'glacialtomb', name: '빙하의 관', icon: '🧊', rarity: 'legend',
-    desc: '내가 거는 빙결이 다음 라운드까지 이어진다. 전투당 네 번까지 빙결을 건다. (맞으면 깨지는 건 그대로)',
-    effect: { freezeRoundBonus: 1, freezeOnHit: 1, freezeCap: 4 },
   },
   {
     id: 'grasproot', name: '얽매는 뿌리', icon: '🕸', rarity: 'legend',
@@ -562,12 +403,9 @@ const genericRelics: Relic[] = [
   },
 
   // --- 경제형 보강 ----------------------------------------------------------
-  { id: 'ledger', name: '상인의 장부', icon: '📒', rarity: 'common', desc: '상점 가격 12% 할인, 골드 +15%.', effect: {}, mods: { shopDiscountPct: 12, goldBonusPct: 15 } },
   { id: 'caravan', name: '행상 마차', icon: '🛒', rarity: 'rare', desc: '상점 진열 +2칸.', effect: {}, mods: { shopExtraItems: 2 } },
   { id: 'bazaar', name: '암시장 통로', icon: '🏮', rarity: 'epic', desc: '상점 진열 +3칸, 가격 25% 할인.', effect: {}, mods: { shopExtraItems: 3, shopDiscountPct: 25 } },
   { id: 'saddlebag', name: '안장 가방', icon: '👜', rarity: 'common', desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 } },
-  { id: 'librarian', name: '사서의 색인', icon: '📚', rarity: 'rare', desc: '승리 보상 선택지 +2칸.', effect: {}, mods: { rewardOptions: 2 } },
-  { id: 'saltpouch', name: '소금 주머니', icon: '🧂', rarity: 'common', desc: '모든 회복 효과 +25%.', effect: {}, mods: { healBonusPct: 25 } },
   { id: 'grailshard', name: '성배 조각', icon: '🏆', rarity: 'epic', desc: '모든 회복 효과 +80%, 회복 카드 회복량 +30%.', effect: { healPowerPct: 30 }, mods: { healBonusPct: 80 } },
   { id: 'ravenomen', name: '까마귀의 전조', icon: '🐦‍⬛', rarity: 'epic', desc: '일반 전투 보상에 유물이 섞일 확률 +18%p.', effect: {}, mods: { relicChanceBonus: 0.18 } },
   { id: 'kingsseal', name: '왕의 봉인', icon: '📜', rarity: 'legend', desc: '승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.', effect: {}, mods: { rewardOptions: 2, goldBonusPct: 60, shopExtraItems: 2 } },

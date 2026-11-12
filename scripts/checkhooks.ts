@@ -202,9 +202,9 @@ console.log('\n기절(stun) — 이 라운드 남은 슬롯만 지운다')
 }
 {
   // 유물 stunOnHit — stunCap 만큼만.
-  const b = battleWith(mergeRelics(['concussor']))
+  const b = battleWith(mergeRelics(['punisher']))
   for (let t = 0; t < 4; t++) b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('강타의 인장은 전투당 stunCap(2)회까지만', b.state.stunsUsed[0], 2)
+  check('처벌자의 손은 전투당 stunCap(2)회까지만', b.state.stunsUsed[0], 2)
 }
 
 // --- 저체력 배율 ------------------------------------------------------------
@@ -254,10 +254,10 @@ console.log('\n관통(alwaysPierce) · 각성(empower) · 선제 보호막(openi
 // --- 전투 밖 효과(RunMods) ---------------------------------------------------
 console.log('\n전투 밖 효과(RunMods)')
 {
-  check('상점 할인 합산', mergeRunMods(['coupon', 'blackcard']).shopDiscountPct, 60)
-  check('할인 상한 80%', mergeRunMods(['coupon', 'coupon', 'blackcard', 'blackcard']).shopDiscountPct, 80)
-  check('골드 보너스 합산', mergeRunMods(['purse', 'blackcard']).goldBonusPct, 55)
-  check('보상 칸 합산', mergeRunMods(['compass', 'divining']).rewardOptions, 3)
+  check('상점 할인 합산', mergeRunMods(['coupon', 'bazaar']).shopDiscountPct, 45)
+  check('할인 상한 80%', mergeRunMods(['coupon', 'coupon', 'bazaar', 'bazaar']).shopDiscountPct, 80)
+  check('골드 보너스 합산', mergeRunMods(['purse', 'midastouch']).goldBonusPct, 90)
+  check('보상 칸 합산', mergeRunMods(['compass', 'kingsseal']).rewardOptions, 3)
 }
 
 // --- 런 진행 규칙(보상·상점·덱 상한) ----------------------------------------
@@ -296,7 +296,7 @@ console.log('\n런 진행 규칙')
   const discounted = rollShop(grantRelic(run, 'coupon')).find((i) => i.kind === 'card')!
   check('상인의 인증패(20%) → 카드 가격 35 → 28', [plain.price, discounted.price], [35, 28])
 
-  check('확장 가방 → 보상 선택지 +1(덱 상한 유물은 2026-11-10에 없앴다)', rollRewards(grantRelic(run, 'satchel')).length, rollRewards(run).length + 1)
+  check('안장 가방 → 보상 선택지 +1(덱 상한 유물은 2026-11-10에 없앴다)', rollRewards(grantRelic(run, 'saddlebag')).length, rollRewards(run).length + 1)
   const hurt = { ...run, hp: 10 }
   check(
     '치유 향유(+50%) → 회복량도 1.5배',
@@ -693,7 +693,7 @@ console.log('\n지속 연장 유물 — 중독·화상·기절·빙결·속박')
   const carriers = RELICS.filter((r) =>
     BONUS_HOOKS.some((h) => (r.effect as Record<string, unknown>)[h] != null),
   )
-  check('연장 유물이 존재한다', carriers.length >= 6, true)
+  check('연장 유물이 존재한다(2026-11-12 100종 정리 뒤 안식일 · 뿌리 2종)', carriers.length >= 2, true)
   check('연장 유물은 전부 전설', carriers.every((r) => r.rarity === 'legend'), true)
   // 시그니처가 아니라 **보상 풀**에 들어 있어야 실제로 얻을 수 있다.
   check('연장 유물은 보상 풀에 있다', carriers.every((r) => REWARD_RELICS.includes(r)), true)
