@@ -414,8 +414,8 @@ const genericRelics: Relic[] = [
   { id: 'fireegg', name: '타오르는 알', icon: '🥚', rarity: 'epic', desc: '화상에 걸리지 않는다.', effect: { burnImmune: true } },
   { id: 'nutrient', name: '영양가루', icon: '✨', rarity: 'rare', desc: '최대 체력 +10, 최대 기력 +10.', effect: { maxHpBonus: 10, maxEnergyBonus: 10 } },
   // 세계수의 가지 = 원래 보상 풀에 있던 전설 유물 「세계수 가지」(`worldtree`, 그림 있음)를 이벤트 전용으로 돌린 것이다
-  // (2026-11-12 사용자 지정 — "둘이 같은 것"). 같은 날 사용자 버프: 회복량 +200% · 매 라운드 체력 +10 · 최대 체력 +15 · 최대 기력 +15.
-  { id: 'worldtree', name: '세계수의 가지', icon: '🌳', rarity: 'legend', eventOnly: true, desc: '회복량 +200%, 매 라운드 체력 +10, 최대 체력 +15, 최대 기력 +15.', effect: { healPowerPct: 200, regen: 10, maxHpBonus: 15, maxEnergyBonus: 15 } },
+  // (2026-11-12 사용자 지정 — "둘이 같은 것"). 같은 날 사용자 버프: 매 라운드 체력 +10 · 최대 체력 +15 · 최대 기력 +15(회복량 % 증폭은 사용자가 뺐다).
+  { id: 'worldtree', name: '세계수의 가지', icon: '🌳', rarity: 'legend', eventOnly: true, desc: '매 라운드 체력 +10, 최대 체력 +15, 최대 기력 +15.', effect: { regen: 10, maxHpBonus: 15, maxEnergyBonus: 15 } },
   // ⚠ 깃털의 효과는 기획서에 없어 정한 값이다 — 사슬에 들인 것(알)보다 세게.
   { id: 'phoenixfeather', name: '불사조의 깃털', icon: '🪶', rarity: 'legend', eventOnly: true, desc: '전투당 한 번, 체력 40으로 되살아난다. 화상에 걸리지 않는다.', effect: { revive: 40, burnImmune: true } },
 ]
