@@ -99,6 +99,9 @@ h3 {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* clip = 스크롤 자체가 없는 잘라내기. hidden은 **포커스가 가면 브라우저가 몰래 옆으로 굴린다** —
+     무대는 축소 전 폭(1280)으로 자리를 차지해서, 화면 끝 버튼을 누르면 무대가 128px씩 밀려 잘렸다(2026-11-12). */
+  overflow: clip;
   background: var(--bg-0);
 }
 

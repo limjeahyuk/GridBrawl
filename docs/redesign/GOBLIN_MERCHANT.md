@@ -7,9 +7,9 @@
 
 | 단계 | 배경(1280×720) | 원본 일러스트 |
 | --- | --- | --- |
-| 가난한 고블린 (쓴 돈 0~79) | `public/redesign/cutscene/goblin/bg-poor.png` | `docs/redesign/2dImg/goblin_2.png` (두건 망토 · 맨발) |
-| 중간 고블린 (80~199) | `public/redesign/cutscene/goblin/bg-mid.png` | `docs/redesign/2dImg/goblin_1.png` (안경 · 조끼) |
-| 부자 고블린 (200 이상) | `public/redesign/cutscene/goblin/bg-rich.png` | `docs/redesign/2dImg/goblin_3.png` (왕좌) |
+| 가난한 고블린 (쓴 돈 0~139) | `public/redesign/cutscene/goblin/bg-poor.png` | `docs/redesign/2dImg/goblin_2.png` (두건 망토 · 맨발) |
+| 중간 고블린 (140~349) | `public/redesign/cutscene/goblin/bg-mid.png` | `docs/redesign/2dImg/goblin_1.png` (안경 · 조끼) |
+| 부자 고블린 (350 이상) | `public/redesign/cutscene/goblin/bg-rich.png` | `docs/redesign/2dImg/goblin_3.png` (왕좌) |
 
 - 배경은 `tools/event-bg/build.py <원본> <결과>`로 만든다: 그림은 왼쪽에 그대로 두고, 오른쪽은 **같은 그림을 크게 늘려 강하게 흐리고 어둡게 한 색 배경**이다(지어낸 풍경 없음). 그림의 오른쪽 가장자리는 그 배경으로 부드럽게 녹아든다. 다른 ? 이벤트도 일러스트가 생기면 같은 스크립트와 배치를 쓴다.
 - **고블린 재산은 화면에 보여 주지 않는다**(2026-11-12 사용자 지정) — 게이지 · 쓴 돈 · "N 더 쓰면 ○○" · 단계 얼굴 표시는 전부 없다. `goblinSpent`는 안에서만 세고, 플레이어에게는 고블린 그림과 진열이 달라지는 것으로만 드러난다. 세 단계 시안은 `screens/GoblinTiers.dc.html`.
@@ -27,7 +27,7 @@
 
 ```ts
 export type GoblinTier = 'poor' | 'mid' | 'rich'
-export const GOBLIN_TIER_AT = { mid: 80, rich: 200 } as const
+export const GOBLIN_TIER_AT = { mid: 140, rich: 350 } as const // 2026-11-12 80 / 200 → 140 / 350(가격 상향에 맞춤)
 export const goblinTier = (spent: number): GoblinTier =>
   spent >= GOBLIN_TIER_AT.rich ? 'rich' : spent >= GOBLIN_TIER_AT.mid ? 'mid' : 'poor'
 ```
@@ -54,9 +54,9 @@ const goblinPrice = (base: number, rng: () => number) => {
 
 | 단계 | 진열 |
 | --- | --- |
-| 가난 | 카드 2 · 회복 1(HP +15) |
-| 중간 | 카드 2 · 유물 1(일반~희귀) · 회복 1(HP +25) |
-| 부자 | 카드 2 · 유물 2(희귀 이상, **전설 확률**) · 회복 1(HP +40) |
+| 가난 | 카드 2 · 회복 1(HP +20) |
+| 중간 | 카드 2 · 유물 1(일반~희귀) · 회복 1(HP +35) |
+| 부자 | 카드 2 · 유물 2(희귀 이상, **전설 확률**) · 회복 1(HP +55) |
 
 정가는 여관 상점과 같다(카드 60, 유물 100/160/250/600 — 2026-11-12 상향) + 회복 물약 50(`PRICE_HEAL` — 물약은 고블린에만 있다). 진열은 `run.ts`의 `rollGoblinShop`(`GOBLIN_STOCK`). 카드는 등급 구분 없이 `cardRewardPool`(직업 · 미보유)에서 뽑는다.
 
@@ -89,9 +89,9 @@ const goblinPrice = (base: number, rng: () => number) => {
 
 | 단계 | 보상 |
 | --- | --- |
-| 가난 | 골드 20 + 진열품 1개 무작위 |
-| 중간 | 골드 55 + 진열품 1개 **고르기** |
-| 부자 | 골드 140 + 진열품 1개 고르기 + 유물 확정 |
+| 가난 | 골드 35 + 진열품 1개 무작위 |
+| 중간 | 골드 95 + 진열품 1개 **고르기** |
+| 부자 | 골드 240 + 진열품 1개 고르기 + 유물 확정 |
 
 코드는 `run.ts`의 `GOBLIN_LOOT` · `events.ts`의 `applySpecialWin`. 보상을 받은 뒤 `goblinSpent = 0` → 다음 고블린 상점은 가난부터. 지면 일반 전투와 같다(런 종료).
 

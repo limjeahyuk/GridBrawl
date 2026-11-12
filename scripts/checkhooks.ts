@@ -1601,7 +1601,7 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
 }
 {
   // 고블린 장사꾼(2026-11) — 쓸수록 부자 · 값은 물건마다 ×0.8~1.5 · 덮쳐서 이기면 재산 0.
-  check('고블린 단계 문턱', [goblinTier(0), goblinTier(79), goblinTier(80), goblinTier(199), goblinTier(200)], ['poor', 'poor', 'mid', 'mid', 'rich'])
+  check('고블린 단계 문턱(140 / 350)', [goblinTier(0), goblinTier(139), goblinTier(140), goblinTier(349), goblinTier(350)], ['poor', 'poor', 'mid', 'mid', 'rich'])
   const r0 = { ...startRun('warrior'), gold: 999 }
   let bad = 0
   for (let i = 0; i < 200; i++)
@@ -1612,14 +1612,14 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   const heal = rollGoblinShop(r0, 'poor').find((i) => i.kind === 'heal')!
   const paid = buyGoblinItem(r0, heal)
   check('사면 쓴 돈이 쌓인다', [paid.ok, paid.run.goblinSpent, paid.run.gold], [true, heal.price, 999 - heal.price])
-  const rich = { ...r0, goblinSpent: 250 }
+  const rich = { ...r0, goblinSpent: 400 }
   const stock = rollGoblinShop(rich, 'rich')
   const fightRun = { ...rich, special: { kind: 'goblin' as const, monsterId: goblinMonsterId('rich'), goblinTier: 'rich' as const, goblinStock: stock }, status: 'fighting' as const }
   check('덮치면 그 단계 고블린과 싸운다', currentEnemy(fightRun).id, 'goblin-rich')
   const won = applySpecialWin(afterWin(fightRun, 50))
   check('이기면 재산 0', won.goblinSpent, 0)
   check('부자를 이기면 유물 확정', !!won.special?.wonRelicId, true)
-  check('이기면 고블린 골드', won.gold >= 999 + 140, true)
+  check('이기면 고블린 골드', won.gold >= 999 + 240, true)
   const fates = new Set<string>()
   for (let i = 0; i < 600; i++) fates.add(rollQuestionFate(fightRun).kind)
   check('? 칸 정체 — 전투 · 여관 · 대장간 · 고블린 · 이벤트(모닥불 없음)', [...fates].sort(), ['combat', 'event', 'goblin', 'inn', 'smith'])

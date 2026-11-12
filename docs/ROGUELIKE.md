@@ -167,8 +167,8 @@
 npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=12345
 ```
 - 봇이 플레이어를 대신해 런 전체(보상 · 상점 · 이벤트까지)를 끝까지 돈다(`scripts/simrun.ts`). 시드 RNG로 재현된다.
-- 플래그: `--sweep`(직업별 클리어율 + 밴드) · `--seed=` · `--char=` · `--skill=easy|normal|hard` · `--policy=greedy|random` · `--path=random|template|greedy|safe` · `--diff=novice|adept|expert|master`(기본 master) · `--relics=a,b`(유물을 들고 시작). npm 플래그는 `--` 뒤에.
+- 플래그: `--sweep`(직업별 클리어율 + 밴드) · `--seed=` · `--char=` · `--skill=easy|normal|hard` · `--policy=greedy|random` · `--path=random|template|greedy|safe` · `--diff=novice|adept|expert|master`(기본 master) · `--relics=a,b`(유물을 들고 시작) · `--up=value|range`(대장간 강화를 수치만 / 공격 카드는 범위로 — 기본 value). npm 플래그는 `--` 뒤에.
 - 시뮬은 마법사를 `kiter`로 굴린다.
-- **현재(2026-11-12, 최고급 · 2막 × 20층 지도) 3시드(12345 · 777 · 2026) 평균 클리어율 ≈ 21.2%** — 마법사 27.6 · 궁수 24.1 · **전사 11.8**(가격 상향 · 19층 여관 삭제 뒤. 지도 도입 직후는 30.1%). 15층 지도 마지막 값은 25.1%(전사 26.6 · 마법사 24.6 · 궁수 24.1).
+- **현재(2026-11-12, 최고급 · 2막 × 20층 지도) 3시드(12345 · 777 · 2026) 평균 클리어율 ≈ 20.2%** — 마법사 26.0 · 궁수 23.8 · **전사 10.7**(가격 상향 · 19층 여관 삭제 · 고블린 단계 140/350 뒤. 지도 도입 직후는 30.1%). 15층 지도 마지막 값은 25.1%(전사 26.6 · 마법사 24.6 · 궁수 24.1).
 - ⚠ 단일 시드로 판정하지 말 것(같은 수치에서도 밴드가 몇 %p씩 널뛴다). 런에선 지속 회복(regen · lifesteal)이 극도로 강하다. 궁수는 화력 · 사거리를 올리면 오히려 나빠진다(붙는다). 마법사의 손잡이는 `turnShield`(≈2.1%p/점).
 - 봇은 사람보다 비관적이다 — 절대값이 아니라 추세 · 상대 비교로 읽는다.

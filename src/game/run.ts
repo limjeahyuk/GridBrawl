@@ -1154,7 +1154,11 @@ export function ambushFight(run: RunState): SpecialFight {
 }
 
 export type GoblinTier = 'poor' | 'mid' | 'rich'
-export const GOBLIN_TIER_AT = { mid: 80, rich: 200 } as const
+/**
+ * 단계 문턱 — 2026-11-12 가격 상향(카드 35 → 60 · 유물 ×1.7)에 맞춰 80 / 200 → 140 / 350. 옛 문턱이면
+ * 카드 두세 장에 부자가 돼 "키워서 턴다"가 공짜였다(사용자 — 가난 > 중간 > 부자도 새 가격에 맞출 것).
+ */
+export const GOBLIN_TIER_AT = { mid: 140, rich: 350 } as const
 export const goblinTier = (spent: number): GoblinTier =>
   spent >= GOBLIN_TIER_AT.rich ? 'rich' : spent >= GOBLIN_TIER_AT.mid ? 'mid' : 'poor'
 export type GoblinItem =
@@ -1167,9 +1171,10 @@ const goblinPrice = (base: number, rng: () => number) => {
   return { base, mul, price: Math.round(base * mul) }
 }
 const GOBLIN_STOCK: Record<GoblinTier, { cards: number; relics: number; rarities: Rarity[]; heal: number }> = {
-  poor: { cards: 2, relics: 0, rarities: [], heal: 15 },
-  mid: { cards: 2, relics: 1, rarities: ['common', 'rare'], heal: 25 },
-  rich: { cards: 2, relics: 2, rarities: ['rare', 'epic', 'legend'], heal: 40 },
+  // 물약 값이 30 → 50으로 올라 회복량도 15 / 25 / 40 → 20 / 35 / 55(2026-11-12).
+  poor: { cards: 2, relics: 0, rarities: [], heal: 20 },
+  mid: { cards: 2, relics: 1, rarities: ['common', 'rare'], heal: 35 },
+  rich: { cards: 2, relics: 2, rarities: ['rare', 'epic', 'legend'], heal: 55 },
 }
 /** 단계마다 다른 건 **무엇을 파느냐**다. */
 export function rollGoblinShop(run: RunState, tier: GoblinTier, rng: () => number = Math.random): GoblinItem[] {
@@ -1215,9 +1220,10 @@ export function goblinItemName(run: RunState, item: GoblinItem): string {
 export const goblinMonsterId = (tier: GoblinTier): string => `goblin-${tier}`
 /** 덮쳐서 이긴 전리품 — 골드 + (가난: 진열품 무작위 / 중간·부자: 진열품 고르기 · 부자는 유물 확정). */
 export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; relic: boolean }> = {
-  poor: { gold: 20, pick: false, relic: false },
-  mid: { gold: 55, pick: true, relic: false },
-  rich: { gold: 140, pick: true, relic: true },
+  // 문턱이 올라간 만큼(쓴 돈 140 / 350) 덮쳐서 얻는 골드도 20 / 55 / 140 → 35 / 95 / 240(2026-11-12).
+  poor: { gold: 35, pick: false, relic: false },
+  mid: { gold: 95, pick: true, relic: false },
+  rich: { gold: 240, pick: true, relic: true },
 }
 
 // --- 보물(2026-11 리디자인) ----------------------------------------------------

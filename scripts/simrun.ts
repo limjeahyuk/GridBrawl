@@ -21,10 +21,12 @@ import { ROSTER, getChar } from '../src/data/roster'
 import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
 import { EVENT_CARDS, RUN_CARDS } from '../src/game/runcards'
-import { ROULETTE_VALUE, spinRoulette } from '../src/game/upgrades'
+import { ROULETTE_RANGE, ROULETTE_VALUE, canPickCell, canUpgradeRange, spinRoulette } from '../src/game/upgrades'
+import type { Offset } from '../src/battle/types'
 import { applySpecialWin, eventChoices, resolveEventChoice, rollQuestionFate, startEvent, tradeList, withEventSeen, type EventId, type EventOutcome } from '../src/game/events'
 import {
   TOTAL_FLOORS,
+  runCard,
   globalFloor,
   advanceFloor,
   afterLoss,
@@ -75,6 +77,8 @@ const flagNum = (name: string, dflt: number): number => {
 const RUNS = parseInt(args.find((a) => /^\d+$/.test(a)) ?? '200', 10)
 /** 캐릭터 × 시작 직업 카드 전 조합을 돌려 밸런스 매트릭스만 출력한다. */
 const SWEEP = args.includes('--sweep')
+/** 대장간 · 낡은 대장간 강화 정책: value(기본 — 수치만) · range(공격 카드는 범위 강화). */
+const UP = flagStr('up', 'value') as 'value' | 'range'
 const SEED = flagNum('seed', 12345)
 const SKILL = flagStr('skill', 'hard') as Difficulty
 const POLICY = flagStr('policy', 'greedy') as 'greedy' | 'random'
@@ -237,6 +241,24 @@ function simUpgrade(run: RunState): RunState {
   const id = POLICY === 'random'
     ? pool[Math.floor(Math.random() * pool.length)]
     : pool.reduce((hi, x) => (rawScore(cardById(x)!) > rawScore(cardById(hi)!) ? x : hi), pool[0])
+  const card = runCard(run, id)
+  // `--up=range`: 공격 카드면 범위(사거리) 강화 — 앞뒤로 멀리 닿는 칸부터 고른다(2026-11-12, 전사 사거리 실험용).
+  if (UP === 'range' && card && canUpgradeRange(card)) {
+    const n = spinRoulette(ROULETTE_RANGE)
+    const range = card.range ?? []
+    const picks: Offset[] = []
+    for (let k = 0; k < n; k++) {
+      let best: Offset | null = null
+      for (let df = -4; df <= 4; df++)
+        for (let du = -2; du <= 2; du++) {
+          const c = { df, du }
+          if (!canPickCell(range, picks, c)) continue
+          if (!best || Math.abs(df) * 3 - Math.abs(du) > Math.abs(best.df) * 3 - Math.abs(best.du)) best = c
+        }
+      if (best) picks.push(best)
+    }
+    return upgradeCard(run, id, { cells: picks })
+  }
   return upgradeCard(run, id, { value: spinRoulette(ROULETTE_VALUE) })
 }
 
