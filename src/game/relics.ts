@@ -24,8 +24,6 @@ export interface RunMods {
   healBonusPct?: number
   /** 일반 전투 보상에 유물이 섞일 확률 +N포인트(0.01 = +1%p). */
   relicChanceBonus?: number
-  /** 덱 상한 +N장. */
-  deckCapBonus?: number
   /** 상점 진열 +N칸(카드 칸이 늘어난다). */
   shopExtraItems?: number
 }
@@ -80,8 +78,8 @@ const SIGNATURE: Record<
     //   사거리 1칸이라 붙는 동안 통째로 얻어맞는데, 몬스터가 이제 걸어오는 나를
     //   정확히 조준한다(원거리 hard 몬스터에 특히 약하다 — 팬텀 45.8% · 화염군주
     //   52.7%). 56 → 107로 되돌렸다. 민감도 ≈ **0.16%p/HP**로 셋 중 가장 둔하다.
-    runEffect: { damageReduction: 2, regen: 2, thorns: 2, maxHpBonus: 107 },
-    desc: '서약의 돌무덤: 최대 체력 +107, 받는 공격 피해 -2, 매 라운드 체력 +2, 피격 시 2 반사.',
+    runEffect: { damageReduction: 2, regen: 2, thorns: 2, maxHpBonus: 97 },
+    desc: '서약의 돌무덤: 최대 체력 +97, 받는 공격 피해 -2, 매 라운드 체력 +2, 피격 시 2 반사.',
   },
   archer: {
     id: 'sig-archer', name: '독니 화살통', icon: '🏹',
@@ -103,8 +101,8 @@ const SIGNATURE: Record<
     //   지금은 **≈0.64%p/HP**로 셋 중 압도적으로 민감하다. 거리를 벌고 싸우는 쪽이라
     //   AI 예측 개편의 타격이 제일 적었고(24.7%), 그래서 18 → 16으로 **내려서** 맞췄다.
     //   전사·마법사와 달리 궁수는 몇 포인트로 밴드가 통째로 움직인다.
-    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 16, lifesteal: 2 },
-    desc: '독니 화살통: 최대 체력 +16, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 체력 2 흡수 + 중독 2라운드.',
+    runEffect: { attackBonus: 5, poisonOnHit: 2, damageReduction: 2, maxHpBonus: 19 }, // 흡혈 2는 2026-11-10 사용자 지정으로 뺐다(체력 100 고정 뒤 궁수가 앞서서)
+    desc: '독니 화살통: 최대 체력 +19, 받는 피해 -2. 내 공격 피해 +5, 피해를 주면 중독 2라운드.',
   },
   mage: {
     id: 'sig-mage', name: '혼백의 마법서', icon: '📖',
@@ -112,8 +110,13 @@ const SIGNATURE: Record<
     // ⚠ turnEnergy는 봇 인공물을 만들어 측정이 튄다(GDD ⑪) — 조정은 체력·보호막으로
     // 하고 이 값은 고정해 둘 것. 실제로 turnEnergy 10은 최대체력 14와 맞먹었다.
     // ⚠ AI 예측 개편(2026-08-10)으로 57 → 80. 민감도 ≈ **0.23%p/HP**.
-    runEffect: { turnEnergy: 5, turnShield: 3, burnOnHit: 2, damageReduction: 2, maxHpBonus: 80 },
-    desc: '혼백의 마법서: 최대 체력 +80, 받는 피해 -2. 매 라운드 기력 +5·보호막 +3, 피해를 주면 화상 2라운드를 묻힌다.',
+    // 2026-11-10 사용자 지정: 런 시작 체력은 **전사 200 · 궁수 100 · 마법사 100**으로 못 박는다
+    //   (마법사가 전사만큼 단단한 건 이상하다). 마법사는 대신 **전투 시작 보호막 +30**.
+    //   ⚠ 그래서 직업 밴드를 더는 maxHpBonus로 못 맞춘다. 체력 100 + 시작 보호막만으로는 5%였고
+    //   (카드를 원거리·속박으로 바꾼 뒤에도), **매 라운드 보호막(turnShield) 3 → 13**으로 메웠다 —
+    //   7 = 11.9% · 11 = 20.4% · 13 = 26.6%(≈2.1%p/점). 마법사의 손잡이는 이제 이 값이다.
+    runEffect: { turnEnergy: 5, turnShield: 13, burnOnHit: 2, damageReduction: 2, maxHpBonus: 22, openingShield: 30 },
+    desc: '혼백의 마법서: 최대 체력 +22, 전투 시작 보호막 +30, 받는 피해 -2. 매 라운드 기력 +5·보호막 +13, 피해를 주면 화상 2라운드를 묻힌다.',
   },
 }
 
@@ -241,12 +244,12 @@ const genericRelics: Relic[] = [
   {
     id: 'firstguard', name: '선제 방벽', icon: '🚧', rarity: 'common',
     desc: '전투 첫 라운드에 보호막 +20.',
-    effect: { openingShield: 40 },
+    effect: { openingShield: 20 },
   },
   {
     id: 'warmup', name: '불씨 지피기', icon: '🔥', rarity: 'common',
     desc: '전투 첫 라운드에 보호막 +10, 매 라운드 기력 +3.',
-    effect: { openingShield: 20, turnEnergy: 3 },
+    effect: { openingShield: 10, turnEnergy: 3 },
   },
 
   // --- 확장 세트 2 (2026-07-31) — 빈 메커니즘 보강(기절·반사·관통·저체력·지속회복) --
@@ -293,7 +296,7 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'vanguard', name: '선봉대장', icon: '🎖', rarity: 'rare',
-    desc: '전투 첫 라운드에 보호막 +15. 내 공격 피해 +3.', effect: { openingShield: 30, attackBonus: 3 },
+    desc: '전투 첫 라운드에 보호막 +15. 내 공격 피해 +3.', effect: { openingShield: 15, attackBonus: 3 },
   },
   {
     id: 'meditation', name: '명상의 룬', icon: '🧘', rarity: 'common',
@@ -337,7 +340,8 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'satchel', name: '확장 가방', icon: '🎒', rarity: 'common',
-    desc: '덱 상한 +4장.', effect: {}, mods: { deckCapBonus: 4 },
+    // 2026-11-10: 덱 상한이 칸마다 5장으로 고정되며(손패 한 쪽에 들어갈 만큼) "덱 상한 +N"이 사라졌다 → 보상 칸으로.
+    desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 },
   },
   {
     id: 'balm', name: '치유 향유', icon: '🧴', rarity: 'rare',
@@ -353,7 +357,7 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'lockpick', name: '만능 열쇠', icon: '🗝', rarity: 'epic',
-    desc: '상점 가격 30% 할인, 덱 상한 +3장.', effect: {}, mods: { shopDiscountPct: 30, deckCapBonus: 3 },
+    desc: '상점 가격 30% 할인, 상점 진열 +1칸.', effect: {}, mods: { shopDiscountPct: 30, shopExtraItems: 1 },
   },
 
   // --- 상태이상 계열 (2026-08-01, 3직업 개편) -------------------------------
@@ -403,7 +407,7 @@ const genericRelics: Relic[] = [
   { id: 'buckler', name: '단단한 손잡이', icon: '🛡', rarity: 'common', desc: '수비 카드의 흡수량 +35%.', effect: { guardPowerPct: 35 } },
   { id: 'towershield', name: '탑 방패', icon: '🗼', rarity: 'rare', desc: '수비 카드의 흡수량 +60%.', effect: { guardPowerPct: 60 } },
   { id: 'rampart', name: '성벽의 맹세', icon: '🧱', rarity: 'epic', desc: '수비 카드의 흡수량 +80%, 최대 체력 +13.', effect: { guardPowerPct: 80, maxHpBonus: 13 } },
-  { id: 'aegisoath', name: '불괴의 서약', icon: '⚜️', rarity: 'legend', desc: '수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.', effect: { guardPowerPct: 120, openingShield: 40, damageReduction: 3 } },
+  { id: 'aegisoath', name: '불괴의 서약', icon: '⚜️', rarity: 'legend', desc: '수비 카드의 흡수량 +120%, 첫 라운드 보호막 +20, 받는 피해 -3.', effect: { guardPowerPct: 120, openingShield: 20, damageReduction: 3 } },
   { id: 'spiked-boss', name: '가시 방패심', icon: '🔩', rarity: 'rare', desc: '수비 카드의 흡수량 +40%, 피격 시 5 반사.', effect: { guardPowerPct: 40, thorns: 5 } },
 
   // --- 치유 증폭 계열 -------------------------------------------------------
@@ -415,10 +419,10 @@ const genericRelics: Relic[] = [
 
   // --- 시작 기력 계열 -------------------------------------------------------
   { id: 'primer', name: '점화약', icon: '🧨', rarity: 'common', desc: '전투 시작 기력 +13.', effect: { startEnergyBonus: 13 } },
-  { id: 'kindling', name: '마른 장작', icon: '🪵', rarity: 'common', desc: '전투 시작 기력 +8, 첫 라운드 보호막 +8.', effect: { startEnergyBonus: 8, openingShield: 15 } },
+  { id: 'kindling', name: '마른 장작', icon: '🪵', rarity: 'common', desc: '전투 시작 기력 +8, 첫 라운드 보호막 +8.', effect: { startEnergyBonus: 8, openingShield: 8 } },
   { id: 'jumpstart', name: '출진의 북', icon: '🥁', rarity: 'rare', desc: '전투 시작 기력 +20.', effect: { startEnergyBonus: 20 } },
   { id: 'bigbang', name: '개전의 봉화', icon: '🧨', rarity: 'epic', desc: '전투 시작 기력 +28, 내 공격 피해 +3.', effect: { startEnergyBonus: 28, attackBonus: 3 } },
-  { id: 'firstlight', name: '여명의 불꽃', icon: '🌅', rarity: 'legend', desc: '전투 시작 기력 +35, 첫 라운드 보호막 +23, 매 라운드 기력 +4.', effect: { startEnergyBonus: 35, openingShield: 45, turnEnergy: 4 } },
+  { id: 'firstlight', name: '여명의 불꽃', icon: '🌅', rarity: 'legend', desc: '전투 시작 기력 +35, 첫 라운드 보호막 +23, 매 라운드 기력 +4.', effect: { startEnergyBonus: 35, openingShield: 23, turnEnergy: 4 } },
 
   // --- 처형 계열 ------------------------------------------------------------
   { id: 'finisher', name: '마무리 칼', icon: '🔪', rarity: 'common', desc: '상대 체력이 절반 이하면 내 공격 피해 +25%.', effect: { executeBonusPct: 25 } },
@@ -439,7 +443,7 @@ const genericRelics: Relic[] = [
   { id: 'secondwind', name: '두 번째 숨', icon: '🌬', rarity: 'epic', desc: '전투당 한 번 체력 23로 되살아나고, 되살아날 힘으로 매 라운드 체력 +3.', effect: { revive: 23, regen: 3 } },
   { id: 'stoneskin', name: '돌갗', icon: '🗿', rarity: 'epic', desc: '받는 피해 -7.', effect: { damageReduction: 7 } },
   { id: 'adamant', name: '금강석 갑주', icon: '💎', rarity: 'legend', desc: '받는 피해 -9, 최대 체력 +13.', effect: { damageReduction: 9, maxHpBonus: 13 } },
-  { id: 'warhorn', name: '전쟁 나팔', icon: '📯', rarity: 'common', desc: '내 공격 피해 +2, 첫 라운드 보호막 +9.', effect: { attackBonus: 2, openingShield: 18 } },
+  { id: 'warhorn', name: '전쟁 나팔', icon: '📯', rarity: 'common', desc: '내 공격 피해 +2, 첫 라운드 보호막 +9.', effect: { attackBonus: 2, openingShield: 9 } },
   { id: 'duelist', name: '결투가의 검', icon: '🤺', rarity: 'epic', desc: '내 공격 피해 +8.', effect: { attackBonus: 8 } },
   { id: 'godslayer', name: '신살자의 창', icon: '🔱', rarity: 'legend', desc: '내 공격 피해 +10, 보호막을 무시한다. 최대 체력 -10.', effect: { attackBonus: 10, alwaysPierce: true, maxHpBonus: -10 } },
   { id: 'gluttony', name: '탐식의 이빨', icon: '😋', rarity: 'legend', desc: '피해를 주면 체력 8 회복. 최대 체력 -10.', effect: { lifesteal: 8, maxHpBonus: -10 } },
@@ -561,8 +565,8 @@ const genericRelics: Relic[] = [
   { id: 'ledger', name: '상인의 장부', icon: '📒', rarity: 'common', desc: '상점 가격 12% 할인, 골드 +15%.', effect: {}, mods: { shopDiscountPct: 12, goldBonusPct: 15 } },
   { id: 'caravan', name: '행상 마차', icon: '🛒', rarity: 'rare', desc: '상점 진열 +2칸.', effect: {}, mods: { shopExtraItems: 2 } },
   { id: 'bazaar', name: '암시장 통로', icon: '🏮', rarity: 'epic', desc: '상점 진열 +3칸, 가격 25% 할인.', effect: {}, mods: { shopExtraItems: 3, shopDiscountPct: 25 } },
-  { id: 'saddlebag', name: '안장 가방', icon: '👜', rarity: 'common', desc: '덱 상한 +2장.', effect: {}, mods: { deckCapBonus: 2 } },
-  { id: 'librarian', name: '사서의 색인', icon: '📚', rarity: 'rare', desc: '승리 보상 선택지 +1칸, 덱 상한 +2장.', effect: {}, mods: { rewardOptions: 1, deckCapBonus: 2 } },
+  { id: 'saddlebag', name: '안장 가방', icon: '👜', rarity: 'common', desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 } },
+  { id: 'librarian', name: '사서의 색인', icon: '📚', rarity: 'rare', desc: '승리 보상 선택지 +2칸.', effect: {}, mods: { rewardOptions: 2 } },
   { id: 'saltpouch', name: '소금 주머니', icon: '🧂', rarity: 'common', desc: '모든 회복 효과 +25%.', effect: {}, mods: { healBonusPct: 25 } },
   { id: 'grailshard', name: '성배 조각', icon: '🏆', rarity: 'epic', desc: '모든 회복 효과 +80%, 회복 카드 회복량 +30%.', effect: { healPowerPct: 30 }, mods: { healBonusPct: 80 } },
   { id: 'ravenomen', name: '까마귀의 전조', icon: '🐦‍⬛', rarity: 'epic', desc: '일반 전투 보상에 유물이 섞일 확률 +18%p.', effect: {}, mods: { relicChanceBonus: 0.18 } },

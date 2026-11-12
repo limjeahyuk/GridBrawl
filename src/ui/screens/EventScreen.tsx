@@ -8,7 +8,7 @@ import {
   eventChoices, eventDef, eventText, resolveEventChoice, startEvent, tradeList, type EventChoice, type EventId,
   type EventOutcome,
 } from '../../game/events'
-import { advanceFloor, currentEnemy, regionOf, runCard, type RunState, type SpecialFight } from '../../game/run'
+import { advanceFloor, currentEnemy, regionOf, replaceCandidates, runCard, type RunState, type SpecialFight } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
 import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
@@ -16,6 +16,7 @@ import { SceneLayers } from '../SceneLayers'
 import { SpriteClip } from '../SpriteClip'
 import { sheetFor } from '../../art/sprites'
 import { UpgradeScreen } from './UpgradeScreen'
+import { WORLDTREE_CARD } from '../../game/runcards'
 
 export function EventScreen({
   run,
@@ -154,7 +155,7 @@ export function EventScreen({
               {picking.key === 'wt-take' ? '덱이 꽉 찼다 — 바꿀 카드를 고르세요' : picking.pick === 'card' ? '내줄 카드를 고르세요' : '내줄 유물을 고르세요'}
             </span>
             <div className="event__picks">
-              {tradeList(cur, picking.pick!).map((id) => {
+              {(picking.key === 'wt-take' ? replaceCandidates(cur, WORLDTREE_CARD) : tradeList(cur, picking.pick!)).map((id) => {
                 if (picking.pick === 'relic') {
                   const r = getRelic(id)
                   return (

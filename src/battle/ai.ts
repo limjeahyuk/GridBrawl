@@ -8,7 +8,7 @@ import {
   facingBetween,
   hazardAt,
   isCollapsedCell,
-  isFullyCollapsed,
+  collapseRound,
   shadowRock,
   spikeStateAt,
   type Cell,
@@ -207,6 +207,8 @@ export function decideAI(
   // 난이도 cfg에 성격·기분을 얹은 **실효 cfg**. profile이 없으면(봇전·튜토리얼)
   // balanced + 기분 0이라 기존 동작과 동일하다.
   const base = DIFF[difficulty]
+  /** 붕괴 시계(엘리트·보스는 늦게 시작한다 — `collapseRound`). */
+  const cr = collapseRound(state)
   const a = ARCH[profile?.archetype ?? 'balanced']
   const mood = profile?.moodAgg ?? 0
   const cfg: AICfg = {
@@ -404,7 +406,7 @@ export function decideAI(
       .filter((c) => {
         if (c.kind !== 'move' || !goesSomewhere(c) || intoTrap(c)) return false
         const land = landingOf(c)
-        if (isCollapsedCell(land, state.round)) return false
+        if (isCollapsedCell(land, cr)) return false
         return !hits(foe, facingBetween(foe, land, 1 - self), inc, land, rocks, !!inc.pierce)
       })
       .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))
@@ -569,20 +571,19 @@ export function decideAI(
     // ⚠ **판 전체가 무너진 뒤에는 도망치지 않는다**(2026-08-05). 그전엔 갈 곳이
     //    없는데도 매 슬롯 중앙으로 걷기만 해서, 마지막 단계부터 AI가 아예 공격을
     //    멈췄다 — 무한전을 끊으라고 넣은 장치가 오히려 판을 늘리고 있었다.
-    if (
-      !isFullyCollapsed(state.round + 1) &&
-      (isCollapsedCell(pos, state.round) || isCollapsedCell(pos, state.round + 1))
-    ) {
+    // ⚠ 2026-11-10부터 판 가운데 4칸(`isCollapseSafe`)은 끝까지 남는다 — 마지막 단계에도 갈 곳이
+    //    있으므로 늘 피한다. 안전지대가 가운데 **줄**에만 있어 좌우만 보면 못 닿는다 → 위아래·대각까지 본다.
+    if (isCollapsedCell(pos, cr) || isCollapsedCell(pos, cr + 1)) {
       const toCenter: MoveDir = pos.col <= (GRID_COLS - 1) / 2 ? 'right' : 'left'
       const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)].filter(
         (c): c is CardDef => !!c,
       )
       // 실제로 **안전한 칸에 내리는** 이동만 고른다 — 한 칸 옮겨 봐야 여전히
-      // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05).
-      const m =
-        esc.find(
-          (c) => usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), state.round + 1),
-        ) ?? esc.find((c) => usable(c) && goesSomewhere(c) && !intoTrap(c))
+      // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05). 그중 상대에게 가까운 쪽.
+      const safeLanding = pool
+        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr + 1))
+        .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))[0]
+      const m = safeLanding ?? esc.find((c) => usable(c) && goesSomewhere(c) && !intoTrap(c))
       if (m) {
         take(m)
         continue
@@ -593,7 +594,7 @@ export function decideAI(
     //   때릴 수 있어도 먼저 내려온다: 화상은 그 라운드에 맞는 모든 타격에 +5가 붙는다.
     if (hazardAt(hazards, pos)?.kind === 'fire') {
       const off = pool
-        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), state.round))
+        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr))
         .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))[0]
       if (off) {
         take(off)

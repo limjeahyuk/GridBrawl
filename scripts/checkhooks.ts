@@ -26,7 +26,11 @@ import {
   currentNode,
   currentOptionIndices,
   currentOptions,
-  deckCap,
+  ATTACK_CAP,
+  SUPPORT_CAP,
+  slotCount,
+  slotOfId,
+  replaceCandidates,
   grantCard,
   grantRelic,
   healHp,
@@ -51,6 +55,7 @@ import {
   hazardsFor,
   goblinTier,
   rollGoblinShop,
+  cardRewardPool,
   buyGoblinItem,
   goblinMonsterId,
   rollQuestionFate,
@@ -59,6 +64,7 @@ import {
   currentEnemy,
   afterWin,
   WIN_HEAL,
+  ELITE_COLLAPSE_DELAY,
   TERRAIN,
   type NodeType,
   type RunDifficulty,
@@ -68,13 +74,16 @@ import { runFightProps } from '../src/game/runbattle'
 import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
 import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, resolveEventChoice, startEvent } from '../src/game/events'
 import { RELIC_BY_ID } from '../src/game/relics'
-import { RUN_CARDS, RUN_CARD_BY_ID, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
+import { RUN_CARDS, RUN_CARD_BY_ID, RUN_CARD_CLASS, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster, MONSTERS } from '../src/game/monsters'
 import {
   BURN_HIT_DAMAGE,
   COLLAPSE_START_ROUND,
+  COLLAPSE_STEP_ROUNDS,
+  isCollapsedCell,
+  isCollapseSafe,
   FOG_DAMAGE,
   FREEZE_SHATTER_BONUS,
   GRID_COLS,
@@ -287,7 +296,7 @@ console.log('\n런 진행 규칙')
   const discounted = rollShop(grantRelic(run, 'coupon')).find((i) => i.kind === 'card')!
   check('상인의 인증패(20%) → 카드 가격 35 → 28', [plain.price, discounted.price], [35, 28])
 
-  check('확장 가방 → 덱 상한 +4', deckCap(grantRelic(run, 'satchel')), deckCap(run) + 4)
+  check('확장 가방 → 보상 선택지 +1(덱 상한 유물은 2026-11-10에 없앴다)', rollRewards(grantRelic(run, 'satchel')).length, rollRewards(run).length + 1)
   const hurt = { ...run, hp: 10 }
   check(
     '치유 향유(+50%) → 회복량도 1.5배',
@@ -303,12 +312,20 @@ console.log('\n런 진행 규칙')
   check('잠기지 않은 카드는 제거된다', removeCard(run, 'c-brace').deck.includes('c-brace'), false)
   // 나중에 주운 대시·대각 이동은 잠기지 않는다 — 꽉 찬 덱에서 바꿀 길을 막으면 안 된다.
   check('대시·대각 이동은 잠기지 않는다', ['m-right2', 'm-ur'].some(isLockedCard), false)
-  // 꽉 찬 덱 + 잠긴 카드를 버리려 하면 "안 고른 것"과 같다(상한을 넘겨 담으면 안 된다).
-  const full = { ...run, deck: [...run.deck, ...Array(deckCap(run) - run.deck.length).fill('c-strike')] }
-  check('덱이 꽉 찼다', full.deck.length, deckCap(run))
-  check('꽉 찬 덱 + 잠긴 카드 지정 → 교체 요구', grantCard(full, 'war-cleave', 'm-up').needsReplace, true)
-  check('꽉 찬 덱 + 잠긴 카드 지정 → 상한을 넘기지 않는다', grantCard(full, 'war-cleave', 'm-up').run.deck.length, deckCap(run))
-  check('꽉 찬 덱 + 일반 카드 지정 → 교체된다', grantCard(full, 'war-cleave', 'c-strike').run.deck.length, deckCap(run))
+  // --- 칸별 상한(2026-11-10 사용자 지정) — 공격 5 · 보조(수비·회복·기력·강화) 5 · 이동은 끝없음 ----
+  check('시작 덱 — 공격 3 · 보조 2', [slotCount(run, 'attack'), slotCount(run, 'support')], [3, 2])
+  const atk5 = { ...run, deck: [...run.deck, 'arc-shot', 'arc-kite'] } // 공격 5장(궁수)
+  check('공격 칸이 꽉 찼다', slotCount(atk5, 'attack'), ATTACK_CAP)
+  check('공격 칸이 차면 공격 카드는 교체를 요구', grantCard(atk5, 'arc-pin').needsReplace, true)
+  check('공격 칸이 차도 보조 카드는 그냥 들어온다', grantCard(atk5, 'c-guard').run.deck.includes('c-guard'), true)
+  check('공격 칸이 차도 이동 카드는 그냥 들어온다', grantCard(atk5, 'm-right2').run.deck.includes('m-right2'), true)
+  check('잠긴 카드를 버리려 하면 교체 요구 그대로', grantCard(atk5, 'arc-pin', 'm-up').needsReplace, true)
+  check('다른 칸 카드를 버리려 해도 교체 요구 그대로', grantCard(atk5, 'arc-pin', 'c-brace').needsReplace, true)
+  check('같은 칸 카드와는 바뀐다', (() => { const d = grantCard(atk5, 'arc-pin', 'arc-kite').run.deck; return [d.includes('arc-pin'), d.includes('arc-kite'), slotCount({ ...atk5, deck: d }, 'attack')] })(), [true, false, ATTACK_CAP])
+  check('교체 후보 = 같은 칸 카드만', replaceCandidates(atk5, 'arc-pin').every((id) => slotOfId(atk5, id) === 'attack'), true)
+  const sup5 = { ...run, deck: [...run.deck, 'c-guard', 'c-repair', 'r-medkit'] } // 보조 5장(버티기·원기·방패·봉합·성수)
+  check('보조 칸이 차면 보조 카드는 교체를 요구', grantCard(sup5, 'r-transfuse').needsReplace, true)
+  check('상한은 5 · 5', [ATTACK_CAP, SUPPORT_CAP], [5, 5])
   // 유료 "카드 1장 제거"는 뺐다 — 덱=손패라 얇게 만들 이득이 0인 함정 칸이었다.
   check('상점에 카드 제거 서비스가 없다', rollShop(run).some((i) => !['card', 'relic'].includes(i.kind)), false)
 }
@@ -969,6 +986,26 @@ console.log('\n넉백 재판정 — 밀려나면 그 슬롯 공격은 새 자리
   check('서로 밀면 둘 다 그대로 맞는다', [hp[0] - b.state.hp[0], hp[1] - b.state.hp[1]], [7, 7])
 }
 
+{
+  // 처박혀 기절하면 같은 슬롯 공격도 못 한다(2026-11-10 신고: "기절인데 스킬 쓰고 기절").
+  // 벽에 붙은 상대를 밀면 한 칸도 안 밀려 자리는 그대로라 "닿느냐"만 보면 반격이 나갔다.
+  const shove: CardDef = {
+    id: 'test-wallshove', name: '테스트 벽밀치기', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 1, energyCost: 0, push: 1, cooldown: 0,
+  }
+  const jab: CardDef = {
+    id: 'test-walljab', name: '테스트 반격', kind: 'attack', desc: '',
+    range: [{ df: 1, du: 0 }], damage: 30, energyCost: 0, cooldown: 0,
+  }
+  const b = battleWith({}, {})
+  b.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }] // 상대가 판 끝 벽에 붙어 있다
+  const hp0 = b.state.hp[0]
+  const steps = b.resolveRound([shove, card('c-energy'), card('c-energy')], [jab, card('c-energy'), card('c-energy')])
+  check('처박힌 쪽은 그 자리에 남는다', b.state.pos[1].col, 5)
+  check('처박혀 기절하면 같은 슬롯 반격이 안 나간다', hp0 - b.state.hp[0], 0)
+  check('반격 대신 기절 스텝이 뜬다', steps.filter((st) => st.slot === 0 && st.actor === 1).map((st) => st.result), ['stun'])
+}
+
 // --- 쓰러진 뒤엔 못 때린다(2026-08-04) ---------------------------------------
 console.log('\n동시 트레이드 — 쓰러진 쪽은 그 턴에 못 때린다')
 {
@@ -1459,6 +1496,27 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   const water = resolveEventChoice(at(12, ['seed', 'nutrient']), startEvent('worldtree'), 'wt-water')!
   check('세계수 — 물을 주면 씨앗·영양가루 → 가지', ['seed', 'nutrient', 'worldbranch'].map((id) => water.run.relicIds.includes(id)), [false, false, true])
   check('가지·깃털은 보상 풀에 없다', REWARD_RELICS.some((x) => x.id === 'worldbranch' || x.id === 'phoenixfeather'), false)
+  // 세계수의 가호 = 중립 · 전설 · 이벤트 전용 / 세계수의 가지 = 전설 · 이벤트 전용(2026-11-10 사용자 지정).
+  // 보상 · 상점 · 고블린(부자 = 전설 확률 최대) · 무작위 유물 어디서도 안 나온다.
+  check('세계수의 가호 — 전설 · 중립', [RUN_CARD_BY_ID[WORLDTREE_CARD].legend, RUN_CARD_CLASS[WORLDTREE_CARD]], [true, undefined])
+  {
+    const seenCards = new Set<string>()
+    const seenRelics = new Set<string>()
+    for (const me of ['warrior', 'archer', 'mage']) {
+      const r: RunState = { ...startRun(me), floor: 15 }
+      for (let i = 0; i < 300; i++) {
+        cardRewardPool(r).forEach((id) => seenCards.add(id))
+        for (const it of [...rollGoblinShop(r, 'rich'), ...rollShop(r)]) {
+          if (it.kind === 'card') seenCards.add(it.cardId)
+          if (it.kind === 'relic') seenRelics.add(it.relicId)
+        }
+        for (const rw of rollRewards(r)) if (rw.kind === 'relic') seenRelics.add(rw.relicId)
+      }
+    }
+    check('세계수의 가호는 보상·상점·고블린에 안 나온다', seenCards.has(WORLDTREE_CARD), false)
+    check('세계수의 가지는 보상·상점·고블린에 안 나온다', seenRelics.has('worldbranch'), false)
+    check('가지 — 전설 · 이벤트 전용', [RELIC_BY_ID['worldbranch'].rarity, RELIC_BY_ID['worldbranch'].eventOnly], ['legend', true])
+  }
   check('영양가루 — 최대 기력 +10이 전투에 실린다', runFightProps(at(3, ['nutrient'])).battleOpts.chars![0].maxEnergy, getChar('warrior').maxEnergy + 10)
   {
     const b = battleWith({})
@@ -1726,7 +1784,8 @@ console.log('\n지형 — 바위')
     const st = b.resolveRound([shove, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-strike'), card('c-strike')])
     check('바위에 막히면 한 칸도 안 밀린다', b.state.pos[1].col, 2)
     check('바위에 처박히면 2칸분 피해(1 + 5×2)', hp - b.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE * 2)
-    check('바위에 처박히면 그 라운드 기절', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+    // 슬롯 1의 반격도 막힌다(2026-11-10) — 전엔 같은 슬롯 공격이 그대로 나가 기절 스텝이 2개(슬롯 2·3)였다.
+    check('바위에 처박히면 그 라운드 기절(같은 슬롯 반격까지)', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 3)
 
     // 벽도 같다 — 판 끝에 몰린 상대는 밀려날 곳이 없어 그대로 부딪힌다.
     const w = withRocks([])
@@ -2233,6 +2292,61 @@ console.log('\n피해 내역(Step.bits) · 슬롯 번호(Step.slot)')
       col.every((s) => (s.bits ?? []).some((x) => x.src === 'collapse')),
       true,
     )
+  }
+}
+
+// --- 붕괴 늦추기 · 안전지대(2026-11-10 사용자 지정) ------------------------------
+console.log('\n붕괴 — 가운데 4칸은 끝까지 · 엘리트·보스는 늦게')
+{
+  const late = COLLAPSE_START_ROUND + COLLAPSE_STEP_ROUNDS * 5 // 마지막 단계를 한참 지난 라운드
+  const safe: string[] = []
+  for (let col = 0; col < GRID_COLS; col++)
+    for (let row = 0; row < GRID_ROWS; row++) if (!isCollapsedCell({ col, row }, late)) safe.push(`${col},${row}`)
+  check('마지막 단계에도 가운데 4칸만 남는다', safe, ['2,1', '2,2', '3,1', '3,2'])
+  check('안전지대 판정 = 그 4칸', safe.every((k) => isCollapseSafe({ col: +k[0], row: +k[2] })), true)
+
+  // 안전지대에 서 있으면 붕괴 피해가 없다.
+  const b = battleWith({})
+  b.state.round = late
+  b.state.pos = [{ col: 2, row: 1 }, { col: 0, row: 0 }]
+  const steps = b.resolveRound(HOLD, HOLD)
+  check('안전지대는 붕괴 피해 없음 · 밖은 있음', ['0', '1'].map((p) => steps.some((s) => s.phase === 'collapse' && s.actor === +p)), [false, true])
+
+  // 엘리트·보스는 4라운드 늦게 무너진다(런 전용 — PvP는 지연 0).
+  const elite = new CardBattle('warrior', 'warrior', { collapseDelay: ELITE_COLLAPSE_DELAY })
+  elite.state.round = COLLAPSE_START_ROUND
+  elite.state.pos = [{ col: 0, row: 1 }, { col: 5, row: 1 }]
+  check('엘리트 — 6라운드엔 아직 안 무너진다', elite.resolveRound(HOLD, HOLD).some((s) => s.phase === 'collapse'), false)
+  elite.state.round = COLLAPSE_START_ROUND + ELITE_COLLAPSE_DELAY
+  check('엘리트 — 4라운드 뒤엔 무너진다', elite.resolveRound(HOLD, HOLD).some((s) => s.phase === 'collapse'), true)
+  check('PvP 전투는 지연 0', new CardBattle('warrior', 'warrior').state.collapseDelay, 0)
+  const eliteRun: RunState = { ...startRun('warrior'), special: { kind: 'spirit', monsterId: 'wolf', elite: true } }
+  check('엘리트 전투에 지연이 실린다', runFightProps(eliteRun).battleOpts.collapseDelay, ELITE_COLLAPSE_DELAY)
+  check('일반 매복은 지연 없음', runFightProps({ ...startRun('warrior'), special: { kind: 'ambush', monsterId: 'slime' } }).battleOpts.collapseDelay, 0)
+
+  // AI는 마지막 단계에도 안전지대로 피한다(위아래까지 본다).
+  const ai = battleWith({})
+  ai.state.round = late
+  ai.state.pos = [{ col: 0, row: 0 }, { col: 3, row: 0 }] // 몬스터가 안전지대 바로 위 무너진 칸
+  const plan = decideAI(ai.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.filter((c) => c.kind === 'move'))
+  check('AI는 안전지대로 피한다', plan[0]?.kind === 'move' && plan[0].dir?.includes('down'), true)
+}
+
+// --- 런 카드 직업 구분(2026-11-10 신고: "법사 카드를 전사도 쓴다") ------------------
+console.log('\n런 카드 — 자기 직업 것만 나온다')
+{
+  check('직업 표의 id가 전부 실제 런 카드', Object.keys(RUN_CARD_CLASS).filter((id) => !RUN_CARD_BY_ID[id]), [])
+  for (const me of ['warrior', 'archer', 'mage']) {
+    const r: RunState = startRun(me)
+    const seen = new Set<string>()
+    for (let i = 0; i < 400; i++) for (const id of cardRewardPool(r)) seen.add(id)
+    // 상점·고블린도 같은 풀을 쓴다 — 실제 진열로도 한 번 더 본다.
+    for (let i = 0; i < 200; i++) for (const it of rollGoblinShop(r, 'rich')) if (it.kind === 'card') seen.add(it.cardId)
+    const foreignRun = [...seen].filter((id) => RUN_CARD_CLASS[id] && RUN_CARD_CLASS[id] !== me)
+    const foreignClass = [...seen].filter((id) => ROSTER.some((c) => c.id !== me && c.cards.some((k) => k.id === id)))
+    check(`${me} — 다른 직업 런 카드가 안 나온다`, foreignRun, [])
+    check(`${me} — 다른 직업 카드가 안 나온다`, foreignClass, [])
+    check(`${me} — 자기 직업 런 카드는 나온다`, [...seen].some((id) => RUN_CARD_CLASS[id] === me), true)
   }
 }
 

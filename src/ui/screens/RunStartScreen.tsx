@@ -72,7 +72,6 @@ export function RunStartScreen({
   })
   // 시그니처 칸을 꾹 누르면 그 카드의 상세가 열린다.
   const zoom = useCardZoom(char.accent)
-  const hpTop = Math.max(...ROSTER.map((c) => startHp(c.id)))
   const sheet = sheetFor(char.id)
 
   // ---- 2단계: 난이도 -------------------------------------------------------
@@ -257,7 +256,8 @@ export function RunStartScreen({
           <div className="herocard__hp">
             <span>HP</span>
             <div className="bar">
-              <i style={{ width: `${(hp / hpTop) * 100}%` }} />
+              {/* 시작은 늘 만피다 — 직업끼리 견준 길이로 그리면 궁수·마법사가 다친 것처럼 보였다(2026-11-10). */}
+              <i style={{ width: '100%' }} />
             </div>
             <b>{hp}</b>
           </div>

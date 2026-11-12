@@ -69,8 +69,8 @@ export const RUN_CARDS: CardDef[] = [
     fx: 'rush', desc: '앞 2~3칸의 상대를 두 칸 끌어당긴다. 도망치는 원거리형을 사거리로 끌어온다.',
   }),
   atk({
-    id: 'r-tether', name: '혼백의 손아귀', range: barBoth(2), damage: 11, energyCost: 11, pull: 1, pointBlank: false,
-    fx: 'orb', desc: '앞 두 칸째 세 줄을 훑어 한 칸 끌어당긴다.',
+    id: 'r-tether', name: '혼백의 손아귀', range: [...barBoth(2), ...barBoth(3)], damage: 12, energyCost: 11, bind: 1, cooldown: 1, pointBlank: false,
+    fx: 'orb', accent: '#b98cff', desc: '앞뒤 2~3칸째 세 줄에서 망령의 손이 발목을 잡는다 — 이 라운드 속박. 붙은 상대는 못 잡는다. 쿨타임 1라운드.',
   }),
 
   // --- 기력 순환 — 누적 기력 트리거 유물과 맞물린다 --------------------------
@@ -309,21 +309,77 @@ export const RUN_CARDS: CardDef[] = [
     id: 'r-retreat', name: '급후퇴', kind: 'move', dir: 'left', steps: 2, cooldown: 0,
     desc: '왼쪽으로 두 칸. **쿨타임이 없다** — 붙는 족족 빠져나오는 궁수의 발.',
   },
+
+  // --- 마법사 전용 고화력(2026-11-10) ----------------------------------------
+  // 런 카드에 직업을 매기자(`RUN_CARD_CLASS`) 마법사가 26 → 9%로 무너졌다 — 전사풍 고화력 카드
+  // (광폭 난타 29 · 파멸의 일격 26 · 돌격창 23)로 골렘·가디언 같은 단단한 엘리트를 뚫어 왔는데
+  // 자기 풀엔 「소멸 포격」(33 · 기력 29) 하나뿐이었다. 마법사다운 모양(길고 넓게 · 관통 · 화상)으로
+  // 같은 구멍을 메운다. 값은 전사 카드보다 **기력이 비싸게** — 마법사는 기력이 넉넉한 직업이다.
+  atk({
+    id: 'r-arcanelance', name: '비전의 창', range: beamBoth(1, 3), damage: 22, energyCost: 16, pierce: true, cooldown: 1,
+    fx: 'orb', accent: '#8a7cff',
+    desc: '앞뒤 1~3칸을 꿰뚫는 마력의 창. 보호막과 바위를 무시한다 — 쿨타임 1라운드.',
+  }),
+  atk({
+    id: 'r-meteor', name: '운석 낙하', range: barBoth(2), damage: 28, energyCost: 20, burn: 1, cooldown: 2, pointBlank: false,
+    fx: 'flame', accent: '#ff7a3a',
+    desc: '앞뒤 2칸째 세로 세 줄에 운석을 떨어뜨린다. 맞으면 화상 1라운드. 붙은 상대는 못 맞힌다 — 쿨타임 2라운드.',
+  }),
+  atk({
+    id: 'r-icespike', name: '얼음 송곳', range: beamBoth(1, 2), damage: 16, energyCost: 9,
+    fx: 'orb', accent: '#7fd0ff',
+    desc: '앞뒤 1~2칸에 얼음 송곳을 꽂는다. 싸고 쿨타임이 없어 매 라운드 쓸 수 있다.',
+  }),
+  atk({
+    id: 'r-soulpyre', name: '혼불 흡수', range: CROSS, damage: 18, energyCost: 13, leech: 5, cooldown: 1,
+    fx: 'flame', accent: '#d45fae',
+    desc: '십자 네 칸을 혼불로 태우고, 피해를 주면 체력 5를 빨아온다 — 쿨타임 1라운드.',
+  }),
 ]
 
 /**
  * 이벤트에서만 얻는 카드 — 보상·상점 풀(`RUN_CARDS`)엔 없고, 해석(`RUN_CARD_BY_ID`)에만 있다.
  * 「세계수의 가호」: 세계수 이벤트에서 씨앗을 심으면 받을지 고른다(2026-11-09).
+ * **중립(직업 없음) · 전설**(2026-11-10 사용자 지정) — 어느 직업이든 이벤트로만 얻는다.
+ * ⚠ `RUN_CARD_CLASS`에 넣지 말 것(중립), `RUN_CARDS`로 옮기지 말 것(그러면 보상에 나온다).
  */
 export const WORLDTREE_CARD = 'ev-worldtree'
 export const EVENT_CARDS: CardDef[] = [
   {
     // 값: 보호막 30(≈ 편향 장막 28 → 기력 6) + 회복 10(≈ 수혈 13 → 기력 7) → 기력 13 · 쿨 2.
     id: WORLDTREE_CARD, name: '세계수의 가호', kind: 'guard', block: 30, healHp: 10, guardCost: 13, cooldown: 2, fx: 'shield',
-    accent: '#7fd66a',
+    legend: true, accent: '#7fd66a',
     desc: '기력 13 소모. 보호막 30을 두르고 체력 10을 회복한다. 쿨타임 2라운드.',
   },
 ]
+
+/**
+ * **런 카드의 직업**(2026-11-10 사용자 신고: "법사 카드를 전사도 쓸 수 있고 전사 카드를 궁수가 쓰고…").
+ * 50장이 직업 구분 없이 한 풀이라 지팡이·서리·화살·망치가 아무 직업에게나 나왔다. 여기 적힌 카드는
+ * **그 직업의 보상·상점·거래에만** 나오고, 안 적힌 카드(기력·회복·기본 수비·보조 이동)는 공용이다.
+ * 기준은 이름(무기·속성)과 직업 정체성 — 전사 = 근접·넉백·방벽·힘 / 궁수 = 중독·끌기·관통·기동 /
+ * 마법사 = 범위·화상·빙결·순간 이동·주문. ⚠ 직업 카드(`roster.ts`)는 원래부터 자기 직업에만 나온다.
+ */
+export const RUN_CARD_CLASS: Record<string, 'warrior' | 'archer' | 'mage'> = {
+  // 전사 13
+  'r-protocol': 'warrior', 'r-maul': 'warrior', 'r-collapse': 'warrior', 'r-frenzy': 'warrior',
+  'r-bastion': 'warrior', 'r-whet': 'warrior', 'r-bulwarkcry': 'warrior', 'r-lance': 'warrior',
+  'r-crescent': 'warrior', 'r-thunderclap': 'warrior', 'r-havoc': 'warrior', 'r-anchor': 'warrior',
+  'r-ironwall': 'warrior',
+  // 궁수 10
+  'r-hook': 'archer', 'r-railgun': 'archer', 'r-plaguebolt': 'archer', 'r-blightwave': 'archer',
+  'r-witherpulse': 'archer', 'r-scattershot': 'archer', 'r-gale': 'archer', 'r-vault': 'archer',
+  'r-retreat': 'archer', 'r-executioner': 'archer',
+  // 마법사 17(고화력 4장 2026-11-10 추가)
+  'r-stunrod': 'mage', 'r-tether': 'mage', 'r-overclock': 'mage', 'r-resonance': 'mage',
+  'r-rupture': 'mage', 'r-annihilate': 'mage', 'r-blink': 'mage', 'r-backblink': 'mage',
+  'r-freerein': 'mage', 'r-emberburst': 'mage', 'r-frostnova': 'mage', 'r-arcburn': 'mage',
+  'r-shockwave': 'mage',
+  'r-arcanelance': 'mage', 'r-meteor': 'mage', 'r-icespike': 'mage', 'r-soulpyre': 'mage',
+}
+/** 이 직업이 보상·상점·거래로 받을 수 있는 런 카드(공용 + 자기 직업). */
+export const runCardsFor = (charId: string): CardDef[] =>
+  RUN_CARDS.filter((c) => !RUN_CARD_CLASS[c.id] || RUN_CARD_CLASS[c.id] === charId)
 
 export const RUN_CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(
   [...RUN_CARDS, ...EVENT_CARDS].map((c) => [c.id, c]),

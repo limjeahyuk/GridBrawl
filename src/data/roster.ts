@@ -371,7 +371,7 @@ export const ROSTER: CharacterDef[] = [
     accent: '#c9a6ff',
     accent2: '#8d6fd0',
     description:
-      '금테 두른 푸른 챙모자를 눌러쓴 만가를 부르는 마녀. 푸른 보석 지팡이로 주문을 읊는다. 한 방은 가볍지만 판을 통째로 덮는 주문으로 도망칠 자리를 지운다. 태우고 얼려 놓은 뒤 천천히 조여드는 싸움을 한다.',
+      '금테 두른 푸른 챙모자를 눌러쓴 만가를 부르는 마녀. 가시덩굴로 발을 묶고 불로 태워 놓은 뒤, 멀리서 강한 주문을 꽂는다. 몸은 약해서 붙으면 진다 — 거리가 곧 목숨이다.',
     maxHp: 78,
     maxEnergy: 50,
     startEnergy: 30,
@@ -379,21 +379,21 @@ export const ROSTER: CharacterDef[] = [
     // 기본기 — 십자·X자·세로줄로 **제일 넓다**. 대신 한 대가 가볍고 기력이 비싸다
     // (매 라운드 기력 +12 패시브가 그 비용을 감당하는 자리다).
     basics: [
-      atk({ id: 'mag-ember', name: '불티', range: CROSS, damage: 6, energyCost: 6, fx: 'flame', desc: '상·하·좌·우 네 칸에 불티를 튀긴다. 줄이 어긋난 상대도 잡는다.' }),
-      atk({ id: 'mag-shard', name: '서리 조각', range: FORK, damage: 5, energyCost: 5, fx: 'orb', desc: '앞뒤 대각 네 칸에 서릿발을 세운다. 정면·바로 위아래는 사각.' }),
-      atk({ id: 'mag-touch', name: '망령의 손길', range: barBoth(1), damage: 5, energyCost: 7, fx: 'orb', desc: '앞뒤 세로 3줄 여섯 칸을 훑는 망령의 손. 기본기 중 가장 넓고 가장 비싸다.' }),
+      atk({ id: 'mag-ember', name: '불티', range: beamBoth(2, 3), damage: 8, energyCost: 6, pointBlank: false, fx: 'flame', desc: '앞뒤 2~3칸째에 불티를 날린다. 멀리서 쏘는 기본 주문 — 붙은 상대는 못 맞힌다.' }),
+      atk({ id: 'mag-shard', name: '가시덩굴', range: barBoth(2), damage: 4, energyCost: 7, bind: 1, cooldown: 1, pointBlank: false, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 2칸째 세로 3줄에 가시덩굴을 돋운다. 맞으면 이 라운드 동안 속박 — 이동 카드를 못 쓴다. 다가오는 발을 묶는 카드. 쿨타임 1라운드.' }),
+      atk({ id: 'mag-touch', name: '망령의 손길', range: barBoth(1), damage: 5, energyCost: 7, push: 1, fx: 'orb', desc: '앞뒤 세로 3줄을 훑어 붙은 상대를 한 칸 밀어낸다. 약하지만 거리를 되찾는 기본기 — 벽에 몰린 상대는 처박힌다.' }),
     ],
     cards: [
-      atk({ id: 'mag-spark', name: '혼불', range: CROSS, damage: 9, energyCost: 7, burn: 1, fx: 'flame', desc: '상·하·좌·우 네 칸에 도깨비불을 흩뿌린다. 피해를 입히면 화상 1라운드 — 화상 중에는 맞을 때마다 5씩 더 아프다.' }),
+      atk({ id: 'mag-spark', name: '혼불', range: beamBoth(2, 3), damage: 11, energyCost: 7, burn: 1, pointBlank: false, fx: 'flame', desc: '앞뒤 2~3칸째에 도깨비불을 날린다. 피해를 입히면 화상 1라운드 — 화상 중에는 맞을 때마다 5씩 더 아프다.' }),
       atk({ id: 'mag-frost', name: '서리 결계', range: barBoth(1), damage: 9, energyCost: 14, freeze: 1, selfShield: 5, fx: 'orb', desc: '앞뒤 한 칸의 세 줄을 얼린다. 피해를 입히면 이 라운드 동안 빙결 — 남은 카드를 못 낸다. 단, 때리면 깨진다(그 타격에 +5). 사용 시 보호막 +5.' }),
-      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...barBoth(1), ...both(2)], damage: 13, energyCost: 18, burn: 2, fx: 'flame', desc: '앞뒤 한 칸 × 세 줄 + 앞뒤 2칸째를 태우는 광역 화염. 피해를 입히면 화상 2라운드.' }),
-      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(1), ...barBoth(2)], damage: 22, energyCost: 25, burn: 3, freeze: 1, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 1~2칸의 세 줄을 통째로 덮는 만가 — 화상 3라운드 + 이 라운드 빙결.' }),
+      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...barBoth(2), ...both(3)], damage: 17, energyCost: 18, burn: 2, pointBlank: false, fx: 'flame', desc: '앞뒤 2칸째 세 줄 + 3칸째를 태우는 광역 화염. 피해를 입히면 화상 2라운드. 붙은 상대는 못 맞힌다.' }),
+      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(2), ...barBoth(3)], damage: 30, energyCost: 25, burn: 3, bind: 1, pointBlank: false, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 2~3칸째 세 줄을 통째로 덮는 만가 — 화상 3라운드 + 이 라운드 속박. 멀리 있을수록 무섭고, 붙은 상대는 못 맞힌다.' }),
       // 마법사의 제약은 기력이다. 무아지경이 그 제약을 2라운드간 통째로 없앤다 —
       // 선불이 비싸고 쿨이 길지만, 켜진 동안 종언의 만가를 계속 쏠 수 있다.
       buff({ id: 'mag-trance', name: '무아지경', buff: 'freeCast', buffRounds: 2, buffCost: 20, cooldown: 3, fx: 'flame', accent: '#d45fae', desc: '2라운드간 모든 카드의 기력 소모가 0이 된다. 켜진 동안 가장 비싼 주문을 매 턴 퍼부을 수 있다 — 쿨타임 3라운드.' }),
       buff({ id: 'mag-ward', name: '혼백의 장막', buff: 'defUp', buffPower: 5, buffRounds: 3, buffCost: 12, accent: '#6fc0b0', desc: '3라운드간 받는 공격 피해 -5. 큰 주문을 모으는 동안 몸을 지킨다.' }),
-      atk({ id: 'mag-blink', name: '그림자 도약', range: CROSS, damage: 10, energyCost: 11, burn: 1, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 상·하·좌·우를 태운다 — 화상 1라운드. 포위를 빠져나오는 카드.' }),
-      atk({ id: 'mag-hex', name: '속박의 저주', range: barBoth(1), damage: 11, energyCost: 14, bind: 1, pull: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 세로 3줄을 저주해 상대를 한 칸 끌어당기고 이 라운드 동안 속박한다. 잡아 온 자리에 묶어 두는 카드 — 쿨타임 2라운드.' }),
+      atk({ id: 'mag-blink', name: '그림자 도약', range: beamBoth(2, 3), damage: 10, energyCost: 11, burn: 1, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 앞뒤 2~3칸째를 태운다 — 화상 1라운드. 붙은 상대에게서 빠져나오며 쏘는 카드.' }),
+      atk({ id: 'mag-hex', name: '속박의 저주', range: [...barBoth(1), ...barBoth(2)], damage: 11, energyCost: 14, bind: 1, push: 1, cooldown: 2, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 1~2칸의 세 줄에 가시덩굴을 일으켜 상대를 한 칸 밀어내고 이 라운드 동안 속박한다. 떼어 놓고 묶어 두는 카드 — 쿨타임 2라운드.' }),
       // ---- 지형 카드(2026-08-07) ------------------------------------------------
       // 판의 모양을 **내가** 바꾸는 첫 플레이어 카드. 그전까지 바위는 무대가 주는
       // 것이라 플레이어에겐 순수한 방해물이었다.

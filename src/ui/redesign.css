@@ -88,7 +88,7 @@
 .scene--abyss .scene__tint { background: rgba(40, 10, 60, 0.5); }
 .scene--lava .scene__tint { background: rgba(120, 36, 8, 0.38); }
 
-/* ---- 타이틀 · 로그인 ------------------------------------------------------ */
+/* ---- 타이틀 ---------------------------------------------------------------- */
 .title__shade {
   position: absolute;
   left: 0;
@@ -191,105 +191,12 @@
 }
 .title__foot i { width: 4px; height: 4px; background: var(--text-dim); }
 .title__footko { font-family: var(--font-body); }
-.userchip {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px 4px 4px;
-  background: rgba(18, 15, 26, 0.9);
-  border: 2px solid var(--edge-hi);
-  border-radius: 0;
-}
-/* ---- 로그인(디자인 `Login`) -------------------------------------------------
-   타이틀과 달리 **가운데 한 줄**이다: 로고 → 문구 → 로그인 판. */
-.login__vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 50% 45%, rgba(18, 15, 26, 0.25) 0%, rgba(18, 15, 26, 0.7) 70%);
-}
-.login__party { position: absolute; inset: 0; pointer-events: none; }
-.login__hero { position: absolute; top: 450px; }
-.login__hero--left { left: 120px; }
-.login__hero--right { left: 900px; }
-.login__content {
-  position: absolute;
-  left: 50%;
-  top: 92px;
-  width: 440px;
-  margin-left: -220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 22px;
-  text-align: center;
-}
-.login__logo {
-  margin: 0;
-  font-family: var(--font-px);
-  font-weight: 700;
-  font-size: 84px;
-  line-height: 0.92;
-  color: var(--cream);
-  text-shadow: 0 6px 0 var(--gold-deep), 0 12px 0 var(--gold-edge);
-}
-.login__tag { margin: 0; font-family: var(--font-display); font-size: 24px; }
-.login__panel {
-  width: 100%;
-  padding: 22px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: rgba(18, 15, 26, 0.94);
-  border: 3px solid var(--edge-black);
-  box-shadow: inset 0 0 0 2px var(--neon-cyan), 0 10px 0 rgba(0, 0, 0, 0.35);
-}
-.login__actions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; max-width: none; margin: 0; }
-.login__guest-note { font-size: 13px; color: var(--text-dim); margin: 0; text-align: left; }
-/* 구글 버튼은 **흰 판**이다(공식 버튼 규격) — 금판으로 칠하면 브랜드 규칙에 어긋난다. */
-.login .login__google {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  height: 56px;
-  padding: 0 18px;
-  background: #fff;
-  color: #1f1f1f;
-  border: 3px solid var(--gold-edge);
-  box-shadow: 0 5px 0 var(--gold-deep);
-  font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 18px;
-}
-.login .login__google:hover { background: #f3f1ec; }
-.login .login__guest { height: 46px; padding: 0; font-size: 20px; }
-.login__notes {
-  margin: 6px 0 0;
-  padding-left: 18px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-dim);
-  text-align: left;
-}
-.login__ver {
-  position: absolute;
-  right: 20px;
-  bottom: 14px;
-  font-family: var(--font-px);
-  font-size: 11px;
-  color: var(--text-dim);
-}
-.login__setup { background: var(--bg-2); border: 2px solid var(--panel-edge); padding: 10px 12px; font-size: 13px; text-align: left; }
 
 /* ---- 영웅 선택 ------------------------------------------------------------
    디자인 `Select`(2026-11-09). 고른 영웅의 일러스트가 화면 배경이고, 오른쪽에 얼굴 탭 · 정보 패널.
    배경 그림은 1280×720이라 무대가 그보다 넓으면(최대 1600) 오른쪽이 비는데, 같은 그림을
    늘려 흐린 층(`.artbg--fill`)을 밑에 깔아 그 틈을 그림의 색으로 메운다. */
-.runstart { display: block; padding: 0; overflow: hidden; background: #0c0a12; }
+.runstart { display: block; padding: 0; background: #0c0a12; }
 .artbg { position: absolute; inset: 0; background-repeat: no-repeat; background-size: auto 100%; background-position: left top; }
 /* 무대가 1280보다 넓을 때 오른쪽 틈을 메우는 층 — 같은 그림을 늘려 흐린다. */
 .artbg--fill { inset: -20px; background-size: 100% 100%; filter: blur(18px) brightness(0.7); }
@@ -991,7 +898,7 @@
   text-shadow: none;
 }
 .bhud__place { font-size: 13px; color: var(--neon-green); text-align: center; line-height: 1.2; }
-.bhud__timer { font-family: var(--font-px); font-size: 13px; color: var(--cream); }
+
 .bhud__tools {
   position: absolute;
   left: 50%;
@@ -1401,6 +1308,29 @@
 .cards__row { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 8px; }
 .cards__hand { flex: 1; justify-content: flex-start; gap: 8px; padding: 12px 0 0; align-items: flex-end; }
 .handcard { width: 96px; height: 106px; }
+/* 손패 넘기기(⇅) — 손패 줄 맨 오른쪽. 공격 쪽 ↔ 이동·보조 쪽. */
+.cards__swap {
+  flex: none;
+  align-self: flex-end;
+  width: 52px;
+  height: 106px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  color: var(--cream);
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1;
+  background: var(--bg-1);
+  border: 3px solid var(--edge-black);
+  box-shadow: inset 0 0 0 2px var(--neon-cyan);
+}
+.cards__swap:hover { background: color-mix(in srgb, var(--neon-cyan) 18%, var(--bg-1)); }
+.cards__swap svg { width: 26px; height: 26px; fill: currentColor; }
+
 .handcard:hover { transform: translateY(-4px); }
 .handcard.is-dim { opacity: 0.55; }
 .handcard__cd {
@@ -1457,6 +1387,10 @@
   overflow: hidden;
 }
 .cardface--compact.cardface--sig { background: #1e2a46; border-color: #8fb6ff; }
+/* 전설 카드(이벤트 전용) — 금빛 테두리. 강화 테두리(금색)와 겹쳐도 빛으로 갈린다. */
+.cardface.cardface--legend { border-color: #ffd24a; box-shadow: inset 0 0 0 1px #ffd24a, 0 0 12px rgba(255, 210, 74, 0.5); }
+.cardface__legend { padding: 0 6px; font-family: var(--font-display); font-size: 12px; color: #1d1408; background: #ffd24a; }
+.cardzoom__kinds .is-legend { color: #1d1408; background: #ffd24a; }
 .cardface--compact.cardface--move { background: #14243a; border-color: #3a6aa8; }
 .cardface--compact.cardface--guard { background: #122a2a; border-color: #3c9c98; }
 .cardface--compact.cardface--energy { background: #2a2410; border-color: #a08a30; }
@@ -1795,14 +1729,10 @@
   box-shadow: inset 0 0 0 2px var(--panel-edge), 0 8px 0 rgba(0, 0, 0, 0.4);
   border-radius: 0;
 }
-.select__header,
-.deckmgr__bar,
-.deckbuild__bar {
+.select__header {
   padding: 22px 64px 12px;
 }
 .select__header h2,
-.deckmgr__bar h2,
-.deckbuild__bar h2,
 .neon-text {
   font-family: var(--font-display);
   font-size: 36px;
@@ -1924,8 +1854,7 @@
 /* 보상 · 상점 · 이벤트 공통 제목 */
 .reward__title,
 .shop__title,
-.event__title,
-.result__title {
+.event__title {
   font-family: var(--font-display);
   color: var(--cream);
   text-shadow: none;
@@ -2263,36 +2192,13 @@
 /* ---- 결과 · 런 종료(디자인 `Result`) ---------------------------------------
    전투 승리는 가운데 한 줄, 런 클리어·실패는 **왼쪽 도장 + 오른쪽 기록** 두 칸. */
 .screenveil--gray { background: rgba(12, 10, 18, 0.78); }
-.result--loss .scene,
+
 .runend--loss .scene { filter: grayscale(0.7); }
-.screen.result { display: block; padding: 0; }
-.result__content {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-.result__stamp {
-  font-family: var(--font-px);
-  font-weight: 700;
-  font-size: 86px;
-  color: var(--cream);
-  text-shadow: 0 6px 0 var(--gold-deep), 0 12px 0 var(--gold-edge);
-  animation: stamp-in 0.6s cubic-bezier(0.2, 1.6, 0.5, 1);
-}
-.result--loss .result__stamp { color: #ff8a8a; text-shadow: 0 6px 0 #6a1c28, 0 12px 0 #2a0a12; }
+
 @keyframes stamp-in {
   from { transform: scale(1.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-.result__sub { font-family: var(--font-display); font-size: 24px; color: var(--text); }
-.result__sprite { height: 192px; }
-.result__name { font-family: var(--font-px); font-size: 20px; color: var(--cream); }
-.result__buttons { display: flex; gap: 12px; margin-top: 8px; }
 
 .screen.runend { display: block; padding: 0; }
 .runend__left {
@@ -2373,17 +2279,12 @@
 .runend__none { font-style: normal; font-size: 13px; color: var(--text-faint); }
 .runend__buttons { margin-top: auto; display: flex; justify-content: flex-end; gap: 10px; }
 
-/* 모드 · 덱 화면 */
-.mode-card,
-.deckcard,
 .avatar-card {
   background: var(--bg-2);
   border: 3px solid var(--panel-edge);
   box-shadow: 0 6px 0 var(--edge-black);
 }
 .avatar-card.is-active { border-color: var(--neon-cyan); }
-.mode-card__title { font-family: var(--font-display); font-size: 26px; color: var(--cream); }
-.mode-card:hover { border-color: var(--neon-cyan); }
 
 /* ---- 도감(디자인 `Codex`) ---------------------------------------------------
    탭 셋: 영웅 · 몬스터 · 유물. 못 본 것은 검은 실루엣 + ???. */
@@ -2545,63 +2446,6 @@
 .relicdex__name { min-height: 30px; font-size: 12px; line-height: 1.25; text-align: center; }
 .relicdex__kind { padding: 1px 6px; font-size: 10px; background: #0f0c16; color: var(--text-dim); }
 
-/* ---- 덱 선택 · 덱 관리 · 덱 빌더 · 온라인 ------------------------------------ */
-.deckselect__body,
-.deckmgr__list { padding: 8px 64px 26px; }
-.deckselect__label { margin: 14px 0 10px; font-size: 22px; font-weight: 400; color: var(--cream); }
-.deckselect__row { gap: 16px; }
-.deckpick {
-  width: 210px;
-  padding: 0 0 12px;
-  gap: 6px;
-  background: var(--bg-2);
-  border: 3px solid var(--panel-edge);
-  box-shadow: 0 6px 0 var(--edge-black);
-  color: var(--text);
-  font-family: var(--font-body);
-}
-.deckpick:hover { border-color: var(--neon-cyan); }
-.deckpick__portrait {
-  width: 100%;
-  height: 140px;
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg-1));
-  border-bottom: 3px solid var(--edge-black);
-}
-.deckpick__name,
-.deckmgr__name { font-family: var(--font-display); font-weight: 400; font-size: 21px; color: var(--cream); }
-.deckpick__meta,
-.deckmgr__meta { font-size: 13px; color: var(--text-dim); }
-.deckmgr__card {
-  background: var(--bg-2);
-  border: 3px solid var(--panel-edge);
-  box-shadow: 0 6px 0 var(--edge-black);
-}
-.deckmgr__portrait { width: 96px; height: 80px; background: color-mix(in srgb, var(--accent) 14%, var(--bg-1)); }
-.deckbuild__name {
-  background: var(--bg-1);
-  border: 2px solid var(--edge-hi);
-  font-family: var(--font-display);
-  font-size: 19px;
-}
-.btn.deckbuild__save { padding: 8px 22px; font-size: 22px; box-shadow: 0 5px 0 var(--gold-deep); border-width: 3px; }
-.modeselect__deck,
-.mp__choose,
-.mp__flow,
-.mp__notice {
-  background: var(--bg-2);
-  border: 3px solid var(--edge-black);
-  box-shadow: inset 0 0 0 2px var(--panel-edge), 0 8px 0 rgba(0, 0, 0, 0.4);
-  padding: 18px 22px;
-}
-.mp__body,
-.modeselect__options { z-index: 1; }
-.mp__me { background: var(--hud); border: 2px solid var(--edge-hi); padding: 4px 10px 4px 4px; }
-.mp__me-art { width: 44px; height: 44px; }
-.mp__code,
-.mp__codeinput { font-family: var(--font-px); color: var(--neon-cyan); background: var(--bg-1); border: 2px solid var(--edge-hi); }
-.mp__rolebtn { font-size: 20px; }
-.mp__lead { color: var(--text); font-size: 16px; }
-
 /* ---- 카드 상세(디자인 `CardDetail`) ----------------------------------------
    두 칸: 왼쪽은 카드 자체(큰 이름 + 사거리), 오른쪽은 수치와 용어. */
 .cardzoom__sheet {
@@ -2733,22 +2577,9 @@
   border: 3px solid var(--edge-black);
   box-shadow: inset 0 0 0 2px var(--neon-cyan);
 }
-.modeselect__deck {
-  align-self: center;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 480px;
-  margin: 10px auto 0;
-  padding: 10px 16px;
-}
-.modeselect__portrait { width: 96px; height: 72px; flex: none; }
-.modeselect__deckname { font-size: 26px; }
-.mp__header h2 { color: var(--cream); }
-.mp__rolehint { color: var(--ink); opacity: 0.8; font-family: var(--font-body); font-size: 12px; }
 
 /* ---- 룰렛 카드 강화(디자인 `Upgrade`) ------------------------------------ */
-.screen.upg { display: block; padding: 0; position: relative; overflow: hidden; color: #efe9f5; }
+.screen.upg { display: block; padding: 0; color: #efe9f5; }
 .upg h1, .upg h2 { margin: 0; font-family: var(--font-display); font-weight: 400; color: #fff6dc; }
 .upg .panel { background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3a3150; box-sizing: border-box; }
 .upg .rise { animation: upg-rise .3s ease-out 1; }
@@ -2938,7 +2769,7 @@
 .event__resfoot span { flex: 1; font-size: 13px; color: #8a849a; }
 
 /* ---- 모닥불(디자인 `Rest`) · 보물 상자 ------------------------------------ */
-.screen.rest { display: block; padding: 0; position: relative; overflow: hidden; }
+.screen.rest { display: block; padding: 0; }
 .rest .scene { filter: brightness(0.38) saturate(0.65); }
 .rest__glow { position: absolute; left: 0; top: 180px; width: 720px; height: 432px; background: url('/redesign/ui/rest/campfire-glow.png') 0 0 / 720px 432px; image-rendering: pixelated; mix-blend-mode: screen; animation: rest-pulse 1.8s ease-in-out infinite; }
 @keyframes rest-pulse { 50% { opacity: .75; } }
@@ -2977,7 +2808,7 @@
 .fate__icon { width: 84px; height: 84px; background: center / 84px 84px no-repeat; image-rendering: pixelated; }
 
 /* ---- 고블린 장사꾼(디자인 `GoblinShop`) ---------------------------------- */
-.screen.gob { display: block; padding: 0; position: relative; overflow: hidden; color: #efe9f5; }
+.screen.gob { display: block; padding: 0; color: #efe9f5; }
 .gob .screenveil { background: rgba(10, 8, 16, 0.62); }
 .gob__where { color: #b6ea6a !important; }
 .gob__wealth { position: absolute; left: 40px; top: 92px; z-index: 1; width: 540px; padding: 10px 14px; box-sizing: border-box; background: rgba(18,15,26,0.9); border: 2px solid #0a0810; box-shadow: inset 0 0 0 2px #5a4a2a; display: flex; flex-direction: column; gap: 6px; }
@@ -3126,7 +2957,7 @@
 /* ---- 여관 · 대장간(디자인 `Inn` · `Blacksmith`, 2026-11-09 `INN_SMITH.md`) ------------
    여관 = 여관 그림 배경(마렌 왼쪽) + 오른쪽 대사창 · 선택지. 대장간 = 던전 벽 + 화덕 도트. */
 .screen.inn,
-.screen.smith { display: block; padding: 0; overflow: hidden; background: #1a100a; }
+.screen.smith { display: block; padding: 0; background: #1a100a; }
 .inn .shop__title,
 .smith .shop__title { margin: 0; font-size: 42px; text-shadow: 3px 3px 0 #0a0604; }
 .inn .shop__where span,

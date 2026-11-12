@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
 // 앱 아이콘 생성기 — **전사(hero-knight) 스프라이트**를 다크 판타지 배경에 얹어
-// 웹(PWA)·iOS·Android 아이콘을 한 번에 굽는다.
+// 웹(PWA) 아이콘을 굽는다. (iOS·Android 출력은 네이티브 앱과 함께 브랜치
+// `archive/native-app`으로 갔다 — 아래 적응형 두 겹(foreground/background)은 그때 다시 쓴다.)
 //
 //   npm run icon
 //
@@ -8,8 +9,6 @@
 // **아이콘과 게임 화면의 전사가 같은 그림**이다 — 아이콘용 그림을 따로 그려
 // 두면 캐릭터를 갈아 끼울 때 아이콘만 옛것으로 남는다(예전 SF 아이콘이 그랬다).
 //
-// ⚠ 굽고 나면 네이티브에 반영하려면 `npx cap sync`가 필요하다(웹 사본이
-//   `ios/App/App/public`·`android/.../assets/public`으로 복사된다).
 // ---------------------------------------------------------------------------
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -319,20 +318,5 @@ const emit = (rel, size, { src = master, from = MASTER, opaque = false, round = 
 emit('public/icon-512.png', 512)
 emit('public/icon-192.png', 192)
 emit('public/apple-touch-icon.png', 180)
-
-// iOS — 알파 채널이 있으면 App Store 업로드가 거부된다
-emit('ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png', 1024, { opaque: true })
-
-// Android — 밀도별 레거시 아이콘(API 25 이하) + 적응형 두 겹(API 26 이상)
-const DENSITY = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 }
-for (const [d, n] of Object.entries(DENSITY)) {
-  const res = `android/app/src/main/res/mipmap-${d}`
-  emit(`${res}/ic_launcher.png`, n)
-  emit(`${res}/ic_launcher_round.png`, n, { round: true })
-  // 적응형 두 겹은 레거시의 2.25배 규격이다(108dp 중 72dp가 안전 영역)
-  const adaptive = Math.round(n * 2.25)
-  emit(`${res}/ic_launcher_foreground.png`, adaptive, { src: foreground, from: FG })
-  emit(`${res}/ic_launcher_background.png`, adaptive, { src: background, from: FG })
-}
 
 console.log(`전사 아이콘 ${wrote.length}장:\n  ` + wrote.join('\n  '))

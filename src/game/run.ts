@@ -21,7 +21,7 @@ import {
 } from './relics'
 import { getMonster, monstersOfTier, type MonsterDef, type TerrainId } from './monsters'
 import { bossScene } from './bosses'
-import { RUN_CARDS, resolveRunCard } from './runcards'
+import { resolveRunCard, runCardsFor } from './runcards'
 import { addUpgrade, upgradeBlock, upgradedCard, type CardUpgrade } from './upgrades'
 import { GRID_COLS, GRID_ROWS, ROCK_HP, type CardDef, type Difficulty, type Hazard, type HazardKind, type Obstacle, type Offset } from '../battle/types'
 
@@ -194,7 +194,19 @@ export const LADDER_FLOORS = NODE_TEMPLATE.length
  *      대가를 치르고 **더 강한 것으로 바꾸는** 거래는 남아 있다(이벤트 카드→유물).
  *   ③ **이동 4방향은 잠긴다**(`LOCKED_CARD_IDS`). 아래 참고.
  */
-export const DECK_CAP = 20
+/**
+ * **덱 상한은 종류별이다**(2026-11-10 사용자 지정 — "공격 카드는 5장 정도면 충분 · 수비·힐·기력도
+ * 합쳐서 5장 · 화면에 스크롤이 없게"). 손패가 **공격 한 장 / 이동·보조 한 장** 두 쪽으로 넘겨 보는데,
+ * 한 쪽에 5장이 넘으면 화면에 안 들어간다. 이동은 묶음 한 장으로 접히므로 상한이 없다.
+ * ⚠ 옛 "덱 20장" 상한·덱 상한 유물(`deckCapBonus`)은 없앴다 — 쪽마다 들어갈 자리가 정해져 있다.
+ */
+export const ATTACK_CAP = 5
+export const SUPPORT_CAP = 5
+/** 카드가 덱의 어느 칸을 쓰는가 — 공격 / 보조(수비·회복·기력·강화) / 이동. */
+export type DeckSlot = 'attack' | 'support' | 'move'
+export const slotOfCard = (c: Pick<CardDef, 'kind'>): DeckSlot =>
+  c.kind === 'move' ? 'move' : c.kind === 'attack' ? 'attack' : 'support'
+export const DECK_SLOT_LABEL: Record<DeckSlot, string> = { attack: '공격', support: '보조', move: '이동' }
 /**
  * 어떤 경로로도 덱에서 뺄 수 없는 카드 — **직교 이동 4장**.
  *
@@ -679,6 +691,15 @@ export function chooseBranch(run: RunState, index: number): RunState {
   picked[run.floor - 1] = idxs[at]
   return { ...run, picked, status: statusForNode(node) }
 }
+/**
+ * 엘리트·보스의 붕괴 지연(라운드). 일반 전투는 6라운드부터 무너지고 엘리트·보스는 10라운드부터 —
+ * 체력이 많아 6라운드면 아직 판이 한창이라 "너무 빠르다"는 신고(2026-11-10).
+ */
+export const ELITE_COLLAPSE_DELAY = 4
+/** 이 전투가 엘리트·보스인가 — 지도 칸, 또는 이벤트가 연 엘리트 전투(초록 정령의 늑대). */
+export function isEliteFight(run: RunState): boolean {
+  return run.special ? !!run.special.elite : isEliteFloor(run)
+}
 export function isEliteFloor(run: RunState): boolean {
   const t = currentNode(run).type
   return t === 'elite' || t === 'boss'
@@ -745,9 +766,29 @@ export function startRun(charId: string, difficulty: RunDifficulty = DEFAULT_DIF
 export function runMods(run: RunState): RunMods {
   return mergeRunMods(run.relicIds)
 }
-/** 유물 보정이 들어간 덱 상한. */
-export function deckCap(run: RunState): number {
-  return DECK_CAP + (runMods(run).deckCapBonus ?? 0)
+/** 그 칸의 상한 — 이동은 묶음으로 접혀서 끝이 없다. */
+export function deckCap(slot: DeckSlot): number {
+  return slot === 'attack' ? ATTACK_CAP : slot === 'support' ? SUPPORT_CAP : Infinity
+}
+/** 카드 id → 덱 칸(모르는 id는 보조로 — 공격 칸을 잘못 막지 않게). */
+export function slotOfId(run: RunState, cardId: string): DeckSlot {
+  const c = resolveRunCard(run.charId, cardId)
+  return c ? slotOfCard(c) : 'support'
+}
+/** 덱에서 그 칸을 쓰는 카드 수. */
+export function slotCount(run: RunState, slot: DeckSlot): number {
+  return run.deck.filter((id) => slotOfId(run, id) === slot).length
+}
+/** 이 카드를 받으려면 한 장을 버려야 하는가(그 칸이 꽉 찼다). */
+export function needsReplaceFor(run: RunState, cardId: string): boolean {
+  if (run.deck.includes(cardId)) return false
+  const slot = slotOfId(run, cardId)
+  return slotCount(run, slot) >= deckCap(slot)
+}
+/** 이 카드와 바꿀 수 있는 덱 카드 — **같은 칸**에서만(공격을 받으려 수비를 버려 봐야 자리가 안 난다). */
+export function replaceCandidates(run: RunState, cardId: string): string[] {
+  const slot = slotOfId(run, cardId)
+  return run.deck.filter((id) => !isLockedCard(id) && slotOfId(run, id) === slot)
 }
 
 // --- 전투 결과 --------------------------------------------------------------
@@ -868,8 +909,11 @@ export function grantCard(
   removeId?: string,
 ): { run: RunState; needsReplace?: boolean } {
   if (run.deck.includes(cardId)) return { run }
-  if (removeId && isLockedCard(removeId)) removeId = undefined
-  if (run.deck.length >= deckCap(run) && !removeId) return { run, needsReplace: true }
+  // 버릴 카드는 **같은 칸**이어야 한다 — 다른 칸을 버려 봐야 이 칸에 자리가 안 난다(잠긴 카드도 같은 취급).
+  if (removeId && !replaceCandidates(run, cardId).includes(removeId)) removeId = undefined
+  if (needsReplaceFor(run, cardId) && !removeId) return { run, needsReplace: true }
+  // 자리가 있으면 버리지 않는다(교체 화면을 거치지 않은 호출이 실수로 카드를 날리지 않게).
+  if (!needsReplaceFor(run, cardId)) removeId = undefined
   let deck = run.deck
   if (removeId) {
     const i = deck.indexOf(removeId)
@@ -916,7 +960,8 @@ function missingClassCards(run: RunState): string[] {
 export function cardRewardPool(run: RunState): string[] {
   const commonPool = ['m-right2', 'm-left2', 'm-ur', 'm-ul', 'm-dr', 'm-dl', 'c-guard', 'c-repair']
   const classCards = getChar(run.charId).cards.map((c) => c.id)
-  const all = [...commonPool, ...classCards, ...RUN_CARDS.map((c) => c.id)]
+  // 런 카드는 공용 + 자기 직업 것만(2026-11-10 — 마법사 카드가 전사에게 나오던 문제).
+  const all = [...commonPool, ...classCards, ...runCardsFor(run.charId).map((c) => c.id)]
   return all.filter((id) => !run.deck.includes(id))
 }
 /**

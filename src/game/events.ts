@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 import { RELIC_BY_ID } from './relics'
 import {
-  GOBLIN_LOOT, cardRewardPool, deckCap, grantCard, grantGoblinItem, grantRelic, healHp, isLockedCard, loseHp, loseMaxHp, loseRelic,
+  GOBLIN_LOOT, cardRewardPool, grantCard, needsReplaceFor, slotOfId, grantGoblinItem, grantRelic, healHp, isLockedCard, loseHp, loseMaxHp, loseRelic,
   removeCard, rollRelicId, upgradableDeckCards, type RunState, type SpecialFight,
 } from './run'
 import { WORLDTREE_CARD } from './runcards'
@@ -259,7 +259,7 @@ export function eventChoices(run: RunState, st: EventState): EventChoice[] {
     case 'worldtree': {
       if (st.step === 1) {
         // 받을지 말지는 플레이어가 고른다. 덱이 꽉 찼으면 한 장과 바꾼다.
-        const full = run.deck.length >= deckCap(run)
+        const full = needsReplaceFor(run, WORLDTREE_CARD)
         return [
           { key: 'wt-take', label: '「세계수의 가호」를 받는다', cost: [], pick: full ? 'card' : undefined, sub: full ? '덱이 꽉 찼다 — 한 장과 바꾼다' : undefined },
           { key: 'leave', label: '두고 간다', cost: [], leave: true },
@@ -355,7 +355,10 @@ export function resolveEventChoice(
     // --- 거래 — 받을 것은 고르기 전엔 안 보인다
     case 'card-card': {
       const gone = removeCard(run, pickId!)
-      const id = pickOne(cardRewardPool(gone).filter((x) => x !== pickId), rng)
+      // 받는 카드는 **내준 카드와 같은 칸**(공격 / 보조 / 이동)에서 — 그래야 자리가 있다(덱 상한은 칸마다 5장).
+      const slot = slotOfId(run, pickId!)
+      const id = pickOne(cardRewardPool(gone).filter((x) => x !== pickId && slotOfId(run, x) === slot), rng)
+      if (!id) return { run: healHp(run, 20), st, title: '거래 무산', body: '마땅한 카드가 없다며 약을 건넸다.', big: 'HP +20', bigKind: 'gain', done: true }
       return { run: grantCard(gone, id).run, st, title: '거래 성사', body: '내 카드를 내주고 다른 카드를 받았다.', cardId: id, done: true }
     }
     case 'card-relic':

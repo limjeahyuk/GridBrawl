@@ -41,6 +41,7 @@ import {
   COLLAPSE_START_ROUND,
   LOW_HP_FRAC,
   collapseDamageAt,
+  collapseRound,
   collapseEscalatesNext,
   GRID_COLS,
   GRID_ROWS,
@@ -517,7 +518,6 @@ export function BattleScreen({
   place,
   foeInfo,
   getOpponentPlan,
-  turnSeconds,
   onSlotsChange,
   tips = true,
   onEnd,
@@ -552,9 +552,6 @@ export function BattleScreen({
   /** 상대 정보 — 등급 표기 · 처음엔 ?로 가려지는 능력들. */
   foeInfo?: { tag?: string; abilities: FoeAbility[] };
   getOpponentPlan: OpponentPlanner;
-  /** 턴 제한(초). 주면 카운트다운이 돌고 0에서 자동 제출한다 — 상대를 무한정
-   *  기다리지 않도록 온라인 대전에서만 사용(싱글·튜토리얼은 미지정). */
-  turnSeconds?: number;
   /** 순서 칸이 바뀔 때마다(튜토리얼이 "카드를 놓았다"를 알아채는 자리). */
   onSlotsChange?: (slots: (CardDef | null)[]) => void;
   /** 첫 만남 팁(꾹 누르기 · 기력 부족 · 바위 · 붕괴 · 보스 · 상태이상). 튜토리얼만 끈다. */
@@ -640,8 +637,6 @@ export function BattleScreen({
   const [phase, setPhase] = useState<"select" | "resolving" | "over">("select");
   const [waitingRemote, setWaitingRemote] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
-  /** 턴 제한 남은 초(온라인 전용, 미사용 시 null) */
-  const [remain, setRemain] = useState<number | null>(null);
   const submittingRef = useRef(false);
   const cancelled = useRef(false);
   // bump to re-read cooldowns after a turn resolves
@@ -1009,6 +1004,11 @@ export function BattleScreen({
   // --- 이동 묶음(디자인 `MoveBundle`) -------------------------------------
   const moveDeck = useMemo(() => hand.filter((c) => c.kind === "move"), [hand]);
   const [tray, setTray] = useState(false);
+  /**
+   * 손패 쪽 — 기본은 **공격**, ⇅로 **이동·보조**(이동 묶음 · 수비 · 회복 · 기력 · 강화)로 넘긴다
+   * (2026-11-10 사용자 지정). 가로 스크롤을 없애려고 나눴다 — 런은 쪽마다 5장 상한이라 늘 들어간다.
+   */
+  const [handPage, setHandPage] = useState<"attack" | "support">("attack");
   /**
    * 묶음 앞면 — 3×3 나침반과 준비·쿨 개수. 색의 뜻은 디자인 그대로다:
    * 파랑 = 그 방향 준비 · 주황 테 = 대시도 준비 · 어두움+숫자 = 쿨 · 금 = 순서 칸에
@@ -1423,48 +1423,6 @@ export function BattleScreen({
     void submitPlan(slots as CardDef[]);
   };
 
-  // 시간 초과 자동 제출 — 항상 유효한 플랜을 만들어 낸다.
-  // ① 지금 플랜이 완성·지불 가능하면 그대로 ② 아니면 빈 슬롯을 원기 회복으로
-  // 메우고 ③ 그래도 기력이 모자라면 원기 회복 3장(언제나 유효).
-  const autoSubmitRef = useRef<() => void>(() => {});
-  autoSubmitRef.current = () => {
-    if (phase !== "select" || submittingRef.current) return;
-    if (filled && affordable) {
-      void submitPlan(slots as CardDef[]);
-      return;
-    }
-    const energyCard = hand.find((c) => c.kind === "energy");
-    if (!energyCard) return;
-    const padded = slots.map((s) => s ?? energyCard) as CardDef[];
-    const ok = planAffordable(
-      padded,
-      battle.state.energy[localSide],
-      local.maxEnergy,
-      passiveEnergy,
-      freeCastOn,
-    );
-    void submitPlan(ok ? padded : [energyCard, energyCard, energyCard]);
-  };
-
-  // 턴 카운트다운(온라인 전용). 0이 되면 자동 제출해 상대 대기가 끝난다.
-  useEffect(() => {
-    if (!turnSeconds || phase !== "select") {
-      setRemain(null);
-      return;
-    }
-    const end = Date.now() + turnSeconds * 1000;
-    setRemain(turnSeconds);
-    const id = setInterval(() => {
-      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-      setRemain(left);
-      if (left <= 0) {
-        clearInterval(id);
-        autoSubmitRef.current();
-      }
-    }, 200);
-    return () => clearInterval(id);
-  }, [phase, turnSeconds]);
-
   useEffect(() => {
     cancelled.current = false;
     return () => {
@@ -1508,7 +1466,7 @@ export function BattleScreen({
           view.status[localSide].some((e) => e.kind === "poison" || e.kind === "burn" || e.kind === "frozen") && "status",
           !!boss && "boss",
           battle.state.obstacles.length > 0 && "elite",
-          battle.state.round >= COLLAPSE_START_ROUND && "collapse",
+          collapseRound(battle.state) >= COLLAPSE_START_ROUND && "collapse",
           hand.some((c) => c.kind !== "move" && selectable(c) && !canAfford(c)) && "energy",
           "longpress",
         ]
@@ -1531,7 +1489,7 @@ export function BattleScreen({
         localSide={localSide}
         view={view}
         turn={battle.state.round}
-        remain={remain}
+        collapseTurn={collapseRound(battle.state)}
         boss={boss}
         place={place}
         phase={phase === "select" ? "카드 선택" : "실행 중"}
@@ -1581,7 +1539,8 @@ export function BattleScreen({
             //   예전엔 이동 강조가 붕괴 표시를 통째로 덮어써서, 갈 수 있는 칸은 전부
             //   멀쩡해 보였고 "이동하면 안개에 안 들어간다"로 읽혔다.
             const cell = { col: ccol, row };
-            const turn = battle.state.round;
+            // 붕괴 시계 — 엘리트·보스는 늦게 시작한다(`collapseRound`).
+            const turn = collapseRound(battle.state);
             const hazard = isCollapsedCell(cell, turn)
               ? " cell--fog"
               : isCollapsedCell(cell, turn + 1)
@@ -1605,7 +1564,6 @@ export function BattleScreen({
               // 같은 색이면 "왜 여기까지 가지"가 된다.
               const face = faceCard(mv);
               const dash = (mv.steps ?? 1) > 1 || (mv.cooldown ?? 0) > 0;
-              const cd = (mv.cooldown ?? 0) > 0 ? ` · CD${mv.cooldown}` : "";
               return (
                 <button
                   key={i}
@@ -1619,10 +1577,9 @@ export function BattleScreen({
                       붕괴 → {collapseDamageAt(turn + 1)} 피해
                     </span>
                   )}
-                  <span className="cell__movelab">
-                    {moveIcon(face.dir, face.steps ?? 1)} {face.name}
-                    {cd}
-                  </span>
+                  {/* 화살표만 — 카드 이름("오른쪽" · "아래")은 칸 위에서 군더더기였다(2026-11-10 사용자 지정).
+                      이름은 title·aria-label에 남는다. 대시는 칸 색(주황)으로 가른다. */}
+                  <span className="cell__movelab">{moveIcon(face.dir, face.steps ?? 1)}</span>
                 </button>
               );
             }
@@ -1923,7 +1880,7 @@ export function BattleScreen({
               (2026-08-05), 숨기기만 하면 ① 보상·상점에서 산 이동 카드가 전투에서
               안 보이고 ② 칸이 안 밝혀질 때 쿨·막힘·속박이 구분되지 않고 ③ 꾹 눌러
               읽을 곳이 없다. 묶음이 그 셋을 받는다. */}
-          {moveDeck.length > 0 && (
+          {handPage === "support" && moveDeck.length > 0 && (
             <div className="bundlewrap">
               {tray && (
                 <section className="tray" aria-label="이동 카드 목록">
@@ -2045,7 +2002,7 @@ export function BattleScreen({
             )}
             <div className="cards__hand">
               {hand
-                .filter((c) => c.kind !== "move")
+                .filter((c) => c.kind !== "move" && (handPage === "attack") === (c.kind === "attack"))
                 .map((c) => {
                   const onCd = cdLeft(c.id) > 0;
                   const locked = onCd || placedNoRepeat(c);
@@ -2118,6 +2075,20 @@ export function BattleScreen({
                 })}
             </div>
           </div>
+          <button
+            className="cards__swap"
+            onClick={() => {
+              setHandPage((p) => (p === "attack" ? "support" : "attack"));
+              setTray(false);
+            }}
+            aria-label={handPage === "attack" ? "이동·보조 카드로 넘기기" : "공격 카드로 넘기기"}
+            title={handPage === "attack" ? "이동·보조 카드 보기" : "공격 카드 보기"}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M8,13V5.82L5.43,8.4L4,7L9,2l5,5L12.58,8.4L10,5.82V13H8Zm7,9l-5-5l1.43-1.4L14,18.18V11h2v7.18l2.57-2.58L20,17l-5,5Z" />
+            </svg>
+            <span>{handPage === "attack" ? "공격" : "보조"}</span>
+          </button>
           <div className="cards__actions">
             <button
               className="btn btn--ghost cards__reset"
@@ -2449,7 +2420,7 @@ function BattleHud({
   localSide,
   view,
   turn,
-  remain,
+  collapseTurn,
   boss,
   place,
   phase,
@@ -2464,7 +2435,8 @@ function BattleHud({
   localSide: 0 | 1;
   view: View;
   turn: number;
-  remain: number | null;
+  /** 붕괴 시계 라운드(엘리트·보스는 `turn`보다 늦다). */
+  collapseTurn: number;
   /** 상대가 스크립트 보스면 그 연출 데이터 — 칭호와 페이즈 문턱 눈금을 붙인다. */
   boss?: BossCinematic;
   place?: string;
@@ -2493,13 +2465,6 @@ function BattleHud({
         <div className="bhud__place">
           {[place, boss ? boss.title : phase].filter(Boolean).join(" · ")}
         </div>
-        {remain !== null && (
-          <div
-            className={`bhud__timer ${remain <= 5 ? "bhud__timer--urgent" : ""}`}
-          >
-            ⏱ {remain}s
-          </div>
-        )}
       </div>
       <BhudSide
         char={chars[oi]}
@@ -2514,16 +2479,16 @@ function BattleHud({
       />
       {/* 라운드 판 아래 보조 줄 — 붕괴 경고와 소리·종료 버튼. */}
       <div className="bhud__tools">
-        {collapseEscalatesNext(turn) && (
+        {collapseEscalatesNext(collapseTurn) && (
           <div className="bhud__fog bhud__fog--warn">
-            {turn < COLLAPSE_START_ROUND
+            {collapseTurn < COLLAPSE_START_ROUND
               ? "⚠ 다음 라운드부터 전장이 무너진다!"
               : "⚠ 다음 라운드 붕괴 확대!"}
           </div>
         )}
-        {turn >= COLLAPSE_START_ROUND && (
+        {collapseTurn >= COLLAPSE_START_ROUND && (
           <div className="bhud__fog">
-            무너진 칸 라운드당 -{collapseDamageAt(turn)}
+            무너진 칸 라운드당 -{collapseDamageAt(collapseTurn)}
           </div>
         )}
         <SfxToggle />

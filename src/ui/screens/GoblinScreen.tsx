@@ -7,7 +7,7 @@ import { getChar } from '../../data/roster'
 import { getRelic, type Rarity } from '../../game/relics'
 import {
   GOBLIN_LOOT, GOBLIN_TIER_AT, advanceFloor, currentEnemy, buyGoblinItem, goblinMonsterId, goblinTier, regionOf, rollGoblinShop,
-  runCard, type GoblinItem, type GoblinTier, type RunState,
+  replaceCandidates, runCard, type GoblinItem, type GoblinTier, type RunState,
 } from '../../game/run'
 import { CardFace, cardAccent } from '../CardFace'
 import { useCardZoom } from '../CardDetail'
@@ -91,8 +91,8 @@ export function GoblinScreen({
     return (
       <div className="screen shop shop--pick">
         <div className="grid-bg" />
-        <h2 className="shop__title">덱이 가득 찼습니다 — 버릴 카드를 고르세요</h2>
-        <DeckPicker charId={cur.charId} deck={cur.deck} zoom={zoom} onPick={(id) => buy(pending, id)} cardOf={(id) => runCard(cur, id)} />
+        <h2 className="shop__title">덱의 그 칸이 가득 찼습니다 — 바꿀 카드를 고르세요</h2>
+        <DeckPicker charId={cur.charId} deck={pending.kind === 'card' ? replaceCandidates(cur, pending.cardId) : cur.deck} zoom={zoom} onPick={(id) => buy(pending, id)} cardOf={(id) => runCard(cur, id)} />
         <button className="btn btn--ghost" onClick={() => setPending(null)}>
           취소
         </button>

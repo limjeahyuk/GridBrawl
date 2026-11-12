@@ -156,7 +156,7 @@ export function CardFace({
       <div
         className={`cardface cardface--compact cardface--${card.kind} ${
           card.signature ? 'cardface--sig' : ''
-        } ${card.upgraded ? 'cardface--upgraded' : ''}`}
+        } ${card.legend ? 'cardface--legend' : ''} ${card.upgraded ? 'cardface--upgraded' : ''}`}
         style={{ ['--accent' as string]: accent }}
       >
         <div className="cf__top">
@@ -185,12 +185,13 @@ export function CardFace({
     <div
       className={`cardface cardface--${card.kind} ${tags.length > 0 ? 'cardface--tagged' : ''} ${
         card.upgraded ? 'cardface--upgraded' : ''
-      }`}
+      } ${card.legend ? 'cardface--legend' : ''}`}
       style={{ ['--accent' as string]: accent }}
     >
       <div className="cardface__top">
         <span className="cardface__icon">{kindIcon(card)}</span>
         {card.signature && <span className="cardface__sig">SP</span>}
+        {card.legend && <span className="cardface__legend">전설</span>}
         {(card.cooldown ?? 0) > 0 && <span className="cardface__cd">CD{card.cooldown}</span>}
       </div>
       <div className="cardface__name">{card.name}</div>

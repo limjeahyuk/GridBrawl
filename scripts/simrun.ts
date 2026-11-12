@@ -1,6 +1,5 @@
 // ---------------------------------------------------------------------------
-// 로그라이크 **런** 밸런스 시뮬레이터. simulate.ts가 단판(1:1) 수치를 재는 도구라면
-// 이쪽은 런 전체(사다리 12층 + 보상·이벤트·상점 + HP 이월)를 끝까지 돌려
+// 로그라이크 **런** 밸런스 시뮬레이터. 런 전체(사다리 12층 + 보상·이벤트·상점 + HP 이월)를 끝까지 돌려
 // **난이도 곡선**을 잰다. 봇이 플레이어를 대신해 카드를 내고 보상을 고른다.
 //
 // 실행:
@@ -21,7 +20,7 @@ import type { CardDef, Difficulty } from '../src/battle/types'
 import { ROSTER, getChar } from '../src/data/roster'
 import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
-import { RUN_CARDS } from '../src/game/runcards'
+import { EVENT_CARDS, RUN_CARDS } from '../src/game/runcards'
 import { ROULETTE_VALUE, spinRoulette } from '../src/game/upgrades'
 import { applySpecialWin, eventChoices, resolveEventChoice, startEvent, tradeList, type EventOutcome } from '../src/game/events'
 import {
@@ -34,6 +33,7 @@ import {
   currentNode,
   currentOptions,
   grantCard,
+  replaceCandidates,
   grantRelic,
   isLockedCard,
   upgradableDeckCards,
@@ -125,6 +125,7 @@ const ALL_CARDS: CardDef[] = [
   ...ROSTER.flatMap((c) => c.basics),
   ...ROSTER.flatMap((c) => c.cards),
   ...RUN_CARDS,
+  ...EVENT_CARDS, // 세계수의 가호 — 이게 없으면 강화 정책이 undefined를 집고 시뮬이 죽는다
 ]
 const cardById = (id: string): CardDef | undefined => ALL_CARDS.find((c) => c.id === id)
 
@@ -151,6 +152,7 @@ function cardScore(id: string, deck: string[], _run?: RunState): number {
 function worstCard(deck: string[]): string {
   const pool = deck.filter((id) => !isLockedCard(id))
   const target = pool.length ? pool : deck
+  if (!target.length) return ''
   return target.reduce((lo, id) => (cardScore(id, []) < cardScore(lo, []) ? id : lo), target[0])
 }
 
@@ -187,7 +189,8 @@ async function playFight(run: RunState): Promise<FightResult> {
   const battle = new CardBattle(fp.p0CharId, fp.p1CharId, fp.battleOpts)
   const pChar = fp.battleOpts.chars![0]
   while (!battle.state.over && battle.state.round <= MAX_TURNS) {
-    const p0 = decideAI(battle.state, 0, pChar, SKILL, fp.deck)
+    // 마법사는 **거리를 두고** 싸운다(2026-11-10 — 원거리 직업, 붙으면 진다). 봇도 그렇게 굴린다.
+    const p0 = decideAI(battle.state, 0, pChar, SKILL, fp.deck, pChar.id === 'mage' ? { archetype: 'kiter', moodAgg: 0 } : undefined)
     const p1 = (await fp.getOpponentPlan(p0, battle)) ?? []
     battle.resolveRound(p0, p1)
   }
@@ -221,7 +224,10 @@ function applyReward(run: RunState, r: Reward): RunState {
   }
   const res = grantCard(run, r.cardId)
   if (!res.needsReplace) return res.run
-  return grantCard(run, r.cardId, worstCard(run.deck)).run // 덱 상한 → 최약 카드와 교체
+  // 칸(공격 5 · 보조 5)이 꽉 찼다 → 같은 칸의 최약 카드보다 나을 때만 바꾼다(2026-11-10 칸별 상한).
+  const worst = worstCard(replaceCandidates(run, r.cardId))
+  if (!worst || rawScore(cardById(worst)!) >= rawScore(cardById(r.cardId)!)) return run
+  return grantCard(run, r.cardId, worst).run
 }
 
 // --- 룰렛 강화 정책 --------------------------------------------------------
@@ -324,7 +330,11 @@ function doInn(run: RunState): RunState {
   const wantRest = () => POLICY === 'random' ? Math.random() < 0.5 : cur.hp / cur.maxHp < 0.8
   const buy = (item: ShopItem) => {
     let res = buyShopItem(cur, item)
-    if (res.needsCardPick) res = buyShopItem(cur, item, worstCard(cur.deck))
+    if (res.needsCardPick && item.kind === 'card') {
+      const worst = worstCard(replaceCandidates(cur, item.cardId))
+      if (!worst || rawScore(cardById(worst)!) >= rawScore(cardById(item.cardId)!)) return
+      res = buyShopItem(cur, item, worst)
+    }
     if (res.ok) {
       cur = res.run
       if (item.kind === 'relic') relicPick[item.relicId] = (relicPick[item.relicId] ?? 0) + 1

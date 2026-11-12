@@ -2,7 +2,7 @@
 // 두 판: 왼쪽에 도장 글씨와 영웅, 오른쪽에 이번 런의 기록이 선다.
 import { sheetFor } from '../../art/sprites'
 import { getChar } from '../../data/roster'
-import { deckCap, difficultyDef, regionOf, type RunDifficulty, type RunState } from '../../game/run'
+import { slotCount, difficultyDef, regionOf, type RunDifficulty, type RunState } from '../../game/run'
 import { RelicIcon } from '../RelicIcon'
 import { SceneLayers } from '../SceneLayers'
 import { SpriteClip } from '../SpriteClip'
@@ -74,7 +74,7 @@ export function RunEndScreen({
           <Stat label={won ? '정복' : '도달'} value={`${run.floor}F`} />
           <Stat label="유물" value={String(run.relicIds.length)} tone="#ffd86a" />
           <Stat label="골드" value={String(run.gold)} tone="#ffd86a" />
-          <Stat label="덱" value={`${run.deck.length}/${deckCap(run)}장`} />
+          <Stat label="덱" value={`공격 ${slotCount(run, 'attack')} · 보조 ${slotCount(run, 'support')}`} />
         </div>
         <span className="runend__label">함께한 유물</span>
         <div className="runend__relics">
