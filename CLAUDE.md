@@ -9,6 +9,7 @@
 | --- | --- | --- |
 | 화면 · 그림 · 리디자인 룰(여관·대장간·이벤트·고블린·강화·함정) | **`docs/redesign/*`** — 진행표 [PROGRESS.md](docs/redesign/PROGRESS.md), 시안 `screens/*.dc.html` | **가장 최신.** 다른 문서와 다르면 이쪽이 이긴다 |
 | 전투 규칙 상세 · 근거 | [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) ④ | 날짜 붙은 절은 그때의 기록. 숫자는 코드가 진실 |
+| 상태이상 개편(기획 · **미구현**) | [docs/redesign/STATUS.md](docs/redesign/STATUS.md) | 중독 확정(11-12) · 나머지 설명 대기. 구현 전까지 §4가 지금 규칙 |
 | 로그라이크 설계 · 밸런스 방법론 | [docs/ROGUELIKE.md](docs/ROGUELIKE.md) | 〃 |
 | 작업 경위 | [docs/HISTORY.md](docs/HISTORY.md) | 사실 아님 — "왜 이렇게 됐나"용 |
 
@@ -136,6 +137,8 @@
 - 기력: 라운드마다 +10(`cards.ts`의 `ENERGY_REGEN`). 버프 카드(`atkUp`·`defUp`·`freeCast`) · 이동공격(`dashForward`, facing 기준). ⚠ `freeCast`는 엔진 `costOf`·UI `planAffordable`·AI 예산 세 곳이 같아야 한다(`baseCostOf`).
 
 ### 상태이상 (2026-08-07 재정의 — 각각 다른 자리를 때린다)
+> ⚠ **개편 기획 중**(2026-11-12) — 중독은 "겹 수 = 남은 라운드, 행동 한 번에 겹 × 1, 상한 없음"으로 바뀐다(`docs/redesign/STATUS.md`, 아직 코드에 없음). 아래 표는 **지금 코드** 규칙이다.
+
 | 상태이상 | 언제 아픈가 | 수치 | 지속 |
 | --- | --- | --- | --- |
 | 중독 | 이동 1칸 / 공격 1장 / 넉백 1칸마다 | 겹당 3 · 보호막 관통 | N라운드 · 겹마다 따로 |
