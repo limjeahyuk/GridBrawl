@@ -47,7 +47,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .spinning .b1,.spinning .b2{animation-duration:.18s}
 .spinning .b2{animation-delay:.09s}
 .wheel{position:absolute;left:30px;top:30px;width:380px;height:380px;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 0 3px #0a0810}
-.lab{position:absolute;left:50%;top:50%;width:22px;height:14px;margin:-7px 0 0 -11px;text-align:center;font-family:'Silkscreen',monospace;font-size:11px;line-height:14px}
+.lab{position:absolute;left:50%;top:50%;width:48px;height:20px;margin:-10px 0 0 -24px;text-align:center;font-family:'Silkscreen',monospace;font-size:17px;line-height:20px;text-shadow:0 2px 0 rgba(0,0,0,0.45)}
 .hub{position:absolute;left:175px;top:175px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff1b8,#c9952f 55%,#7a5418);border:4px solid #2a1c10;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'Silkscreen',monospace;font-size:38px;color:#1d1408;box-shadow:0 4px 0 rgba(0,0,0,0.4)}
 .ptr{position:absolute;left:204px;top:-6px;width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:44px solid #e0485a;filter:drop-shadow(0 3px 0 #2a1c10);transform-origin:50% 0}
 .spinning .ptr{animation:flap .09s ease-in-out infinite alternate}
@@ -76,6 +76,8 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       <span class="anvil" aria-hidden="true"></span>
       <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">카드 강화</h1>
       <span style="padding: 3px 10px; font-size: 13px; background: {{srcBg}}; color: {{srcFg}}; border: 2px solid {{srcEdge}}">{{srcLabel}}</span>
+      <span style="font-size: 11px; color: #b9b1c9; margin-left: 6px">시안용 판</span>
+      <sc-for list="{{tiers}}" as="t" hint-placeholder-count="2"><button type="button" class="fbtn {{t.cls}}" onClick="{{t.onTap}}">{{t.t}}</button></sc-for>
     </div>
     <div style="display: flex; gap: 4px">
       <sc-for list="{{crumbs}}" as="c" hint-placeholder-count="5"><span style="padding: 5px 11px; font-size: 13px; background: {{c.bg}}; color: {{c.fg}}; border: 2px solid {{c.edge}}">{{c.label}}</span></sc-for>
@@ -92,7 +94,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
         <span style="font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 3px; color: #b9b1c9">SELECTED</span>
         <span style="font-size: 12px; padding: 2px 8px; background: #120f1a; border: 1px solid #4a4058; color: {{cur.lvlFg}}">{{cur.lvlTxt}}</span>
       </div>
-      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">{{cur.name}}</h2>
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">{{cur.name}} <span style="color: #ffd86a; font-size: 24px">{{cur.stars}}</span></h2>
       <div style="display: flex; gap: 8px">
         <span style="font-family: 'Silkscreen', monospace; font-size: 18px; padding: 3px 10px; background: #3a1016; color: #ff9a9a; border: 2px solid #e0485a">{{cur.dmTxt}}</span>
         <span style="font-family: 'Silkscreen', monospace; font-size: 18px; padding: 3px 10px; background: #10203a; color: #8ad0ff; border: 2px solid #4a9aff">EN {{cur.en}}</span>
@@ -105,7 +107,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       <div style="margin-top: auto; padding: 10px 12px; background: #120f1a; border: 2px solid #2a2438; font-size: 13px; line-height: 1.6; color: #c9c2d6">{{srcNote}}</div>
     </section>
     <section class="rise" style="position: absolute; left: 450px; top: 96px; right: 40px; display: flex; flex-direction: column; gap: 14px">
-      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">어떤 카드를 강화할까? <span style="font-family: 'Noto Sans KR', sans-serif; font-size: 14px; color: #b9b1c9">덱 9장 · 이동 카드 빼고 전부 · 카드당 최대 2번 (꽝은 안 셈)</span></h2>
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">어떤 카드를 강화할까? <span style="font-family: 'Noto Sans KR', sans-serif; font-size: 14px; color: #b9b1c9">덱 9장 · 이동 카드 빼고 전부 · 카드당 최대 3번(★) · 0 · 마이너스도 한 번으로 센다</span></h2>
       <div style="display: grid; grid-template-columns: repeat(4, 180px); gap: 14px">
         <sc-for list="{{deck}}" as="k" hint-placeholder-count="9">
           <button type="button" class="dk {{k.on}}" onClick="{{k.onTap}}" style="border-color: {{k.edge}}; background: {{k.bg}}; opacity: {{k.op}}">
@@ -144,16 +146,16 @@ a{color:#f4d470}a:hover{color:#fff1b8}
           <div style="display: flex; align-items: center; gap: 14px; margin-top: 14px">
             <span style="font-family: 'Silkscreen', monospace; font-size: 40px; color: {{stat.col}}">{{cur.dm}}</span>
             <span style="font-family: 'Silkscreen', monospace; font-size: 26px; color: #6a6478">→</span>
-            <span style="font-family: 'Silkscreen', monospace; font-size: 40px; color: #ffd86a">{{cur.dm}}+?</span>
+            <span style="font-family: 'Silkscreen', monospace; font-size: 40px; color: #ffd86a">{{cur.dm}}{{plusQ}}</span>
           </div>
-          <div style="display: flex; gap: 4px; margin-top: 8px"><sc-for list="{{chips}}" as="c" hint-placeholder-count="6"><span style="width: 34px; height: 26px; display: flex; align-items: center; justify-content: center; font-family: 'Silkscreen', monospace; font-size: 12px; background: {{c.bg}}; color: {{c.fg}}">+{{c.v}}</span></sc-for></div>
-          <span style="margin-top: auto; font-size: 14px; line-height: 1.6; color: #e4def0; text-align: center">룰렛에 걸린 숫자만큼 {{stat.word}}{{stat.josa}} 오른다.<br>바로 적용 — 고를 것 없음.</span>
+          <div style="display: flex; gap: 4px; margin-top: 8px"><sc-for list="{{chips}}" as="c" hint-placeholder-count="6"><span style="width: 40px; height: 26px; display: flex; align-items: center; justify-content: center; font-family: 'Silkscreen', monospace; font-size: 12px; background: {{c.bg}}; color: {{c.fg}}">{{c.v}}</span></sc-for></div>
+          <span style="margin-top: auto; font-size: 14px; line-height: 1.6; color: #e4def0; text-align: center">룰렛에 걸린 숫자만큼 {{stat.word}}{{stat.josa}} {{dmgVerb}}.<br>바로 적용 — 고를 것 없음.</span>
         </button>
         <button type="button" class="tile" onClick="{{pickRange}}" disabled="{{noRange}}">
           <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #ff9a3a">RANGE</span>
           <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 38px">범위</b>
           <span class="rg" style="grid-template-columns: repeat(9, 22px); margin-top: 6px"><sc-for list="{{cur.hint}}" as="g" hint-placeholder-count="45"><span style="width: 22px; height: 22px; box-sizing: border-box; background: {{g.bg}}; box-shadow: {{g.sh}}"></span></sc-for></span>
-          <span style="margin-top: auto; font-size: 14px; line-height: 1.6; color: #e4def0; text-align: center">걸린 숫자만큼 <b style="color: #ff9a3a">지금 범위에 붙은 칸</b>을<br>직접 골라 넓힌다(주황 점선 = 고를 수 있는 칸).</span>
+          <span style="margin-top: auto; font-size: 14px; line-height: 1.6; color: #e4def0; text-align: center">걸린 숫자만큼 <b style="color: #ff9a3a">지금 범위에 붙은 칸</b>을<br>직접 골라 넓힌다(주황 점선 = 고를 수 있는 칸).<span style="display: {{freeD}}"><br>마이너스면 <b style="color: #ff9a9a">뺄 칸</b>을 직접 고른다(1칸은 남는다).</span></span>
           <span style="display: {{noRangeD}}; padding: 4px 10px; font-size: 13px; background: #2a1620; color: #ff9a9a; border: 1px solid #8a3040">범위가 없는 카드 — 수치만 강화할 수 있다</span>
         </button>
       </div>
@@ -163,11 +165,11 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 
   <!-- ③ 룰렛 -->
   <sc-if value="{{sSpin}}" hint-placeholder-val="{{false}}">
-    <div class="wheelbox {{spinCls}}" aria-label="룰렛 0~5">
+    <div class="wheelbox {{spinCls}}" aria-label="룰렛">
       <div class="rim"></div>
       <sc-for list="{{bulbs}}" as="b" hint-placeholder-count="36"><span class="bulb {{b.cls}}" style="transform: rotate({{b.a}}deg) translateY(-206px)"></span></sc-for>
       <div class="wheel" style="background: {{wheelBg}}; transform: rotate({{rot}}deg); transition: {{wheelTr}}">
-        <sc-for list="{{labels}}" as="l" hint-placeholder-count="60"><span class="lab" style="transform: rotate({{l.a}}deg) translateY(-168px); color: {{l.fg}}">{{l.t}}</span></sc-for>
+        <sc-for list="{{labels}}" as="l" hint-placeholder-count="10"><span class="lab" style="transform: rotate({{l.a}}deg) translateY(-160px); color: {{l.fg}}">{{l.t}}</span></sc-for>
         <span aria-hidden="true" style="position: absolute; inset: 60px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(10,8,16,0.55)"></span>
       </div>
       <div class="ptr" aria-hidden="true"></div>
@@ -206,7 +208,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       <div style="display: flex; align-items: center; gap: 22px">
         <span style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-size: 12px; color: #b9b1c9">지금</span><span style="font-family: 'Silkscreen', monospace; font-size: 48px; color: #ff9a9a">{{cur.dm}}</span></span>
         <span style="font-family: 'Silkscreen', monospace; font-size: 30px; color: #6a6478">→</span>
-        <span class="res" style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-size: 12px; color: #b9b1c9">강화 후</span><span style="font-family: 'Silkscreen', monospace; font-size: 64px; color: #ffd86a; text-shadow: 0 4px 0 #7a5418">{{dmgAfter}}</span></span>
+        <span class="res" style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-size: 12px; color: #b9b1c9">강화 후</span><span style="font-family: 'Silkscreen', monospace; font-size: 64px; color: {{dmgAfterCol}}; text-shadow: 0 4px 0 #7a5418">{{dmgAfter}}</span></span>
       </div>
       <p style="margin: 0; font-size: 14px; color: #c9c2d6; text-align: center">{{dmgNote}}</p>
       <div style="display: flex; gap: 12px">
@@ -218,8 +220,8 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   <!-- ④-b 범위 고르기 -->
   <sc-if value="{{sRange}}" hint-placeholder-val="{{false}}">
     <section class="rise" style="position: absolute; left: 40px; top: 140px; width: 500px; display: flex; flex-direction: column; gap: 12px">
-      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">넓힐 칸 <span style="color: #ff9a3a">{{left}}</span>개를 고르자</h2>
-      <span style="font-size: 13px; line-height: 1.6; color: #c9c2d6">주황 점선 = 지금 범위(또는 나)에 붙은 칸 — 위아래·대각선 포함. 고른 칸에 붙은 칸도 새로 열린다.</span>
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 30px; color: #fff6dc">{{editVerb}} 칸 <span style="color: {{editCol}}">{{left}}</span>개를 고르자</h2>
+      <span style="font-size: 13px; line-height: 1.6; color: #c9c2d6">{{editHint}}</span>
       <div class="panel" style="padding: 16px; align-self: flex-start">
         <div class="rg" style="grid-template-columns: repeat(9, 48px); gap: 4px">
           <sc-for list="{{edit}}" as="c" hint-placeholder-count="45">
@@ -230,14 +232,14 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       </div>
       <div style="display: flex; gap: 14px; font-size: 12px; color: #c9c2d6; align-items: center">
         <span><span style="display: inline-block; width: 12px; height: 12px; background: #f4d470; vertical-align: -2px"></span> 나</span>
-        <span><span style="display: inline-block; width: 12px; height: 12px; background: #e0485a; vertical-align: -2px"></span> 원래 범위</span>
-        <span><span style="display: inline-block; width: 12px; height: 12px; background: #ff9a3a; vertical-align: -2px"></span> 새로 고른 칸(번호 = 고른 순서)</span>
+        <span><span style="display: inline-block; width: 12px; height: 12px; background: #e0485a; vertical-align: -2px"></span> 지금 범위</span>
+        <span><span style="display: inline-block; width: 12px; height: 12px; background: {{legendCol}}; vertical-align: -2px"></span> {{legendTxt}}(번호 = 고른 순서)</span>
       </div>
     </section>
     <section class="panel rise" style="position: absolute; left: 600px; top: 140px; width: 640px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
       <div style="display: flex; align-items: center; gap: 12px">
         <div style="display: flex; gap: 4px"><sc-for list="{{pips}}" as="p" hint-placeholder-count="5"><span style="width: 26px; height: 26px; background: {{p.bg}}; box-shadow: inset 0 0 0 2px {{p.edge}}; display: flex; align-items: center; justify-content: center; font-family: 'Silkscreen', monospace; font-size: 12px; color: #1d1408">{{p.t}}</span></sc-for></div>
-        <span style="font-size: 14px; color: #e4def0">룰렛 <b style="font-family: 'Silkscreen', monospace; color: #ff9a3a">{{result}}</b> · 남은 칸 <b style="font-family: 'Silkscreen', monospace; color: #ffd86a">{{left}}</b></span>
+        <span style="font-size: 14px; color: #e4def0">룰렛 <b style="font-family: 'Silkscreen', monospace; color: {{editCol}}">{{result}}</b> · 남은 칸 <b style="font-family: 'Silkscreen', monospace; color: #ffd86a">{{left}}</b></span>
         <span style="flex-grow: 1"></span>
         <button type="button" class="toggle" onClick="{{toggleMirror}}"><span class="sw {{mirrorCls}}"><span></span></span>앞뒤 대칭으로 찍기</button>
       </div>
@@ -254,7 +256,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
           <span style="font-size: 12px; color: #b9b1c9">강화 후 카드</span>
           <div style="padding: 10px 12px; background: #2a1620; border: 3px solid #e0485a; display: flex; flex-direction: column; gap: 6px">
             <span style="display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 12px"><span style="color: #ff9a9a">{{cur.dmTxt}}</span><span style="color: #8ad0ff">EN {{cur.en}}</span></span>
-            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #fff6dc">{{nextName}}</span>
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #fff6dc">{{cur.name}} <span style="color: #ffd86a; font-size: 18px">{{nextStars}}</span></span>
             <span class="rg" style="grid-template-columns: repeat(9, 12px); gap: 2px"><sc-for list="{{after}}" as="g" hint-placeholder-count="45"><span style="width: 12px; height: 12px; background: {{g}}"></span></sc-for></span>
             <span style="font-size: 12px; color: #ffd0a0">맞는 칸 {{baseN}} → {{afterN}}</span>
           </div>
@@ -276,7 +278,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 36px; color: #fff6dc">{{doneTitle}}</h2>
       <div class="res" style="width: 300px; padding: 14px 16px; box-sizing: border-box; background: #2a1620; border: 3px solid #e0485a; box-shadow: 0 0 0 3px #2a1c10, 0 0 30px rgba(244,212,112,0.35); display: flex; flex-direction: column; gap: 8px">
         <span style="display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 14px"><span style="color: #ff9a9a">{{cur.dmTxt}}</span><span style="color: #8ad0ff">EN {{cur.en}}</span></span>
-        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 28px; color: #fff6dc">{{cur.name}}</span>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 28px; color: #fff6dc">{{cur.name}} <span style="color: #ffd86a; font-size: 22px">{{cur.stars}}</span></span>
         <span class="rg" style="align-self: center; grid-template-columns: repeat(9, 24px); gap: 3px"><sc-for list="{{cur.big}}" as="g" hint-placeholder-count="45"><span style="width: 24px; height: 24px; background: {{g.bg}}; box-shadow: {{g.sh}}"></span></sc-for></span>
       </div>
       <p style="margin: 0; font-size: 14px; color: #e4def0">{{doneNote}}</p>
@@ -292,11 +294,13 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { src: 'smith', step: 'pick', card: 0, path: 'dmg', rot: 0, spinning: false, result: null, force: null, picks: [], mirror: false, saved: {}, gold: 140 };
+    // tier: 'paid' = 강화 맡기기(80G · 낡은 대장간도 같은 판) / 'free' = 직접 강화(무료) — 2026-11-12 사용자 지정
+    this.state = { tier: 'paid', step: 'pick', card: 0, path: 'dmg', rot: 0, spinning: false, result: null, force: null, picks: [], mirror: false, saved: {}, gold: 140 };
   }
   renderVals() {
     const st = this.state;
-    const H = '#e0485a', S = '#f4d470', E = '#2a2438', O = '#ff9a3a';
+    const H = '#e0485a', S = '#f4d470', E = '#2a2438', O = '#ff9a3a', G = '#5a2a34';
+    const free = st.tier === 'free';
     // 범위 = [df(앞+), du(위+)] — 판의 Offset과 같은 규약
     const sym = (pts) => pts.concat(pts.filter(([f]) => f !== 0).map(([f, u]) => [-f, u]));
     const BASE = [
@@ -311,7 +315,7 @@ class Component extends DCLogic {
       { name: '오른쪽 대시', kind: 'move', dm: null, en: 0, range: [], desc: '오른쪽으로 두 칸. 이동 카드는 강화하지 않는다.' },
     ];
     const KIND = { atk: ['#2a1620', '#8a3040'], sig: ['#1e2a46', '#8fb6ff'], guard: ['#122a2a', '#3c9c98'], heal: ['#18281a', '#6ab83a'], move: ['#14243a', '#3a6aa8'] };
-    // 강화할 수치 — 공격은 피해, 가드는 방어량, 회복은 회복량. 같은 룰렛(0/5/10/15/20)을 쓴다
+    // 강화할 수치 — 공격은 피해, 가드는 방어량, 회복은 회복량
     const STAT = {
       atk: { name: '공격력', word: '피해', josa: '가', en: 'DAMAGE', tag: 'DM', col: '#ff9a9a' },
       sig: { name: '공격력', word: '피해', josa: '가', en: 'DAMAGE', tag: 'DM', col: '#ff9a9a' },
@@ -319,28 +323,41 @@ class Component extends DCLogic {
       heal: { name: '회복량', word: '회복량', josa: '이', en: 'HEAL', tag: 'HP+', col: '#b6ea6a' },
       move: { name: '—', word: '—', josa: '이', en: 'MOVE', tag: 'MOVE', col: '#8ad0ff' },
     };
+    const MAX_LVL = 3; // 카드 한 장당 강화는 최대 3번(별 ★) — 0 · 마이너스도 한 번으로 센다
+    const stars = (n) => '★'.repeat(n) + '☆'.repeat(Math.max(0, MAX_LVL - n));
+    const signed = (n) => (n > 0 ? '+' + n : n < 0 ? '−' + -n : '0');
     const cardAt = (i) => {
       const b = BASE[i], s = st.saved[i];
       return Object.assign({}, b, s ? { dm: s.dm, range: s.range, lvl: s.lvl } : {});
     };
     const has = (arr, f, u) => arr.some(([a, b]) => a === f && b === u);
     const DFS = [-4, -3, -2, -1, 0, 1, 2, 3, 4], DUS = [2, 1, 0, -1, -2];
-    const gridOf = (range, extra = []) => {
+    const gridOf = (range, extra = [], gone = []) => {
       const out = [];
-      for (const u of DUS) for (const f of DFS) out.push(f === 0 && u === 0 ? S : has(extra, f, u) ? O : has(range, f, u) ? H : E);
+      for (const u of DUS) for (const f of DFS) out.push(f === 0 && u === 0 ? S : has(extra, f, u) ? O : has(gone, f, u) ? G : has(range, f, u) ? H : E);
       return out;
     };
     const ci = st.card, c = cardAt(ci);
-    const MAX_LVL = 2; // 카드 한 장당 강화는 최대 2번
     const noKind = c.kind === 'move'; // 강화가 안 되는 건 이동뿐
     const stat = STAT[c.kind];
     const noRange = !c.range.length;
     const locked = noKind || (c.lvl || 0) >= MAX_LVL;
     const lvl = c.lvl || 0;
-    const nameOf = (cc, l) => cc.name + (l ? '+' + l : '');
-    // 고를 수 있는 칸: 범위(+고른 칸, +나)에 8방향으로 붙은 빈 칸
+
+    // ---- 룰렛 판 둘 — [값, %]
+    const WHEELS = {
+      paid: { dmg: [[5, 15], [10, 25], [15, 30], [20, 20], [30, 10]], range: [[1, 25], [2, 25], [3, 20], [4, 20], [5, 10]] },
+      free: { dmg: [[-10, 15], [-5, 20], [0, 40], [10, 15], [20, 10]], range: [[-2, 10], [-1, 15], [0, 50], [1, 15], [3, 10]] },
+    };
+    const PROB = WHEELS[st.tier][st.path];
+    const res = st.result;
+    // 범위 마이너스 = 뺄 칸을 직접 고른다. 1칸은 남긴다
+    const drop = st.path === 'range' && res != null && res < 0;
+    const need = !res || st.path !== 'range' ? 0 : res > 0 ? res : Math.min(-res, c.range.length - 1);
+
+    // 고를 수 있는 칸: 범위(+고른 칸, +나)에 8방향으로 붙은 빈 칸 / 빼기는 지금 범위의 칸
     const picks = st.picks;
-    const all = c.range.concat(picks);
+    const all = drop ? c.range.filter(([f, u]) => !has(picks, f, u)) : c.range.concat(picks);
     const canAt = (f, u) => {
       if ((f === 0 && u === 0) || has(all, f, u)) return false;
       const anchors = all.concat([[0, 0]]);
@@ -357,60 +374,50 @@ class Component extends DCLogic {
       hint.push({ bg: me ? S : hit ? H : can ? 'rgba(255,154,58,0.18)' : E, sh: can ? 'inset 0 0 0 2px #ff9a3a' : 'none' });
     }
     const cur = {
-      name: nameOf(c, lvl), dm: c.dm == null ? '—' : String(c.dm), dmTxt: c.dm == null ? 'MOVE' : `${stat.tag} ${c.dm}`,
+      name: c.name, stars: stars(lvl), dm: c.dm == null ? '—' : String(c.dm), dmTxt: c.dm == null ? 'MOVE' : `${stat.tag} ${c.dm}`,
       en: String(c.en), desc: c.desc, big, hint, mini: gridOf(c.range), locked,
-      edge: KIND[c.kind][1], lvlTxt: noKind ? '강화 불가 — 이동 카드' : lvl >= MAX_LVL ? `최대 강화 ${lvl}/${MAX_LVL}` : `강화 ${lvl}/${MAX_LVL}`, lvlFg: locked ? '#ff9a9a' : lvl ? '#ffd86a' : '#b9b1c9',
+      edge: KIND[c.kind][1], lvlTxt: noKind ? '강화 불가 — 이동 카드' : lvl >= MAX_LVL ? `최대 강화 ${stars(lvl)}` : `강화 ${stars(lvl)}`, lvlFg: locked ? '#ff9a9a' : lvl ? '#ffd86a' : '#b9b1c9',
     };
     const deck = BASE.map((b, i) => {
       const k = cardAt(i), [bg, edge] = KIND[k.kind], nk = k.kind === 'move', mx = (k.lvl || 0) >= MAX_LVL, lk = nk || mx;
       return {
-        name: nameOf(k, k.lvl || 0), dm: k.dm == null ? 'MOVE' : STAT[k.kind].tag + k.dm, en: 'EN' + k.en, bg, edge,
+        name: k.name, dm: k.dm == null ? 'MOVE' : STAT[k.kind].tag + k.dm, en: 'EN' + k.en, bg, edge,
         mini: gridOf(k.range), on: i === ci ? 'dk-on' : '', op: lk ? 0.45 : 1,
-        tag: nk ? '강화 불가' : mx ? `최대 ${k.lvl}/${MAX_LVL}` : `${k.lvl || 0}/${MAX_LVL}`, tagFg: nk ? '#ff9a9a' : mx ? '#ff9a9a' : k.lvl ? '#ffd86a' : '#b9b1c9',
+        tag: nk ? '강화 불가' : mx ? `최대 ${stars(k.lvl)}` : stars(k.lvl || 0), tagFg: nk ? '#ff9a9a' : mx ? '#ff9a9a' : k.lvl ? '#ffd86a' : '#b9b1c9',
         onTap: () => this.setState({ card: i }),
       };
     });
 
-    // ---- 룰렛 60칸 — 종류마다 다른 판
-    //   공격력: 0 / 5 / 10 / 15 / 20  = 10 / 25 / 30 / 25 / 10 %  (6 · 15 · 18 · 15 · 6칸)
-    //   범위:   0 / 1 / 2 / 3 / 4 / 5 = 10 / 20 / 20 / 20 / 20 / 10 % (6 · 12 · 12 · 12 · 12 · 6칸)
-    const WHEEL = {
-      dmg: [[0, 10], [5, 25], [10, 30], [15, 25], [20, 10]],
-      range: [[0, 10], [1, 20], [2, 20], [3, 20], [4, 20], [5, 10]],
-    };
-    const PROB = WHEEL[st.path];
-    // 고르게 흩뿌린다 — 숫자마다 칸 수만큼 원 둘레에 등간격으로 놓고(위상은 숫자마다 다르게) 각도순 정렬,
-    // 그다음 같은 숫자가 붙은 자리는 뒤쪽 다른 숫자와 바꾼다(원형이라 마지막-처음도 본다).
-    const seq = (() => {
-      const ent = [];
-      PROB.forEach(([v, p], j) => { const n = Math.round(p * 0.6); for (let k = 0; k < n; k++) ent.push([(k + ((j * 0.37 + 0.11) % 1)) / n, v]); });
-      const out = ent.sort((a, b) => a[0] - b[0]).map((e) => e[1]);
-      const L = out.length;
-      for (let pass = 0; pass < 4; pass++) for (let i = 0; i < L; i++) {
-        const a = out[(i - 1 + L) % L];
-        if (out[i] !== a) continue;
-        for (let d = 1; d < L; d++) {
-          const j = (i + d) % L, b = out[j];
-          if (b !== a && out[(j - 1 + L) % L] !== out[i] && out[(j + 1) % L] !== out[i] && out[(i + 1) % L] !== b) { out[j] = out[i]; out[i] = b; break; }
-        }
-      }
-      return out;
-    })();
+    // ---- 룰렛 10칸 — 숫자마다 2칸, 칸 폭 = 확률의 절반(그림 넓이 = 확률). 한 칸씩 건너 놓아 같은 숫자가 안 붙는다
+    const n = PROB.length;
+    const order = n % 2 ? Array.from({ length: n }, (_, i) => (i * 2) % n) : PROB.map((_, i) => i);
+    const slices = [];
+    let acc = 0;
+    for (const i of order.concat(order)) {
+      const [v, p] = PROB[i], w = (p / 2) * 3.6;
+      slices.push({ v, a: acc, b: acc + w });
+      acc += w;
+    }
+    // 색 — 0 = 회색, 마이너스 = 붉은색, 플러스 = 파랑 → 초록 → 보라, 판의 맨 위 값 = 금색
     const TONE = [['#3a3448', '#2e2a3a', '#b9b1c9'], ['#3a6aa8', '#2e5690', '#e4f0ff'], ['#3c9c98', '#2e8480', '#e4fffc'], ['#6ab83a', '#58a02e', '#f0ffe4'], ['#a46ae0', '#8c56c8', '#f6ecff'], ['#ffd24a', '#e8b830', '#1d1408']];
-    const COL = {};
-    PROB.forEach(([v], i) => { COL[v] = i === PROB.length - 1 ? TONE[5] : TONE[i]; });
-    const N = seq.length, SL = 360 / N;
-    const stops = [];
-    seq.forEach((v, i) => {
-      const a = i * SL, b = (i + 1) * SL, col = COL[v][i % 2];
-      stops.push(`#0a0810 ${a.toFixed(2)}deg ${(a + 0.5).toFixed(2)}deg`, `${col} ${(a + 0.5).toFixed(2)}deg ${b.toFixed(2)}deg`);
-    });
+    const NEG = [['#a8323e', '#8c2832', '#ffe4e8'], ['#c45a4a', '#a84a3c', '#fff0ec']];
+    const toneOf = (table) => {
+      const m = { 0: TONE[0] };
+      const neg = table.filter(([v]) => v < 0).map(([v]) => v), pos = table.filter(([v]) => v > 0).map(([v]) => v);
+      neg.forEach((v, i) => { m[v] = NEG[Math.min(i + 2 - neg.length, 1)] || NEG[0]; });
+      pos.forEach((v, i) => { m[v] = i === pos.length - 1 ? TONE[5] : TONE[1 + i]; });
+      return m;
+    };
+    const COL = toneOf(PROB);
+    const anyNeg = PROB.some(([v]) => v < 0);
+    const fmt = (v) => (st.path === 'dmg' || anyNeg ? signed(v) : String(v));
+    const stops = slices.map(({ v, a, b }, i) => `#0a0810 ${a.toFixed(2)}deg ${(a + 0.8).toFixed(2)}deg, ${COL[v][i % 2]} ${(a + 0.8).toFixed(2)}deg ${b.toFixed(2)}deg`);
     const wheelBg = `conic-gradient(from 0deg, ${stops.join(', ')})`;
-    const labels = seq.map((v, i) => ({ a: ((i + 0.5) * SL).toFixed(2), t: String(v), fg: COL[v][2] }));
+    const labels = slices.map(({ v, a, b }) => ({ a: ((a + b) / 2).toFixed(2), t: fmt(v), fg: COL[v][2] }));
     const bulbs = Array.from({ length: 36 }, (_, i) => ({ a: i * 10, cls: i % 2 ? 'b2' : 'b1' }));
-    const res = st.result;
     const topV = PROB[PROB.length - 1][0];
-    const probs = PROB.map(([v, p]) => ({ v: st.path === 'dmg' && v ? '+' + v : String(v), pct: String(p), w: p * 3, bg: COL[v][0], fg: v === topV ? '#ffd86a' : '#efe9f5', on: res === v && !st.spinning ? 'prow-on' : '' }));
+    const maxP = Math.max(...PROB.map(([, p]) => p));
+    const probs = PROB.map(([v, p]) => ({ v: fmt(v), pct: String(p), w: (p / maxP) * 90, bg: COL[v][0], fg: v === topV ? '#ffd86a' : v < 0 ? '#ff9a9a' : '#efe9f5', on: res === v && !st.spinning ? 'prow-on' : '' }));
     const roll = () => {
       if (st.force != null && PROB.some(([v]) => v === st.force)) return st.force;
       let r = Math.random() * 100;
@@ -419,10 +426,9 @@ class Component extends DCLogic {
     };
     const spin = () => {
       const v = roll();
-      const idxs = seq.map((x, i) => (x === v ? i : -1)).filter((i) => i >= 0);
-      const k = idxs[Math.floor(Math.random() * idxs.length)];
-      const jitter = (Math.random() - 0.5) * SL * 0.6;
-      const target = -((k + 0.5) * SL + jitter);
+      const mine = slices.filter((x) => x.v === v);
+      const sl = mine[Math.floor(Math.random() * mine.length)];
+      const target = -((sl.a + sl.b) / 2 + (Math.random() - 0.5) * (sl.b - sl.a) * 0.6);
       const curMod = ((st.rot % 360) + 360) % 360;
       const tgtMod = ((target % 360) + 360) % 360;
       const rot = st.rot + 360 * 7 + ((tgtMod - curMod + 360) % 360);
@@ -431,23 +437,24 @@ class Component extends DCLogic {
       this._t = setTimeout(() => this.setState({ spinning: false, result: v }), 5300);
     };
     const nextFromSpin = () => {
-      if (st.path === 'range' && res > 0) this.setState({ step: 'range', picks: [] });
+      if (need) this.setState({ step: 'range', picks: [] });
       else this.setState({ step: 'dmg' });
     };
-    const forces = [['?', null]].concat(PROB.map(([v]) => [String(v), v])).map(([t, v]) => ({ t, cls: st.force === v ? 'fbtn-on' : '', onTap: () => this.setState({ force: v }) }));
-    const DMG_TONE = [TONE[0], TONE[1], TONE[2], TONE[3], TONE[5]];
-    const chips = WHEEL.dmg.map(([v], i) => ({ v: String(v), bg: DMG_TONE[i][0], fg: DMG_TONE[i][2] }));
+    const forces = [['?', null]].concat(PROB.map(([v]) => [fmt(v), v])).map(([t, v]) => ({ t, cls: st.force === v ? 'fbtn-on' : '', onTap: () => this.setState({ force: v }) }));
+    const DMGT = WHEELS[st.tier].dmg, DCOL = toneOf(DMGT);
+    const chips = DMGT.map(([v]) => ({ v: signed(v), bg: DCOL[v][0], fg: DCOL[v][2] }));
+    const tiers = [['맡기기 80G', 'paid'], ['직접 무료', 'free']].map(([t, v]) => ({ t, cls: st.tier === v ? 'fbtn-on' : '', onTap: () => this.setState({ tier: v, step: 'pick', result: null, force: null, picks: [] }) }));
 
-    // ---- 범위 편집
-    const left = st.result ? st.result - picks.length : 0;
+    // ---- 범위 편집(붙이기 / 빼기)
+    const left = need - picks.length;
     const edit = [];
     for (const u of DUS) for (const f of DFS) {
       const me = f === 0 && u === 0, hit = has(c.range, f, u), pi = picks.findIndex(([a, b]) => a === f && b === u);
-      const can = left > 0 && canAt(f, u);
+      const can = left > 0 && (drop ? hit && pi < 0 : canAt(f, u));
       let cls = '', bg = 'rgba(42,36,56,0.55)', sh = 'none', t = '', aria = '';
       if (me) { bg = S; sh = 'inset 0 0 0 3px #7a5418'; t = '나'; }
-      else if (hit) { bg = H; sh = 'inset 0 0 0 2px #ff8a8a'; aria = '원래 범위'; }
-      else if (pi >= 0) { cls = 'rc-pick'; bg = O; sh = 'inset 0 0 0 3px #ffd0a0'; t = String(pi + 1); aria = `${pi + 1}번째로 고른 칸 — 눌러서 빼기`; }
+      else if (pi >= 0) { cls = 'rc-pick'; bg = drop ? G : O; sh = drop ? 'inset 0 0 0 3px #8a3040' : 'inset 0 0 0 3px #ffd0a0'; t = String(pi + 1); aria = `${pi + 1}번째로 고른 칸 — 눌러서 빼기`; }
+      else if (hit) { cls = can ? 'rc-can' : ''; bg = H; sh = can ? 'inset 0 0 0 2px #ff9a3a' : 'inset 0 0 0 2px #ff8a8a'; aria = can ? '뺄 수 있는 칸' : '지금 범위'; }
       else if (can) { cls = 'rc-can'; aria = '고를 수 있는 칸'; }
       edit.push({
         cls, bg, sh, t, aria,
@@ -458,23 +465,24 @@ class Component extends DCLogic {
           }
           if (!can) return;
           const add = [[f, u]];
-          if (st.mirror && f !== 0 && left >= 2 && !has(all, -f, u)) add.push([-f, u]);
+          const twin = drop ? has(c.range, -f, u) && !has(picks, -f, u) : !has(all, -f, u);
+          if (st.mirror && f !== 0 && left >= 2 && twin) add.push([-f, u]);
           this.setState({ picks: picks.concat(add) });
         },
       });
     }
-    const pips = Array.from({ length: st.result || 0 }, (_, i) => ({ bg: i < picks.length ? O : '#120f1a', edge: i < picks.length ? '#ffd0a0' : '#ff9a3a', t: i < picks.length ? String(i + 1) : '' }));
-    const after = gridOf(c.range, picks);
+    const pips = Array.from({ length: need }, (_, i) => ({ bg: i < picks.length ? (drop ? G : O) : '#120f1a', edge: i < picks.length ? (drop ? '#8a3040' : '#ffd0a0') : drop ? '#e0485a' : '#ff9a3a', t: i < picks.length ? String(i + 1) : '' }));
+    const after = drop ? gridOf(c.range, [], picks) : gridOf(c.range, picks);
     // 판 미리보기: 나 (1,1), 적 (3,1)·(4,2)
     const board = [];
     let hits = 0;
     for (let r = 0; r < 4; r++) for (let col = 0; col < 6; col++) {
       const f = col - 1, u = 1 - r;
       const me = col === 1 && r === 1, foe = (col === 3 && r === 1) || (col === 4 && r === 2);
-      const hit = has(c.range, f, u), np = has(picks, f, u);
-      if (foe && (hit || np)) hits++;
+      const live = has(all, f, u), np = has(picks, f, u);
+      if (foe && live) hits++;
       board.push({
-        bg: me ? S : np ? 'rgba(255,154,58,0.85)' : hit ? 'rgba(224,72,90,0.7)' : 'rgba(10,30,12,0.12)',
+        bg: me ? S : np ? (drop ? 'rgba(90,42,52,0.9)' : 'rgba(255,154,58,0.85)') : live ? 'rgba(224,72,90,0.7)' : 'rgba(10,30,12,0.12)',
         sh: foe ? 'inset 0 0 0 2px #2a0a10' : 'none', t: me ? '나' : foe ? '적' : '',
       });
     }
@@ -482,43 +490,57 @@ class Component extends DCLogic {
 
     const crumbIdx = { pick: 0, path: 1, spin: 2, dmg: 3, range: 3, done: 4 }[st.step];
     const crumbs = ['카드', '강화 종류', '룰렛', '적용', '저장'].map((label, i) => ({ label: (i < crumbIdx ? '✓ ' : '') + label, bg: i === crumbIdx ? '#f4d470' : '#1a1626', fg: i === crumbIdx ? '#1d1408' : '#c9c2d6', edge: i === crumbIdx ? '#f4d470' : '#4a4058' }));
-    const isShop = true; // 지도 칸 강화는 대장간에서만(50G)
-    const dmgAfter = c.dm == null ? '—' : String(c.dm + (res || 0));
+    const price = free ? 0 : 80;
+    // 수치는 0 아래로 안 내려간다
+    const after0 = c.dm == null ? null : Math.max(0, c.dm + (st.path === 'dmg' ? res || 0 : 0));
+    const valRes = st.path === 'dmg' ? res || 0 : 0;
+    const save = (s, doneN = 0) => this.setState({ saved: s, step: 'done', picks: [], doneN, gold: st.gold - price });
 
     return {
-      crumbs, gold: String(st.gold),
-      srcLabel: '대장간 · 50G', srcBg: '#2a1c08', srcFg: '#ffd86a', srcEdge: '#c9952f',
-      srcNote: '대장장이에게 50골드를 내고 카드 한 장을 강화한다. 룰렛을 돌린 뒤엔 결과가 0이어도 돈은 돌려받지 못한다. 대장간에서는 한 번만 — 강화를 마치면 바로 지도로 나간다(카드당 최대 2번).',
+      crumbs, gold: String(st.gold), tiers,
+      srcLabel: free ? '대장간 · 직접 강화' : '대장간 · 맡긴 강화 80G', srcBg: free ? '#1a1626' : '#2a1c08', srcFg: free ? '#efe9f5' : '#ffd86a', srcEdge: free ? '#8a849a' : '#c9952f',
+      srcNote: free
+        ? '망치를 빌려 직접 두들긴다. 공짜지만 그대로거나(0) 오히려 나빠질(−) 수도 있다. 그래도 강화 1번(★)은 쓴다. 대장간에서는 한 번만 — 강화를 마치면 바로 지도로(카드당 최대 3번).'
+        : '대장장이에게 80골드를 맡기면 반드시 오른다(낡은 대장간 「카드라도 두들긴다」도 같은 판 · 무료). 룰렛을 돌린 뒤엔 돈을 돌려받지 못한다. 대장간에서는 한 번만 — 강화를 마치면 바로 지도로(카드당 최대 3번).',
       leaveLabel: '← 대장간으로', exitLabel: '지도로 ▶',
       sPick: st.step === 'pick', sPath: st.step === 'path', sSpin: st.step === 'spin', sDmg: st.step === 'dmg', sRange: st.step === 'range', sDone: st.step === 'done',
       showChip: st.step !== 'pick' && st.step !== 'done', cur, deck, chips,
+      plusQ: free ? '±?' : '+?', dmgVerb: free ? '오르거나 내린다' : '오른다', freeD: free ? 'inline' : 'none',
       toPath: () => { if (!locked) this.setState({ step: 'path' }); }, backPick: () => this.setState({ step: 'pick' }),
-      pickDmg: () => this.setState({ step: 'spin', path: 'dmg', result: null }), pickRange: () => { if (!noRange) this.setState({ step: 'spin', path: 'range', result: null }); },
+      pickDmg: () => this.setState({ step: 'spin', path: 'dmg', result: null, force: null }), pickRange: () => { if (!noRange) this.setState({ step: 'spin', path: 'range', result: null, force: null }); },
       stat, noRange, noRangeD: noRange ? 'block' : 'none',
       // 룰렛
       wheelBg, labels, bulbs, rot: st.rot.toFixed(2), wheelTr: st.spinning ? 'transform 5.2s cubic-bezier(0.08, 0.72, 0.08, 1)' : 'none',
       spinCls: st.spinning ? 'spinning' : '', spinning: st.spinning,
-      hubTxt: st.spinning ? '…' : res == null ? '?' : String(res), hubCls: res != null && !st.spinning ? 'res' : '',
-      hubBg: res != null && !st.spinning && COL[res] ?`radial-gradient(circle at 40% 35%, #fff6dc, ${COL[res][0]} 60%, ${COL[res][1]})` : 'radial-gradient(circle at 40% 35%,#fff1b8,#c9952f 55%,#7a5418)',
+      hubTxt: st.spinning ? '…' : res == null ? '?' : fmt(res), hubCls: res != null && !st.spinning ? 'res' : '',
+      hubBg: res != null && !st.spinning && COL[res] ? `radial-gradient(circle at 40% 35%, #fff6dc, ${COL[res][0]} 60%, ${COL[res][1]})` : 'radial-gradient(circle at 40% 35%,#fff1b8,#c9952f 55%,#7a5418)',
       pathEn: st.path === 'dmg' ? stat.en : 'RANGE', pathColor: st.path === 'dmg' ? stat.col : '#ff9a3a',
-      spinTitle: st.path === 'dmg' ? `${stat.word}${stat.josa} 얼마나 오를까?` : `범위가 몇 칸 넓어질까?`,
+      spinTitle: st.path === 'dmg' ? `${stat.word}${stat.josa} 얼마나 ${free ? '바뀔까' : '오를까'}?` : free ? '범위가 넓어질까, 좁아질까?' : '범위가 몇 칸 넓어질까?',
       probs, forces,
-      resLine: st.spinning ? '돌아가는 중…' : res == null ? '' : res === 0 ? '0 — 꽝! 이번 강화는 빈손' : st.path === 'dmg' ? `${res} — ${stat.word} +${res}` : `${res} — 범위 ${res}칸을 고른다`,
-      resColor: res === 0 ? '#b9b1c9' : res === 5 ? '#ffd86a' : '#fff6dc',
+      resLine: st.spinning ? '돌아가는 중…' : res == null ? '' : res === 0 ? '0 — 그대로! 강화 1번(★)은 쓴다'
+        : st.path === 'dmg' ? `${fmt(res)} — ${stat.word} ${signed(res)}`
+        : res > 0 ? `${fmt(res)} — 범위 ${res}칸을 고른다` : `${fmt(res)} — 범위에서 ${need}칸을 뺀다${need < -res ? '(1칸은 남는다)' : ''}`,
+      resColor: res == null || res === 0 ? '#b9b1c9' : res < 0 ? '#ff9a9a' : res === topV ? '#ffd86a' : '#fff6dc',
       spinBtn: st.spinning ? '돌아가는 중' : res == null ? '돌린다!' : '다음 ▶', spinOrNext: () => { if (st.spinning) return; if (res == null) spin(); else nextFromSpin(); },
-      // 공격력 / 꽝
-      dmgTag: res === 0 ? 'NO LUCK' : stat.en + ' UP', dmgEdge: res === 0 ? '#8a849a' : '#ffd86a',
-      dmgTitle: res === 0 ? '꽝 — 아무것도 오르지 않았다' : `${stat.word} +${res}!`, dmgAfter: res === 0 ? (c.dm == null ? '—' : String(c.dm)) : dmgAfter,
-      dmgNote: res === 0 ? (st.path === 'range' ? '범위를 노렸지만 0이 나왔다. 50골드는 사용됐다.' : '50골드는 사용됐다. 다시 맡기려면 또 50골드.') : '바로 적용된다. 범위는 그대로.',
-      dmgBtn: res === 0 ? '확인' : '저장 ✓',
+      // 수치 결과 / 그대로
+      dmgTag: valRes > 0 ? stat.en + ' UP' : valRes < 0 ? stat.en + ' DOWN' : 'NO CHANGE', dmgEdge: valRes > 0 ? '#ffd86a' : valRes < 0 ? '#e0485a' : '#8a849a',
+      dmgTitle: valRes > 0 ? `${stat.word} ${signed(valRes)}!` : valRes < 0 ? `${stat.word} ${signed(valRes)} — 망쳤다` : '그대로 — 아무것도 바뀌지 않았다',
+      dmgAfter: after0 == null ? '—' : String(after0), dmgAfterCol: valRes < 0 ? '#ff9a9a' : '#ffd86a',
+      dmgNote: valRes ? `바로 적용된다. 범위는 그대로.${valRes < 0 ? ' 수치는 0 아래로 내려가지 않는다.' : ''} 강화 ${stars(lvl + 1)}`
+        : st.path === 'range' && res ? `범위가 1칸뿐이라 뺄 칸이 없다. 그래도 강화 1번(★)은 쓴다 — ${stars(lvl + 1)}`
+        : `카드는 그대로지만 강화 1번(★)은 쓴다 — ${stars(lvl + 1)}`,
+      dmgBtn: '저장 ✓',
       saveDmg: () => {
         const s = Object.assign({}, st.saved);
-        if (res > 0) s[ci] = { dm: c.dm + res, range: c.range, lvl: lvl + 1 };
-        this.setState({ saved: s, step: 'done', gold: isShop ? st.gold - 50 : st.gold });
+        s[ci] = { dm: after0, range: c.range, lvl: lvl + 1 };
+        save(s);
       },
       // 범위
-      edit, pips, result: String(res || 0), left: String(Math.max(0, left)), after, board, nextName: nameOf(c, lvl + 1),
-      baseN: String(c.range.length), afterN: String(c.range.length + picks.length),
+      edit, pips, result: fmt(res || 0), left: String(Math.max(0, left)), after, board, nextStars: stars(lvl + 1),
+      editVerb: drop ? '뺄' : '넓힐', editCol: drop ? '#ff9a9a' : '#ff9a3a',
+      editHint: drop ? '빨간 칸(지금 범위) 중에서 고른다 — 고른 칸은 범위에서 빠진다. 1칸은 남는다.' : '주황 점선 = 지금 범위(또는 나)에 붙은 칸 — 위아래·대각선 포함. 고른 칸에 붙은 칸도 새로 열린다.',
+      legendCol: drop ? G : O, legendTxt: drop ? '뺄 칸' : '새로 고른 칸',
+      baseN: String(c.range.length), afterN: String(all.length),
       hitLine: hits ? `지금 자리에서 적 ${hits}명이 범위 안` : '이 자리에선 아직 아무도 안 닿는다', hitColor: hits ? '#b6ea6a' : '#b9b1c9',
       mirrorCls: st.mirror ? 'sw-on' : '', toggleMirror: () => this.setState({ mirror: !st.mirror }),
       undo: () => this.setState({ picks: picks.slice(0, -1) }), clearPicks: () => this.setState({ picks: [] }),
@@ -526,13 +548,13 @@ class Component extends DCLogic {
       saveRange: () => {
         if (saveOff) return;
         const s = Object.assign({}, st.saved);
-        s[ci] = { dm: c.dm, range: c.range.concat(picks), lvl: lvl + 1 };
-        this.setState({ saved: s, step: 'done', picks: [], gold: isShop ? st.gold - 50 : st.gold });
+        s[ci] = { dm: c.dm, range: drop ? c.range.filter(([f, u]) => !has(picks, f, u)) : c.range.concat(picks), lvl: lvl + 1 };
+        save(s, picks.length);
       },
       // 완료
-      doneTitle: res === 0 ? '이번엔 빈손' : `${cur.name} 강화 완료`,
-      doneNote: (res === 0 ? '카드는 그대로다.' : st.path === 'dmg' ? `${stat.word} +${res}` : `범위 +${res}칸 — 고른 칸 그대로 저장됐다`) + ` · 강화 ${lvl}/${MAX_LVL}` + (lvl >= MAX_LVL ? ' (최대)' : ''),
-      wheelNote: st.path === 'dmg' ? '60칸 룰렛 — 0과 +20은 6칸씩, +5·+15는 15칸, +10은 18칸이 섞여 있다.' : '60칸 룰렛 — 0과 5는 6칸씩, 1~4는 12칸씩 섞여 있다.',
+      doneTitle: (res || 0) > 0 ? `${cur.name} 강화 완료` : res ? `${cur.name} — 강화가 빗나갔다` : `${cur.name} — 그대로`,
+      doneNote: (res === 0 ? '카드는 그대로다.' : st.path === 'dmg' ? `${stat.word} ${signed(res)}` : res > 0 ? `범위 +${res}칸 — 고른 칸 그대로 저장됐다` : `범위 ${signed(-(st.doneN || 0))}칸`) + ` · 강화 ${stars(lvl)}` + (lvl >= MAX_LVL ? ' (최대)' : ''),
+      wheelNote: '10칸 룰렛 — 숫자마다 2칸씩, 칸이 넓을수록 잘 나온다(넓이 = 확률).',
       again: () => this.setState({ step: 'pick', result: null, picks: [] }),
     };
   }
