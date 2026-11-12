@@ -24,9 +24,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 @keyframes ty0{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes ty1{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 .p0 .inR{animation:ir0 .45s ease-out both}.p1 .inR{animation:ir1 .45s ease-out both}
 @keyframes ir0{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}@keyframes ir1{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
-.d1{animation-delay:.15s!important}.d2{animation-delay:.3s!important}
-.heal{animation:heal 1.2s ease-out both}
-@keyframes heal{0%{transform:translateY(10px);opacity:0}20%{opacity:1}100%{transform:translateY(-30px);opacity:0}}
+.d1{animation-delay:.15s!important}.d2{animation-delay:.3s!important}.d3{animation-delay:.45s!important}
 .next{animation:nx .8s ease-in-out infinite}@keyframes nx{50%{transform:translateY(4px)}}
 </style>
 </helmet>
@@ -38,11 +36,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   <header style="position: absolute; left: 32px; right: 32px; top: 18px; display: flex; justify-content: space-between; align-items: center">
     <div style="display: flex; gap: 12px; align-items: baseline"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 42px; text-shadow: 3px 3px 0 #0a0604">대장간</h1><span style="font-size: 14px; color: #ffd8a8; text-shadow: 2px 2px 0 #0a0604">초원 · 5층</span></div>
     <div style="display: flex; gap: 8px; align-items: center">
-      <button type="button" class="fbtn" onClick="{{reset}}">처음부터(시안)</button>
+      <button type="button" class="fbtn" onClick="{{togglePoor}}">{{poorLabel}}</button>
       <span style="display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: rgba(42,28,8,0.92); border: 2px solid #c9952f"><span class="coin" aria-hidden="true"></span><span style="font-family: 'Silkscreen', monospace; font-size: 17px; color: #ffd86a">{{gold}}</span></span>
-      <span style="position: relative; padding: 8px 12px; background: rgba(18,15,26,0.92); border: 2px solid #4a4058; font-family: 'Silkscreen', monospace; font-size: 15px; color: #ffb0b0">HP {{hp}}/{{maxHp}}
-        <sc-if value="{{healShow}}" hint-placeholder-val="{{false}}"><span class="heal" style="position: absolute; right: 6px; top: 34px; font-size: 20px; color: #b6ea6a; text-shadow: 2px 2px 0 #0a0604">+{{healN}}</span></sc-if>
-      </span>
+      <span style="padding: 8px 12px; background: rgba(18,15,26,0.92); border: 2px solid #4a4058; font-family: 'Silkscreen', monospace; font-size: 15px; color: #ffb0b0">HP {{hp}}/{{maxHp}}</span>
     </div>
   </header>
 
@@ -57,7 +53,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   </section>
 
   <nav style="position: absolute; left: 600px; bottom: 30px; width: 644px; display: flex; flex-direction: column; gap: 10px">
-    <sc-for list="{{choices}}" as="c" hint-placeholder-count="2">
+    <sc-for list="{{choices}}" as="c" hint-placeholder-count="3">
       <a href="{{c.href}}" class="opt inR {{c.d}} {{c.cls}}" onClick="{{c.onTap}}">
         <span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1">
           <span style="font-family: 'Do Hyeon', sans-serif; font-size: 26px">{{c.label}}</span>
@@ -73,27 +69,27 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { hp: 70, maxHp: 103, gold: 140, left: false, heal: 0, k: 0 };
+    this.state = { hp: 70, maxHp: 103, gold: 140 };
   }
   renderVals() {
     const st = this.state;
-    // 강화 50골드 한 번(저장하면 바로 지도로) 또는 쉬어 가기(최대 체력 10%) — 둘 중 하나
-    const COST = 50, PASS_PCT = 0.1;
-    const passN = Math.min(st.maxHp - st.hp, Math.round(st.maxHp * PASS_PCT));
+    // 2026-11-12 사용자 지정 — 선택지 셋, 강화는 한 번 · 한 장(저장하면 바로 지도로). 옛 "쉬어 간다"(10% 회복)는 없앴다.
+    //   강화 맡기기 80G — 맡긴 판(수치 +5~+30 · 범위 1~5칸, 반드시 오른다)
+    //   직접 강화 무료 — 직접 판(수치 −10~+20 · 범위 −2~+3칸, 그대로거나 나빠질 수도)
+    //   나가기 — 아무것도 없이 다음 층
+    // 룰렛 화면은 Upgrade.dc.html(위쪽 "시안용 판" 버튼으로 맡기기 / 직접을 바꿔 본다).
+    const COST = 80;
     const can = st.gold >= COST;
-    const line = st.left ? '"그래, 몸부터 챙겨야지. 다음엔 카드도 들고 오게!"'
-      : '"어이, 어서 오게! 쇠든 카드든 두들기면 단단해지지. 50골드면 한 장 손봐 주겠네 — 딱 한 장이야."';
-    const choices = st.left ? [
-      { label: '지도로', sub: '다음 칸을 고르러 간다', subFg: '#ffd8a8', chipD: 'none', cost: '', href: 'RunMap.dc.html', cls: '', d: 'd1', onTap: () => {} },
-    ] : [
-      { label: '카드 강화', sub: can ? '카드 한 장 · 룰렛으로 수치 또는 범위 · 강화하면 대장간을 떠난다' : '골드가 모자란다', subFg: can ? '#ffd8a8' : '#b9a89a', chipD: 'inline-flex', cost: String(COST), href: can ? 'Upgrade.dc.html' : '#', cls: can ? '' : 'opt-off', d: 'd1', onTap: () => {} },
-      { label: '쉬어 간다', sub: `강화하지 않고 불 곁에서 쉰다 · 최대 체력의 10% 회복 (+${passN})`, subFg: '#b6ea6a', chipD: 'none', cost: '', href: '#', cls: '', d: 'd2',
-        onTap: () => this.setState({ left: true, hp: st.hp + passN, heal: passN, k: st.k + 1 }) },
+    const line = `"어이, 어서 오게! ${COST}골드면 내가 제대로 두들겨 주지. 돈이 아까우면 망치를 빌려줄 테니 직접 해 보든가 — 망쳐도 난 모르네!"`;
+    const choices = [
+      { label: '강화 맡기기', sub: can ? '대장장이가 두들긴다 · 반드시 오른다 · 카드 한 장' : '골드가 모자란다', subFg: can ? '#ffd8a8' : '#b9a89a', chipD: 'inline-flex', cost: String(COST), href: can ? 'Upgrade.dc.html' : '#', cls: can ? '' : 'opt-off', d: 'd1', onTap: () => {} },
+      { label: '직접 강화', sub: '공짜 · 대신 그대로거나 오히려 나빠질 수도 있다 · 카드 한 장', subFg: '#ffd8a8', chipD: 'none', cost: '', href: 'Upgrade.dc.html', cls: '', d: 'd2', onTap: () => {} },
+      { label: '나가기', sub: '아무것도 하지 않고 다음 층으로', subFg: '#ffd8a8', chipD: 'none', cost: '', href: 'RunMap.dc.html', cls: '', d: 'd3', onTap: () => {} },
     ];
     return {
-      pk: 'p' + (st.k % 2), gold: String(st.gold), hp: String(st.hp), maxHp: String(st.maxHp), line, choices,
-      healShow: st.heal > 0, healN: String(st.heal),
-      reset: () => this.setState({ hp: 70, gold: 140, left: false, heal: 0, k: st.k + 1 }),
+      pk: 'p0', gold: String(st.gold), hp: String(st.hp), maxHp: String(st.maxHp), line, choices,
+      poorLabel: can ? '골드 부족 보기(시안)' : '골드 되돌리기(시안)',
+      togglePoor: () => this.setState({ gold: can ? 50 : 140 }),
     };
   }
 }
