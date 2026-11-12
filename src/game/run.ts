@@ -175,7 +175,7 @@ const CENTER_LANE = 1
 const NODE_TEMPLATE: NodeType[] = [
   'combat', 'combat', 'event', 'combat', 'inn', 'combat', 'elite',
   'event', 'combat', 'elite', 'inn',
-  'combat', 'combat', 'event', 'boss',
+  'event', 'combat', 'event', 'boss', // 12층 전투 → ?(2026-11-12 "이벤트가 더 자주")
 ]
 export const LADDER_FLOORS = NODE_TEMPLATE.length
 
@@ -308,6 +308,8 @@ export interface RunState {
   maxHpLoss?: number
   /** 이번 런에서 고블린 상점에 쓴 골드 — 단계(가난·중간·부자)를 정한다. 덮쳐서 이기면 0. */
   goblinSpent?: number
+  /** 이번 런에 이미 만난 ? 이벤트 id — 다 보기 전에는 다시 안 나온다(2026-11-12 사용자 지정). */
+  seenEvents?: string[]
   hp: number
   maxHp: number
   gold: number
@@ -1120,9 +1122,12 @@ export function advanceFloor(run: RunState): RunState {
   return { ...run, floor, special: undefined, status: 'choosing' }
 }
 // --- ? 칸 정체 · 고블린 장사꾼(2026-11 리디자인 · `docs/redesign/GOBLIN_MERCHANT.md`) ---
-/** ? 칸이 실제로 무엇인지 — 들어가 봐야 안다. 가중치는 시안에 없어 정한 값이다. */
+/**
+ * ? 칸이 실제로 무엇인지 — 들어가 봐야 안다. 가중치는 시안에 없어 정한 값이다.
+ * 2026-11-12 이벤트 55 → 70(사용자 "이벤트가 더 자주") — 이벤트 12종을 런당 1번꼴로는 거의 못 봤다.
+ */
 export type QuestionFate = 'event' | 'combat' | 'rest' | 'goblin'
-const FATE_WEIGHTS: [QuestionFate, number][] = [['event', 55], ['combat', 15], ['rest', 15], ['goblin', 15]]
+const FATE_WEIGHTS: [QuestionFate, number][] = [['event', 70], ['combat', 10], ['rest', 10], ['goblin', 10]]
 export function rollQuestionFate(rng: () => number = Math.random): QuestionFate {
   let r = rng() * 100
   for (const [f, w] of FATE_WEIGHTS) {

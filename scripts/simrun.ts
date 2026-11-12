@@ -22,7 +22,7 @@ import { getRelic, type Rarity } from '../src/game/relics'
 import { runFightProps } from '../src/game/runbattle'
 import { EVENT_CARDS, RUN_CARDS } from '../src/game/runcards'
 import { ROULETTE_VALUE, spinRoulette } from '../src/game/upgrades'
-import { applySpecialWin, eventChoices, resolveEventChoice, startEvent, tradeList, type EventOutcome } from '../src/game/events'
+import { applySpecialWin, eventChoices, resolveEventChoice, startEvent, tradeList, withEventSeen, type EventOutcome } from '../src/game/events'
 import {
   LADDER_FLOORS,
   advanceFloor,
@@ -271,7 +271,7 @@ function eventPick(run: RunState, st: ReturnType<typeof startEvent>): string | n
 }
 function doEvent(run: RunState): RunState {
   let st = startEvent(undefined, Math.random, run)
-  let cur = run
+  let cur = withEventSeen(run, st.id)
   for (let i = 0; i < 12; i++) {
     const key = eventPick(cur, st)
     if (!key) break

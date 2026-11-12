@@ -157,8 +157,14 @@ export function startEvent(id?: EventId, rng: () => number = Math.random, run?: 
     ;[fx[i], fx[j]] = [fx[j], fx[i]]
   }
   const pool = EVENT_DEFS.filter((e) => (run ? eventEligible(run, e.id) : !e.steps && e.id !== 'spirit'))
-  return { id: id ?? pickOne(pool, rng).id, potions: fx, tries: 0, fails: 0, prizes: ['heal', 'relic'], step: 0 }
+  // 한 런 안에서는 겹치지 않는다(2026-11-12 사용자 지정) — 나올 수 있는 걸 다 봤을 때만 다시 섞는다.
+  const fresh = pool.filter((e) => !run?.seenEvents?.includes(e.id))
+  return { id: id ?? pickOne(fresh.length ? fresh : pool, rng).id, potions: fx, tries: 0, fails: 0, prizes: ['heal', 'relic'], step: 0 }
 }
+
+/** 이 이벤트를 만났다고 런에 적는다 — 이벤트 화면이 열리자마자(그냥 떠나도 본 것이다). */
+export const withEventSeen = (run: RunState, id: EventId): RunState =>
+  run.seenEvents?.includes(id) ? run : { ...run, seenEvents: [...(run.seenEvents ?? []), id] }
 
 /** 대가 칩 — 골드(금) · HP(빨강) · 최대 HP(분홍) · 카드/유물(회색). */
 export interface CostChip { kind: 'gold' | 'hp' | 'maxhp' | 'item'; text: string }

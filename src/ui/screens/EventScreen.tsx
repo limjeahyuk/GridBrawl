@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { getChar } from '../../data/roster'
 import { getRelic } from '../../game/relics'
 import {
-  eventChoices, eventDef, eventText, resolveEventChoice, startEvent, tradeList, type EventChoice, type EventId,
+  eventChoices, eventDef, eventText, resolveEventChoice, startEvent, tradeList, withEventSeen, type EventChoice, type EventId,
   type EventOutcome,
 } from '../../game/events'
 import { advanceFloor, currentEnemy, regionOf, replaceCandidates, runCard, type RunState, type SpecialFight } from '../../game/run'
@@ -43,7 +43,7 @@ export function EventScreen({
   onFight: (next: RunState) => void
 }) {
   const [st, setSt] = useState(() => startEvent(eventId, Math.random, run))
-  const [cur, setCur] = useState(run)
+  const [cur, setCur] = useState(() => withEventSeen(run, st.id))
   const [picking, setPicking] = useState<EventChoice | null>(null)
   const [out, setOut] = useState<EventOutcome | null>(null)
   const [upgrading, setUpgrading] = useState(false)

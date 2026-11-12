@@ -72,7 +72,7 @@ import {
 } from '../src/game/run'
 import { runFightProps } from '../src/game/runbattle'
 import { MAX_UPGRADE, ROULETTE_RANGE, ROULETTE_VALUE, addUpgrade, canPickCell, spinRoulette, upgradedCard } from '../src/game/upgrades'
-import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, resolveEventChoice, startEvent } from '../src/game/events'
+import { EVENT_DEFS, RELIC_POOLS, applySpecialWin, eventChoices, eventEligible, resolveEventChoice, startEvent, withEventSeen } from '../src/game/events'
 import { RELIC_BY_ID } from '../src/game/relics'
 import { RUN_CARDS, RUN_CARD_BY_ID, RUN_CARD_CLASS, WORLDTREE_CARD, resolveRunCard } from '../src/game/runcards'
 import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src/game/bosses'
@@ -1374,6 +1374,19 @@ console.log('\n룰렛 카드 강화 — 수치 0~20 · 범위 0~5칸 · 카드�
 console.log('\n이벤트 8종 — 대가만 보인다 · 히든 잠금 · 반복형')
 {
   check('이벤트 12종(8 + 사슬 4)', EVENT_DEFS.map((e) => e.id).sort(), ['apothecary', 'egg', 'forge', 'gacha', 'jar', 'mole', 'phoenix', 'spirit', 'spring', 'surgery', 'trade', 'worldtree'])
+  // 한 런 안에서는 겹치지 않는다(2026-11-12) — 8종을 다 볼 때까지 같은 게 안 나온다, 다 보면 다시 섞는다.
+  {
+    let r = { ...startRun('warrior'), floor: 12 }
+    const ids: string[] = []
+    for (let i = 0; i < 9; i++) {
+      const id = startEvent(undefined, Math.random, { ...r, relicIds: ['phoenixfeather'] }).id
+      ids.push(id)
+      r = withEventSeen(r, id)
+    }
+    check('이벤트 — 다 보기 전엔 같은 이벤트가 다시 안 나온다', new Set(ids.slice(0, 8)).size, 8)
+    check('이벤트 — 다 보면 다시 나온다(막히지 않는다)', ids.length, 9)
+    check('이벤트 — 본 기록은 한 번만', withEventSeen(withEventSeen(r, 'jar'), 'jar').seenEvents!.filter((x) => x === 'jar').length, 1)
+  }
   const pooled = Object.values(RELIC_POOLS).flat()
   check('유물 풀의 id가 전부 실제 유물', pooled.filter((id) => !RELIC_BY_ID[id]), [])
   check('차가운 쇠는 실제 유물', !!RELIC_BY_ID['coldiron'], true)
