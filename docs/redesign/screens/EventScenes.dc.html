@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>이벤트 일러스트 시안</title>
+<title>? 이벤트 화면 모음</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -14,52 +14,89 @@ body{margin:0}
 .eb-forge{background-image:url(/redesign/cutscene/events/forge.png)}
 .eb-spring{background-image:url(/redesign/cutscene/events/spring.png)}
 .eb-trade{background-image:url(/redesign/cutscene/events/trade.png)}
+.eb-jar{background-image:url(/redesign/cutscene/events/jar.png)}
+.eb-apothecary{background-image:url(/redesign/cutscene/events/apothecary.png)}
+.eb-gacha{background-image:url(/redesign/cutscene/events/gacha.png)}
+.eb-mole{background-image:url(/redesign/cutscene/events/mole.png)}
+.eb-surgery{background-image:url(/redesign/cutscene/events/surgery.png)}
+.eb-dragon{background-image:url(/redesign/cutscene/events/dragon.png)}
+.eb-casino{background-image:url(/redesign/cutscene/events/casino.png)}
+.eb-macgora{background-image:url(/redesign/cutscene/events/macgora.png)}
 .shot{position:relative;width:1280px;height:720px;background-size:1280px 720px;background-repeat:no-repeat;overflow:hidden;box-shadow:0 0 0 3px #3a3150;color:#efe9f5}
-.opt{display:flex;align-items:center;gap:10px;padding:14px 16px;box-sizing:border-box;background:#1a1626;border:2px solid #4a4058}
-.opt-lock{border-style:dashed;background:repeating-linear-gradient(135deg,#17131f 0 8px,#1d1828 8px 16px);color:#8a849a}
-.chip{font-size:12px;padding:2px 8px;font-family:'Silkscreen','Noto Sans KR',monospace;white-space:nowrap;background:#1a1626;color:#c9c2d6;border:1px solid #4a4058}
+.opt{display:flex;align-items:center;gap:10px;min-height:58px;padding:10px 16px;box-sizing:border-box;background:#1a1626;border:2px solid #4a4058}
+.opt-blank{border-style:dashed;background:repeating-linear-gradient(135deg,#17131f 0 8px,#1d1828 8px 16px);color:#9a94aa}
+.chip{font-size:12px;padding:2px 8px;font-family:'Silkscreen','Noto Sans KR',monospace;white-space:nowrap;background:#2a1c08;color:#ffd86a;border:1px solid #c9952f}
+.chip-hp{background:#3a1016;color:#ff9a9a;border-color:#e0485a}
 </style>
 </helmet>
-<div style="width: 4000px; height: 900px; box-sizing: border-box; padding: 30px 40px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 18px">
+<div style="width: 5400px; height: 2560px; box-sizing: border-box; padding: 36px 40px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 22px">
   <header>
-    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 38px; color: #fff6dc">? 이벤트 일러스트 시안 — 낡은 대장간 · 거래 · 온천</h1>
-    <p style="margin: 6px 0 0; font-size: 15px; color: #c9c2d6">그림을 화면 전체 배경으로 깔고, 이벤트 이름 · 글 · 선택지를 오른쪽 패널에 올린다. 선택지에는 대가만 보이고 결과는 고른 뒤에 나온다. 직접 눌러 보려면 "? 이벤트 8종" 보드의 탭.</p>
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 42px; color: #fff6dc">? 이벤트 화면 모음 — 일러스트 11종</h1>
+    <p style="margin: 8px 0 0; font-size: 16px; color: #c9c2d6">그림을 화면 전체 배경으로 깔고, 이벤트 이름 · 글 · 선택지는 오른쪽 패널에 올린다. 오른쪽은 글이 읽히는 만큼만 어둡게 했다. 직접 눌러 보려면 "? 이벤트 11종" 보드의 탭. <b style="color: #ffd86a">빗금 친 선택지</b>는 기획이 아직 없어 비워 둔 것이다.</p>
   </header>
-  <div style="display: flex; gap: 40px">
-    <sc-for list="{{evs}}" as="e" hint-placeholder-count="3">
+  <div style="display: flex; flex-wrap: wrap; gap: 36px 40px">
+    <sc-for list="{{evs}}" as="e" hint-placeholder-count="11">
       <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
         <div class="shot {{e.cls}}" role="img" aria-label="{{e.name}}">
-          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,6,12,0.78) 0%, rgba(8,6,12,0) 20%)"></div>
-          <div style="position: absolute; top: 0; bottom: 0; right: 0; width: 820px; background: linear-gradient(90deg, rgba(8,6,12,0) 0%, rgba(8,6,12,0.55) 40%)"></div>
-          <span style="position: absolute; left: 32px; top: 16px; font-family: 'Do Hyeon', sans-serif; font-size: 34px; color: #fff6dc">? 칸 · 이벤트</span>
+          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,6,12,0.7) 0%, rgba(8,6,12,0) 18%)"></div>
+          <div style="position: absolute; top: 0; bottom: 0; right: 0; width: 820px; background: linear-gradient(90deg, rgba(8,6,12,0) 0%, rgba(8,6,12,0.45) 42%)"></div>
+          <span style="position: absolute; left: 32px; top: 16px; font-family: 'Do Hyeon', sans-serif; font-size: 34px; color: #fff6dc; text-shadow: 3px 3px 0 #0a0604">? 칸 · 이벤트</span>
           <div style="position: absolute; left: 600px; top: 116px; width: 644px; box-sizing: border-box; padding: 18px 22px 20px; background: rgba(16,10,8,0.88); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px {{e.col}}, 0 8px 0 rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 12px">
-            <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{e.col}}">EVENT · 한 번</span>
+            <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{e.col}}">EVENT · {{e.kind}}</span>
             <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">{{e.name}}</b>
             <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{e.text}}</p>
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px">
               <sc-for list="{{e.choices}}" as="c" hint-placeholder-count="3">
-                <div class="opt {{c.cls}}"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 23px; flex-grow: 1">{{c.label}}</span><span class="chip" style="display: {{c.chipD}}">{{c.chip}}</span></div>
+                <div class="opt {{c.cls}}"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; flex-grow: 1">{{c.label}}</span><span class="chip {{c.chipCls}}" style="display: {{c.chipD}}">{{c.chip}}</span></div>
               </sc-for>
             </div>
           </div>
         </div>
-        <figcaption style="display: flex; gap: 10px; align-items: baseline"><b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: #fff6dc">{{e.name}}</b><span style="font-size: 13px; color: #c9c2d6">{{e.src}}</span></figcaption>
+        <figcaption style="display: flex; gap: 10px; align-items: baseline">
+          <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px; color: {{e.col}}">{{e.name}}</b>
+          <span style="font-size: 14px; color: #c9c2d6">{{e.src}}</span>
+        </figcaption>
       </figure>
     </sc-for>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4000,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5400,"height":2560}}'>
 class Component extends DCLogic {
   renderVals() {
-    const c = (label, chip, cls) => ({ label, chip: chip || '', chipD: chip ? 'inline-block' : 'none', cls: cls || '' });
+    const c = (label, chip, kind) => ({ label, chip: chip || '', chipD: chip ? 'inline-block' : 'none',
+      chipCls: kind === 'hp' ? 'chip-hp' : '', cls: kind === 'blank' ? 'opt-blank' : '' });
+    const B = [c('(선택지 1)', '', 'blank'), c('(선택지 2)', '', 'blank')];
     const evs = [
-      { cls: 'eb-forge', name: '빈 대장간', col: '#ff8a5a', src: '대장간.png', text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
-        choices: [c('카드라도 두들긴다'), c('주변에 쇠라도 챙긴다'), c('??? — 잠겨 있다 · 무언가 필요해 보인다', '', 'opt-lock')] },
-      { cls: 'eb-trade', name: '거래', col: '#c48aff', src: '거래상.png', text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.',
+      { cls: 'eb-forge', name: '빈 대장간', col: '#ff8a5a', kind: '한 번', src: '대장간.png',
+        text: '빈 대장간을 발견했다.\n신기하게 불은 꺼질 생각을 하지 않는다.',
+        choices: [c('카드라도 두들긴다'), c('주변에 쇠라도 챙긴다'), c('??? — 잠겨 있다', '', 'blank')] },
+      { cls: 'eb-trade', name: '거래', col: '#c48aff', kind: '한 번', src: '거래상.png',
+        text: '"그 물건 탐나는군요. 저와 거래하실래요?"\n누군가가 거래를 요청했다.',
         choices: [c('내 카드 한 장 ↔ 다른 카드', '카드 1장'), c('내 카드 한 장 ↔ 유물', '카드 1장'), c('내 유물 하나 ↔ 다른 유물', '유물 1개')] },
-      { cls: 'eb-spring', name: '온천', col: '#6ae0e0', src: '온천.png', text: '김이 모락모락 나는 아주 뜨끈한 온천을 발견했다.\n당장 쉬고 싶어진다.',
-        choices: [c('휴식')] },
+      { cls: 'eb-spring', name: '온천', col: '#6ae0e0', kind: '한 번', src: '온천.png',
+        text: '김이 모락모락 나는 아주 뜨끈한 온천을 발견했다.\n당장 쉬고 싶어진다.', choices: [c('휴식')] },
+      { cls: 'eb-apothecary', name: '약방', col: '#8a6ae0', kind: '반복', src: 'Plague doctor.png',
+        text: '엄청나게 많은 약들이 있는 약방에 들어섰다.\n의문의 남자가 약 3가지를 보여 준다.',
+        choices: [c('약 (빨강)', '50'), c('약 (초록)', '50'), c('약 (보라)', '50'), c('나간다')] },
+      { cls: 'eb-jar', name: '항아리', col: '#b6ea6a', kind: '한 번 · 전투 가능', src: 'snake.png',
+        text: '어둡고 매우 습한 동굴에 들어왔다.\n눈앞에 항아리 하나가 떡하니 있다. 열어 보겠습니까?',
+        choices: [c('연다'), c('건드리지 않는다')] },
+      { cls: 'eb-gacha', name: '반짝이는 가게', col: '#ff8ab0', kind: '반복', src: 'Gatcha.png',
+        text: '반짝반짝 거리는 가게에 들어서니, 돈을 넣으면 무언가를\n집을 수 있을 것 같은 기계가 있다. 해 보겠습니까?',
+        choices: [c('돈 넣기', '50'), c('나가기')] },
+      { cls: 'eb-mole', name: '두더지', col: '#6ae0ff', kind: '반복', src: 'mole.png',
+        text: '반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?',
+        choices: [c('땅 파기', 'HP -10', 'hp'), c('가던 길 가기')] },
+      { cls: 'eb-surgery', name: '수술실', col: '#fff6dc', kind: '한 번', src: 'doctor_soosool.png',
+        text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?',
+        choices: [c('심장', '최대 HP -10', 'hp'), c('손', 'HP -15', 'hp'), c('발', 'HP -15', 'hp')] },
+      { cls: 'eb-dragon', name: '용족 마법사', col: '#c48aff', kind: '기획 전', src: 'dragon_magision.png',
+        text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
+      { cls: 'eb-casino', name: '카지노', col: '#ff8ab0', kind: '기획 전', src: 'casino.png',
+        text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
+      { cls: 'eb-macgora', name: '막고라', col: '#ffa24a', kind: '기획 전', src: 'macgora.png',
+        text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
     ];
     return { evs };
   }

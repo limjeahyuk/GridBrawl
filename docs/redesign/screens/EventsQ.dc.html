@@ -22,7 +22,15 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .ebg{position:absolute;inset:0;background-size:1280px 720px;background-repeat:no-repeat}
 .eb-forge{background-image:url(/redesign/cutscene/events/forge.png)}
 .eb-spring{background-image:url(/redesign/cutscene/events/spring.png)}
-.eb-trade{background-image:url(/redesign/cutscene/events/trader.png)}
+.eb-trade{background-image:url(/redesign/cutscene/events/trade.png)}
+.eb-jar{background-image:url(/redesign/cutscene/events/jar.png)}
+.eb-apothecary{background-image:url(/redesign/cutscene/events/apothecary.png)}
+.eb-gacha{background-image:url(/redesign/cutscene/events/gacha.png)}
+.eb-mole{background-image:url(/redesign/cutscene/events/mole.png)}
+.eb-surgery{background-image:url(/redesign/cutscene/events/surgery.png)}
+.eb-casino{background-image:url(/redesign/cutscene/events/casino.png)}
+.eb-macgora{background-image:url(/redesign/cutscene/events/macgora.png)}
+.eb-dragon{background-image:url(/redesign/cutscene/events/dragon.png)}
 .a-forge{background-image:url(/redesign/ui/events/forge.png)}
 .a-trader{background-image:url(/redesign/ui/events/trader.png)}
 .a-hotspring{background-image:url(/redesign/ui/events/hotspring.png)}
@@ -69,7 +77,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,6,12,0.72)"></div>
   <div class="ebg {{bgCls}}" role="img" aria-label="{{ev.name}}" style="display: {{bgD}}"></div>
   <div aria-hidden="true" style="display: {{bgD}}; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,6,12,0.78) 0%, rgba(8,6,12,0) 20%)"></div>
-  <div aria-hidden="true" style="display: {{bgD}}; position: absolute; top: 0; bottom: 0; right: 0; width: 820px; background: linear-gradient(90deg, rgba(8,6,12,0) 0%, rgba(8,6,12,0.55) 40%)"></div>
+  <div aria-hidden="true" style="display: {{bgD}}; position: absolute; top: 0; bottom: 0; right: 0; width: 820px; background: linear-gradient(90deg, rgba(8,6,12,0) 0%, rgba(8,6,12,0.45) 42%)"></div>
 
   <header style="position: absolute; left: 32px; right: 32px; top: 16px; display: flex; justify-content: space-between; align-items: center">
     <div style="display: flex; gap: 12px; align-items: baseline"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">? 칸 · 이벤트</h1><span style="font-size: 13px; color: #c9c4ee">위 탭으로 이벤트를 바꿔 본다 — 실제 게임에선 ? 칸에서 하나가 뽑힌다</span></div>
@@ -236,6 +244,9 @@ class Component extends DCLogic {
     const MY_RELICS = ['fang', 'plating', 'heart'].concat(st.iron ? ['coldiron'] : []);
 
     // ---------------------------------------------------------------- 이벤트 정의
+    // 그림만 온 이벤트의 빈 선택지 — 기획이 오면 라벨 · 대가 · 결과만 채우면 된다
+    const blank = (i) => ({ label: `(선택지 ${i})`, sub: '기획 전 — 비워 둠', chips: [],
+      onTap: () => done(bigRes('…', '#8a849a', '(결과 — 기획이 오면 채운다)', '고른 뒤 무슨 일이 생기는지를 여기에 적는다.', '#4a4058')) });
     const E = {
       forge: {
         name: '빈 대장간', code: 'EV-FORGE', kindTxt: '한 번', tagCol: '#ff8a5a', glow: 'rgba(255,138,58,0.32)',
@@ -269,7 +280,7 @@ class Component extends DCLogic {
       apothecary: {
         name: '약방', code: 'EV-APOTHECARY', kindTxt: '반복', tagCol: '#8a6ae0', glow: 'rgba(138,106,224,0.25)',
         text: '엄청나게 많은 약들이 있는 약방에 들어섰다.\n의문의 남자가 약 3가지를 보여 준다.',
-        art: ['a-apothecary', '', 72, 60, 1],
+        art: ['a-apothecary', '', 72, 60, 1], bg: 'eb-apothecary',
         repeat: true,
         choices: [0, 1, 2].map((i) => ({
           label: '약', icon: 'pot' + i, chips: [gold(50)], off: st.gold < 50,
@@ -285,7 +296,7 @@ class Component extends DCLogic {
       jar: {
         name: '항아리', code: 'EV-JAR', kindTxt: '한 번 · 전투 가능', tagCol: '#b6ea6a', glow: 'rgba(106,184,58,0.22)',
         text: '어둡고 매우 습한 동굴에 들어왔다.\n눈앞에 항아리 하나가 떡하니 있다. 열어 보겠습니까?',
-        art: ['a-jar', '', 48, 52, 1],
+        art: ['a-jar', '', 48, 52, 1], bg: 'eb-jar',
         choices: [
           { label: '연다', chips: [], onTap: () => {
             if (st.forceJar === 'snake' || (st.forceJar !== 'empty' && Math.random() < 0.5)) set({ phase: 'battle', fx: 'shake' });
@@ -297,7 +308,7 @@ class Component extends DCLogic {
       gacha: {
         name: '반짝이는 가게', code: 'EV-GACHA', kindTxt: '반복', tagCol: '#ff8ab0', glow: 'rgba(255,138,176,0.25)',
         text: '반짝반짝 거리는 가게에 들어서니, 돈을 넣으면 무언가를 집을 수 있을 것 같은 기계가 있다.\n해 보겠습니까?',
-        art: ['a-gacha', 'f2', 52, 68, 2],
+        art: ['a-gacha', 'f2', 52, 68, 2], bg: 'eb-gacha',
         repeat: true,
         choices: [
           { label: '돈 넣기', chips: [gold(50)], sub: `넣은 횟수 ${st.gachaTries} · 남은 상품 ${2 - st.gachaGot.length}개`, off: st.gold < 50, onTap: () => {
@@ -319,7 +330,7 @@ class Component extends DCLogic {
       mole: {
         name: '두더지', code: 'EV-MOLE', kindTxt: '반복', tagCol: '#6ae0ff', glow: 'rgba(106,224,255,0.2)',
         text: '반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?',
-        art: ['a-mole', 'f4', 64, 44, 4],
+        art: ['a-mole', 'f4', 64, 44, 4], bg: 'eb-mole',
         repeat: true,
         choices: [
           { label: '땅 파기', chips: [hpc(10 + 3 * st.moleTries)], sub: st.moleTries ? `${st.moleTries}번 팠다 — 팔수록 더 힘들다` : '', onTap: () => {
@@ -335,15 +346,34 @@ class Component extends DCLogic {
       surgery: {
         name: '수술실', code: 'EV-SURGERY', kindTxt: '한 번', tagCol: '#fff6dc', glow: 'rgba(255,246,220,0.18)',
         text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?',
-        art: ['a-surgery', '', 72, 56, 1],
+        art: ['a-surgery', '', 72, 56, 1], bg: 'eb-surgery',
         choices: [
           { label: '심장', chips: [mhp(10)], onTap: () => { const id = pick(POOL.heart); done(relicRes(id, '새 심장: {r}', '최대 체력이 10 줄었다.', '#e0485a'), { maxHp: st.maxHp - 10, hp: Math.min(st.hp, st.maxHp - 10) }); } },
           { label: '손', chips: [hpc(15)], onTap: () => { const id = pick(POOL.hand); done(relicRes(id, '새 손: {r}', '체력이 15 줄었다.', '#e8b080'), { hp: Math.max(1, st.hp - 15) }); } },
           { label: '발', chips: [hpc(15)], onTap: () => { const id = pick(POOL.foot); done(relicRes(id, '새 발: {r}', '체력이 15 줄었다.', '#e8b080'), { hp: Math.max(1, st.hp - 15) }); } },
         ],
       },
+      // ── 아래 셋은 그림만 왔다(2026-11-13) — 글 · 선택지 · 결과는 기획이 오면 채운다 ──
+      dragon: {
+        name: '용족 마법사', code: 'EV-DRAGON', kindTxt: '기획 전', tagCol: '#c48aff', glow: 'rgba(196,138,255,0.22)',
+        text: '(이벤트 글 — 기획이 오면 채운다)',
+        art: ['a-jar', '', 48, 52, 1], bg: 'eb-dragon',
+        choices: [blank(1), blank(2)],
+      },
+      casino: {
+        name: '카지노', code: 'EV-CASINO', kindTxt: '기획 전', tagCol: '#ff8ab0', glow: 'rgba(255,138,176,0.22)',
+        text: '(이벤트 글 — 기획이 오면 채운다)',
+        art: ['a-jar', '', 48, 52, 1], bg: 'eb-casino',
+        choices: [blank(1), blank(2)],
+      },
+      macgora: {
+        name: '막고라', code: 'EV-MACGORA', kindTxt: '기획 전', tagCol: '#ffa24a', glow: 'rgba(255,162,74,0.22)',
+        text: '(이벤트 글 — 기획이 오면 채운다)',
+        art: ['a-jar', '', 48, 52, 1], bg: 'eb-macgora',
+        choices: [blank(1), blank(2)],
+      },
     };
-    const ORDER = [['forge', '대장장이'], ['trade', '거래'], ['spring', '온천'], ['apothecary', '약방'], ['jar', '항아리'], ['gacha', '갓챠'], ['mole', '두더지'], ['surgery', '수술실']];
+    const ORDER = [['forge', '대장장이'], ['trade', '거래'], ['spring', '온천'], ['apothecary', '약방'], ['jar', '항아리'], ['gacha', '갓챠'], ['mole', '두더지'], ['surgery', '수술실'], ['dragon', '용족 마법사'], ['casino', '카지노'], ['macgora', '막고라']];
     const ev = E[st.ev];
     const [artCls, anim, aw, ah, nf] = ev.art;
     const S4 = 4;

@@ -202,7 +202,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 ## 7. 에셋 규칙
 
 - 게임이 쓰는 그림은 `public/`만. **원본·안 쓰는 그림을 `public/`에 두지 않는다**(배포된다).
-- 사용자가 준 원본 일러스트는 **`docs/redesign/2dImg/`**(`cairn`·`sable`·`magision`·`inn.png`·`대장간`·`대장장이`·`온천`·`거래상.png` — 버전 관리 · 배포 안 됨. **마법사는 `magision.png`가 지금 그림**이고 `dirge.png`는 옛 그림이다 — 굽힌 결과 이름은 그대로 `bg-dirge.png`). 배경은 `docs/redesign/tools/hero-bg`·`inn-bg`·`event-bg/build.py`로 굽는다.
+- 사용자가 준 원본 일러스트는 **`docs/redesign/2dImg/`**(`cairn`·`sable`·`magision`·`inn.png`·`대장간`·`대장장이`·`온천`·`거래상.png` · 이벤트 그림 한 묶음(`snake`·`Plague doctor`·`Gatcha`·`mole`·`doctor_soosool`·`goldbox`·`goldbox_in`·`mimic`·`casino`·`macgora`·`dragon_magision`·`goblin_*_full` — 2026-11-13) — 버전 관리 · 배포 안 됨. **마법사는 `magision.png`가 지금 그림**이고 `dirge.png`는 옛 그림이다 — 굽힌 결과 이름은 그대로 `bg-dirge.png`). 배경은 `docs/redesign/tools/`로 굽는다 — `hero-bg`·`inn-bg`·`event-bg/build.py`(세로 그림을 한쪽에 세우기) · `event-bg/build_wide.py`(가로 그림) · **`event-bg/cover.py`(가로 그림 꽉 채우기 — 1344×768은 화면비가 거의 같다)** · `icon/build.py`(앱 아이콘).
 - 서드파티 스프라이트 팩 원본은 `assets-raw/`(**gitignore** — EULA상 커밋 금지), `npm run sprites`로 `public/sprites/`에 굽는다. 리디자인 시트는 `public/redesign/sprites/`(`docs/redesign/tools/`가 생성).
 - `public/sprites/`에 남은 옛 시트는 아직 리디자인 그림이 없는 몬스터용(철퇴병 · 감시안 · 버서커 · 뱀파이어 · 가디언 · 석궁병 · 주술사 · 기사 · 암살자 — `medieval-warrior`·`flying-eye`·`martial-hero`·`mimic`·`angel`·`church-wizard`)과 `rat`(미사용, 원본이 없어 보존) · `hero-knight`뿐이다. ⚠ `hero-knight`는 2026-11-12에 웹 아이콘이 거래상 그림으로 바뀌면서 **쓰는 곳이 없어졌다**(지울지는 사용자 결정). 옛 배경 `public/bg`·바위 `public/terrain`은 2026-11-09에 지웠다(리디자인으로 대체).
 - 시트 `facesRight`는 **몸이 향한 쪽**(공격 프레임의 타격 방향)으로 판정. 모든 시트에 명시.

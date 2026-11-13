@@ -11,15 +11,30 @@
 
 그림은 `public/redesign/ui/events/`에 있다(×4로 쓴다). 뱀은 `public/redesign/sprites/snake/`에 있다.
 
-**일러스트가 있는 이벤트는 여관처럼 그림을 화면 전체 배경으로 깔고**, 이벤트 이름 · 글 · 선택지를 오른쪽 패널(x 600~1244)에 올린다(2026-11-12). 도트 그림 틀(왼쪽 380×470)은 그 이벤트에서 뺀다.
+**일러스트가 있는 이벤트는 여관처럼 그림을 화면 전체 배경으로 깔고**, 이벤트 이름 · 글 · 선택지를 오른쪽 패널(x 600~1244)에 올린다. 도트 그림 틀(왼쪽 380×470)은 그 이벤트에서 뺀다. 오른쪽은 **글이 읽히는 만큼만** 어둡게 한다(가로 그라디언트 0.45 + 패널 0.88) — 그림을 가리지 않는다.
 
-| 이벤트 | 배경(1280×720) | 원본 |
+| 이벤트 | 배경 `public/redesign/cutscene/events/` | 원본 `docs/redesign/2dImg/` |
 | --- | --- | --- |
-| 낡은 대장간 `forge` | `public/redesign/cutscene/events/forge.png` | `2dImg/대장간.png` — 화면을 그대로 채움 |
-| 거래 `trade` | `public/redesign/cutscene/events/trader.png` | `2dImg/거래상.png` — 거래상은 왼쪽, 오른쪽은 같은 그림을 흐린 색 배경 |
-| 온천 `spring` | `public/redesign/cutscene/events/spring.png` | `2dImg/온천.png` — 화면을 그대로 채움 |
+| 낡은 대장간 `forge` | `forge.png` | `대장간.png` |
+| 거래 `trade` | `trade.png` | `거래상.png` |
+| 온천 `spring` | `spring.png` | `온천.png` |
+| 약방 `apothecary` | `apothecary.png` | `Plague doctor.png` |
+| 항아리 `jar` | `jar.png` | `snake.png` |
+| 갓챠 `gacha` | `gacha.png` | `Gatcha.png` |
+| 두더지 `mole` | `mole.png` | `mole.png` |
+| 수술실 `surgery` | `surgery.png` | `doctor_soosool.png` |
+| 용족 마법사 `dragon` ⚠기획 전 | `dragon.png` | `dragon_magision.png` |
+| 카지노 `casino` ⚠기획 전 | `casino.png` | `casino.png` |
+| 막고라 `macgora` ⚠기획 전 | `macgora.png` | `macgora.png` |
 
-배경은 `tools/event-bg/build_wide.py`(가로 그림용: `full` = 화면 채우기, `shift` = 높이에 맞추고 끝을 흐린 배경으로 녹임)로 만든다. 나머지 이벤트(약방 · 항아리 · 갓챠 · 두더지 · 수술실)는 그림이 올 때까지 도트 틀 그대로.
+- 파일 이름 = **이벤트 id**다. 코드는 `EventScreen.tsx`의 `EVENT_SCENE`(id → 패널 색)과 `redesign.css`의 `.artbg--ev-<id>` 한 줄로 붙는다 — 지금 붙어 있는 건 `forge` · `trade` · `spring` 셋뿐이고, 나머지 여덟은 그림만 와 있다.
+- 세로 그림(여관 · 거래상 · 대장장이)은 `tools/event-bg/build_wide.py`, **가로 그림(1344×768)은 `tools/event-bg/cover.py`** 로 굽는다(화면비가 거의 같아 꽉 채우기만 한다).
+- 그림이 아직 없는 이벤트(사슬 넷)는 도트 틀 그대로.
+
+### 기획이 아직 없는 이벤트 (그림만 옴 · 2026-11-13)
+
+용족 마법사 · 카지노 · 막고라 셋은 **글 · 선택지 · 결과를 비워 뒀다**(시안에서 `(선택지 1)` `(선택지 2)` 빗금). 기획이 오면 아래 틀대로 적고 `EventsQ.dc.html`의 해당 항목만 채우면 된다. 미믹(보물 상자)도 마찬가지다.
+
 
 ## 공통 규칙 (모든 이벤트)
 

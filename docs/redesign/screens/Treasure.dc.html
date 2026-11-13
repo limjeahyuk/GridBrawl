@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>보물 — 유물 상자</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}a:hover{color:#fff1b8}
+.bg{position:absolute;inset:0;background-size:1280px 720px;background-repeat:no-repeat}
+.tb-box{background-image:url(/redesign/cutscene/treasure/box.png)}
+.tb-in{background-image:url(/redesign/cutscene/treasure/box-in.png)}
+.tb-mimic{background-image:url(/redesign/cutscene/treasure/mimic.png)}
+.rf78{width:78px;height:78px;background-image:url(/redesign/ui/relics/atlas-full.png);background-size:780px 780px;image-rendering:pixelated;flex-shrink:0}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:10px 18px;box-sizing:border-box;background:rgba(20,14,12,0.88);border:2px solid #6a4a30;box-shadow:0 4px 0 rgba(0,0,0,0.45);color:#fff6dc;font:inherit;text-align:left;cursor:pointer;text-decoration:none}
+.opt:hover{border-color:#f4d470;background:rgba(42,28,16,0.94);transform:translateX(-4px)}
+.opt-red{border-color:#8a3040}
+.opt-red:hover{border-color:#ff6a5a;background:rgba(58,16,22,0.94)}
+.go{display:inline-flex;align-items:center;height:50px;padding:0 24px;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 5px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:23px;cursor:pointer;text-decoration:none}
+.go-red{background:#e0485a;color:#fff6dc;box-shadow:0 5px 0 #7a1a28}
+.fbtn{height:28px;padding:0 10px;background:rgba(18,15,26,0.85);border:2px solid #4a4058;color:#c9c2d6;font:inherit;font-size:12px;cursor:pointer}
+.fon{background:#f4d470;border-color:#2a1c10;color:#1d1408}
+.p0 .inR{animation:ir0 .45s ease-out both}.p1 .inR{animation:ir1 .45s ease-out both}
+@keyframes ir0{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ir1{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.d1{animation-delay:.1s!important}.d2{animation-delay:.22s!important}
+.p0 .pop{animation:pp0 .5s ease-out both}.p1 .pop{animation:pp1 .5s ease-out both}
+@keyframes pp0{from{transform:translateY(16px) scale(.8);opacity:0}to{transform:none;opacity:1}}
+@keyframes pp1{from{transform:translateY(16px) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.shine{animation:sh 2.2s ease-in-out infinite}@keyframes sh{50%{opacity:.55}}
+</style>
+</helmet>
+<div class="{{pk}}" style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #14100c; font-family: 'Noto Sans KR', sans-serif; color: #fff6dc">
+  <div class="bg {{bgCls}}" role="img" aria-label="{{aria}}"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,6,4,0.7) 0%, rgba(10,6,4,0) 16%)"></div>
+  <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; right: 0; width: 780px; background: linear-gradient(90deg, rgba(10,6,4,0) 0%, rgba(10,6,4,0.45) 42%)"></div>
+
+  <header style="position: absolute; left: 32px; right: 32px; top: 18px; display: flex; justify-content: space-between; align-items: center">
+    <div style="display: flex; gap: 12px; align-items: baseline"><h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 42px; text-shadow: 3px 3px 0 #0a0604">보물</h1><span style="font-size: 14px; color: #ffd8a8; text-shadow: 2px 2px 0 #0a0604">초원 · 9층 · 유물 상자</span></div>
+    <div style="display: flex; gap: 8px; align-items: center">
+      <span style="display: flex; gap: 4px; align-items: center; padding: 3px 6px; background: rgba(10,6,4,0.6)">
+        <span style="font-size: 12px; color: #b9a89a; margin-right: 2px">시안</span>
+        <sc-for list="{{forceBtns}}" as="f" hint-placeholder-count="3"><button type="button" class="fbtn {{f.cls}}" onClick="{{f.onTap}}">{{f.label}}</button></sc-for>
+      </span>
+      <span style="padding: 8px 12px; background: rgba(18,15,26,0.92); border: 2px solid #4a4058; font-family: 'Silkscreen', monospace; font-size: 15px; color: #ffb0b0">HP {{hp}}/103</span>
+    </div>
+  </header>
+
+  <!-- 상자 안에 든 것 — 상자 그림 위에 얹는다 -->
+  <sc-if value="{{showLoot}}" hint-placeholder-val="{{false}}">
+    <div class="pop" style="position: absolute; left: 150px; top: 330px; width: 300px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+      <span class="shine" aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 300px; height: 220px; margin: -110px 0 0 -150px; background: radial-gradient(ellipse at 50% 50%, rgba(255,232,150,0.55) 0%, rgba(255,210,74,0.18) 45%, rgba(0,0,0,0) 72%)"></span>
+      <span class="rf78" style="position: relative; transform: scale(1.6); background-position: {{loot.pos}}; display: {{loot.relicD}}; filter: drop-shadow(0 6px 0 rgba(0,0,0,0.45))"></span>
+      <span style="position: relative; display: {{loot.bigD}}; font-family: 'Silkscreen', monospace; font-size: 54px; color: #b6ea6a; text-shadow: 3px 3px 0 #0a0604">{{loot.big}}</span>
+      <span style="position: relative; margin-top: 26px; padding: 4px 14px; background: rgba(10,6,4,0.82); border: 2px solid {{loot.edge}}; font-family: 'Do Hyeon', sans-serif; font-size: 22px">{{loot.name}}</span>
+    </div>
+  </sc-if>
+
+  <!-- 글 -->
+  <section style="position: absolute; left: 600px; top: 120px; width: 644px; box-sizing: border-box; padding: 18px 22px 20px; background: rgba(16,10,8,0.9); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px {{edge}}, 0 8px 0 rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 10px">
+    <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{edge}}">{{kicker}}</span>
+    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 38px; color: #fff6dc">{{title}}</h2>
+    <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{text}}</p>
+    <span style="display: {{descD}}; font-size: 14px; line-height: 1.6; color: #ffd8a8">{{desc}}</span>
+  </section>
+
+  <!-- 선택지 -->
+  <nav style="position: absolute; left: 600px; bottom: 30px; width: 644px; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{choices}}" as="c" hint-placeholder-count="2">
+      <a href="{{c.href}}" class="opt inR {{c.d}} {{c.cls}}" onClick="{{c.onTap}}">
+        <span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1">
+          <span style="font-family: 'Do Hyeon', sans-serif; font-size: 26px; color: {{c.fg}}">{{c.label}}</span>
+          <span style="display: {{c.subD}}; font-size: 13px; color: {{c.subFg}}">{{c.sub}}</span>
+        </span>
+      </a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // force: 'relic' | 'empty' | 'mimic' — 시안에서 결과를 골라 본다(실제로는 무작위)
+    this.state = { step: 'found', force: 'relic', hp: 70, k: 0 };
+  }
+  renderVals() {
+    const st = this.state;
+    const RELICS = [
+      { name: '흡성의 룬', pos: '-468px -234px', rarity: '희귀', edge: '#6ab8ff', desc: '공격으로 피해를 주면 체력 5 회복.' },
+      { name: '두꺼운 판금', pos: '-234px 0px', rarity: '일반', edge: '#8a849a', desc: '받는 피해 -3.' },
+      { name: '영원의 수레바퀴', pos: '0px -468px', rarity: '전설', edge: '#ffd86a', desc: '매 라운드 기력 +12, 보호막 +5.' },
+    ];
+    const r = RELICS[1];
+    const go = (step, extra) => () => this.setState(Object.assign({ step, k: st.k + 1 }, extra || {}));
+    const V = {
+      found: {
+        bgCls: 'tb-box', aria: '유물 상자', kicker: 'TREASURE', edge: '#c9952f',
+        title: '유물 상자', text: '길가에 낡은 상자가 놓여 있다.\n자물쇠는 이미 부서져 있다.',
+        showLoot: false,
+        choices: [
+          { label: '연다', sub: '유물 하나 — 고르는 건 없다', subFg: '#ffd8a8', href: '#', d: 'd1',
+            onTap: go(st.force === 'mimic' ? 'mimic' : st.force === 'empty' ? 'empty' : 'got') },
+          { label: '그냥 지나간다', sub: '아무 일 없이 지도로 돌아간다', subFg: '#b9a89a', href: 'RunMap.dc.html', d: 'd2', onTap: () => {} },
+        ],
+      },
+      got: {
+        bgCls: 'tb-in', aria: '상자 안의 유물', kicker: 'TREASURE · 획득', edge: '#c9952f',
+        title: '상자 안에 유물이 들어 있었다', text: '「' + r.name + '」을(를) 손에 넣었다.', desc: r.rarity + ' · ' + r.desc,
+        showLoot: true, loot: { relicD: 'block', bigD: 'none', big: '', pos: r.pos, name: '「' + r.name + '」', edge: r.edge },
+        choices: [{ label: '받고 지도로', sub: '유물 줄에 바로 붙는다', subFg: '#ffd8a8', href: 'RunMap.dc.html', d: 'd1', onTap: () => {} }],
+      },
+      empty: {
+        bgCls: 'tb-in', aria: '빈 상자', kicker: 'TREASURE · 빈 상자', edge: '#6a6478',
+        title: '상자는 비어 있었다', text: '먼지만 풀썩인다. 대신 잠깐 숨을 돌렸다.', desc: '체력 +20 (받을 유물이 더 없을 때 — `openTreasure`)',
+        showLoot: true, loot: { relicD: 'none', bigD: 'block', big: '+20', pos: '0 0', name: '체력 +20', edge: '#6ab83a' },
+        choices: [{ label: '지도로', sub: '', subFg: '#b9a89a', href: 'RunMap.dc.html', d: 'd1', onTap: () => {} }],
+      },
+      mimic: {
+        bgCls: 'tb-mimic', aria: '미믹', kicker: 'MIMIC · 기획 전', edge: '#e0485a',
+        title: '상자가 이빨을 드러냈다', text: '(이벤트 글 — 기획이 오면 채운다)', desc: '미믹 규칙은 아직 없다 — 전투 수치 · 보상 · 나올 확률을 정해 주면 채운다.',
+        showLoot: false,
+        choices: [
+          { label: '(선택지 1)', sub: '기획 전 — 비워 둠', subFg: '#b9a89a', href: '#', d: 'd1', cls: 'opt-red', fg: '#ffb0b0', onTap: () => {} },
+          { label: '(선택지 2)', sub: '기획 전 — 비워 둠', subFg: '#b9a89a', href: '#', d: 'd2', onTap: () => {} },
+        ],
+      },
+    }[st.step];
+    const forceBtns = [['relic', '유물'], ['empty', '빈 상자'], ['mimic', '미믹']].map(([k, label]) => ({
+      label, cls: st.force === k ? 'fon' : '', onTap: () => this.setState({ force: k, step: 'found', k: st.k + 1 }),
+    }));
+    return Object.assign({
+      pk: 'p' + (st.k % 2), hp: String(st.hp), forceBtns,
+      desc: '', descD: 'none', loot: { relicD: 'none', bigD: 'none', big: '', pos: '0 0', name: '', edge: '#6a4a30' },
+    }, V, {
+      descD: V.desc ? 'block' : 'none',
+      choices: V.choices.map((c) => Object.assign({ cls: '', fg: '#fff6dc', subD: c.sub ? 'block' : 'none' }, c)),
+    });
+  }
+}
+</script>
+</body>
+</html>
