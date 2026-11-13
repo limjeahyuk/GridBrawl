@@ -113,7 +113,7 @@ npm run typecheck && npm run check && npm run sim:run 900 -- --sweep --seed=1234
 ## 7. 에셋 규칙
 
 - 게임이 쓰는 그림은 `public/`만. **원본 · 안 쓰는 그림을 `public/`에 두지 않는다**(배포된다).
-- 사용자가 준 원본 일러스트는 **`docs/design/2dImg/`** — 배포 안 됨(⚠ git에는 올라가 있다). **마법사는 `magision.png`가 지금 그림**이고 `dirge.png`는 옛 그림이다(굽힌 결과 이름은 그대로 `bg-dirge.png`). 배경 · 아이콘은 `docs/design/tools/`로 굽는다 — 목록은 [docs/design/README.md](docs/design/README.md).
+- 사용자가 준 원본 일러스트는 **`docs/design/2dImg/`** — **git에 넣는다**(사용자가 사진을 넣고 그걸로 디자인을 만든다) · 배포 안 됨. ⚠ **Claude는 이 폴더를 건드리지 않는다**(2026-11-13 사용자 지정) — 읽어서 굽는 건 되지만 파일을 고치거나 · 옮기거나 · 지우거나 · 새로 넣지 않는다. **마법사는 `magision.png`가 지금 그림**이고 `dirge.png`는 옛 그림이다(굽힌 결과 이름은 그대로 `bg-dirge.png`). 배경 · 아이콘은 `docs/design/tools/`로 굽는다 — 목록은 [docs/design/README.md](docs/design/README.md).
 - 서드파티 스프라이트 팩 원본은 `assets-raw/`(**gitignore** — EULA상 커밋 금지), `npm run sprites`로 `public/sprites/`에 굽는다. 리디자인 시트는 `public/redesign/sprites/`.
 - `public/sprites/`에 남은 옛 시트는 리디자인 도트가 없는 몬스터용과 `rat`(미사용 · 원본 없어 보존) · `hero-knight`(⚠ 2026-11-12부터 쓰는 곳 없음 — 지울지는 사용자 결정)뿐이다.
 - 시트 `facesRight`는 **몸이 향한 쪽**(공격 프레임의 타격 방향)으로 판정. 모든 시트에 명시.

@@ -3,7 +3,7 @@
 새로 그린 픽셀아트 스프라이트·배경입니다. 전부 `public/redesign/`에 있고 **코드에 이미 붙어 있다**(`art/sprites.ts`의 `SHEETS` · `run.ts`의 `sceneFor` — 2026-11-07~12).
 
 > 이 폴더(`docs/design/`)는 **그림 · 시안 · 도구**만 둔다 — 게임 규칙은 [`docs/rules/`](../rules/RUN.md), 진행표는 [PROGRESS.md](../PROGRESS.md), 문서 지도는 CLAUDE.md §0.
-> 시안 대응표 [screens/README.md](screens/README.md) · 사용자 원본 그림 `2dImg/`(배포 안 됨 — ⚠ git에는 올라가 있다) · 굽는 도구 `tools/` · 미리보기 `previews/` · 데이터 `events.json`(이벤트 카탈로그 시안용) · `relics-100.json` · `relics-source.json`(유물 정리 원본).
+> 시안 대응표 [screens/README.md](screens/README.md) · 사용자 원본 그림 `2dImg/`(git에 넣는다 · 배포 안 됨 · **Claude는 건드리지 않는다** — 읽기만) · 굽는 도구 `tools/` · 미리보기 `previews/` · 데이터 `events.json`(이벤트 카탈로그 시안용) · `relics-100.json` · `relics-source.json`(유물 정리 원본).
 
 ```
 public/redesign/
@@ -63,5 +63,6 @@ docs/design/
 | `tools/inn-bg/build.py` | 여관 배경 |
 | `tools/event-bg/build.py` · `build_wide.py` · `cover.py` | 이벤트 배경 — 세로 그림을 한쪽에 세우기 · 가로 그림 · 가로 그림 꽉 채우기(1344×768은 화면비가 거의 같다) |
 | `tools/icon/build.py` | 웹 아이콘 마스터(`master-1024.png`, 거래상 얼굴) — `npm run icon`이 줄인다 |
+| `tools/relic_icons.py [outdir]` | 유물 아이콘 아틀라스(`../relics-source.json` · `../relics-100.json` → `out/ui/relics/` → `public/redesign/ui/relics/`). 글리프는 `legend_glyphs.py` · 새 유물(알 · 영양가루 · 깃털 — 지금 이모지)을 그릴 때 쓴다 |
 | `tools/status-icons/status_icons.py` | 상태이상 · 버프 아이콘 16×16 + 숫자(`StatusIcons` 시안) |
 

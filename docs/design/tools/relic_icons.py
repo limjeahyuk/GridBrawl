@@ -944,15 +944,20 @@ def build(relics_json, outdir, keep=None, COLS=16):
 
 
 if __name__ == '__main__':
-    import shutil
-    shutil.rmtree('/home/claude/gb/out/ui/relics', ignore_errors=True)
-    k = json.load(open('/home/claude/gb/relics100.json'))
-    idx, atlas = build('/home/claude/rx/relics.json', '/home/claude/gb/out', keep=k['keep'], COLS=10)
-    ix = json.load(open('/home/claude/gb/out/ui/relics/index.json'))
+    # usage: python3 relic_icons.py [outdir]   (기본 out/ → out/ui/relics/ · 결과를 public/redesign/ui/relics/로 옮긴다)
+    # 입력: ../relics-source.json(유물 원본 167종) · ../relics-100.json(남길 것 keep · 합친 것 merged)
+    import shutil, sys
+    from collections import Counter
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = sys.argv[1] if len(sys.argv) > 1 else 'out'
+    shutil.rmtree(os.path.join(out, 'ui', 'relics'), ignore_errors=True)
+    k = json.load(open(os.path.join(here, '..', 'relics-100.json'), encoding='utf-8'))
+    idx, atlas = build(os.path.join(here, '..', 'relics-source.json'), out, keep=k['keep'], COLS=10)
+    ip = os.path.join(out, 'ui', 'relics', 'index.json')
+    ix = json.load(open(ip, encoding='utf-8'))
     for r in ix['relics']:
         r['merged'] = k['merged'].get(r['id'], [])
-    json.dump(ix, open('/home/claude/gb/out/ui/relics/index.json', 'w'), ensure_ascii=False, indent=1)
-    Image.fromarray(atlas).resize((atlas.shape[1] * 3, atlas.shape[0] * 3), Image.NEAREST).save('/home/claude/gb/prev_relics.png')
-    from collections import Counter
+    json.dump(ix, open(ip, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    Image.fromarray(atlas).resize((atlas.shape[1] * 3, atlas.shape[0] * 3), Image.NEAREST).save(os.path.join(out, 'prev_relics.png'))
     print(len(idx), Counter(x['family'] for x in idx).most_common())
     print(Counter(x['behavior']['kind'] for x in idx))
