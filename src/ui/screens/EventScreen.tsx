@@ -27,6 +27,11 @@ const EVENT_SCENE: Partial<Record<EventId, string>> = {
   forge: '#ff8a5a',
   trade: '#c48aff',
   spring: '#6ae0e0',
+  apothecary: '#8a6ae0',
+  jar: '#b6ea6a',
+  gacha: '#ff8ab0',
+  mole: '#6ae0ff',
+  surgery: '#fff6dc',
 }
 
 export function EventScreen({

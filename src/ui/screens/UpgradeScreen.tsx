@@ -215,12 +215,14 @@ export function UpgradeScreen({
 
       {step === 'pick' && (
         <>
-          <section className="upg__sel rise">
+          <section className={`upg__sel upg__sel--${card.kind} panel rise`}>
             <div className="upg__selhead">
               <span>SELECTED</span>
               <span className={block ? 'is-bad' : lvl ? 'is-up' : ''}>{block ?? `강화 ${stars(lvl)}`}</span>
             </div>
-            <h2>{card.name}</h2>
+            <h2>
+              {card.name} <span className="upg__stars">{stars(lvl)}</span>
+            </h2>
             <div className="upg__chips">
               <span className="upg__dm">{stat ? `${stat.tag} ${statNum}` : 'MOVE'}</span>
               <span className="upg__en">EN {costOf(card)}</span>
@@ -446,7 +448,7 @@ export function UpgradeScreen({
       )}
 
       {step === 'value' && (
-        <section className={`upg__valres panel rise ${path === 'value' && (result ?? 0) > 0 ? '' : 'is-miss'}`}>
+        <section className={`upg__valres panel rise ${path === 'value' && (result ?? 0) > 0 ? '' : path === 'value' && (result ?? 0) < 0 ? 'is-down' : 'is-miss'}`}>
           <span className="upg__en2">{path === 'value' && result ? `${stat?.en} ${result > 0 ? 'UP' : 'DOWN'}` : 'NO CHANGE'}</span>
           <h2>
             {path === 'value' && result

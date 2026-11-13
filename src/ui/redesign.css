@@ -214,6 +214,11 @@
 .artbg--ev-forge { background-image: url('/redesign/cutscene/events/forge.png'); }
 .artbg--ev-trade { background-image: url('/redesign/cutscene/events/trade.png'); }
 .artbg--ev-spring { background-image: url('/redesign/cutscene/events/spring.png'); }
+.artbg--ev-apothecary { background-image: url('/redesign/cutscene/events/apothecary.png'); }
+.artbg--ev-jar { background-image: url('/redesign/cutscene/events/jar.png'); }
+.artbg--ev-gacha { background-image: url('/redesign/cutscene/events/gacha.png'); }
+.artbg--ev-mole { background-image: url('/redesign/cutscene/events/mole.png'); }
+.artbg--ev-surgery { background-image: url('/redesign/cutscene/events/surgery.png'); }
 .artbg--in { animation: artbg-in 0.5s ease-out both; }
 @keyframes artbg-in { from { opacity: 0; transform: translateX(-24px); } }
 .artbg__veil {
@@ -2612,6 +2617,13 @@
 .upg__selhead { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-px); font-size: 12px; letter-spacing: 3px; color: #b9b1c9; }
 .upg__selhead span + span { font-family: var(--font-body); letter-spacing: 0; padding: 2px 8px; background: #120f1a; border: 1px solid #4a4058; }
 .upg__sel h2 { font-size: 34px; }
+.upg__stars { font-size: 24px; color: #ffd86a; }
+/* 선택한 카드 패널 테두리 = 카드 종류 색(덱 카드 `.upg__dk--*`와 같다 · 시안 `cur.edge`). */
+.upg .upg__sel { box-shadow: inset 0 0 0 2px #8a3040; }
+.upg .upg__sel--guard { box-shadow: inset 0 0 0 2px #3c9c98; }
+.upg .upg__sel--heal { box-shadow: inset 0 0 0 2px #6ab83a; }
+.upg .upg__sel--move { box-shadow: inset 0 0 0 2px #3a6aa8; }
+.upg .upg__sel--energy, .upg .upg__sel--buff { box-shadow: inset 0 0 0 2px #8fb6ff; }
 .upg__sel .upg__grid { align-self: center; margin-top: 6px; }
 .upg__sel .upg__hint { text-align: center; }
 .upg__sel p { margin: 0; font-size: 14px; line-height: 1.6; color: #e4def0; }
@@ -2680,8 +2692,11 @@
 .upg__bar span { display: block; height: 100%; }
 .upg__resline { flex-grow: 1; font-size: 15px; font-family: var(--font-display); }
 .upg__valres, .upg__done { position: absolute; left: 50%; top: 160px; width: 640px; margin-left: -320px; z-index: 1; padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
-.upg__valres { box-shadow: inset 0 0 0 2px #ffd86a; }
-.upg__valres.is-miss { box-shadow: inset 0 0 0 2px #8a849a; }
+/* `.upg .panel`(회색 테두리)보다 세게 — 시안 `dmgEdge`: 오름 금 · 내림 빨강 · 그대로 회색. */
+.upg .upg__valres { box-shadow: inset 0 0 0 2px #ffd86a; }
+.upg .upg__valres.is-miss { box-shadow: inset 0 0 0 2px #8a849a; }
+.upg .upg__valres.is-down { box-shadow: inset 0 0 0 2px #e0485a; }
+.upg__valres.is-down .upg__en2 { color: #e0485a; }
 .upg__valres.is-miss .upg__en2 { color: #8a849a; }
 .upg__valres h2, .upg__done h2 { font-size: 36px; }
 .upg__valres p, .upg__done p { margin: 0; font-size: 14px; color: #c9c2d6; text-align: center; }
@@ -2690,7 +2705,7 @@
 .upg__arrow--big small { font-family: var(--font-body); font-size: 12px; color: #b9b1c9; }
 .upg__arrow--big b { font-weight: 400; font-size: 48px; }
 .upg__arrow--big .res b { font-size: 64px; text-shadow: 0 4px 0 #7a5418; }
-.upg__done { box-shadow: inset 0 0 0 2px #b6ea6a; }
+.upg .upg__done { box-shadow: inset 0 0 0 2px #b6ea6a; }
 .upg__final { width: 300px; padding: 14px 16px; box-sizing: border-box; background: #2a1620; border: 3px solid #e0485a; box-shadow: 0 0 0 3px #2a1c10, 0 0 30px rgba(244,212,112,0.35); display: flex; flex-direction: column; gap: 8px; }
 .upg__final .upg__dkstat { font-size: 14px; }
 .upg__final .upg__dkname { font-size: 28px; }
@@ -2774,10 +2789,27 @@
 /* ---- 보물 상자 (? 칸 모닥불 화면은 2026-11-12에 없앴다) -------------------- */
 @keyframes rest-pulse { 50% { opacity: .75; } }
 .chip--range { background: #2a1608; color: #ffb07a; border-color: #ff9a3a; }
-/* 보물 상자 — 지도 아이콘 14×14의 정수 12배. */
-.treasure__chest { display: block; width: 168px; height: 168px; background: url('/redesign/ui/map-icons/treasure.png') center / 168px 168px no-repeat; image-rendering: pixelated; animation: rest-pulse 1.6s ease-in-out infinite; }
-.treasure__chest.is-open { animation: upg-res .5s cubic-bezier(.2,1.6,.4,1) 1; filter: brightness(1.3) drop-shadow(0 0 24px rgba(255, 216, 106, 0.6)); }
-.treasure__open { align-self: flex-start; margin-top: 10px; }
+/* 보물 상자(시안 `Treasure.dc.html` 2026-11-13) — 그림 있는 ? 이벤트와 같은 배치 · 그림 1280×720.
+   열면 상자 그림이 `box-in`으로 바뀌고 받은 것을 상자 위(150, 330 · 폭 300)에 얹는다. */
+.artbg--tb-box { background-image: url('/redesign/cutscene/treasure/box.png'); }
+.artbg--tb-in { background-image: url('/redesign/cutscene/treasure/box-in.png'); }
+.treasure__bgin { animation: gob-bgin 0.6s ease-out both; }
+.treasure.event--scene .event__panel { top: 120px; max-height: 360px; background: rgba(16, 10, 8, 0.9); gap: 10px; }
+.treasure .event__desc { white-space: pre-line; }
+.treasure__desc { font-size: 14px; line-height: 1.6; color: #ffd8a8; }
+.treasure__choices { position: absolute; left: 600px; bottom: 30px; z-index: 1; width: 644px; display: flex; flex-direction: column; gap: 10px; }
+.event .treasure__opt { min-height: 72px; padding: 10px 18px; background: rgba(20, 14, 12, 0.88); border-color: #6a4a30; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45); font-size: 26px; color: #fff6dc; cursor: pointer; animation: treasure-in .45s ease-out both; }
+.event .treasure__opt:nth-child(2) { animation-delay: .12s; }
+.event .treasure__opt:hover { border-color: #f4d470; background: rgba(42, 28, 16, 0.94); transform: translateX(-4px); }
+.treasure__opt small { font-size: 13px; color: #ffd8a8; }
+@keyframes treasure-in { from { transform: translateX(40px); opacity: 0; } }
+.treasure__loot { position: absolute; left: 150px; top: 330px; z-index: 1; width: 300px; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: treasure-pop .5s ease-out both; pointer-events: none; }
+@keyframes treasure-pop { from { transform: translateY(16px) scale(.8); opacity: 0; } }
+.treasure__shine { position: absolute; left: 50%; top: 50%; width: 300px; height: 220px; margin: -110px 0 0 -150px; background: radial-gradient(ellipse at 50% 50%, rgba(255, 232, 150, 0.55) 0%, rgba(255, 210, 74, 0.18) 45%, rgba(0, 0, 0, 0) 72%); animation: rest-pulse 2.2s ease-in-out infinite; }
+/* 아틀라스 한 칸 26px × 3 = 78 → × 5/3 = 130(원본의 정수 5배). */
+.treasure__relic { position: relative; transform: scale(1.6667); margin: 26px 0; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.45)); }
+.treasure__big { position: relative; font-family: var(--font-px); font-size: 54px; color: #b6ea6a; text-shadow: 3px 3px 0 #0a0604; }
+.treasure__tag { position: relative; margin-top: 26px; padding: 4px 14px; background: rgba(10, 6, 4, 0.82); border: 2px solid; font-family: var(--font-display); font-size: 22px; color: var(--cream); }
 
 /* ---- ? 칸 정체 공개(디자인 `Event` 1단계) ---------------------------------- */
 .fates { position: absolute; left: 0; right: 0; top: 130px; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 26px; }
