@@ -823,6 +823,12 @@ function availableRelics(run: RunState): string[] {
 export function rollRelicId(run: RunState): string | undefined {
   return pickWeightedRelic(availableRelicDefs(run), runDepth(run))?.id
 }
+/**
+ * 줄 유물이 꼭 있어야 하는 곳(보물 · 이벤트 · 거래)의 마지막 받침 — 미보유가 하나도 없으면 **아무 유물이나**.
+ * 98종을 다 가질 일은 사실상 없다. 가진 유물이면 `grantRelic`이 그대로 둔다(겹쳐 붙지 않는다).
+ * 대체 보상(체력 등)은 없다(2026-11-13 사용자 지정).
+ */
+export const anyRewardRelicId = (): string => pick(REWARD_RELICS).id
 /** 유물 장착(최대체력 증가분만큼 현재 체력도 함께 오른다). */
 export function grantRelic(run: RunState, relicId: string): RunState {
   if (!relicId || run.relicIds.includes(relicId)) return run
@@ -841,8 +847,6 @@ export const COMBAT_RELIC_ODDS: RarityOdds = [['common', 1]]
 export const ELITE_RELIC_ODDS: RarityOdds = [['rare', 0.94], ['epic', 0.06]]
 export const BOSS_RELIC_ODDS: RarityOdds = [['epic', 0.88], ['legend', 0.12]] // 영웅, 낮은 확률로 전설(2026-11-12 사용자)
 export const TREASURE_RELIC_ODDS: RarityOdds = [['common', 0.55], ['rare', 0.4], ['epic', 0.05]]
-/** 보물 상자가 비어 있을 확률(2026-11-13 사용자 지정) — 비면 아무것도 없다. */
-export const TREASURE_EMPTY_CHANCE = 0.05
 export const BOSS_RELIC_OPTIONS = 3
 export function rollRelicOf(run: RunState, odds: RarityOdds, exclude: string[] = []): string | undefined {
   const avail = availableRelicDefs(run).filter((r) => !exclude.includes(r.id))
@@ -1228,11 +1232,10 @@ export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; reli
 
 // --- 보물(2026-11 리디자인) ----------------------------------------------------
 /** 보물 칸 — 유물 상자 하나. */
-export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
+export function openTreasure(run: RunState): { run: RunState; relicId: string } {
   // 지도 하나에 딱 하나 · 고르기 없이 하나(2026-11-12 사용자 지정).
-  // 빈 상자 5% = 아무것도 안 준다 · 대체 보상 없음(2026-11-13 사용자 지정). 받을 유물이 없을 때도 빈 상자.
-  const relicId = Math.random() < TREASURE_EMPTY_CHANCE ? undefined : rollRelicOf(run, TREASURE_RELIC_ODDS)
-  if (!relicId) return { run }
+  // 지도의 보물은 **빈 상자가 없다**(2026-11-13 사용자 지정 — 빈 상자 5%는 ? 칸 보물상자 이벤트 몫, 아직 없음).
+  const relicId = rollRelicOf(run, TREASURE_RELIC_ODDS) ?? anyRewardRelicId()
   return { run: grantRelic(run, relicId), relicId }
 }
 /**

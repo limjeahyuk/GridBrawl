@@ -1,7 +1,7 @@
 // 보물 칸 = 유물 상자(2026-11 리디자인 · 시안 `Treasure.dc.html` 2026-11-13).
 // 닫힌 상자 그림 + 오른쪽 글 · 선택지(연다 / 그냥 지나간다). 열면 열린 상자(`box-in`) **한가운데**에 유물이
 // 떠오르고 오른쪽에 툴팁처럼 효과가 붙는다 — **유물을 누르면 바로 지도로**(사용자 지정 11-13).
-// 체력 · 골드 칩은 없다(유물만 얻는 곳 — 사용자 지정). 받을 유물이 없으면 빈 상자 — 아무것도 안 준다(`openTreasure`).
+// 체력 · 골드 칩은 없다(유물만 얻는 곳 — 사용자 지정). 지도의 보물은 빈 상자가 없다 — 늘 유물(`openTreasure`).
 // ⚠ 시안의 미믹(`mimic.png`)은 규칙이 없어 아직 안 나온다(PROGRESS T17).
 import { useState } from 'react'
 import { getRelic } from '../../game/relics'
@@ -11,8 +11,8 @@ import { RARITY_LABEL, RelicIcon } from '../RelicIcon'
 const RARITY_EDGE = { common: '#8a849a', rare: '#6ab8ff', epic: '#c48aff', legend: '#ffd86a' } as const
 
 export function TreasureScreen({ run, onDone }: { run: RunState; onDone: (next: RunState) => void }) {
-  const [opened, setOpened] = useState<{ run: RunState; relicId?: string } | null>(null)
-  const relic = opened?.relicId ? getRelic(opened.relicId) : null
+  const [opened, setOpened] = useState<{ run: RunState; relicId: string } | null>(null)
+  const relic = opened ? getRelic(opened.relicId) : null
   const art = opened ? 'in' : 'box'
   return (
     <div className="screen event event--scene treasure" style={{ ['--evcol' as string]: '#c9952f' }}>
@@ -54,6 +54,7 @@ export function TreasureScreen({ run, onDone }: { run: RunState; onDone: (next: 
           </nav>
         </>
       ) : (
+        relic && (
         // 상자 안 한가운데 — 누르면 지도로.
         <div className="treasure__loot">
           <span className="treasure__shine" aria-hidden="true" />
@@ -61,30 +62,20 @@ export function TreasureScreen({ run, onDone }: { run: RunState; onDone: (next: 
             type="button"
             className="treasure__item"
             onClick={() => onDone(advanceFloor(opened.run))}
-            aria-label={relic ? `「${relic.name}」 받고 지도로` : '지도로'}
+            aria-label={`「${relic.name}」 받고 지도로`}
           >
-            {relic ? <RelicIcon id={relic.id} size={78} className="treasure__relic" /> : <span className="treasure__big">텅</span>}
+            <RelicIcon id={relic.id} size={78} className="treasure__relic" />
           </button>
           <span className="treasure__hint">눌러서 지도로 ▶</span>
-          <div className="treasure__tip" style={{ ['--tipcol' as string]: relic ? RARITY_EDGE[relic.rarity] : '#6a6478' }}>
-            {relic ? (
-              <>
-                <span className="relictip__name">
-                  <b>{relic.name}</b>
-                  <em className={`relictip__rarity is-${relic.rarity}`}>{RARITY_LABEL[relic.rarity]}</em>
-                </span>
-                <p>{relic.desc}</p>
-              </>
-            ) : (
-              <>
-                <span className="relictip__name">
-                  <b>빈 상자</b>
-                </span>
-                <p>먼지만 풀썩인다. 아무것도 없었다.</p>
-              </>
-            )}
+          <div className="treasure__tip" style={{ ['--tipcol' as string]: RARITY_EDGE[relic.rarity] }}>
+            <span className="relictip__name">
+              <b>{relic.name}</b>
+              <em className={`relictip__rarity is-${relic.rarity}`}>{RARITY_LABEL[relic.rarity]}</em>
+            </span>
+            <p>{relic.desc}</p>
           </div>
         </div>
+        )
       )}
     </div>
   )

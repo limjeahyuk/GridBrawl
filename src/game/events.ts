@@ -12,7 +12,7 @@
 import { RELIC_BY_ID } from './relics'
 import {
   GOBLIN_LOOT, cardRewardPool, grantCard, needsReplaceFor, slotOfId, grantGoblinItem, grantRelic, healHp, isLockedCard, loseHp, loseMaxHp, loseRelic,
-  removeCard, rollRelicId, upgradableDeckCards, type RunState, type SpecialFight,
+  removeCard, rollRelicId, anyRewardRelicId, upgradableDeckCards, type RunState, type SpecialFight,
 } from './run'
 import { WORLDTREE_CARD } from './runcards'
 
@@ -339,20 +339,19 @@ export interface EventOutcome {
   fight?: SpecialFight
 }
 
-/** 풀에서 미보유 유물 하나. 풀을 다 가졌으면 아무 유물이나. */
-export function relicFromPool(run: RunState, pool: RelicPool, rng: () => number = Math.random): string | undefined {
+/** 풀에서 미보유 유물 하나. 풀을 다 가졌으면 미보유 아무 유물 → 그것도 없으면 아무 유물(가진 것일 수도). */
+export function relicFromPool(run: RunState, pool: RelicPool, rng: () => number = Math.random): string {
   if (pool !== 'any') {
     const left = RELIC_POOLS[pool].filter((id) => RELIC_BY_ID[id] && !run.relicIds.includes(id))
     if (left.length) return pickOne(left, rng)
   }
-  return rollRelicId(run)
+  return rollRelicId(run) ?? anyRewardRelicId()
 }
 const relicName = (id: string) => RELIC_BY_ID[id]?.name ?? id
 
-/** 유물 하나를 받는 결과. 받을 유물이 없으면 그걸로 끝 — 대체 보상 없음(2026-11-13 사용자 지정). */
+/** 유물 하나를 받는 결과 — 늘 유물이 나온다(대체 보상 없음 · 2026-11-13 사용자 지정). */
 function gainRelic(run: RunState, st: EventState, pool: RelicPool, title: string, done = true, rng = Math.random): EventOutcome {
   const id = relicFromPool(run, pool, rng)
-  if (!id) return { run, st, title, body: '더 받을 유물이 없다.', big: '—', bigKind: 'none', done }
   return { run: grantRelic(run, id), st, title, body: `「${relicName(id)}」을(를) 얻었다.`, relicId: id, done }
 }
 
@@ -384,15 +383,20 @@ export function resolveEventChoice(
       // 받는 카드는 **내준 카드와 같은 칸**(공격 / 보조 / 이동)에서 — 그래야 자리가 있다(덱 상한은 칸마다 5장).
       const slot = slotOfId(run, pickId!)
       const id = pickOne(cardRewardPool(gone).filter((x) => x !== pickId && slotOfId(run, x) === slot), rng)
-      if (!id) return { run, st, title: '거래 무산', body: '마땅한 카드가 없다며 고개를 저었다.', big: '—', bigKind: 'none', done: true }
+      if (!id) {
+        // 같은 칸에 안 가진 카드가 없다 — 이동 칸(장수 제한 없음)을 다 모았을 때뿐. 그 칸의 아무 카드나 준다:
+        // 이미 가진 카드라 덱은 그대로(내준 카드도 안 잃는다). 대체 보상 없음(2026-11-13 사용자 지정).
+        const owned = pickOne(run.deck.filter((x) => x !== pickId && !isLockedCard(x) && slotOfId(run, x) === slot), rng) ?? pickId!
+        return { run, st, title: '거래 성사', body: '건네받은 카드는 이미 가진 것이었다 — 덱은 그대로다.', cardId: owned, done: true }
+      }
       return { run: grantCard(gone, id).run, st, title: '거래 성사', body: '내 카드를 내주고 다른 카드를 받았다.', cardId: id, done: true }
     }
     case 'card-relic':
       return gainRelic(removeCard(run, pickId!), st, 'any', '거래 성사', true, rng)
     case 'relic-relic': {
-      const id = rollRelicId(run) // 내주는 유물은 아직 갖고 있으니 같은 걸 돌려받을 일이 없다
+      // 내주는 유물은 아직 갖고 있으니 같은 걸 돌려받을 일이 없다. 미보유가 없으면 아무 유물(사실상 안 생긴다).
+      const id = rollRelicId(run) ?? anyRewardRelicId()
       const gone = loseRelic(run, pickId!)
-      if (!id) return { run: gone, st, title: '거래 성사', body: '유물을 건넸지만 돌아온 건 없다.', big: '—', bigKind: 'none', done: true }
       return { run: grantRelic(gone, id), st, title: '거래 성사', body: `「${relicName(id)}」을(를) 받았다.`, relicId: id, done: true }
     }
     // --- 온천
