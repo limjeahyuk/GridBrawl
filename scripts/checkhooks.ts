@@ -63,7 +63,6 @@ import {
   currentEnemy,
   afterWin,
   WIN_HEAL,
-  ELITE_COLLAPSE_DELAY,
   TERRAIN,
   type NodeType,
   type RunDifficulty,
@@ -80,11 +79,12 @@ import { getMonster, MONSTERS } from '../src/game/monsters'
 import {
   BURN_PCT_PER_STACK,
   burnPct,
-  COLLAPSE_START_ROUND,
-  COLLAPSE_STEP_ROUNDS,
-  isCollapsedCell,
-  isCollapseSafe,
-  FOG_DAMAGE,
+  FIRE_STAND_DAMAGE,
+  FIRE_PASS_DAMAGE,
+  FIRE_TURNS,
+  FOG_SPREAD_AT,
+  HOLE_FALL_DAMAGE,
+  HOLE_SPAWN_COUNT,
   FREEZE_SHATTER_BONUS,
   GRID_COLS,
   GRID_ROWS,
@@ -94,7 +94,6 @@ import {
   type CardDef,
   type Hazard,
   type Obstacle,
-  spikeStateAt,
 } from '../src/battle/types'
 
 let failed = 0
@@ -528,62 +527,22 @@ const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poi
   check('속박 — 라운드를 넘기지 않는다', b.statusOf(1, 'bind'), undefined)
 }
 {
-  // 독안개 — 라운드 종료에 그 칸에 선 쪽을 10 갉는다(보호막 무시).
-  const fogJab: CardDef = { ...card('c-strike'), id: 'test-fog', fog: 2 }
+  // 독안개(2026-11-13 · `HAZARDS.md` 8절) — 턴 끝마다 서 있으면 중독 1겹(보호막 무관) · 5턴 ·
+  // 3턴 뒤 십자로 퍼졌다가 2턴 뒤 다 같이 걷힌다.
+  const fogJab: CardDef = { ...card('c-strike'), id: 'test-fog', fog: true }
   const b = battleWith({}, {})
-  const hp0 = b.state.hp[1]
-  b.resolveRound([fogJab, card('c-energy'), card('c-energy')], HOLD)
+  b.state.shield[1] = 0
+  const steps = b.resolveRound([fogJab, card('c-energy'), card('c-energy')], HOLD)
   check('독안개가 상대 칸에 깔린다', !!b.fogAt(b.state.pos[1]), true)
-  const dealt = hp0 - b.state.hp[1]
-  check('독안개 — 깔린 라운드에 바로 밟는다', dealt > FOG_DAMAGE, true)
+  check('독안개 — 턴 끝 셋 = 중독 3겹(라운드 끝 −1 → 2)', b.stacksOf(1, 'poison'), 2)
+  check('독안개 — 피해는 없다(중독만)', steps.some((s) => s.card.id === 'st-fog' && s.recoil > 0), false)
+  check('독안개 — 3턴 뒤 십자로 퍼진다', b.state.fog.length > 1, true)
+  check('독안개 — 퍼진 뒤 남은 턴은 모두 2', b.state.fog.every((f) => f.turns === FOG_SPREAD_AT), true)
   b.state.shield[1] = 50
-  const hp1 = b.state.hp[1]
+  const p1 = b.stacksOf(1, 'poison')
   b.resolveRound(HOLD, HOLD)
-  check('독안개 — 보호막을 무시한다', hp1 - b.state.hp[1], FOG_DAMAGE)
-  const hp2 = b.state.hp[1]
-  b.resolveRound(HOLD, HOLD)
-  check('독안개 — 지속이 끝나면 걷힌다', hp2 - b.state.hp[1], 0)
-}
-{
-  // 유물 훅: poisonOnHit = 평범한 카드에도 N겹.
-  const b = battleWith({ poisonOnHit: 2 }, {})
-  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('poisonOnHit 2 — 평범한 카드에도 2겹(끝에 1)', b.stacksOf(1, 'poison'), 1)
-}
-{
-  // 카드 + 유물 + 안식일은 **다 더한다**(사용자 확인): 4 + 2 + 1 = 7 → 끝에 6.
-  const b = battleWith({ poisonOnHit: 2, poisonRoundBonus: 1 }, {})
-  b.resolveRound([pjab('test-pboth', 4), card('c-energy'), card('c-energy')], HOLD)
-  check('카드 + 유물 + 안식일 — 다 더한다(7 → 6)', b.stacksOf(1, 'poison'), 6)
-}
-{
-  // 위력 % — **아플 때** round(겹 × (1 + %/100)), 거는 쪽(상대) 유물. 5겹 × 1.4 = 7.
-  const b = battleWith({ statusPowerPct: 40 }, {})
-  b.resolveRound([pjab('test-ppct', 6), card('c-energy'), card('c-energy')], HOLD)
-  const hp = b.state.hp[1]
-  b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('statusPowerPct 40% — 5겹이 7(반올림)', hp - b.state.hp[1], 7)
-  // 중독된 쪽 자신의 % 유물은 안 본다.
-  const c = battleWith({}, { statusPowerPct: 100 })
-  c.resolveRound([pjab('test-ppct2', 6), card('c-energy'), card('c-energy')], HOLD)
-  const hp2 = c.state.hp[1]
-  c.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('statusPowerPct — 중독된 쪽 유물은 안 본다(5)', hp2 - c.state.hp[1], 5)
-}
-{
-  // 이미 걸려 있는 상대에게만 보너스. 첫 타격은 아직 안 걸렸으므로 보너스 없음.
-  const plain = battleWith({}, {})
-  const hpPlain = plain.state.hp[1]
-  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  const baseDmg = hpPlain - plain.state.hp[1]
-
-  const b = battleWith({ poisonOnHit: 2, bonusVsAfflicted: 7 }, {})
-  const hp0 = b.state.hp[1]
-  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('bonusVsAfflicted — 첫 타격엔 안 붙는다', hp0 - b.state.hp[1], baseDmg)
-  const hp1 = b.state.hp[1]
-  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('bonusVsAfflicted — 걸린 뒤엔 +7', hp1 - b.state.hp[1], baseDmg + 7)
+  check('독안개 — 보호막이 있어도 걸린다(2턴 더 → +2, 라운드 끝 −1)', b.stacksOf(1, 'poison'), p1 + 2 - 1)
+  check('독안개 — 5턴 뒤 가운데까지 다 걷힌다', b.state.fog.length, 0)
 }
 {
   // 자기 버프(atkUp)는 `afflicted`가 아니다 — 시너지 유물이 켜지면 안 된다.
@@ -595,14 +554,6 @@ const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poi
   b.resolveRound([defBuff, card('c-energy'), card('c-energy')], HOLD)
   check('버프가 걸려 있다', !!b.statusOf(0, 'defUp'), true)
   check('버프는 상태이상 시너지 대상이 아니다', b.afflicted(0), false)
-}
-{
-  // 독안개로도 KO가 나야 한다(전장 붕괴와 같은 자리).
-  const fogJab: CardDef = { ...card('c-strike'), id: 'test-fogko', fog: 2 }
-  const b = battleWith({}, {})
-  b.state.hp[1] = 12 // 타격 5을 견디고 7 남은 뒤 안개 10에 쓰러진다
-  b.resolveRound([fogJab, card('c-energy'), card('c-energy')], HOLD)
-  check('독안개로 KO — 전투가 끝난다', [b.state.over, b.state.winner], [true, 0])
 }
 
 // --- 넉백 × 중독 (2026-08-07 3차 · 사용자 예시 그대로) -------------------------
@@ -1220,38 +1171,6 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
   )
   check('shatter — 가드를 부수고 피해가 들어간다', b.state.hp[1] < b.maxHp[1], true)
 }
-{
-  // 전장 붕괴 — 무너진 칸에 서 있으면 턴 종료에 피해. `collapseResist`가 깎는다.
-  const at = (turn: number, pas: Partial<Passive>) => {
-    const b = battleWith(pas)
-    b.state.round = turn
-    b.state.pos = [{ col: 0, row: 1 }, { col: 3, row: 1 }] // 왼쪽 끝 = 가장 먼저 무너지는 열
-    const hp = b.state.hp[0]
-    b.resolveRound(HOLD, HOLD)
-    return hp - b.state.hp[0] // battleWith는 패시브를 통째로 갈아끼우므로 regen이 없다
-  }
-  check('붕괴 1단계 — 턴당 5', at(6, {}), 5)
-  check('붕괴 2단계 — 턴당 8', at(9, {}), 8)
-  check('붕괴 3단계 — 턴당 12', at(12, {}), 12)
-  check('collapseResist가 붕괴 피해를 깎는다', at(6, { collapseResist: 3 }), 2)
-  check('collapseResist가 크면 아예 안 아프다', at(6, { collapseResist: 99 }), 0)
-}
-{
-  // ⚠ **무너진 칸으로 들어갈 수 있어야 한다**(사용자 신고 — 소프트 위험지대).
-  const b = battleWith({})
-  b.state.round = 6
-  b.state.pos = [{ col: 1, row: 1 }, { col: 4, row: 1 }]
-  b.resolveRound([card('m-left'), card('c-energy'), card('c-energy')], HOLD)
-  check('무너진 칸으로 이동이 막히지 않는다', b.state.pos[0].col, 0)
-}
-{
-  // 전면 붕괴 뒤에는 AI가 도망치지 않고 계속 싸운다 — 예전엔 슬롯을 전부 이동에 썼다.
-  const b = battleWith({})
-  b.state.round = 12 // 판 전체가 무너진 단계
-  b.state.pos = [{ col: 2, row: 1 }, { col: 3, row: 1 }]
-  const plan = decideAI(b.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.concat(getChar('warrior').basics))
-  check('전면 붕괴 뒤 AI는 이동만 하지 않는다', plan.every((c) => c.kind === 'move'), false)
-}
 
 // --- 지도 — 길 그리기 · 2막 × 20층(2026-11-12) -----------------------------------
 console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · 끊긴 길')
@@ -1386,73 +1305,198 @@ console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · �
   check('마지막 층 다음은 승리', advanceFloor(last).status, 'won')
 }
 
-// --- 함정 4종(2026-11 리디자인 · 런 전용) -------------------------------------
-console.log('\n함정 — 불길 · 가시덫 · 가시덩굴 · 빙판')
+// --- 판 위의 것(2026-11-13 재설계 · 런 전용 · `docs/rules/HAZARDS.md`) ----------------
+console.log('\n판 위의 것 — 덩굴 · 화염 · 용암 · 균열 → 구멍 · 빙판 · 속박 중 넉백 · T20 구멍')
 {
-  const hzBattle = (hazards: Hazard[], foe = { col: 5, row: 3 }) =>
-    new CardBattle('warrior', 'warrior', { startCells: [{ col: 1, row: 1 }, foe], hazards })
+  const hzBattle = (hazards: Hazard[], pas: Partial<Passive> = {}, foe = { col: 5, row: 3 }, seed = 7) =>
+    new CardBattle('warrior', 'warrior', {
+      chars: [getChar('warrior'), getChar('warrior')],
+      passives: [{ desc: '', ...pas }, { desc: '' }],
+      startCells: [{ col: 1, row: 1 }, foe],
+      hazards,
+      seed,
+    })
   const R = card('m-right')
+  const R2 = card('m-right2')
+  const E = card('c-energy')
   const kinds = (b: CardBattle, p = 0) => b.state.status[p].map((e) => e.kind)
   check('함정을 안 넘기면 빈 판(PvP 불변)', new CardBattle('warrior', 'warrior').state.hazards, [])
-
-  let b = hzBattle([{ kind: 'fire', cell: { col: 2, row: 1 } }])
-  b.resolveRound([R, card('c-energy'), card('c-guard')], HOLD)
-  check('불길 — 서 있으면 라운드 끝에 화상(다음 라운드까지)', kinds(b).includes('burn'), true)
-  check('불길 — 라운드마다 사그라든다(3 → 2)', b.state.hazards[0].rounds, 2)
-
-  b = hzBattle([{ kind: 'bramble', cell: { col: 2, row: 1 } }])
-  b.resolveRound([R, R, card('c-energy')], HOLD)
-  check('가시덩굴 — 밟으면 속박, 남은 이동이 무효', b.state.pos[0], { col: 2, row: 1 })
-
-  b = hzBattle([{ kind: 'spikes', cell: { col: 2, row: 1 }, phase: 1 }])
-  check('가시덫 주기 — 숨음 → 경고 → 솟음', [0, 1, 2].map((r) => spikeStateAt({ kind: 'spikes', cell: { col: 0, row: 0 }, phase: 0 }, r)), ['hidden', 'warn', 'up'])
-  b.resolveRound([R, R, card('c-energy')], HOLD)
-  check('가시덫 — 솟은 라운드에 밟으면 속박', b.state.pos[0], { col: 2, row: 1 })
-  b = hzBattle([{ kind: 'spikes', cell: { col: 2, row: 1 }, phase: 0 }])
-  b.resolveRound([R, R, card('c-energy')], HOLD)
-  check('가시덫 — 경고 중엔 그냥 지나간다', b.state.pos[0], { col: 3, row: 1 })
-
-  b = hzBattle([{ kind: 'ice', cell: { col: 2, row: 1 } }])
-  b.resolveRound([R, card('c-energy'), card('c-guard')], HOLD)
-  check('빙판 — 들어선 방향으로 한 칸 더', b.state.pos[0], { col: 3, row: 1 })
-  b = hzBattle([{ kind: 'ice', cell: { col: 2, row: 1 } }], { col: 3, row: 1 })
-  b.resolveRound([R, card('c-energy'), card('c-guard')], HOLD)
-  check('빙판 — 상대 앞에서는 멈춘다', b.state.pos[0], { col: 2, row: 1 })
-
-  b = hzBattle([{ kind: 'fire', cell: { col: 3, row: 2 } }, { kind: 'bramble', cell: { col: 3, row: 1 } }])
-  b.resolveRound(HOLD, HOLD)
-  check('불길이 붙은 덩굴을 태운다', b.state.hazards.map((h) => h.kind), ['fire'])
   check('시작 칸에는 함정이 안 선다', hzBattle([{ kind: 'fire', cell: { col: 1, row: 1 } }]).state.hazards, [])
 
-  // 배치 — 일반 전투에만, 끝열은 비운다.
+  // 덩굴 — 지나가다가도 그 칸에서 멈추고 속박 1턴. 계속 서 있으면 다시 안 걸린다.
+  let b = hzBattle([{ kind: 'bramble', cell: { col: 2, row: 1 } }])
+  b.resolveRound([R2, E, E], HOLD)
+  check('덩굴 — 두 칸 이동 중 가운데 덩굴에서 멈춘다', b.state.pos[0], { col: 2, row: 1 })
+  b = hzBattle([{ kind: 'bramble', cell: { col: 2, row: 1 } }])
+  b.resolveRound([R, R, E], HOLD)
+  check('덩굴 — 속박 1턴: 다음 턴 이동이 무효', b.state.pos[0], { col: 2, row: 1 })
+  check('덩굴 — 그 자리에 서 있으면 다시 안 걸린다', kinds(b).includes('bind'), false)
+  b = hzBattle([{ kind: 'bramble', cell: { col: 3, row: 1 } }, { kind: 'fire', cell: { col: 3, row: 2 } }])
+  b.resolveRound(HOLD, HOLD)
+  check('덩굴 — 화염이 붙어 있으면 다음 라운드에 화염(9턴)', b.state.hazards.find((h) => h.cell.row === 1), { kind: 'fire', cell: { col: 3, row: 1 }, turns: FIRE_TURNS })
+
+  // 화염 — 턴 끝에 서 있으면 10 + 화상 1겹 · 지나가면 5 · 보호막이 막는다 · 9턴 뒤 꺼진다.
+  b = hzBattle([{ kind: 'fire', cell: { col: 2, row: 1 } }])
+  let hp = b.state.hp[0]
+  b.resolveRound([R, E, E], HOLD)
+  check('화염 — 도착하면 턴 끝마다 10(세 턴 = 30)', hp - b.state.hp[0], FIRE_STAND_DAMAGE * 3)
+  check('화염 — 턴마다 화상 1겹(3 − 라운드 끝 1 = 2)', b.stacksOf(0, 'burn'), 2)
+  check('화염 — 9턴 중 3턴이 지났다', b.state.hazards[0].turns, FIRE_TURNS - 3)
+  b = hzBattle([{ kind: 'fire', cell: { col: 2, row: 1 } }])
+  hp = b.state.hp[0]
+  b.resolveRound([R2, E, E], HOLD)
+  check('화염 — 지나가면 5만(화상 없음)', [hp - b.state.hp[0], b.stacksOf(0, 'burn')], [FIRE_PASS_DAMAGE, 0])
+  b = hzBattle([{ kind: 'fire', cell: { col: 1, row: 1 } }], { turnShield: 40 })
+  b.state.hazards = [{ kind: 'fire', cell: { col: 1, row: 1 }, turns: 9 }]
+  hp = b.state.hp[0]
+  b.resolveRound(HOLD, HOLD)
+  check('화염 — 보호막이 다 막으면 피해도 화상도 없다', [hp - b.state.hp[0], b.stacksOf(0, 'burn')], [0, 0])
+  b = hzBattle([], { damageReduction: 4 })
+  b.state.hazards = [{ kind: 'fire', cell: { col: 1, row: 1 }, turns: 9 }]
+  hp = b.state.hp[0]
+  b.resolveRound([E, card('c-guard'), E], HOLD)
+  check('화염 — 받는 피해 감소도 깎는다(10 − 4 = 6, 보호막이 남은 턴은 0)', hp - b.state.hp[0] <= (FIRE_STAND_DAMAGE - 4) * 3, true)
+  b = hzBattle([])
+  b.state.hazards = [{ kind: 'fire', cell: { col: 4, row: 3 }, turns: 1 }]
+  b.resolveRound(HOLD, HOLD)
+  check('화염 — 남은 턴이 다하면 꺼진다', b.state.hazards, [])
+
+  // 용암 — 서 있으면 화염과 같고, 지나가기는 무해 · 안 꺼진다.
+  b = hzBattle([{ kind: 'lava', cell: { col: 2, row: 1 } }])
+  hp = b.state.hp[0]
+  b.resolveRound([R2, E, E], HOLD)
+  check('용암 — 지나가기는 무해', hp - b.state.hp[0], 0)
+  b = hzBattle([{ kind: 'lava', cell: { col: 2, row: 1 } }])
+  hp = b.state.hp[0]
+  b.resolveRound([R, E, E], HOLD)
+  b.resolveRound(HOLD, HOLD)
+  b.resolveRound(HOLD, HOLD)
+  b.resolveRound(HOLD, HOLD)
+  check('용암 — 서 있으면 턴마다 10 · 안 꺼진다', [hp - b.state.hp[0] >= FIRE_STAND_DAMAGE * 10, b.state.hazards.length], [true, 1])
+
+  // 균열 → 구멍 — 밟을 때 · 서서 턴이 끝날 때 한 단계, 3단계 다음은 구멍(멈춰 있으면 바로 빠진다).
+  b = hzBattle([{ kind: 'crack', cell: { col: 3, row: 1 } }])
+  b.resolveRound([R2, E, E], HOLD)
+  check('균열 — 지나가면 한 단계', b.state.hazards[0].stage, 2)
+  b = hzBattle([{ kind: 'crack', cell: { col: 2, row: 1 } }])
+  hp = b.state.hp[0]
+  b.resolveRound([R, E, E], HOLD)
+  check('균열 — 1단계에 걸어 들어가 두 턴 서 있으면 구멍 → 빠진다', [b.state.hazards[0].kind, hp - b.state.hp[0]], ['hole', HOLE_FALL_DAMAGE])
+  check('구멍 — 상하좌우 한 칸으로 나온다', Math.abs(b.state.pos[0].col - 2) + Math.abs(b.state.pos[0].row - 1), 1)
+  const fallDmg = (pas: Partial<Passive>) => {
+    const x = hzBattle([{ kind: 'hole', cell: { col: 2, row: 1 } }], pas)
+    const h0 = x.state.hp[0]
+    x.resolveRound([R, E, E], HOLD)
+    return h0 - x.state.hp[0]
+  }
+  check('구멍 — 멈추면 빠진다(피해 50)', fallDmg({}), HOLE_FALL_DAMAGE)
+  check('구멍 피해 감소(collapseResist 12) — 38', fallDmg({ collapseResist: 12 }), HOLE_FALL_DAMAGE - 12)
+  check('구멍 피해 감소 99 — 피해 없음', fallDmg({ collapseResist: 99 }), 0)
+  b = hzBattle([{ kind: 'hole', cell: { col: 2, row: 1 } }])
+  hp = b.state.hp[0]
+  b.resolveRound([R2, E, E], HOLD)
+  check('구멍 — 지나가기는 괜찮다', [hp - b.state.hp[0], b.state.pos[0]], [0, { col: 3, row: 1 }])
+  // 나올 칸이 다 막히면 쓰러진다 — 구석 구멍(0,0) · 옆 (1,0)도 구멍 · 아래 (0,1)은 바위.
+  {
+    const shove2: CardDef = { id: 'test-shove2', name: '테스트 넉백2', kind: 'attack', desc: '', range: [{ df: 1, du: 0 }], damage: 0, energyCost: 0, push: 2, cooldown: 0 }
+    const x = new CardBattle('warrior', 'warrior', {
+      startCells: [{ col: 3, row: 0 }, { col: 2, row: 0 }],
+      hazards: [{ kind: 'hole', cell: { col: 0, row: 0 } }, { kind: 'hole', cell: { col: 1, row: 0 } }],
+      obstacles: [{ cell: { col: 0, row: 1 }, hp: ROCK_HP, maxHp: ROCK_HP }],
+      seed: 3,
+    })
+    x.resolveRound([shove2, E, E], HOLD)
+    check('구멍 — 나올 칸이 다 막혔으면 그 자리에서 쓰러진다(적이면 승리)', [x.state.over, x.state.winner], [true, 0])
+  }
+
+  // 빙판 — 무슨 행동이든 30%로 넘어진다(시드 RNG) → 기절 1턴 · 빙판이 사라진다. 미끄러짐은 없다.
+  let slipped = 0
+  for (let seed = 1; seed <= 400; seed++) {
+    const x = hzBattle([{ kind: 'ice', cell: { col: 2, row: 1 } }], {}, undefined, seed)
+    x.resolveRound([R, E, E], HOLD)
+    if (!x.state.hazards.length) slipped++
+    if (seed === 1) check('빙판 — 미끄러지지 않는다(그 칸에 선다)', x.state.pos[0], { col: 2, row: 1 })
+  }
+  // 도착 1번 + 그 뒤 기력 카드 두 번 = 세 번 굴린다 → 1 − 0.7³ ≈ 66%.
+  check('빙판 — 넘어지는 비율 ≈ 1 − 0.7³(± 8%p)', Math.abs(slipped / 400 - (1 - 0.7 ** 3)) < 0.08, true)
+  {
+    const same = (seed: number) => {
+      const x = hzBattle([{ kind: 'ice', cell: { col: 2, row: 1 } }], {}, undefined, seed)
+      return JSON.stringify(x.resolveRound([R, E, E], HOLD).map((s) => [s.card.id, s.snapshot.pos]))
+    }
+    check('빙판 — 같은 시드면 같은 결과(재현)', same(11) === same(11), true)
+  }
+
+  // 속박 중엔 넉백 · 끌어당김을 안 당한다(처박기도 없다).
+  {
+    const shove: CardDef = { id: 'test-shove1', name: '테스트 넉백1', kind: 'attack', desc: '', range: [{ df: 1, du: 0 }], damage: 0, energyCost: 0, push: 1, cooldown: 0 }
+    const x = new CardBattle('warrior', 'warrior', { startCells: [{ col: 2, row: 1 }, { col: 3, row: 1 }] })
+    x.state.status[1].push({ kind: 'bind', rounds: 1, power: 0, since: 1 })
+    x.resolveRound([shove, E, E], HOLD)
+    check('속박 중 — 넉백에 안 밀린다', x.state.pos[1], { col: 3, row: 1 })
+  }
+
+  // 바위 — 공격을 막지 않는다 · 체력 999.
+  {
+    const x = new CardBattle('warrior', 'warrior', {
+      startCells: [{ col: 1, row: 1 }, { col: 3, row: 1 }],
+      obstacles: [{ cell: { col: 2, row: 1 }, hp: ROCK_HP, maxHp: ROCK_HP }],
+    })
+    const shot: CardDef = { id: 'test-shot2', name: '테스트 2칸', kind: 'attack', desc: '', range: [{ df: 2, du: 0 }], damage: 10, energyCost: 0, cooldown: 0 }
+    const h0 = x.state.hp[1]
+    x.resolveRound([shot, E, E], HOLD)
+    check('바위 — 사격선을 막지 않는다(너머의 상대가 맞는다)', x.state.hp[1] < h0, true)
+    check('바위 체력 999', ROCK_HP, 999)
+  }
+
+  // T20 — 시드가 있는 전투는 10라운드가 시작될 때 빈 칸 둘이 구멍이 된다(그 뒤 5라운드마다).
+  {
+    const x = hzBattle([])
+    x.state.round = 9
+    x.resolveRound(HOLD, HOLD)
+    const holes = x.state.hazards.filter((h) => h.kind === 'hole')
+    check('T20 — 10라운드에 구멍 둘', holes.length, HOLE_SPAWN_COUNT)
+    check('T20 — 사람이 선 칸엔 안 생긴다', holes.some((h) => x.state.pos.some((p) => p.col === h.cell.col && p.row === h.cell.row)), false)
+    x.resolveRound(HOLD, HOLD)
+    check('T20 — 11라운드엔 안 늘어난다', x.state.hazards.length, HOLE_SPAWN_COUNT)
+    const y = new CardBattle('warrior', 'warrior')
+    y.state.round = 9
+    y.resolveRound(HOLD, HOLD)
+    check('T20 — 시드 없는 전투(PvP)엔 안 생긴다', y.state.hazards, [])
+  }
+
+  // 배치 — 일반 전투에만, 끝열은 비운다. 종류는 지역별(1막 덩굴 · 화염 · 균열 / 2막 빙판 · 균열 · 화염).
   const r0 = startRun('warrior')
   let onEdge = 0, any = 0
+  const seen = new Set<string>()
   for (let i = 0; i < 300; i++) {
     const hz = hazardsFor(r0)
     if (hz.length) any++
+    for (const h of hz) seen.add(h.kind)
     onEdge += hz.filter((h) => h.cell.col === 0 || h.cell.col === GRID_COLS - 1).length
   }
   check('일반 전투의 일부에 함정이 깔린다', any > 50 && any < 250, true)
   check('끝열(시작 자리)엔 함정이 없다', onEdge, 0)
+  check('1막 함정 종류', [...seen].sort(), ['bramble', 'crack', 'fire'])
   const eliteRun = { ...r0, map: r0.map.map((f) => f.map((n) => ({ ...n, type: 'elite' as const }))) }
   check('엘리트 칸엔 함정 대신 바위', [0, 1, 2, 3, 4].some(() => hazardsFor(eliteRun).length > 0), false)
+  check('런 전투엔 시드가 실린다', typeof runFightProps(r0).battleOpts.seed, 'number')
 
-  // AI도 함정을 안다(2026-11-09) — 걸어서 들어가지 않는다. 이동 카드만 쥐여 주고
-  // 상대와 두 칸 — 사이 칸에 덩굴을 두면 한 칸 이동(m-left)을 안 고른다(밀착 공격이 없어 상대 칸엔 안 올라선다).
+  // AI도 함정을 안다 — 걸어서 들어가지 않는다. 이동 카드만 쥐여 주고 상대와 두 칸 — 사이 칸에
+  // 덩굴 · 화염 · 3단계 균열 · 구멍을 두면 한 칸 이동(m-left)을 안 고른다. 1단계 균열은 밟는다.
   const moves = COMMON_CARDS.filter((c) => c.kind === 'move')
-  const trapAhead = (kind: Hazard['kind'], phase?: number) =>
+  const trapAhead = (h: Omit<Hazard, 'cell'>) =>
     new CardBattle('warrior', 'warrior', {
       startCells: [{ col: 2, row: 1 }, { col: 4, row: 1 }],
-      hazards: [{ kind, cell: { col: 3, row: 1 }, phase }],
+      hazards: [{ ...h, cell: { col: 3, row: 1 } }],
     })
-  let walkedIn = 0, walkedFree = 0
-  for (let i = 0; i < 40; i++) {
-    if (decideAI(trapAhead('bramble').state, 1, getChar('warrior'), 'hard', moves)[0]?.id === 'm-left') walkedIn++
-    if (decideAI(trapAhead('spikes', 2).state, 1, getChar('warrior'), 'hard', moves)[0]?.id === 'm-left') walkedFree++
+  const walks = (h: Omit<Hazard, 'cell'>) => {
+    let n = 0
+    for (let i = 0; i < 40; i++) if (decideAI(trapAhead(h).state, 1, getChar('warrior'), 'hard', moves)[0]?.id === 'm-left') n++
+    return n
   }
-  check('AI는 덩굴로 걸어 들어가지 않는다', walkedIn, 0)
-  // 가시덫은 솟은 라운드에만 아프다 — 숨은 라운드엔 그냥 밟고 지나간다(위상 2 = 1라운드엔 숨음).
-  check('AI는 숨은 가시덫은 그냥 밟는다', walkedFree > 0, true)
+  check('AI는 덩굴 · 화염 · 3단계 균열 · 구멍으로 걸어 들어가지 않는다', [walks({ kind: 'bramble' }), walks({ kind: 'fire', turns: 9 }), walks({ kind: 'crack', stage: 3 }), walks({ kind: 'hole' })], [0, 0, 0, 0])
+  check('AI는 1단계 균열은 그냥 밟는다', walks({ kind: 'crack', stage: 1 }) > 0, true)
 }
 
 // --- 룰렛 카드 강화(2026-11 리디자인) -----------------------------------------
@@ -1884,7 +1928,7 @@ console.log('\n지형 — 바위')
     check('줄을 바꾸면 바위를 지나갈 수 있다', [b3.state.pos[0].col, b3.state.pos[0].row], [2, 0])
   }
 
-  // ② 사격선을 끊는다 — 사이에 낀 바위가 그 칸을 가린다. 대각은 안 가린다.
+  // ② 공격은 막지 않는다(2026-11-13 · `HAZARDS.md` 1절) — 바위 너머도 맞는다.
   {
     const beam: CardDef = {
       id: 'test-beam', name: '테스트 광선', kind: 'attack', desc: '',
@@ -1894,33 +1938,10 @@ console.log('\n지형 — 바위')
     const b = withRocks(rocks([2, 1]))
     const hp1 = b.state.hp[1]
     b.resolveRound([beam, card('c-energy'), card('c-energy')], HOLD)
-    check('바위 뒤 상대는 안 맞는다', hp1 - b.state.hp[1], 0)
-
-    // 관통은 바위를 무시하고 뒤를 그대로 때린다(궁수·마법사의 답).
-    const bp = withRocks(rocks([2, 1]))
-    const hpp = bp.state.hp[1]
-    bp.resolveRound([{ ...beam, id: 'test-beam-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
-    check('관통은 바위를 뚫고 맞힌다', hpp - bp.state.hp[1] > 0, true)
-
-    // 유물 `alwaysPierce`도 같은 규칙(엔진 piercesRock 한 곳을 본다).
-    const ba = new CardBattle('warrior', 'warrior', {
-      chars: [getChar('warrior'), getChar('warrior')],
-      passives: [{ desc: '', alwaysPierce: true }, { desc: '' }],
-      startCells: [{ col: 1, row: 1 }, { col: 4, row: 1 }],
-      obstacles: rocks([2, 1]),
-    })
-    const hpa = ba.state.hp[1]
-    ba.resolveRound([beam, card('c-energy'), card('c-energy')], HOLD)
-    check('alwaysPierce 유물도 바위를 뚫는다', hpa - ba.state.hp[1] > 0, true)
-
-    // 다른 줄의 바위는 아무것도 안 가린다 — 우회로가 늘 남아 있어야 한다.
-    const bd = withRocks(rocks([2, 0]))
-    const hpd = bd.state.hp[1]
-    bd.resolveRound([beam, card('c-energy'), card('c-energy')], HOLD)
-    check('다른 줄 바위는 사격선을 안 막는다', hpd - bd.state.hp[1] > 0, true)
+    check('바위 뒤 상대도 맞는다', hp1 - b.state.hp[1] > 0, true)
   }
 
-  // ③ 부술 수 있다 — 가로막은 바위가 그 공격의 피해를 받는다(빗나가도).
+  // ③ 사실상 안 깨진다 — 공격이 덮은 칸의 바위만 깎인다(999).
   {
     const hit: CardDef = {
       id: 'test-rockhit', name: '테스트 타격', kind: 'attack', desc: '',
@@ -1928,14 +1949,10 @@ console.log('\n지형 — 바위')
     }
     const b = withRocks(rocks([2, 1]))
     b.resolveRound([hit, card('c-energy'), card('c-energy')], HOLD)
-    check('가로막은 바위가 깎인다', b.state.obstacles[0]?.hp, ROCK_HP - 13)
-    // 한 번 더 때리면 부서져 판에서 사라진다.
-    b.resolveRound([hit, card('c-energy'), card('c-energy')], HOLD)
-    check('바위가 부서지면 판에서 사라진다', b.state.obstacles.length, 0)
-    // 관통은 바위를 그냥 지나간다 — 깎지도 않는다.
-    const bp = withRocks(rocks([2, 1]))
-    bp.resolveRound([{ ...hit, id: 'test-rockhit-p', pierce: true }, card('c-energy'), card('c-energy')], HOLD)
-    check('관통은 바위를 깎지 않는다', bp.state.obstacles[0]?.hp, ROCK_HP)
+    check('덮은 칸의 바위가 깎인다', b.state.obstacles[0]?.hp, ROCK_HP - 13)
+    const far = withRocks(rocks([3, 1]))
+    far.resolveRound([{ ...hit, range: [{ df: 1, du: 0 }] }, card('c-energy'), card('c-energy')], HOLD)
+    check('덮지 않은 칸의 바위는 안 깎인다', far.state.obstacles[0]?.hp, ROCK_HP)
   }
 
   // ④ 처박기(2026-08-07 사용자 확정) — 밀려날 곳이 막혀 있으면 **벽이든 바위든**
@@ -1992,7 +2009,7 @@ console.log('\n지형 — 바위')
       b.state.obstacles.map((r) => r.cell.col).sort((x, y) => x - y),
       [0, 2],
     )
-    check('석벽 체력은 카드가 정한다', b.state.obstacles[0]?.maxHp, 23)
+    check('석벽 체력도 ROCK_HP(999)', b.state.obstacles[0]?.maxHp, ROCK_HP)
     // 파이터가 선 칸에는 안 세운다(바위 위에 서 있는 상태를 만들면 안 된다).
     // p0=2·p1=3이면 상대 좌우는 1과 3인데, 3은 보스 자신이 서 있으므로 1만 선다.
     const c2 = withRocks([], [2, 1], [3, 1])
@@ -2447,43 +2464,21 @@ console.log('\n피해 내역(Step.bits) · 슬롯 번호(Step.slot)')
     )
     check('세 슬롯이 모두 재생된다', new Set(slots).size, 3)
   }
-  // ⑦ 라운드 종료 정산(붕괴)은 어느 카드의 결과도 아니다 → 슬롯 없음.
+  // ⑦ 턴 끝 정산(화염)은 그 턴의 슬롯 번호를 달고, 피해 꼬리표 합 = 깎인 체력.
   {
     const b = battleWith({})
-    b.state.round = COLLAPSE_START_ROUND
-    b.state.pos = [{ col: 0, row: 1 }, { col: 5, row: 1 }] // 둘 다 무너진 열
+    b.state.hazards = [{ kind: 'fire', cell: { col: 2, row: 1 }, turns: 9 }]
+    const from = [b.state.hp[0], b.state.hp[1]] as [number, number]
     const steps = b.resolveRound(HOLD, HOLD)
-    const col = steps.filter((s) => s.phase === 'collapse')
-    check('붕괴 스텝이 나온다', col.length, 2)
-    check('붕괴 스텝에는 슬롯 번호가 없다', col.every((s) => s.slot === undefined), true)
-    check(
-      '붕괴 피해에도 꼬리표가 붙는다',
-      col.every((s) => (s.bits ?? []).some((x) => x.src === 'collapse')),
-      true,
-    )
+    const fire = steps.filter((s) => s.phase === 'hazard')
+    check('화염 스텝이 턴마다 나온다', fire.length, 3)
+    check('화염 스텝은 그 턴의 슬롯 번호를 단다', fire.map((s) => s.slot), [0, 1, 2])
+    check('화염 피해 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from), 'ok')
   }
 }
 
-// --- 이동불가 후속(2026-11-13 사용자 지정) — 붕괴도 빙결을 깨며 +5 · AI는 풀린 첫 턴에 피하거나 막는다 ---
-console.log('\n이동불가 후속 — 붕괴 파쇄 +5 · AI 풀린 첫 턴')
-{
-  const run = (frozen: boolean) => {
-    const b = battleWith({})
-    b.state.round = COLLAPSE_START_ROUND
-    b.state.pos = [{ col: 2, row: 1 }, { col: 5, row: 1 }] // p1만 무너진 열
-    if (frozen) b.state.status[1].push({ kind: 'frozen', rounds: 5, power: 0, since: 0 })
-    const hp = b.state.hp[1]
-    const steps = b.resolveRound(HOLD, HOLD)
-    const col = steps.find((x) => x.phase === 'collapse' && x.actor === 1)
-    const bitsSum = (col?.bits ?? []).reduce((n, x) => n + x.n, 0)
-    return { lost: hp - b.state.hp[1], bitsSum, still: !!b.statusOf(1, 'frozen') }
-  }
-  const plain = run(false)
-  const iced = run(true)
-  check('붕괴로 빙결이 깨지면 +5', iced.lost - plain.lost, FREEZE_SHATTER_BONUS)
-  check('붕괴 파쇄 — 피해 내역 합 = 깎인 체력', iced.bitsSum, iced.lost)
-  check('붕괴 파쇄 — 빙결이 풀린다', iced.still, false)
-}
+// --- 이동불가 후속(2026-11-13 사용자 지정) — AI는 풀린 첫 턴에 피하거나 막는다 ---
+console.log('\n이동불가 후속 — AI 풀린 첫 턴')
 {
   // AI: 넘어온 기절 1턴 → 1번 슬롯은 비우고 2번 슬롯엔 이동(또는 가드).
   const b = battleWith({})
@@ -2509,43 +2504,6 @@ console.log('\n이동불가 후속 — 붕괴 파쇄 +5 · AI 풀린 첫 턴')
   }
   check('AI — 속박 턴엔 이동하지 않는다(20/20)', noMoveWhileBound, 20)
   check('AI — 속박이 끝난 턴엔 이동 · 수비(20/20)', movedAfter, 20)
-}
-
-// --- 붕괴 늦추기 · 안전지대(2026-11-10 사용자 지정) ------------------------------
-console.log('\n붕괴 — 가운데 4칸은 끝까지 · 엘리트·보스는 늦게')
-{
-  const late = COLLAPSE_START_ROUND + COLLAPSE_STEP_ROUNDS * 5 // 마지막 단계를 한참 지난 라운드
-  const safe: string[] = []
-  for (let col = 0; col < GRID_COLS; col++)
-    for (let row = 0; row < GRID_ROWS; row++) if (!isCollapsedCell({ col, row }, late)) safe.push(`${col},${row}`)
-  check('마지막 단계에도 가운데 4칸만 남는다', safe, ['2,1', '2,2', '3,1', '3,2'])
-  check('안전지대 판정 = 그 4칸', safe.every((k) => isCollapseSafe({ col: +k[0], row: +k[2] })), true)
-
-  // 안전지대에 서 있으면 붕괴 피해가 없다.
-  const b = battleWith({})
-  b.state.round = late
-  b.state.pos = [{ col: 2, row: 1 }, { col: 0, row: 0 }]
-  const steps = b.resolveRound(HOLD, HOLD)
-  check('안전지대는 붕괴 피해 없음 · 밖은 있음', ['0', '1'].map((p) => steps.some((s) => s.phase === 'collapse' && s.actor === +p)), [false, true])
-
-  // 엘리트·보스는 4라운드 늦게 무너진다(런 전용 — PvP는 지연 0).
-  const elite = new CardBattle('warrior', 'warrior', { collapseDelay: ELITE_COLLAPSE_DELAY })
-  elite.state.round = COLLAPSE_START_ROUND
-  elite.state.pos = [{ col: 0, row: 1 }, { col: 5, row: 1 }]
-  check('엘리트 — 6라운드엔 아직 안 무너진다', elite.resolveRound(HOLD, HOLD).some((s) => s.phase === 'collapse'), false)
-  elite.state.round = COLLAPSE_START_ROUND + ELITE_COLLAPSE_DELAY
-  check('엘리트 — 4라운드 뒤엔 무너진다', elite.resolveRound(HOLD, HOLD).some((s) => s.phase === 'collapse'), true)
-  check('PvP 전투는 지연 0', new CardBattle('warrior', 'warrior').state.collapseDelay, 0)
-  const eliteRun: RunState = { ...startRun('warrior'), special: { kind: 'spirit', monsterId: 'wolf', elite: true } }
-  check('엘리트 전투에 지연이 실린다', runFightProps(eliteRun).battleOpts.collapseDelay, ELITE_COLLAPSE_DELAY)
-  check('일반 매복은 지연 없음', runFightProps({ ...startRun('warrior'), special: { kind: 'ambush', monsterId: 'slime' } }).battleOpts.collapseDelay, 0)
-
-  // AI는 마지막 단계에도 안전지대로 피한다(위아래까지 본다).
-  const ai = battleWith({})
-  ai.state.round = late
-  ai.state.pos = [{ col: 0, row: 0 }, { col: 3, row: 0 }] // 몬스터가 안전지대 바로 위 무너진 칸
-  const plan = decideAI(ai.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.filter((c) => c.kind === 'move'))
-  check('AI는 안전지대로 피한다', plan[0]?.kind === 'move' && plan[0].dir?.includes('down'), true)
 }
 
 // --- 런 카드 직업 구분(2026-11-10 신고: "법사 카드를 전사도 쓴다") ------------------

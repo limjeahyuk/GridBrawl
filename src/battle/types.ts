@@ -190,14 +190,12 @@ export const BURN_PCT_PER_STACK = 10
 export const BURN_PCT_MAX_STACKS = 3
 export const burnPct = (stacks: number): number =>
   Math.min(Math.max(0, stacks), BURN_PCT_MAX_STACKS) * BURN_PCT_PER_STACK
-/** 불길 함정이 거는 화상 겹 — **임시**(함정 재설계 때 사용자가 정한다 · STATUS.md 2절). */
+/** 화염 · 용암 지형이 턴 끝에 거는 화상 겹(`HAZARDS.md` 3절 — 체력에 닿았을 때만). */
 export const FIRE_BURN_STACKS = 1
 /** 빙결을 깨뜨린 타격에 얹히는 추가 피해(보호막 관통). */
 export const FREEZE_SHATTER_BONUS = 5
 /** 넉백·끌어당김이 막혀 **못 밀려난 한 칸당** 피해. 0칸도 못 밀리면 기절까지 붙는다. */
 export const KNOCKBACK_BLOCK_DAMAGE = 5
-/** 독안개 타일 위에서 라운드 종료에 받는 피해(보호막 무시 — 전장 붕괴와 같은 자리). */
-export const FOG_DAMAGE = 10
 
 /** 버프의 최대 지속 라운드(중독 · 화상은 겹 = 라운드라 상한이 없다). */
 export const STATUS_MAX_ROUNDS = 3
@@ -206,51 +204,86 @@ export const STATUS_MAX_ROUNDS = 3
 export const isLayered = (k: StatusKind): boolean => k === 'poison' || k === 'burn'
 
 // ---------------------------------------------------------------------------
-// 독안개 타일 (2026-08-07)
+// 판 위의 것 — 함정 · 독안개 · 구멍 (2026-11-13 재설계 · `docs/rules/HAZARDS.md`)
 //
-// 전장 붕괴와 **같은 자리·같은 규칙**이다(라운드 종료 · 보호막 무시 · 랜덤 없음).
-// 다른 건 하나뿐 — 붕괴는 시간이 만들고 안개는 **카드가 깐다**. 그래서 안개는
-// "여기 서 있지 마라"를 상대에게 강제하는 도구가 되고, 중독과 물린다(비키려면
-// 움직여야 하는데 중독은 움직이면 아프다).
-//
-// ⚠ **런(싱글) 전용은 아니다** — 궁수 카드가 깔면 PvP에서도 생긴다. 그래서 이건
-//   `RULES_VERSION`에 걸리는 규칙이다(바위처럼 no-op으로 빠지지 않는다).
+// 함정은 **런 전용**(`BattleOpts.hazards`)이고, 독안개는 카드가 깐다. 둘 다 **턴 단위**로
+// 정산한다(슬롯이 끝날 때마다 — 이동 · 수비 · 공격을 다 치른 뒤).
+// 랜덤(빙판 넘어짐 · 구멍에서 나올 칸)은 전투마다 받은 시드(`BattleOpts.seed`)로 엔진 안에서
+// 굴린다 — 같은 입력 → 같은 결과는 그대로다(`HAZARDS.md` 10절).
 // ---------------------------------------------------------------------------
 
-/** 판 위의 독안개 한 칸. `rounds`가 0이 되면 걷힌다. */
+/** 판 위의 독안개 한 칸. `turns`가 0이 되면 걷힌다. */
 export interface FogTile {
   cell: Cell
-  rounds: number
+  /** 남은 턴 — 턴이 끝날 때마다 서 있는 쪽에 중독 1겹을 건 뒤 1 준다. */
+  turns: number
+  /** 카드가 깐 가운데 칸인가 — 가운데 칸만 십자로 퍼진다(퍼진 칸은 안 퍼진다). */
+  origin?: boolean
 }
+/** 독안개 지속(턴) — 카드는 숫자 없이 그냥 깐다(`HAZARDS.md` 8절). */
+export const FOG_TURNS = 5
+/** 가운데 칸의 남은 턴이 이 값이 되는 순간 십자로 퍼진다(3턴 뒤 · 퍼진 칸은 2턴 뒤 다 같이 걷힌다). */
+export const FOG_SPREAD_AT = 2
 
 /**
- * 판 위 함정(2026-11 리디자인 · 시안 `Hazards` — **런 전용**). `BattleOpts.hazards`로만 들어오고
- * PvP·봇전은 안 넘기므로 규칙이 통째로 no-op이다 → `RULES_VERSION` 무관(바위가 처음 들어왔을 때와 같은 근거).
- *   fire     불길 — 들어서거나 라운드 끝에 서 있으면 화상 `FIRE_BURN_STACKS`겹(임시 1 — 함정 재설계 때). `rounds`가 지나면 꺼진다. 붙은 덩굴을 태운다.
- *   spikes   가시덫 — 숨음 → 경고 → 솟음을 되풀이(`spikeStateAt`). 솟은 라운드에 들어서면 속박.
- *   bramble  가시덩굴 — 들어서면 속박(늘 켜져 있다). 불길에 닿으면 탄다.
- *   ice      빙판 — 들어선 방향으로 한 칸 더 미끄러진다(바위·벽·상대 앞에선 멈춘다).
+ *   bramble  덩굴 — 들어서면(지나가다 · 밀려 가다도) **그 칸에서 멈추고** 속박 1턴. 화염 · 용암이
+ *            상하좌우에 붙어 있으면 라운드 끝에 화염으로 바뀐다.
+ *   fire     화염 — 턴 끝에 서 있으면 피해 10 + 화상 1겹, 지나가면 5. 보호막 · 경감이 막는다. 9턴 뒤 꺼진다.
+ *   lava     용암 — 화염과 같되 지나가기는 무해 · 꺼지지 않는다(지금은 안 깐다).
+ *   crack    균열 — 1~3단계. 밟거나 지나갈 때 · 위에서 턴이 끝날 때 한 단계 → 3단계 다음은 구멍.
+ *   hole     구멍 — 지나가기는 괜찮고, **멈추면 빠진다**(피해 50 + 상하좌우 무작위 칸).
+ *   ice      빙판 — 위에서 무엇을 하든(지나가기 · 도착 포함) 30%로 넘어진다 → 기절 1턴 · 빙판이 사라진다.
+ *   danger   위험 칸 — 표시 전용(추후 카드용). 아무 일도 안 일어난다.
  */
-export type HazardKind = 'fire' | 'spikes' | 'bramble' | 'ice'
+export type HazardKind = 'bramble' | 'fire' | 'lava' | 'crack' | 'hole' | 'ice' | 'danger'
 export interface Hazard {
   kind: HazardKind
   cell: Cell
-  /** 불길 — 남은 라운드(0이면 꺼진다). 나머지는 안 쓴다. */
-  rounds?: number
-  /** 가시덫 — 주기 위상(0~2). 칸마다 달라 한꺼번에 솟지 않는다. */
-  phase?: number
+  /** 화염 — 남은 턴(0이면 꺼진다). 나머지는 안 쓴다. */
+  turns?: number
+  /** 균열 — 단계(1~3). */
+  stage?: number
 }
-export const FIRE_ROUNDS = 3
-export type SpikeState = 'hidden' | 'warn' | 'up'
-/** 가시덫의 그 라운드 상태 — 3라운드 주기(숨음 → 경고 → 솟음). 랜덤 없음 → 락스텝 안전. */
-export const spikeStateAt = (h: Hazard, round: number): SpikeState =>
-  (['hidden', 'warn', 'up'] as const)[(round + (h.phase ?? 0)) % 3]
+export const FIRE_TURNS = 9
+/** 화염 · 용암 칸에서 턴이 끝날 때 받는 피해(보호막 · 받는 피해 감소가 막는다). */
+export const FIRE_STAND_DAMAGE = 10
+/** 화염 칸을 지나갈 때 받는 피해(같은 규칙 · 화상은 없다). */
+export const FIRE_PASS_DAMAGE = 5
+/** 구멍에 빠졌을 때 피해(보호막 무시 · 구멍 피해 감소 유물 `collapseResist`만 깎는다). */
+export const HOLE_FALL_DAMAGE = 50
+/** 빙판 위에서 행동할 때 넘어질 확률. */
+export const ICE_SLIP_CHANCE = 0.3
+/** 균열 마지막 단계 — 여기서 한 번 더 오르면 구멍. */
+export const CRACK_MAX_STAGE = 3
+
+/**
+ * **전투를 끝낼 장치**(T20 · 2026-11-13 사용자 — 임시값은 `HAZARDS.md` 8-quater).
+ * 10라운드부터 5라운드마다 빈 칸 `HOLE_SPAWN_COUNT`개가 구멍이 된다 — 그 라운드 카드를 고를 때 이미 보인다.
+ */
+export const HOLE_SPAWN_START = 10
+export const HOLE_SPAWN_EVERY = 5
+export const HOLE_SPAWN_COUNT = 2
+/** 이 라운드가 **시작될 때** 구멍이 새로 생기는가. */
+export const holesSpawnAt = (round: number): boolean =>
+  round >= HOLE_SPAWN_START && (round - HOLE_SPAWN_START) % HOLE_SPAWN_EVERY === 0
+
 export const hazardAt = (list: readonly Hazard[], c: Cell): Hazard | undefined =>
   list.find((h) => h.cell.col === c.col && h.cell.row === c.row)
 
 /** 이 칸에 깔린 독안개(없으면 undefined). */
 export const fogAt = (fog: readonly FogTile[], c: Cell): FogTile | undefined =>
-  fog.find((f) => f.rounds > 0 && f.cell.col === c.col && f.cell.row === c.row)
+  fog.find((f) => f.turns > 0 && f.cell.col === c.col && f.cell.row === c.row)
+
+/**
+ * 시드 의사 난수(mulberry32) — 상태 한 정수를 받아 [0,1) 값과 다음 상태를 돌려준다.
+ * 엔진이 `BattleState.rng`에 상태를 들고 다녀서 스냅샷 · 재현이 그대로 된다.
+ */
+export function nextRandom(state: number): [number, number] {
+  const a = (state + 0x6d2b79f5) | 0
+  let t = Math.imul(a ^ (a >>> 15), 1 | a)
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+  return [((t ^ (t >>> 14)) >>> 0) / 4294967296, a]
+}
 
 export interface CardDef {
   id: string
@@ -309,11 +342,10 @@ export interface CardDef {
   /** 적중 시 상대를 **이 라운드 동안** 속박(이동 카드만 무효 — 공격·수비는 나간다). */
   bind?: number
   /**
-   * 적중 시 상대가 선 칸에 **독안개**를 깐다 — 값은 안개가 머무는 라운드 수.
-   * 라운드 종료마다 그 칸에 선 쪽이 `FOG_DAMAGE`(보호막 무시). 비키게 만드는
-   * 카드이고, 중독과 겹치면 "서 있어도 아프고 움직여도 아프다"가 된다.
+   * 적중 시 상대가 선 칸에 **독안개**를 깐다(`FOG_TURNS`턴 · 3턴 뒤 십자로 퍼진다 — `HAZARDS.md` 8절).
+   * 서 있으면 턴 끝마다 중독 1겹 — 비키게 만드는 카드다.
    */
-  fog?: number
+  fog?: boolean
   /** 적중 시 상대를 (공격자 쪽으로) N칸 끌어당긴다. push의 반대. */
   pull?: number
   /**
@@ -411,18 +443,13 @@ export const inBounds = (c: Cell): boolean =>
 // 판이 6×3짜리 빈 격자뿐이라 어느 전투나 "가로로 붙었다 떨어졌다"만 반복됐다.
 // 바위는 그 판에 **막힌 칸**을 만들어 접근 경로와 사격선을 동시에 끊는다.
 //
-// 규칙은 셋뿐이다 — 늘리지 않는다:
-//   ① **못 들어간다.** 이동·이동공격(dashForward)·넉백·끌어당김이 바위 앞에서
-//      멈춘다. 벽과 같은 자리에서 처리되므로 새 분기가 거의 안 생긴다.
-//   ② **사격선을 끊는다.** 공격자와 목표가 **같은 줄이나 같은 열**일 때, 그 사이에
-//      낀 바위가 그 칸을 가린다. 대각으로 어긋난 칸은 안 가린다 — 그래서 **줄을
-//      옮기는 것**이 언제나 우회로로 남고, "거리를 사는" 궁수가 갇히지 않는다.
-//   ③ **부술 수 있다.** 체력이 있어서 때리면 깨진다(`ROCK_HP`). 공격이 덮은 칸에
-//      선 바위, 그리고 그 공격을 **가로막은** 바위가 피해를 받는다 — 어떤 카드든
-//      결국 길을 뚫을 수 있다.
-// 예외는 **관통**(`pierce` · 유물 `alwaysPierce`)이다. 관통 공격은 바위를 무시하고
-// 그 뒤를 그대로 때린다(바위도 안 깎는다) — 궁수·마법사의 답이 되는 자리다.
-//
+// 규칙(2026-11-13 재설계 · `docs/rules/HAZARDS.md` 1절):
+//   ① **못 들어간다 · 못 지나간다.** 이동·이동공격(dashForward)·넉백·끌어당김이 바위 앞에서
+//      멈춘다(넉백이 막히면 처박기).
+//   ② **공격은 막지 않는다.** 바위 너머의 상대도 그대로 맞는다(옛 "사격선을 끊는다"는 없앴다 —
+//      그래서 관통이 바위를 무시하는 규칙도 뜻이 없어졌다).
+//   ③ **사실상 안 깨진다**(체력 `ROCK_HP` 999). 공격이 덮은 칸에 선 바위는 깎이고, 깨지면 빈 칸.
+//   ④ 상태이상 면역(바위는 상태이상을 안 받는다).
 // ⚠ **런(싱글) 전용이다.** 바위는 오직 `BattleOpts.obstacles`로만 들어오고 PvP·봇전은
 //   빈 배열이라 아래 규칙이 전부 no-op이 된다 — 그래서 `RULES_VERSION`을 올리지
 //   않는다(보스 전용 카드와 같은 근거). 바위가 PvP 판에 놓이는 날에는 반드시 올린다.
@@ -435,8 +462,8 @@ export interface Obstacle {
   maxHp: number
 }
 
-/** 바위 기본 체력. 카드 한 장으로는 못 깨고 두세 대를 들여야 하는 값. */
-export const ROCK_HP = 25
+/** 바위 체력 — 깨지 말라고 둔 값(2026-11-13 사용자 · `HAZARDS.md` 1절). */
+export const ROCK_HP = 999
 
 /** 이 칸에 선 바위(없으면 undefined). */
 export const rockAt = (rocks: readonly Obstacle[], c: Cell): Obstacle | undefined =>
@@ -445,42 +472,6 @@ export const rockAt = (rocks: readonly Obstacle[], c: Cell): Obstacle | undefine
 /** 이 칸에 들어갈 수 있는가 — 격자 안이고 바위가 없어야 한다. */
 export const canStand = (rocks: readonly Obstacle[], c: Cell): boolean =>
   inBounds(c) && !rockAt(rocks, c)
-
-/**
- * `from`에서 `to`를 노릴 때 **사이를 가로막고 선** 바위(가장 가까운 것). 없으면
- * undefined.
- *
- * 같은 줄(행)이나 같은 열일 때만 가린다 — 대각으로 어긋난 칸은 뚫린 것으로 본다.
- * 6×3 격자에서 임의의 선분을 긋는 규칙(Bresenham 등)은 판정이 눈에 안 읽히고,
- * "가로·세로로 곧게 이어질 때만 막힌다"는 그림만 보고도 바로 알 수 있다.
- * `to` 칸 자체에 선 바위는 여기서 세지 않는다(그건 목표를 가리는 게 아니라 **그게
- * 목표**다 — 호출부가 `rockAt`으로 따로 본다).
- */
-export function shadowRock(
-  rocks: readonly Obstacle[],
-  from: Cell,
-  to: Cell,
-): Obstacle | undefined {
-  if (!rocks.length) return undefined
-  if (from.row === to.row) {
-    const step = to.col > from.col ? 1 : to.col < from.col ? -1 : 0
-    if (step === 0) return undefined
-    for (let col = from.col + step; col !== to.col; col += step) {
-      const r = rockAt(rocks, { col, row: from.row })
-      if (r) return r
-    }
-    return undefined
-  }
-  if (from.col === to.col) {
-    const step = to.row > from.row ? 1 : -1
-    for (let row = from.row + step; row !== to.row; row += step) {
-      const r = rockAt(rocks, { col: from.col, row })
-      if (r) return r
-    }
-    return undefined
-  }
-  return undefined // 대각으로 어긋난 칸 — 바위가 가리지 않는다
-}
 
 /** 카드가 판에 세우는 바위. 보스 카드(수호기사)와 전사·마법사의 지형 카드가 쓴다. */
 export interface RockPlan {
@@ -500,68 +491,6 @@ export interface RockPlan {
   dist?: number
 }
 
-// ---------------------------------------------------------------------------
-// 전장 붕괴 (2026-08-05, 옛 "독안개") — 무한전 억제 장치.
-//
-// **왜 안개가 아니라 붕괴인가**: 예전엔 보라색 독안개가 가장자리를 덮었는데, 판이
-// 6×3뿐이라 "안개가 낀다"보다 **"설 자리가 줄어든다"**가 실제로 일어나는 일이었다.
-// 그래서 연출을 바닥이 무너지는 쪽으로 바꿨다 — 이름·색·경고가 전부 그쪽이다.
-//
-// ⚠ **무너진 칸에도 들어갈 수 있다(소프트 위험지대).** 벽으로 막지 않는 이유:
-//   ① 판이 6×3이고 마지막 단계는 **전 칸**이 무너진다 — 막으면 설 자리가 0이 된다.
-//   ② 넉백·끌어당김·돌진이 상시로 위치를 옮긴다. 막힌 칸이 생기면 "밀렸는데 갈 곳이
-//      없다"를 엔진 곳곳에서 따로 처리해야 하고, 그게 곧 룰 분기 = 락스텝 위험이다.
-//   ③ 궁수의 정체성이 "거리를 사는 것"이다. 강제로 좁히면 붙어야만 하는 판이 되어
-//      3직업 약점 설계가 무너진다. **체력을 내고 거리를 사는** 선택으로 남긴다.
-// 대신 단계가 오를수록 **더 아프게** 해서 소모전이 실제로 끝나게 한다.
-export const COLLAPSE_START_ROUND = 6
-export const COLLAPSE_STEP_ROUNDS = 3
-/** 단계별 **라운드당** 피해(실드 무시). 단계가 오를수록 버티는 값이 커진다. */
-export const COLLAPSE_DAMAGE: readonly number[] = [5, 8, 12]
-
-/** 마지막 단계 = 안전지대 밖이 전부 무너지는 단계. 6열이면 stage 2. */
-export const COLLAPSE_MAX_STAGE = Math.ceil(GRID_COLS / 2) - 1
-
-/**
- * **안전지대 — 판 한가운데 4칸(가운데 2열 × 가운데 2줄)은 끝까지 안 무너진다**(2026-11-10 사용자 지정:
- * "발판이 줄어드는 게 너무 빠르다 · 마지막 4칸 정도는 계속 있도록"). 예전엔 마지막 단계에 판 전체가
- * 무너져 설 자리가 0이었다. 마지막 단계의 압박은 그대로고(밖은 전부 12씩), 버틸 섬 하나가 남는다.
- */
-export const isCollapseSafe = (c: Cell): boolean =>
-  Math.abs(c.col * 2 - (GRID_COLS - 1)) <= 1 && Math.abs(c.row * 2 - (GRID_ROWS - 1)) <= 1
-
-/**
- * 붕괴 시계가 보는 라운드 — 전투마다 붕괴를 늦출 수 있다(`BattleOpts.collapseDelay`, 런 전용:
- * 엘리트·보스는 시간을 더 준다). 엔진·AI·화면이 모두 이걸 거쳐 같은 값을 본다.
- */
-export const collapseRound = (s: { round: number; collapseDelay?: number }): number =>
-  s.round - (s.collapseDelay ?? 0)
-
-/** 해당 라운드의 붕괴 단계. 시작 전 -1, 시작 라운드 0, 이후 COLLAPSE_STEP_ROUNDS마다 +1(cap). */
-export const collapseStageAt = (round: number): number =>
-  round < COLLAPSE_START_ROUND
-    ? -1
-    : Math.min(
-        COLLAPSE_MAX_STAGE,
-        Math.floor((round - COLLAPSE_START_ROUND) / COLLAPSE_STEP_ROUNDS),
-      )
-
-/** 해당 라운드에 이 셀이 무너져 있는가 — 양 끝 열부터 안쪽으로 무너진다. */
-export const isCollapsedCell = (c: Cell, round: number): boolean => {
-  const stage = collapseStageAt(round)
-  return stage >= 0 && !isCollapseSafe(c) && (c.col <= stage || c.col >= GRID_COLS - 1 - stage)
-}
-
-/** 그 라운드에 무너진 칸에 서 있으면 받는 피해. 단계 밖이면 0. */
-export const collapseDamageAt = (round: number): number => {
-  const stage = collapseStageAt(round)
-  if (stage < 0) return 0
-  return COLLAPSE_DAMAGE[Math.min(stage, COLLAPSE_DAMAGE.length - 1)]
-}
-
-/** 다음 라운드에 붕괴가 시작되거나 한 단계 더 번지는가(경고용). */
-export const collapseEscalatesNext = (round: number): boolean =>
-  collapseStageAt(round + 1) > collapseStageAt(round)
 /**
  * 파이터가 바라보는 쪽(+1 오른쪽 / −1 왼쪽) — **상대 위치로만 정한다**(2026-08-05).
  *
@@ -602,7 +531,7 @@ export interface BattleSnapshot {
   obstacles: Obstacle[]
   /** 이 시점에 깔려 있는 독안개. 바위와 같은 이유로 스냅샷에 싣는다. */
   fog: FogTile[]
-  /** 이 시점의 함정과 그때의 라운드(가시덫 상태를 그리려면 라운드가 필요하다). */
+  /** 이 시점의 함정(화염 남은 턴 · 균열 단계)과 그때의 라운드. */
   hazards: Hazard[]
   round: number
 }
@@ -617,21 +546,21 @@ export type ActionResult =
   | 'blocked' // connected but fully absorbed by the opponent's guard
   | 'whiff' // out of range
   | 'nofuel' // could not pay the energy cost
-  | 'collapse' // 무너진 칸에 서 있어 턴 종료에 피해를 입었다(실드 무시)
+  | 'hazard' // 판 위의 것이 아프게 했다 — 화염 · 용암 · 구멍에 빠짐
   | 'revive' // came back from a KO via a revive passive (once per battle)
   | 'stun' // 기절해 이 슬롯의 카드를 못 냈다 / 유물 트리거로 상대를 기절시켰다
   | 'trigger' // 누적 기력 트리거 발동(회복·보호막·피해)
-  | 'status' // 중독이 이동을 갉았다 / 독안개를 밟았다(보호막 무시)
+  | 'status' // 중독이 이동을 갉았다 / 독안개가 중독을 걸었다
   | 'frozen' // 빙결이라 이 슬롯의 카드를 못 냈다
   | 'bind' // 속박이라 이동 카드가 무효가 됐다
-  | 'rock' // 바위를 세웠다 / 바위가 부서졌다
+  | 'rock' // 바위를 세웠다 / 바위가 부서졌다 / 판 위의 것이 바뀌었다(균열 · 구멍 · 덩굴이 탐)
   | 'fog' // 판에 독안개를 깔았다
 
 export type Phase =
   | 'move'
   | 'defense'
   | 'attack'
-  | 'collapse'
+  | 'hazard'
   | 'revive'
   | 'stun'
   | 'trigger'
@@ -699,8 +628,8 @@ export type DamageSrc =
   | 'thorns' // 가시 반사 — 때린 쪽이 도로 받는다
   | 'recoil' // 카드 반동 — 자기 카드가 자기를 깎는다
   | 'poison' // 중독 — 움직이거나 때릴 때마다
-  | 'fog' // 독안개 타일
-  | 'collapse' // 전장 붕괴
+  | 'fire' // 화염 · 용암 지형
+  | 'hole' // 구멍에 빠짐
   | 'relic' // 유물 트리거의 고정 피해
 
 export interface DamageBit {

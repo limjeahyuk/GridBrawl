@@ -2,9 +2,18 @@ import { getChar, type CharacterDef, type Passive } from '../data/roster'
 import { isBuff } from './types'
 import { ENERGY_REGEN } from './cards'
 import {
-  COLLAPSE_START_ROUND,
-  FOG_DAMAGE,
+  CRACK_MAX_STAGE,
+  FIRE_PASS_DAMAGE,
+  FIRE_STAND_DAMAGE,
+  FIRE_TURNS,
+  FOG_SPREAD_AT,
+  FOG_TURNS,
   FREEZE_SHATTER_BONUS,
+  HOLE_FALL_DAMAGE,
+  HOLE_SPAWN_COUNT,
+  ICE_SLIP_CHANCE,
+  holesSpawnAt,
+  nextRandom,
   GRID_COLS,
   GRID_ROWS,
   KNOCKBACK_BLOCK_DAMAGE,
@@ -17,26 +26,20 @@ import {
   START_CELLS,
   STATUS_MAX_ROUNDS,
   canStand,
-  collapseDamageAt,
-  collapseRound,
   facingBetween,
   fogAt,
   inBounds,
-  isCollapsedCell,
   isFullLock,
   isLock,
   LOCK_RANK,
   rockAt,
-  shadowRock,
   type BattleSnapshot,
   type Cell,
   type CardDef,
   type DamageBit,
   type FogTile,
   type Hazard,
-  FIRE_ROUNDS,
   hazardAt,
-  spikeStateAt,
   type Obstacle,
   type RockPlan,
   type StatusEffect,
@@ -46,13 +49,16 @@ import {
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
 
-// 붕괴·부활 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
-const COLLAPSE_CARD: CardDef = { id: 'collapse', name: '붕괴', kind: 'guard', desc: '바닥이 무너져 내린다.' }
+// 판 위의 것 · 부활 스텝(연출·로그)용 가짜 카드 — 덱에는 존재하지 않음.
+const FIRE_CARD: CardDef = { id: 'hz-fire', name: '화염', kind: 'guard', desc: '발밑의 불길에 그을린다.' }
+const HOLE_CARD: CardDef = { id: 'hz-hole', name: '구멍', kind: 'guard', desc: '구멍에 빠졌다가 기어 나왔다.' }
+const ICE_CARD: CardDef = { id: 'hz-ice', name: '미끄러짐', kind: 'guard', desc: '빙판에서 넘어졌다.' }
+const HOLE_SPAWN_CARD: CardDef = { id: 'hz-holes', name: '갈라지는 바닥', kind: 'guard', desc: '바닥이 꺼져 구멍이 났다.' }
 const REVIVE_CARD: CardDef = { id: 'revive', name: '잿불 부활', kind: 'guard', desc: '쓰러진 자리에서 불씨로 되살아난다.' }
 const STUN_CARD: CardDef = { id: 'stun', name: '기절', kind: 'guard', desc: '기절해서 이 턴에 아무것도 못 한다.' }
 const TRIGGER_CARD: CardDef = { id: 'trigger', name: '유물 발동', kind: 'guard', desc: '누적 기력이 유물을 깨웠다.' }
 const POISON_CARD: CardDef = { id: 'st-poison', name: '중독', kind: 'guard', desc: '움직이자 독이 퍼진다.' }
-const FOG_CARD: CardDef = { id: 'st-fog', name: '독안개', kind: 'guard', desc: '독안개가 폐를 태운다.' }
+const FOG_CARD: CardDef = { id: 'st-fog', name: '독안개', kind: 'guard', desc: '독안개를 들이마셨다.' }
 const FOG_LAY_CARD: CardDef = { id: 'fog-lay', name: '독안개', kind: 'guard', desc: '바닥에 독안개가 깔렸다.' }
 const FROZEN_CARD: CardDef = { id: 'st-frozen', name: '빙결', kind: 'guard', desc: '얼어붙어 아무것도 못 한다.' }
 const BIND_CARD: CardDef = { id: 'st-bind', name: '속박', kind: 'guard', desc: '발이 묶여 움직일 수 없다.' }
@@ -90,14 +96,16 @@ export interface BattleState {
   status: [StatusEffect[], StatusEffect[]]
   /** 판 위의 바위(지형). 비어 있으면 지형 규칙이 통째로 no-op — PvP·봇전이 그렇다. */
   obstacles: Obstacle[]
-  /** 판에 깔린 독안개. 카드가 깔고 라운드 종료마다 그 칸에 선 쪽을 갉는다. */
+  /** 판에 깔린 독안개. 카드가 깔고, 턴이 끝날 때마다 그 칸에 선 쪽에 중독 1겹(`HAZARDS.md` 8절). */
   fog: FogTile[]
   /** 판 위 함정(런 전용 — `types.ts`의 `Hazard`). 비어 있으면 규칙이 통째로 no-op. */
   hazards: Hazard[]
   /** 지금 몇 **라운드**인가(1부터). 한 라운드 = 카드 3장 = 3턴. */
   round: number
-  /** 붕괴를 몇 라운드 늦추는가(런 전용 — 엘리트·보스). 붕괴 판정은 `collapseRound(state)`로. */
-  collapseDelay: number
+  /** 시드 의사 난수 상태(`nextRandom`) — 빙판 넘어짐 · 구멍에서 나올 칸. */
+  rng: number
+  /** 10라운드부터 구멍이 생기는가(T20 — 런 전용: `BattleOpts.seed`가 있을 때만). */
+  holeSpawn: boolean
   over: boolean
   winner: number | null
 }
@@ -135,8 +143,11 @@ export interface BattleOpts {
   startStatus?: [StatusEffect[] | undefined, StatusEffect[] | undefined]
   /** 함정(**런 전용**, 2026-11). 시작 칸·바위와 겹치는 건 버린다. PvP는 안 넘긴다. */
   hazards?: readonly Hazard[]
-  /** 붕괴를 N라운드 늦춘다(**런 전용**, 2026-11-10 — 엘리트·보스). PvP는 안 넘기므로 0. */
-  collapseDelay?: number
+  /**
+   * 이 전투의 시드(**런 전용**, 2026-11-13). 빙판 넘어짐 · 구멍에서 나올 칸을 엔진 안에서 이 시드로
+   * 굴린다 — 같은 입력이면 같은 결과다. 넘기면 **10라운드부터 구멍이 생긴다**(T20). PvP는 안 넘긴다.
+   */
+  seed?: number
 }
 
 /** Turn-based 2D card battle. Index 0 (player) faces +col, index 1 faces -col. */
@@ -216,9 +227,15 @@ export class CardBattle {
       fog: [],
       hazards: (opts?.hazards ?? [])
         .filter((h) => inBounds(h.cell) && !sameCell(h.cell, p0) && !sameCell(h.cell, p1) && !rockAt(obstacles, h.cell))
-        .map((h) => ({ ...h, cell: cloneCell(h.cell), rounds: h.kind === 'fire' ? (h.rounds ?? FIRE_ROUNDS) : h.rounds })),
+        .map((h) => ({
+          ...h,
+          cell: cloneCell(h.cell),
+          ...(h.kind === 'fire' ? { turns: h.turns ?? FIRE_TURNS } : null),
+          ...(h.kind === 'crack' ? { stage: h.stage ?? 1 } : null),
+        })),
       round: 1,
-      collapseDelay: Math.max(0, Math.round(opts?.collapseDelay ?? 0)),
+      rng: (opts?.seed ?? 1) | 0,
+      holeSpawn: opts?.seed != null,
       over: false,
       winner: null,
     }
@@ -320,60 +337,11 @@ export class CardBattle {
     return rockAt(this.state.obstacles, c)
   }
 
-  /**
-   * 이 공격이 **바위를 무시하는가**. 카드의 `pierce`와 유물 `alwaysPierce` 둘 다
-   * 관통이다 — 사격선 판정·바위 피해가 모두 이 한 곳을 본다.
-   */
-  piercesRock(p: number, card: CardDef): boolean {
-    return !!card.pierce || !!this.passive[p].alwaysPierce
-  }
-
   /** Cells this attack covers right now, mapped from the attacker's facing. */
   targetsOf(p: number, card: CardDef): Cell[] {
     const f = this.facing(p)
     const from = this.state.pos[p]
     return (card.range ?? []).map((o) => ({ col: from.col + f * o.df, row: from.row - o.du }))
-  }
-
-  /**
-   * 이동 카드 한 장. **실제로 밟은 칸 수를 돌려준다** — 중독이 "움직인 칸마다"
-   * 갉으므로 호출부가 이 값을 그대로 쓴다(대시 `<<`는 2, 대각선은 1 — 사용자 확정).
-   */
-  private applyMove(p: number, card: CardDef): number {
-    const s = this.state
-    const [dc, dr] = MOVE_DELTA[card.dir ?? 'right']
-    const steps = card.steps ?? 1
-    let cur = cloneCell(s.pos[p])
-    let moved = 0
-    for (let k = 0; k < steps; k++) {
-      const next: Cell = { col: cur.col + dc, row: cur.row + dr }
-      // 벽과 **바위**에서 멈춘다 — 바위는 통과도 착지도 안 된다(지형 규칙 ①).
-      if (!canStand(s.obstacles, next)) break
-      cur = next // 상대 셀 통과·정지 모두 가능(겹침 허용)
-      moved += 1
-    }
-    s.pos[p] = cur
-    return moved
-  }
-
-  /**
-   * 공격 카드에 딸린 이동(`dashForward`). **facing 기준 상대 이동**이라
-   * (+ 전진 / − 후퇴) 멀티에서 좌우 미러링이 필요 없다 — 절대 방향 이동 카드와
-   * 달리 `faceCard`가 손댈 게 없다. 벽에 막히면 갈 수 있는 만큼만 간다.
-   */
-  private applyDash(p: number, forward: number): number {
-    const s = this.state
-    const step = this.facing(p) * Math.sign(forward)
-    let cur = cloneCell(s.pos[p])
-    let moved = 0
-    for (let k = 0; k < Math.abs(forward); k++) {
-      const next: Cell = { col: cur.col + step, row: cur.row }
-      if (!canStand(s.obstacles, next)) break // 벽·바위에 막히면 거기까지만
-      cur = next
-      moved += 1
-    }
-    s.pos[p] = cur
-    return moved
   }
 
   /**
@@ -605,34 +573,217 @@ export class CardBattle {
       })
     }
 
-    /** 이 칸에 독안개를 깐다(이미 있으면 지속만 길게). */
-    const layFog = (cell: Cell, rounds: number) => {
-      if (rounds <= 0 || !inBounds(cell)) return
+    /** 이 칸에 독안개를 깐다 — 늘 `FOG_TURNS`턴짜리 가운데 칸(이미 있으면 다시 5턴부터). */
+    const layFog = (cell: Cell) => {
+      if (!inBounds(cell)) return
       const cur = fogAt(s.fog, cell)
-      if (cur) cur.rounds = Math.max(cur.rounds, rounds)
-      else s.fog.push({ cell: cloneCell(cell), rounds })
+      if (cur) {
+        cur.turns = Math.max(cur.turns, FOG_TURNS)
+        cur.origin = true
+      } else s.fog.push({ cell: cloneCell(cell), turns: FOG_TURNS, origin: true })
+    }
+
+    // -----------------------------------------------------------------------
+    // 판 위의 것(2026-11-13 재설계 · `docs/rules/HAZARDS.md`)
+    // -----------------------------------------------------------------------
+
+    /** 시드 의사 난수 한 번(0 이상 1 미만) — 상태는 `s.rng`에 남는다(재현 · 스냅샷 안전). */
+    const rand = (): number => {
+      const [v, next] = nextRandom(s.rng)
+      s.rng = next
+      return v
+    }
+
+    /** 판 위의 것이 주는 자기 피해 스텝(연출 — 본인 몸에 −N). */
+    const hazardStep = (p: number, card: CardDef, dealt: number, src: DamageBit['src']) =>
+      steps.push({
+        phase: 'hazard',
+        actor: p,
+        card,
+        result: 'hazard',
+        damage: 0,
+        heal: 0,
+        drain: 0,
+        recoil: dealt,
+        ...(dealt > 0 ? { bits: [{ src, on: p as 0 | 1, n: dealt }] } : null),
+        snapshot: this.snapshot(),
+      })
+
+    /**
+     * **화염 · 용암 피해**(3 · 4절) — 보호막과 받는 피해 감소(유물 + 방어 강화)가 막는다.
+     * 일부라도 체력에 닿았고 `burnIt`이면 화상 1겹(지나갈 때는 피해만).
+     */
+    const fireHit = (p: number, n: number, burnIt: boolean) => {
+      const absorbed = Math.min(s.shield[p], n)
+      s.shield[p] -= absorbed
+      const core = Math.max(0, n - absorbed - (this.passive[p].damageReduction ?? 0) - buffPower(p, 'defUp'))
+      const dealt = Math.min(s.hp[p], core)
+      s.hp[p] -= dealt
+      if (core > 0 && burnIt) applyStatus(p, 'burn', 0, FIRE_BURN_STACKS)
+      hazardStep(p, FIRE_CARD, dealt, 'fire')
+    }
+
+    /** 균열이 한 단계 오른다 — 3단계 다음은 구멍(5절). */
+    const crackUp = (h: Hazard) => {
+      const next = (h.stage ?? 1) + 1
+      if (next > CRACK_MAX_STAGE) {
+        h.kind = 'hole'
+        delete h.stage
+      } else h.stage = next
     }
 
     /**
-     * **함정 밟기**(런 전용 · 2026-11). p가 (dc, dr) 방향으로 움직여 지금 칸에 들어섰다.
-     * 빙판이면 한 칸 더 미끄러지고 그 칸도 밟는다(빙판끼리 이어 미끄러지진 않는다).
-     * 돌려주는 값 = 미끄러진 칸 수 — 중독이 "몸이 옮겨진 칸"으로 같이 센다.
+     * **구멍에 빠진다**(5절) — 피해 50(보호막 무시 · `collapseResist`만 깎는다) + 상하좌우 중 나올 수
+     * 있는 칸(판 안 · 바위 아님 · 구멍 아님 — 상대 칸은 된다)에서 무작위 한 칸. 다 막혔으면 쓰러진다.
+     * 나온 칸의 함정은 밟은 것으로 치지 않는다(기어 나온 것이지 들어선 게 아니다).
      */
-    const enterHazard = (p: number, dc: number, dr: number, slid = false): number => {
-      if (!s.hazards.length) return 0
-      const h = hazardAt(s.hazards, s.pos[p])
-      if (!h) return 0
-      if (h.kind === 'fire') applyStatus(p, 'burn', 0, FIRE_BURN_STACKS)
-      else if (h.kind === 'bramble' || (h.kind === 'spikes' && spikeStateAt(h, s.round) === 'up'))
-        applyStatus(p, 'bind', 0, 1)
-      else if (h.kind === 'ice' && !slid && (dc || dr)) {
-        const next: Cell = { col: s.pos[p].col + Math.sign(dc), row: s.pos[p].row + Math.sign(dr) }
-        // 바위·벽·**상대** 앞에서는 멈춘다.
-        if (!canStand(s.obstacles, next) || sameCell(next, s.pos[1 - p])) return 0
-        s.pos[p] = next
-        return 1 + enterHazard(p, dc, dr, true)
+    const fall = (p: number) => {
+      const here = s.pos[p]
+      const exits = (
+        [
+          [0, -1],
+          [1, 0],
+          [0, 1],
+          [-1, 0],
+        ] as const
+      )
+        .map(([dc, dr]) => ({ col: here.col + dc, row: here.row + dr }))
+        .filter((c) => canStand(s.obstacles, c) && hazardAt(s.hazards, c)?.kind !== 'hole')
+      let dealt: number
+      if (!exits.length) {
+        dealt = s.hp[p]
+        s.hp[p] = 0
+      } else {
+        dealt = Math.min(s.hp[p], Math.max(0, HOLE_FALL_DAMAGE - (this.passive[p].collapseResist ?? 0)))
+        s.hp[p] -= dealt
+        s.pos[p] = exits[Math.floor(rand() * exits.length)]
       }
-      return 0
+      hazardStep(p, HOLE_CARD, dealt, 'hole')
+    }
+
+    /** 빙판에서 넘어졌다(6절) — 그 턴 · 다음 턴 기절(`stunned` 1), 빙판은 사라진다. */
+    const slip = (p: number, ice: Hazard) => {
+      s.hazards = s.hazards.filter((h) => h !== ice)
+      applyStatus(p, 'stunned', 0, 1)
+      steps.push({
+        phase: 'stun',
+        actor: p,
+        card: ICE_CARD,
+        result: 'stun',
+        damage: 0,
+        heal: 0,
+        drain: 0,
+        recoil: 0,
+        snapshot: this.snapshot(),
+      })
+    }
+
+    /**
+     * p가 `cell`에 **들어섰다**(이동 · 대시 · 밀려남 — 지나가는 칸도 도착 칸도). `last` = 여기서
+     * 멈춘다. **여기서 멈춰야 하면 true** — 덩굴(속박) · 빙판에서 넘어짐.
+     */
+    const stepInto = (p: number, cell: Cell, last: boolean): boolean => {
+      const h = hazardAt(s.hazards, cell)
+      if (!h) return false
+      if (h.kind === 'bramble') {
+        applyStatus(p, 'bind', 0, 1)
+        return true
+      }
+      if (h.kind === 'fire' && !last) fireHit(p, FIRE_PASS_DAMAGE, false)
+      else if (h.kind === 'crack') crackUp(h)
+      else if (h.kind === 'ice' && rand() < ICE_SLIP_CHANCE) {
+        slip(p, h)
+        return true
+      }
+      return false
+    }
+
+    /** 멈춘 자리가 구멍이면 빠진다(이동 도착 · 밀려 멈춤 · 서 있던 균열이 구멍이 됨). */
+    const landOn = (p: number) => {
+      if (s.hp[p] > 0 && hazardAt(s.hazards, s.pos[p])?.kind === 'hole') fall(p)
+    }
+
+    /**
+     * (dc, dr) 쪽으로 최대 n칸 걷는다(이동 카드 · 대시 · 넉백 · 끌어당김 공용). 벽 · 바위 앞에서 멈추고
+     * (겹침은 허용), 지나가는 칸마다 `stepInto`를 본다. 돌려주는 값: 실제로 옮긴 칸 수 · 함정 때문에
+     * 멈췄는가(그러면 남은 넉백은 처박기가 아니다).
+     */
+    const walk = (p: number, dc: number, dr: number, n: number): { moved: number; stopped: boolean } => {
+      let moved = 0
+      let stopped = false
+      for (let k = 0; k < n; k++) {
+        const next: Cell = { col: s.pos[p].col + dc, row: s.pos[p].row + dr }
+        if (!canStand(s.obstacles, next)) break
+        s.pos[p] = next
+        moved += 1
+        const last = k === n - 1 || !canStand(s.obstacles, { col: next.col + dc, row: next.row + dr })
+        if (s.hazards.length && stepInto(p, next, last)) {
+          stopped = true
+          break
+        }
+      }
+      if (moved) landOn(p)
+      return { moved, stopped }
+    }
+
+    /**
+     * **턴 끝 정산**(슬롯마다 — 이동 · 수비 · 공격을 다 치른 뒤). 화염 · 용암 피해 → 균열이 오름(서 있는
+     * 칸마다 한 번) → 구멍이 됐으면 빠짐 → 독안개 중독 → 화염 · 독안개 시계(독안개는 3턴 뒤 십자로 퍼짐).
+     * 순서는 p0 → p1 고정.
+     */
+    const endTurn = () => {
+      if (s.hazards.length) {
+        for (let p = 0; p < 2; p++) {
+          if (s.hp[p] <= 0) continue
+          const k = hazardAt(s.hazards, s.pos[p])?.kind
+          if (k === 'fire' || k === 'lava') fireHit(p, FIRE_STAND_DAMAGE, true)
+        }
+        const raised = new Set<Hazard>()
+        for (let p = 0; p < 2; p++) {
+          const h = hazardAt(s.hazards, s.pos[p])
+          if (s.hp[p] <= 0 || h?.kind !== 'crack' || raised.has(h)) continue
+          raised.add(h)
+          crackUp(h)
+        }
+        for (let p = 0; p < 2; p++) landOn(p)
+        s.hazards = s.hazards
+          .map((h) => (h.kind === 'fire' ? { ...h, turns: (h.turns ?? 1) - 1 } : h))
+          .filter((h) => h.kind !== 'fire' || (h.turns ?? 0) > 0)
+      }
+      if (s.fog.length) {
+        for (let p = 0; p < 2; p++) {
+          if (s.hp[p] <= 0 || !fogAt(s.fog, s.pos[p])) continue
+          // 보호막이 있어도 걸린다(8절) — 피해가 아니라 상태이상이다.
+          applyStatus(p, 'poison', POISON_TICK_DAMAGE, 1)
+          steps.push({
+            phase: 'status',
+            actor: p,
+            card: FOG_CARD,
+            result: 'status',
+            damage: 0,
+            heal: 0,
+            drain: 0,
+            recoil: 0,
+            snapshot: this.snapshot(),
+          })
+        }
+        for (const f of s.fog) f.turns -= 1
+        const spreads = s.fog.filter((f) => f.origin && f.turns === FOG_SPREAD_AT)
+        for (const f of spreads)
+          for (const [dc, dr] of [
+            [0, -1],
+            [1, 0],
+            [0, 1],
+            [-1, 0],
+          ] as const) {
+            const cell = { col: f.cell.col + dc, row: f.cell.row + dr }
+            if (!canStand(s.obstacles, cell)) continue
+            const cur = s.fog.find((x) => sameCell(x.cell, cell))
+            if (cur) cur.turns = Math.max(cur.turns, FOG_SPREAD_AT)
+            else s.fog.push({ cell, turns: FOG_SPREAD_AT })
+          }
+        s.fog = s.fog.filter((f) => f.turns > 0)
+      }
     }
 
     /**
@@ -663,10 +814,11 @@ export class CardBattle {
           })
           return
         }
-        // 중독은 이동 카드 **한 장에 한 번**(두 칸 · 빙판 미끄러짐 합쳐서, 0칸이면 안 아프다).
+        // 중독은 이동 카드 **한 장에 한 번**(몇 칸이든, 0칸이면 안 아프다).
         // 이동한 뒤에 정산해야 새 자리 스냅샷과 피해가 같은 순간으로 읽힌다.
-        let moved = this.applyMove(p, c)
-        if (moved) moved += enterHazard(p, ...MOVE_DELTA[c.dir ?? 'right'])
+        // ⚠ 함정 스텝(넘어짐 · 구멍 · 화염 5)이 이동 스텝보다 먼저 쌓인다 — 연출 순서는 화면이 맞춘다.
+        const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
+        const { moved } = walk(p, dc, dr, c.steps ?? 1)
         emit(p, c, 'move')
         tickPoison(p, moved)
       } else if (c.kind === 'guard') {
@@ -745,34 +897,23 @@ export class CardBattle {
     const connectsNow = (p: number, c: CardDef): boolean => {
       const d = 1 - p
       if (sameCell(s.pos[p], s.pos[d])) return c.pointBlank !== false
-      if (!this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))) return false
-      // 지형 ② — 사이에 바위가 끼면 사격선이 끊긴다. 관통은 그대로 뚫는다.
-      if (this.piercesRock(p, c)) return true
-      return !shadowRock(s.obstacles, s.pos[p], s.pos[d])
+      // 바위는 공격을 막지 않는다(2026-11-13 · `HAZARDS.md` 1절 — 옛 "사격선 차단"은 없앴다).
+      return this.targetsOf(p, c).some((cell) => sameCell(cell, s.pos[d]))
     }
 
-    /**
-     * 이 공격이 **깎아 내는 바위들**(지형 ③). 두 가지가 대상이다:
-     *   ⓐ 공격이 덮은 칸에 서 있는 바위 — 범위에 들어왔으니 그대로 맞는다
-     *   ⓑ 그 칸을 **가로막은** 바위 — 날아가다 바위에 부딪힌 셈이다
-     * ⓑ가 있어야 사거리가 짧은 카드로도 결국 길을 뚫을 수 있다. 관통 공격은 바위를
-     * 무시하므로 아무것도 깎지 않는다(뒤를 그냥 때린다).
-     */
+    /** 이 공격이 **깎아 내는 바위들** — 공격이 덮은 칸에 선 바위(체력 999라 사실상 안 깨진다). */
     const rocksHitBy = (p: number, c: CardDef): Obstacle[] => {
-      if (!s.obstacles.length || this.piercesRock(p, c)) return []
-      const from = s.pos[p]
+      if (!s.obstacles.length) return []
       const out: Obstacle[] = []
       for (const cell of this.targetsOf(p, c)) {
-        if (!inBounds(cell)) continue
-        const r = rockAt(s.obstacles, cell) ?? shadowRock(s.obstacles, from, cell)
+        const r = inBounds(cell) ? rockAt(s.obstacles, cell) : undefined
         if (r && !out.includes(r)) out.push(r)
       }
       return out
     }
 
     /**
-     * 판에 바위를 세운다(`CardDef.raiseRocks`). 파이터가 선 칸·이미 바위가 있는 칸·
-     * 무너진 칸은 건너뛴다 — 무너진 칸에 세워 봐야 이 턴 끝에 같이 무너진다.
+     * 판에 바위를 세운다(`CardDef.raiseRocks`). 파이터가 선 칸·이미 바위가 있는 칸은 건너뛴다.
      * 세워진 칸 목록을 돌려준다(빈 배열이면 아무것도 못 세운 것).
      */
     const raiseRocks = (p: number, plan: RockPlan): Cell[] => {
@@ -788,7 +929,6 @@ export class CardBattle {
         if (!inBounds(cell)) continue
         if (sameCell(cell, s.pos[0]) || sameCell(cell, s.pos[1])) continue
         if (rockAt(s.obstacles, cell)) continue
-        if (isCollapsedCell(cell, collapseRound(s))) continue
         const hp = Math.max(1, Math.round(plan.hp))
         s.obstacles.push({ cell, hp, maxHp: hp })
         made.push(cell)
@@ -855,8 +995,8 @@ export class CardBattle {
         freeze: 0,
         /** 이 타격이 상대의 빙결을 깨뜨렸는가 — 깨면 그 자리에서 빙결이 사라진다. */
         thaw: false,
-        /** 상대가 선 칸에 깔 독안개의 지속 라운드. */
-        fog: 0,
+        /** 상대가 선 칸에 독안개를 까는가. */
+        fog: false,
         rocks: [] as Obstacle[],
         rockDmg: 0,
       }
@@ -875,8 +1015,7 @@ export class CardBattle {
       tickPoison(p, 1)
       if (c.dashForward) {
         const dir = this.facing(p) * Math.sign(c.dashForward)
-        const m = this.applyDash(p, c.dashForward)
-        if (m) enterHazard(p, dir, 0)
+        walk(p, dir, 0, Math.abs(c.dashForward))
       }
       // ⚠ 공격 카드의 바위는 여기서 세우지 않는다 — `settleAttack`이 **넉백 뒤에**
       //   세운다. 지형 카드는 "밀어내고 그 자리에 바위를 세운다"가 요점이라, 여기서
@@ -1000,7 +1139,7 @@ export class CardBattle {
         burn,
         freeze: freeze > 0 ? 1 + (atkPas.freezeRoundBonus ?? 0) : 0,
         thaw,
-        fog: core > 0 ? (c.fog ?? 0) : 0,
+        fog: core > 0 && !!c.fog,
         rocks,
         rockDmg,
       }
@@ -1025,6 +1164,8 @@ export class CardBattle {
     // 돌려주는 값: 실제로 밀려난 칸 수, 막혀서 못 간 칸 수, 그리고 **밀려나던 방향**
     // (`dir`, 정규 좌표 ±1). `dir`은 룰에 안 쓰이고 `Step.slam`으로 UI에만 간다 —
     // 처박힌 연출을 **어느 쪽 벽/바위에서** 터뜨릴지 정하는 값이다.
+    // **속박 중엔 넉백 · 끌어당김을 안 당한다**(2026-11-13 · `HAZARDS.md` 2절 · `STATUS.md` 4절) —
+    // 안 밀리므로 처박기도 없다. 덩굴 · 빙판에서 멈추면 남은 칸도 처박기가 아니다(벽이 아니다).
     const applyShove = (
       attacker: number,
       n: number,
@@ -1032,15 +1173,10 @@ export class CardBattle {
     ): { moved: number; blocked: number; dir: -1 | 1 } => {
       const d = 1 - attacker
       const f = this.facing(attacker) * (toward ? -1 : 1)
-      let moved = 0
-      for (let k = 0; k < n; k++) {
-        const next: Cell = { col: s.pos[d].col + f, row: s.pos[d].row }
-        if (next.col < 0 || next.col >= GRID_COLS) break
-        if (rockAt(s.obstacles, next)) break
-        s.pos[d] = next
-        moved += 1
-      }
-      return { moved, blocked: n - moved, dir: f > 0 ? 1 : -1 }
+      const dir = f > 0 ? 1 : -1
+      if (this.statusOf(d, 'bind')) return { moved: 0, blocked: 0, dir }
+      const { moved, stopped } = walk(d, f, 0, n)
+      return { moved, blocked: stopped ? 0 : n - moved, dir }
     }
 
     // apply a measured attack's HP / board consequences
@@ -1082,8 +1218,6 @@ export class CardBattle {
         blocked += k.blocked
         if (k.blocked > 0) slamDir = k.dir
       }
-      // 밀려난 칸에 함정이 있으면 밟는다(빙판이면 더 미끄러진다 — 넉백 콤보).
-      if (moved > 0) moved += enterHazard(d, this.facing(r.p) * (r.pull && !r.push ? -1 : 1), 0)
       // **한 칸이라도 막히면 기절**한다(사용자 예시: 3칸 중 2칸만 밀려도 기절).
       const slammed = blocked > 0
       // 처박기 피해도 실제로 깎인 몫을 기억해 둔다 — `Step.damage`에는 안 실리는
@@ -1109,7 +1243,7 @@ export class CardBattle {
       // 선후가 안 생긴다.
       if (r.poison) applyStatus(d, 'poison', POISON_TICK_DAMAGE, r.poison)
       if (r.burn) applyStatus(d, 'burn', 0, r.burn)
-      if (r.fog) layFog(s.pos[d], r.fog)
+      if (r.fog) layFog(s.pos[d])
       return { moved, slam: slamDir, dmgDealt, slamDealt, thornsDealt, recoilDealt }
     }
 
@@ -1217,7 +1351,7 @@ export class CardBattle {
      * ⚠ 2026-08-07부터 **여기서 피해를 주지 않는다.** 중독은 행동할 때(`tickPoison`),
      *   화상은 맞을 때(`computeAttack`이 피해에 % 곱) 이미 정산됐다 — 예전처럼
      *   라운드 종료에 또 갉으면 같은 상태이상을 두 번 받는 셈이 된다.
-     *   라운드 종료에 갉는 건 이제 **독안개와 전장 붕괴**(자리 값)뿐이다.
+     *   판 위의 것(화염 · 독안개 · 구멍)은 **턴 끝**(`endTurn`)에 정산한다 — 라운드 끝엔 아무것도 안 갉는다.
      *
      * 이동불가(빙결·기절·속박)는 턴 단위라 여기서 안 깎는다 — 슬롯 시작에 깎이고 라운드를
      * 넘어간다(2026-11-13). 순서는 p0 → p1 고정(랜덤 없음).
@@ -1231,30 +1365,6 @@ export class CardBattle {
           .map((e) => (isLock(e.kind) ? e : { ...e, rounds: e.rounds - 1 }))
           .filter((e) => e.rounds > 0)
       }
-    }
-
-    /** 독안개 — 라운드 종료에 그 칸에 선 쪽을 갉는다(보호막 무시). 그다음 한 라운드 걷힌다. */
-    const tickFog = () => {
-      if (!s.fog.length) return
-      for (let p = 0; p < 2; p++) {
-        if (!fogAt(s.fog, s.pos[p])) continue
-        const dealt = Math.min(s.hp[p], FOG_DAMAGE)
-        if (dealt <= 0) continue
-        s.hp[p] -= dealt
-        steps.push({
-          phase: 'status',
-          actor: p,
-          card: FOG_CARD,
-          result: 'status',
-          damage: 0,
-          heal: 0,
-          drain: 0,
-          recoil: dealt, // 자기 몸에 뜨는 피해 — UI가 본인에게 -N을 띄운다
-          bits: [{ src: 'fog', on: p as 0 | 1, n: dealt }],
-          snapshot: this.snapshot(),
-        })
-      }
-      s.fog = s.fog.map((f) => ({ ...f, rounds: f.rounds - 1 })).filter((f) => f.rounds > 0)
     }
 
     const prio = (c: CardDef) => (c.kind === 'move' ? 0 : c.kind === 'attack' ? 2 : 1)
@@ -1289,6 +1399,14 @@ export class CardBattle {
           recoil: 0,
           snapshot: this.snapshot(),
         })
+      }
+      // **빙판 위에서 행동하면 30%로 넘어진다**(`HAZARDS.md` 6절) — 무슨 카드든 취소되고 기절 1턴
+      //   (이 턴 + 다음 턴). 카드는 안 낸 것으로 친다(기력 · 쿨다운 그대로). 이동해서 지나가는 빙판은 `walk`가 본다.
+      for (let p = 0; p < 2; p++) {
+        const ice = plans[p][slot] ? hazardAt(s.hazards, s.pos[p]) : undefined
+        if (ice?.kind !== 'ice' || rand() >= ICE_SLIP_CHANCE) continue
+        plans[p][slot] = undefined as unknown as CardDef
+        slip(p, ice)
       }
       const here = ([0, 1] as const)
         .map((p) => ({ p: p as number, card: plans[p][slot] }))
@@ -1398,6 +1516,9 @@ export class CardBattle {
         }
       }
 
+      // 턴 끝 — 화염 · 용암 · 균열 · 구멍 · 독안개(`HAZARDS.md`).
+      endTurn()
+
       // 누적 기력 유물(기력 N마다 기절·회복 등)은 슬롯이 끝날 때 정산한다 — 공격
       // 트레이드 계산 중간에 끼어들지 않게.
       fireEnergyTriggers()
@@ -1409,68 +1530,48 @@ export class CardBattle {
       if (settleKo()) break
     }
 
-    // 독안개 — 붕괴보다 **먼저** 갉는다. 붕괴는 무한전을 끊는 최후의 장치라
-    // 마지막에 두는 게 읽기 좋다. 그다음 남은 지속을 한 라운드 깎는다.
-    if (!s.over) {
-      tickFog()
-      settleKo()
-    }
     tickStatuses()
 
-    // 함정의 라운드 끝(런 전용) — ⚠ `tickStatuses` **뒤**라야 불길의 화상이 다음 라운드까지 간다.
-    if (!s.over && s.hazards.length) {
-      for (let p = 0; p < 2; p++)
-        if (hazardAt(s.hazards, s.pos[p])?.kind === 'fire') applyStatus(p, 'burn', 0, FIRE_BURN_STACKS)
-      // 불길에 붙은(상하좌우) 덩굴이 탄다 → 불길이 한 라운드 사그라든다.
-      const fires = s.hazards.filter((h) => h.kind === 'fire')
+    if (!s.over) {
+      // 덩굴 → 화염(2절) — 상하좌우에 화염 · 용암이 붙은 덩굴은 다음 라운드부터 화염(9턴).
+      const hot = s.hazards.filter((h) => h.kind === 'fire' || h.kind === 'lava')
       const touching = (a: Cell, b: Cell) => Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1
-      s.hazards = s.hazards
-        .filter((h) => h.kind !== 'bramble' || !fires.some((f) => touching(f.cell, h.cell)))
-        .map((h) => (h.kind === 'fire' ? { ...h, rounds: (h.rounds ?? 1) - 1 } : h))
-        .filter((h) => h.kind !== 'fire' || (h.rounds ?? 0) > 0)
-    }
-
-    // 전장 붕괴: COLLAPSE_START_ROUND부터, 라운드 종료 시 무너진 칸에 서 있으면 피해.
-    // 실드는 무시하지만 유물의 `collapseResist`만큼은 줄어든다(발판 유물).
-    // (자기 피해이므로 Step.recoil로 전달 — UI가 본인 몸에 -N을 띄운다)
-    const cr = collapseRound(s)
-    if (!s.over && cr >= COLLAPSE_START_ROUND) {
-      // 무너진 칸의 **바위도 같이 무너진다**. 남겨 두면 판이 좁아지는 속도에 지형이
-      // 곱해져, 마지막 단계에서 "무너진 칸에도 들어갈 수 있다"는 안전판(붕괴 설계의
-      // 핵심)이 바위 때문에 사라진다 — 밀려날 곳도 도망칠 곳도 없는 판이 된다.
-      s.obstacles = s.obstacles.filter((r) => !isCollapsedCell(r.cell, cr))
-      // 안개도 같은 이유로 무너진 칸에서는 사라진다(그 칸 자체가 없어진다).
-      s.fog = s.fog.filter((f) => !isCollapsedCell(f.cell, cr))
-      s.hazards = s.hazards.filter((h) => !isCollapsedCell(h.cell, cr))
-      const base = collapseDamageAt(cr)
-      for (let p = 0; p < 2; p++) {
-        if (!isCollapsedCell(s.pos[p], cr)) continue
-        const dmg = Math.max(0, base - (this.passive[p].collapseResist ?? 0))
-        if (dmg <= 0) continue
-        const dealt = Math.min(s.hp[p], dmg)
-        // 붕괴 피해도 **빙결을 깬다**(2026-11-12 사용자 지정 — 카드 공격 · 처박기 · 붕괴. 독안개 · 중독은 아님).
-        //   깨지면 **무조건 +5**(2026-11-13 사용자 지정 — 카드 타격과 같다).
-        const shatter = s.status[p].some((e) => e.kind === 'frozen') ? FREEZE_SHATTER_BONUS : 0
-        if (shatter) s.status[p] = s.status[p].filter((e) => e.kind !== 'frozen')
-        const shatterDealt = Math.min(s.hp[p] - dealt, shatter)
-        s.hp[p] = Math.max(0, s.hp[p] - dmg - shatter)
-        steps.push({
-          phase: 'collapse',
-          actor: p,
-          card: COLLAPSE_CARD,
-          result: 'collapse',
-          damage: 0,
-          heal: 0,
-          drain: 0,
-          recoil: dmg + shatter,
-          bits: [
-            { src: 'collapse', on: p as 0 | 1, n: dealt },
-            ...(shatterDealt > 0 ? [{ src: 'shatter' as const, on: p as 0 | 1, n: shatterDealt }] : []),
-          ],
-          snapshot: this.snapshot(),
-        })
+      s.hazards = s.hazards.map((h) =>
+        h.kind === 'bramble' && hot.some((f) => touching(f.cell, h.cell))
+          ? { kind: 'fire' as const, cell: h.cell, turns: FIRE_TURNS }
+          : h,
+      )
+      // **전투를 끝낼 장치**(T20 · `HAZARDS.md` 8-quater) — 다음 라운드가 10 · 15 · 20 …이면 빈 칸
+      // `HOLE_SPAWN_COUNT`개가 구멍이 된다(사람 · 바위 · 구멍이 없는 칸, 다른 함정은 덮는다). 그 라운드
+      // 카드를 고를 때 이미 보인다. 런 전용(시드가 있을 때만).
+      if (s.holeSpawn && holesSpawnAt(s.round + 1)) {
+        const free: Cell[] = []
+        for (let col = 0; col < GRID_COLS; col++)
+          for (let row = 0; row < GRID_ROWS; row++) {
+            const c = { col, row }
+            if (sameCell(c, s.pos[0]) || sameCell(c, s.pos[1]) || rockAt(s.obstacles, c)) continue
+            if (hazardAt(s.hazards, c)?.kind === 'hole') continue
+            free.push(c)
+          }
+        let made = 0
+        for (; made < HOLE_SPAWN_COUNT && free.length; made++) {
+          const cell = free.splice(Math.floor(rand() * free.length), 1)[0]
+          s.hazards = s.hazards.filter((h) => !sameCell(h.cell, cell))
+          s.hazards.push({ kind: 'hole', cell })
+        }
+        if (made)
+          steps.push({
+            phase: 'rock',
+            actor: 0,
+            card: HOLE_SPAWN_CARD,
+            result: 'rock',
+            damage: 0,
+            heal: 0,
+            drain: 0,
+            recoil: 0,
+            snapshot: this.snapshot(),
+          })
       }
-      settleKo()
     }
 
     // 라운드 종료: 쿨다운을 한 칸 돌리고, 이 라운드에 **실제로 낸** 카드를 잠근다

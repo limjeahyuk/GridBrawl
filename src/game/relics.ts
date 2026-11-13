@@ -303,7 +303,7 @@ const genericRelics: Relic[] = [
   //   치유 증폭   healPowerPct — 회복 카드만 키운다(regen은 안 탄다 — 2026-11-12). 장기전 빌드
   //   시작 기력   startEnergyBonus — 1턴부터 큰 카드. 짧고 굵게 끝내는 빌드
   //   처형        executeBonusPct — 상대가 반피 이하일 때 배율. 마무리 빌드
-  //   발판        collapseResist  — 무너진 칸을 딛고 버틴다(전장 붕괴 대응)
+  //   발판        collapseResist  — 구멍에 빠진 피해를 줄인다(2026-11-13 임시 — 전장 붕괴를 없애며 돌림)
   // ⚠ 희귀도별 **파워 예산을 기존 세트에 맞췄다** — 아래 새 70종은 유물 풀을 두 배로
   //   희석하므로, 평균 세기가 어긋나면 클리어율이 통째로 움직인다(실제로 측정했다).
 
@@ -334,11 +334,11 @@ const genericRelics: Relic[] = [
   { id: 'guillotine', name: '단두대', icon: '⚰️', rarity: 'epic', desc: '상대 체력이 절반 이하면 내 공격 피해 +70%.', effect: { executeBonusPct: 70 } },
   { id: 'reaperveil', name: '사신의 장막', icon: '☠️', rarity: 'legend', desc: '상대 체력이 절반 이하면 내 공격 피해 +100%. 보호막을 무시한다.', effect: { executeBonusPct: 100, alwaysPierce: true } },
 
-  // --- 발판 계열 (전장 붕괴 대응) -------------------------------------------
-  { id: 'ironshoes', name: '무쇠 신발', icon: '🥾', rarity: 'common', desc: '무너진 칸에서 받는 피해 -4.', effect: { collapseResist: 8 } },
-  { id: 'anchorstone', name: '고정 말뚝', icon: '⚓', rarity: 'rare', desc: '무너진 칸에서 받는 피해 -7, 최대 체력 +8.', effect: { collapseResist: 14, maxHpBonus: 8 } },
-  { id: 'skywalk', name: '허공 걸음', icon: '☁️', rarity: 'epic', desc: '무너진 칸에서 받는 피해 -12. 무너진 판을 그냥 딛고 선다.', effect: { collapseResist: 24 } },
-  { id: 'worldpillar', name: '세계의 기둥', icon: '🏛', rarity: 'legend', desc: '무너진 칸 피해를 완전히 무시하고, 매 라운드 보호막 +6.', effect: { collapseResist: 99, turnShield: 6 } },
+  // --- 발판 계열 (구멍 대응 — 2026-11-13 임시, 사용자가 추후 재정의) ----------
+  { id: 'ironshoes', name: '무쇠 신발', icon: '🥾', rarity: 'common', desc: '구멍에 빠졌을 때 받는 피해 -4.', effect: { collapseResist: 4 } },
+  { id: 'anchorstone', name: '고정 말뚝', icon: '⚓', rarity: 'rare', desc: '구멍에 빠졌을 때 받는 피해 -7, 최대 체력 +8.', effect: { collapseResist: 7, maxHpBonus: 8 } },
+  { id: 'skywalk', name: '허공 걸음', icon: '☁️', rarity: 'epic', desc: '구멍에 빠졌을 때 받는 피해 -12.', effect: { collapseResist: 12 } },
+  { id: 'worldpillar', name: '세계의 기둥', icon: '🏛', rarity: 'legend', desc: '구멍에 빠져도 피해가 없고, 매 라운드 보호막 +6.', effect: { collapseResist: 99, turnShield: 6 } },
 
   // --- 기존 훅 조합 보강 — 빈자리를 메우는 조합들 ---------------------------
   { id: 'gravepact', name: '무덤의 약조', icon: '⚱️', rarity: 'rare', desc: '전투당 한 번 체력 18로 되살아난다. 받는 피해 -2.', effect: { revive: 18, damageReduction: 2 } },

@@ -208,8 +208,8 @@ export const RUN_CARDS: CardDef[] = [
 
   // --- ② 상태이상 -----------------------------------------------------------
   atk({
-    id: 'r-plaguebolt', name: '역병 화살', range: beamBoth(1, 2), damage: 10, energyCost: 9, poison: 2, fog: 1,
-    fx: 'bolt', accent: '#3cbf7a', desc: '앞뒤 1~2칸. 피해를 주면 중독 2겹 + 맞은 자리에 독안개 1라운드. 서 있어도 아프고 비켜도 아프다.',
+    id: 'r-plaguebolt', name: '역병 화살', range: beamBoth(1, 2), damage: 10, energyCost: 9, poison: 2, fog: true,
+    fx: 'bolt', accent: '#3cbf7a', desc: '앞뒤 1~2칸. 피해를 주면 중독 2겹 + 맞은 자리에 독안개(서 있으면 턴마다 중독 1겹 · 5턴 · 3턴 뒤 십자로 퍼진다). 서 있어도 아프고 비켜도 아프다.',
   }),
   atk({
     id: 'r-emberburst', name: '불티 폭발', range: CROSS, damage: 11, energyCost: 10, burn: 1,

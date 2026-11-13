@@ -248,7 +248,6 @@ def sheets():
         'rock-meadow': [rock(0), rock(1), rock(2)] + rock_break(),
         'rock-pillar': [rock(0, True), rock(1, True), rock(2, True)] + rock_break(True),
         'fire': [fire(i) for i in range(6)],
-        'fire-ignite': [fire(0, s=0.25), fire(1, s=0.55), fire(2, s=0.85)],
         'spikes': [spikes(0), spikes(1), spikes(2), spikes(3), spikes(4), spikes(4, True)],
         'bramble': [bramble(i) for i in range(4)] + [bramble(0, snare=s) for s in (0.35, 0.7, 1.0)],
         'fog': [fog(i) for i in range(6)],
@@ -269,5 +268,7 @@ def build(outdir):
 
 if __name__ == '__main__':
     from pix import preview
-    s = build('/home/claude/gb/out')
-    preview(list(s.values()), '/home/claude/gb/prev_hzcell.png', scale=5, bg=(52, 60, 46, 255))
+    import sys
+    out = sys.argv[1] if len(sys.argv) > 1 else 'out'   # -> <out>/terrain/hazards-cell/*.png
+    s = build(out)
+    preview(list(s.values()), os.path.join(out, 'prev_hzcell.png'), scale=5, bg=(52, 60, 46, 255))

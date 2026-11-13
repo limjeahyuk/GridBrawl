@@ -6,16 +6,13 @@ import {
   MOVE_DELTA,
   canStand,
   facingBetween,
+  fogAt,
   hazardAt,
-  isCollapsedCell,
-  collapseRound,
-  shadowRock,
-  spikeStateAt,
+  CRACK_MAX_STAGE,
   type Cell,
   type CardDef,
   type Difficulty,
   type MoveDir,
-  type Obstacle,
 } from './types'
 
 interface AICfg {
@@ -168,26 +165,15 @@ const chebyshev = (a: Cell, b: Cell): number =>
 
 /**
  * Does `card` from `self` (at `pos`, given `facing`) cover the opponent cell?
- * `rocks`가 있으면 **사격선이 끊기는지**까지 본다 — 엔진 `connectsNow`와 같은 규칙이라
- * AI가 "닿는다"고 판단한 공격이 엔진에서 헛치는 일이 없다. 관통은 바위를 무시한다.
+ * 엔진 `connectsNow`와 같은 규칙 — 바위는 공격을 막지 않는다(2026-11-13 · `HAZARDS.md` 1절).
  */
-function hits(
-  pos: Cell,
-  facing: number,
-  card: CardDef,
-  opp: Cell,
-  rocks: readonly Obstacle[] = [],
-  pierces = false,
-): boolean {
+function hits(pos: Cell, facing: number, card: CardDef, opp: Cell): boolean {
   // 밀착(같은 셀)은 range가 아니라 카드의 pointBlank로 판정 — 엔진과 같은 규칙
   const overlapping = pos.col === opp.col && pos.row === opp.row
   if (overlapping) return card.pointBlank !== false
-  const covered = (card.range ?? []).some(
+  return (card.range ?? []).some(
     (o) => pos.col + facing * o.df === opp.col && pos.row - o.du === opp.row,
   )
-  if (!covered) return false
-  if (pierces || !rocks.length) return true
-  return !shadowRock(rocks, pos, opp)
 }
 
 /**
@@ -207,8 +193,6 @@ export function decideAI(
   // 난이도 cfg에 성격·기분을 얹은 **실효 cfg**. profile이 없으면(봇전·튜토리얼)
   // balanced + 기분 0이라 기존 동작과 동일하다.
   const base = DIFF[difficulty]
-  /** 붕괴 시계(엘리트·보스는 늦게 시작한다 — `collapseRound`). */
-  const cr = collapseRound(state)
   const a = ARCH[profile?.archetype ?? 'balanced']
   const mood = profile?.moodAgg ?? 0
   const cfg: AICfg = {
@@ -232,16 +216,24 @@ export function decideAI(
   // 함정(2026-11-09) — 런에서만 채워진다. 빈 배열이면 아래 판정이 전부 예전 그대로다.
   const hazards = state.hazards ?? []
   /**
-   * 이 칸에 **들어서면** 아픈가 — 엔진 `enterHazard`와 같은 규칙(불길 = 화상 · 덩굴 = 속박 ·
-   * 이번 라운드에 솟은 가시덫 = 속박). 빙판은 아프지 않고 미끄러질 뿐이라 `landingOf`가 따로 본다.
+   * 이 칸에 **멈추면** 손해인가(엔진 `walk` · `endTurn` — `HAZARDS.md`): 화염 · 용암(턴 끝 피해 + 화상) ·
+   * 덩굴(속박) · 구멍(빠짐) · 3단계 균열(밟으면 구멍 → 빠짐) · 빙판(30% 넘어짐) · 독안개(턴 끝 중독).
    * ⚠ AI는 이 칸으로 **걸어 들어가지 않는다**(접근·카이팅·회피·탈출 모두). 밀려 들어가는 건 못 막는다.
+   * 넘어질지는 모른다(시드 RNG — 사용자 OK).
    */
   const hurtsAt = (c: Cell): boolean => {
+    if (fogAt(state.fog, c)) return true
     const h = hazardAt(hazards, c)
-    return !!h && (h.kind === 'fire' || h.kind === 'bramble' || (h.kind === 'spikes' && spikeStateAt(h, state.round) === 'up'))
+    if (!h) return false
+    if (h.kind === 'crack') return (h.stage ?? 1) >= CRACK_MAX_STAGE
+    return h.kind !== 'danger'
   }
-  /** 이 공격이 바위를 무시하는가 — 엔진 `piercesRock`과 같은 규칙. */
-  const pierces = (c: CardDef) => !!c.pierce || !!char.passive.alwaysPierce
+  /** 서 있으면 턴 끝마다 손해인 칸 — 내려온다(화염 · 용암 · 균열 · 빙판 · 독안개). */
+  const badFooting = (c: Cell): boolean => {
+    if (fogAt(state.fog, c)) return true
+    const k = hazardAt(hazards, c)?.kind
+    return k === 'fire' || k === 'lava' || k === 'crack' || k === 'ice'
+  }
   // ⚠ 방향은 **지금 서 있는 자리**에서 상대를 보고 정한다(2026-08-05, 엔진과 같은
   //   규칙). 좌석 고정이던 시절엔 AI가 상대를 지나친 뒤에도 반대쪽을 겨눠서,
   //   "닿는다"고 판단한 공격이 엔진에서 헛쳤다. `pos`·`foe`는 슬롯마다 갱신되므로
@@ -294,8 +286,7 @@ export function decideAI(
     else energy -= baseCostOf(c) // 공격·가드·힐·버프는 비용 필드만 다르고 같은 처리
   }
 
-  // 이동 카드가 도착할 셀 — 엔진 applyMove와 동일 규칙(벽·**바위**에서 멈춤, 겹침 허용)
-  // + 내린 칸이 **빙판이면 한 칸 더** 미끄러진다(엔진 `enterHazard` — 한 번만, 상대 앞에선 멈춤).
+  // 이동 카드가 도착할 셀 — 엔진 `walk`와 같은 규칙(벽·**바위**에서 멈춤, 겹침 허용, **덩굴에서 멈춤**).
   function landingOf(c: CardDef): Cell {
     const steps = c.steps ?? 1
     const [dc, dr] = MOVE_DELTA[c.dir ?? 'right']
@@ -304,10 +295,7 @@ export function decideAI(
       const next: Cell = { col: cur.col + dc, row: cur.row + dr }
       if (!canStand(rocks, next)) break
       cur = next
-    }
-    if ((cur.col !== pos.col || cur.row !== pos.row) && hazardAt(hazards, cur)?.kind === 'ice') {
-      const slide: Cell = { col: cur.col + dc, row: cur.row + dr }
-      if (canStand(rocks, slide) && !(slide.col === foeCur.col && slide.row === foeCur.row)) cur = slide
+      if (hazardAt(hazards, cur)?.kind === 'bramble') break
     }
     return cur
   }
@@ -399,7 +387,7 @@ export function decideAI(
   function incomingAt(slot: number, foe: Cell, at: Cell): CardDef | undefined {
     const c = read?.[slot]
     if (!c || c.kind !== 'attack') return undefined
-    return hits(foe, facingBetween(foe, at, 1 - self), c, at, rocks, !!c.pierce) ? c : undefined
+    return hits(foe, facingBetween(foe, at, 1 - self), c, at) ? c : undefined
   }
 
   /** 이 슬롯 이후로 상대 계획에 공격이 남아 있는가 — 가드를 들 이유가 있는지의 기준. */
@@ -409,15 +397,13 @@ export function decideAI(
   /**
    * `inc`의 사거리 밖으로 나가는 이동 — 상대와 **가까운 순서**로. 이동은 prio 0이라
    * 같은 슬롯의 공격보다 먼저 해소되므로 이 슬롯 안에서 실제로 피해진다.
-   * 무너질 칸으로 피하지는 않는다(피하려다 붕괴에 맞으면 손해다).
    */
   function evadeCards(foe: Cell, inc: CardDef): CardDef[] {
     return pool
       .filter((c) => {
         if (c.kind !== 'move' || !goesSomewhere(c) || intoTrap(c)) return false
         const land = landingOf(c)
-        if (isCollapsedCell(land, cr)) return false
-        return !hits(foe, facingBetween(foe, land, 1 - self), inc, land, rocks, !!inc.pierce)
+        return !hits(foe, facingBetween(foe, land, 1 - self), inc, land)
       })
       .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))
   }
@@ -557,7 +543,7 @@ export function decideAI(
     if ((lockedAhead > 0 && slot === lockedAhead) || (boundAhead > 0 && slot === boundAhead)) {
       // 읽은 공격이 있으면 그 사거리 밖으로, 없으면 줄을 바꾸는 쪽부터(대개 사격선을 벗어난다).
       const safe = (c: CardDef) =>
-        c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr)
+        c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c)
       const dodge = inc
         ? evadeCards(foe, inc).find(usable)
         : pool
@@ -614,35 +600,11 @@ export function decideAI(
       }
     }
 
-    // 1) 붕괴 이탈 — 지금 또는 다음 턴에 발밑이 무너지면 공격보다 탈출이 먼저
-    //    (무너진 칸에 서서 트레이드하다 둘 다 죽는 사고 방지). 중앙 열 쪽으로 이동.
-    // ⚠ **판 전체가 무너진 뒤에는 도망치지 않는다**(2026-08-05). 그전엔 갈 곳이
-    //    없는데도 매 슬롯 중앙으로 걷기만 해서, 마지막 단계부터 AI가 아예 공격을
-    //    멈췄다 — 무한전을 끊으라고 넣은 장치가 오히려 판을 늘리고 있었다.
-    // ⚠ 2026-11-10부터 판 가운데 4칸(`isCollapseSafe`)은 끝까지 남는다 — 마지막 단계에도 갈 곳이
-    //    있으므로 늘 피한다. 안전지대가 가운데 **줄**에만 있어 좌우만 보면 못 닿는다 → 위아래·대각까지 본다.
-    if (isCollapsedCell(pos, cr) || isCollapsedCell(pos, cr + 1)) {
-      const toCenter: MoveDir = pos.col <= (GRID_COLS - 1) / 2 ? 'right' : 'left'
-      const esc = [moveCard(toCenter, 2), moveCard(toCenter, 1)].filter(
-        (c): c is CardDef => !!c,
-      )
-      // 실제로 **안전한 칸에 내리는** 이동만 고른다 — 한 칸 옮겨 봐야 여전히
-      // 무너진 칸이면 슬롯만 버리는 셈이다(2026-08-05). 그중 상대에게 가까운 쪽.
-      const safeLanding = pool
-        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr + 1))
-        .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))[0]
-      const m = safeLanding ?? esc.find((c) => usable(c) && goesSomewhere(c) && !intoTrap(c))
-      if (m) {
-        take(m)
-        continue
-      }
-    }
-
-    // 1-bis) 불길 위에 서 있으면 내려온다 — 라운드 끝에 서 있어도 화상이다(엔진 함정 정산).
-    //   때릴 수 있어도 먼저 내려온다: 화상은 그 라운드에 맞는 모든 타격에 +5가 붙는다.
-    if (hazardAt(hazards, pos)?.kind === 'fire') {
+    // 1) 발밑이 나쁘면 내려온다 — 화염 · 용암 · 균열 · 빙판 · 독안개는 턴이 끝날 때마다 손해다
+    //   (엔진 `endTurn`). 때릴 수 있어도 먼저 내려온다.
+    if (badFooting(pos)) {
       const off = pool
-        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr))
+        .filter((c) => c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c))
         .sort((x, y) => chebyshev(landingOf(x), foe) - chebyshev(landingOf(y), foe))[0]
       if (off) {
         take(off)
@@ -656,7 +618,7 @@ export function decideAI(
         (a) =>
           usable(a) &&
           energy >= (a.energyCost ?? 0) &&
-          hits(pos, facingAt(pos, foe), a, foe, rocks, pierces(a)),
+          hits(pos, facingAt(pos, foe), a, foe),
       )
       .sort((x, y) => (y.damage ?? 0) - (x.damage ?? 0))
     if (ready.length > 0 && Math.random() < cfg.aggression) {

@@ -98,7 +98,7 @@ export interface Passive {
   startEnergyBonus?: number
   /** 상대 체력이 절반(`LOW_HP_FRAC`) 이하일 때 내 공격 피해 +N%(처형). */
   executeBonusPct?: number
-  /** 무너진 칸에서 받는 라운드당 피해 -N(0까지). 전장 붕괴 전용 방어. */
+  /** 구멍에 빠졌을 때 받는 피해 -N(0까지 · 2026-11-13 — 이름만 옛 전장 붕괴에서 왔다). */
   collapseResist?: number
 
   // --- 상태이상 지속 연장 훅 (2026-08-07 2차) — **런 전용 전설 유물 전용** -------
@@ -354,7 +354,7 @@ export const ROSTER: CharacterDef[] = [
       atk({ id: 'arc-shot', name: '잿빛 화살', range: [...beamBoth(1, 2), ...FORK], damage: 12, energyCost: 8, fx: 'bolt', desc: '앞뒤 1~2칸 + 앞뒤 대각 네 칸을 노리는 기본 사격. 한 줄 어긋난 상대도 대각으로 잡는다. 겹쳐 선 상대도 맞힌다.' }),
       atk({ id: 'arc-venom', name: '독니 화살', range: beam(2, 4), damage: 11, energyCost: 10, poison: 2, pointBlank: false, fx: 'bolt', desc: '앞 2~4칸 저격. 피해를 입히면 중독 2겹 — 중독은 움직이거나 때릴 때마다 겹만큼 갉으므로 거리를 벌리려는 상대에게 값을 물린다. 밀착 사각.' }),
       atk({ id: 'arc-pin', name: '말뚝 화살', range: beamBoth(1, 2), damage: 14, energyCost: 16, pierce: true, push: 1, fx: 'bolt', desc: '앞뒤 1~2칸을 꿰뚫는 한 방. 보호막을 무시하고, 맞은 상대를 한 칸 밀어낸다.' }),
-      atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 20, energyCost: 23, poison: 3, fog: 2, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 중독 3겹 + 맞은 자리에 독안개 2라운드. 서 있으면 안개가 갉고 비키면 중독이 갉는다. 밀착 사각.' }),
+      atk({ id: 'arc-rain', name: '독의 비', range: [...bar(1), ...bar(2)], damage: 20, energyCost: 23, poison: 3, fog: true, pointBlank: false, fx: 'orb', signature: true, accent: '#3cbf7a', desc: '시그니처. 앞 1~2칸 × 세 줄에 독화살을 퍼붓는다 — 중독 3겹 + 맞은 자리에 독안개(서 있으면 턴마다 중독 1겹 · 5턴 · 3턴 뒤 십자로 퍼진다). 서 있으면 안개가 쌓고 비키면 중독이 갉는다. 밀착 사각.' }),
       // ⚠ 궁수의 구조적 약점: 카드 대부분이 밀착 사각인데 몬스터가 접근한다.
       // 아래 두 장이 그 해법이다 — 물러나며 쏘고(카이팅), 붙은 적을 얼려 떼어낸다.
       atk({ id: 'arc-kite', name: '물러서며 쏘기', range: [...beamBoth(1, 2), ...FORK], damage: 11, energyCost: 10, dashForward: -1, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞뒤 1~2칸 + 앞뒤 대각 네 칸에 흩뿌린다. 빠지면서 어긋난 줄을 대각으로 쓸어 맞힌다 — 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),

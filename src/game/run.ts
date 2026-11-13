@@ -564,10 +564,10 @@ const rock = (col: number, row: number, hp = ROCK_HP): Obstacle => ({
 export const TERRAIN: Record<TerrainId, readonly Obstacle[]> = {
   // 무너진 잔해 둘. 대각으로 어긋나게 둬서 어느 줄도 막지 않는다 — 엘리트 칸의
   // 기본 배치이자 골렘이 데려오는 것.
-  rubble: [rock(2, 0, 34), rock(3, 3, 34)],
+  rubble: [rock(2, 0), rock(3, 3)],
   // 무너진 기둥이 같은 열에 둘. col 3이 아래 두 줄로만 지나가는 **좁은 문**이 된다.
   // 가디언(거북이)과 짝이라 제일 단단하다.
-  pillars: [rock(3, 0, 62), rock(3, 1, 62)],
+  pillars: [rock(3, 0), rock(3, 1)],
   // 굳은 용암 덩이 하나. 가운데를 가로막아 직선 접근을 꺾는다.
   lavaslab: [rock(3, 1)],
 }
@@ -576,14 +576,15 @@ export const TERRAIN: Record<TerrainId, readonly Obstacle[]> = {
 const ELITE_TERRAIN: TerrainId = 'rubble'
 
 /**
- * 함정 배치(2026-11 리디자인 · 시안 `Hazards`). **일반 전투(? 매복 포함)의 일부에만** 깔린다 —
- * 엘리트는 바위, 보스·고블린은 빈 판이라 지형 면을 겹치지 않는다. 종류는 지역이 고른다:
- * 초원 = 가시덩굴 · 불길 / 던전 = 가시덫 · 빙판 · 불길. 끝열(시작 자리)은 비운다.
+ * 함정 배치(2026-11-13 재설계 · `docs/rules/HAZARDS.md` 8-ter — **임시**, 몬스터 재정립 때 몬스터별로).
+ * **일반 전투(? 매복 포함)의 일부에만** 깔린다 — 엘리트는 바위, 보스·고블린은 빈 판이라 지형 면을
+ * 겹치지 않는다. 종류는 지역이 고른다: 초원 = 덩굴 · 화염 · 균열 / 던전 = 빙판 · 균열 · 화염.
+ * 균열은 1단계로 깔린다. 끝열(시작 자리)은 비운다. 용암 · 위험 칸은 아직 안 깐다.
  */
 const HAZARD_CHANCE = 0.4
 const REGION_HAZARDS: Record<'grassland' | 'dungeon', HazardKind[]> = {
-  grassland: ['bramble', 'fire'],
-  dungeon: ['spikes', 'ice', 'fire'],
+  grassland: ['bramble', 'fire', 'crack'],
+  dungeon: ['ice', 'crack', 'fire'],
 }
 export function hazardsFor(run: RunState, rng: () => number = Math.random): Hazard[] {
   const sp = run.special
@@ -597,7 +598,7 @@ export function hazardsFor(run: RunState, rng: () => number = Math.random): Haza
   for (let i = 0; i < n && cells.length; i++) {
     const cell = cells.splice(Math.floor(rng() * cells.length), 1)[0]
     const kind = kinds[Math.floor(rng() * kinds.length)]
-    out.push({ kind, cell, ...(kind === 'spikes' ? { phase: Math.floor(rng() * 3) } : null) })
+    out.push({ kind, cell, ...(kind === 'crack' ? { stage: 1 } : null) })
   }
   return out
 }
@@ -675,19 +676,6 @@ export function chooseBranch(run: RunState, index: number): RunState {
   const picked = run.picked.slice()
   picked[run.floor - 1] = idxs[at]
   return { ...run, picked, status: statusForNode(node) }
-}
-/**
- * 엘리트·보스의 붕괴 지연(라운드). 일반 전투는 6라운드부터 무너지고 엘리트·보스는 10라운드부터 —
- * 체력이 많아 6라운드면 아직 판이 한창이라 "너무 빠르다"는 신고(2026-11-10).
- */
-export const ELITE_COLLAPSE_DELAY = 4
-/** 이 전투가 엘리트·보스인가 — 지도 칸, 또는 이벤트가 연 엘리트 전투(초록 정령의 늑대). */
-export function isEliteFight(run: RunState): boolean {
-  return run.special ? !!run.special.elite : isEliteFloor(run)
-}
-export function isEliteFloor(run: RunState): boolean {
-  const t = currentNode(run).type
-  return t === 'elite' || t === 'boss'
 }
 /**
  * 현재 층의 몬스터(층 스케일 + 엘리트 보정 반영). combat/elite/boss 노드에서만 유효.

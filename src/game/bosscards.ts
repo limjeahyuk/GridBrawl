@@ -19,7 +19,7 @@
 // ⚠ 수치를 건드리면 `npm run sim:run -- --sweep`을 다시 돌린다. 엘리트 두 종
 //   (수호기사·화염군주)은 7층·후반에 나오므로 클리어율에 직접 얹힌다.
 // ---------------------------------------------------------------------------
-import type { CardDef, Offset } from '../battle/types'
+import { ROCK_HP, type CardDef, type Offset } from '../battle/types'
 
 // 범위 헬퍼 — roster.ts·runcards.ts와 **같은 규약**(2026-08-03 앞뒤 대칭)이지만
 // 파일마다 따로 갖고 있다. 보스도 지나쳐 가는 상대를 놓치면 안 되므로 대칭이 기본.
@@ -107,7 +107,7 @@ const SANCTUM: CardDef[] = [
     // 한 칸도 못 밀려 **처박혀 기절한다**(엔진 `slammed`).
     // ⚠ 세우는 위치는 상대 **좌우**뿐이다. 위아래까지 막으면 갇혀서 못 빠져나온다.
     id: 'b-ward-menhir', name: '석벽 소환', kind: 'guard', block: 17, guardCost: 7, cooldown: 0,
-    raiseRocks: { hp: 23, where: 'flankFoe' },
+    raiseRocks: { hp: ROCK_HP, where: 'flankFoe' },
     fx: 'shield', accent: '#c9a24a',
     desc: '바닥을 내리쳐 상대 좌우에 바위를 세운다(체력 23). 보호막 17를 함께 두른다.',
   },

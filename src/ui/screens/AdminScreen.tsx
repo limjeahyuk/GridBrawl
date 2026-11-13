@@ -80,7 +80,7 @@ const PASSIVE_HOOKS: Hook[] = [
   { key: 'healPowerPct', label: '회복량 +N%', type: 'int' },
   { key: 'startEnergyBonus', label: '시작 기력 +N', type: 'int' },
   { key: 'executeBonusPct', label: '처형(상대 저체력) +N%', type: 'int' },
-  { key: 'collapseResist', label: '붕괴 피해 −N', type: 'int' },
+  { key: 'collapseResist', label: '구멍 피해 −N', type: 'int' },
 ]
 
 /** 공격 카드에 붙일 수 있는 특수 능력. 값이 없으면 그 능력이 없는 것이다. */

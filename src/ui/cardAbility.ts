@@ -12,7 +12,7 @@
 import {
   BURN_PCT_MAX_STACKS,
   BURN_PCT_PER_STACK,
-  FOG_DAMAGE,
+  FOG_TURNS,
   FREEZE_SHATTER_BONUS,
   KNOCKBACK_BLOCK_DAMAGE,
   POISON_TICK_DAMAGE,
@@ -40,7 +40,7 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '➤',
       label: '관통',
-      meaning: '보호막에 막히지 않고 그대로 체력을 깎는다. 바위도 뚫고 그 뒤를 맞힌다.',
+      meaning: '보호막에 막히지 않고 그대로 체력을 깎는다.',
     })
   if (c.shatter)
     out.push({
@@ -52,13 +52,13 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '👊',
       label: `넉백 ${c.push}`,
-      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 다음 턴 기절한다. 중독에 걸린 상대는 밀려나면 독도 한 번 받는다.`,
+      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 다음 턴 기절한다. 속박된 상대는 안 밀린다. 중독에 걸린 상대는 밀려나면 독도 한 번 받는다.`,
     })
   if (c.pull)
     out.push({
       icon: '🪝',
       label: `끌어당김 ${c.pull}`,
-      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 다음 턴 기절한다. 중독에 걸린 상대는 끌려오면 독도 한 번 받는다.`,
+      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 다음 턴 기절한다. 속박된 상대는 안 끌려온다. 중독에 걸린 상대는 끌려오면 독도 한 번 받는다.`,
     })
   if (c.stun)
     out.push({
@@ -94,8 +94,8 @@ export function abilityList(c: CardDef): AbilityInfo[] {
   if (c.fog)
     out.push({
       icon: '🌫',
-      label: `독안개 ${c.fog}라운드`,
-      meaning: `맞은 자리에 독안개를 ${c.fog}라운드 깐다. 라운드가 끝날 때 그 칸에 서 있으면 ${FOG_DAMAGE} 피해(보호막 무시). 비키게 만드는 카드다.`,
+      label: '독안개',
+      meaning: `피해를 주면 맞은 자리에 독안개를 깐다. 턴이 끝날 때 그 칸에 서 있으면 중독 1겹(보호막이 있어도 걸린다). ${FOG_TURNS}턴 가고, 3턴 뒤엔 상하좌우 한 칸으로 퍼졌다가 다 같이 걷힌다. 지나가는 건 괜찮다.`,
     })
   if (c.leech)
     out.push({
@@ -148,8 +148,8 @@ export function abilityList(c: CardDef): AbilityInfo[] {
       label: `바위 ${c.raiseRocks.hp}`,
       meaning:
         c.raiseRocks.where === 'ahead'
-          ? `내 앞 ${c.raiseRocks.dist ?? 1}칸에 체력 ${c.raiseRocks.hp}짜리 바위를 세운다. 바위 칸은 아무도 못 들어가고, 같은 줄·같은 열의 사격선을 끊는다(대각은 안 가린다). 상대가 그 칸에 있었다면 먼저 밀려나고, 밀어내지 못하면 바위가 서지 않는다.`
-          : `체력 ${c.raiseRocks.hp}짜리 바위를 판에 세운다. 바위 칸은 아무도 못 들어가고, 같은 줄·같은 열의 사격선을 끊는다.`,
+          ? `내 앞 ${c.raiseRocks.dist ?? 1}칸에 체력 ${c.raiseRocks.hp}짜리 바위를 세운다. 바위 칸은 아무도 못 들어가고 못 지나간다(공격은 막지 않는다). 상대가 그 칸에 있었다면 먼저 밀려나고, 밀어내지 못하면 바위가 서지 않는다.`
+          : `체력 ${c.raiseRocks.hp}짜리 바위를 판에 세운다. 바위 칸은 아무도 못 들어가고 못 지나간다(공격은 막지 않는다).`,
     })
   // 겹친 상대를 못 때리는 원거리 카드만 알려준다 — 대부분의 카드는 때릴 수 있다.
   if (c.kind === 'attack' && c.pointBlank === false)
