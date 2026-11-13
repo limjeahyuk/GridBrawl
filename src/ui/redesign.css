@@ -835,8 +835,6 @@
   border: 2px solid var(--accent);
 }
 .bhud__info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-/* 상태 칩의 픽셀 아이콘이 **정수 2배(24×20)**라 줄 높이가 26px은 돼야 안 잘린다.
-   `.bhud__side`(84px) 안쪽은 68px이고 이 줄 + HP(12) + 기력(8) + 간격 8 = 54px이라 여유가 있다. */
 .bhud__head { display: flex; align-items: center; gap: 8px; height: 26px; }
 .bhud__side--right .bhud__head { flex-direction: row-reverse; }
 .bhud__name {
@@ -861,15 +859,6 @@
 }
 .bhud__sub { margin-left: auto; font-size: 12px; color: var(--accent); white-space: nowrap; }
 .bhud__side--right .bhud__sub { margin-left: 0; margin-right: auto; }
-.bhud__status {
-  position: static;
-  display: flex;
-  gap: 3px;
-  min-width: 0;
-  overflow: hidden;
-  width: auto;
-  margin: 0;
-}
 .bhud__row { display: flex; align-items: center; gap: 8px; }
 .bhud__side--right .bhud__row { flex-direction: row-reverse; }
 .bhud__tag { width: 20px; flex: none; font-family: var(--font-px); font-size: 11px; color: #ff8a8a; }
@@ -936,35 +925,12 @@
   text-shadow: none;
 }
 .bhud__fog--warn { color: var(--neon-yellow); }
-.stchip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 1px 4px;
-  border-radius: 0;
-  background: rgba(10, 8, 16, 0.92);
-  border: 1px solid var(--frame);
-  font-family: var(--font-px);
-  font-size: 10px;
-  color: var(--text);
-}
-.stchip b { color: var(--neon-cyan); font-weight: 400; }
-.stchip__ico {
-  /* ⚠ 12×10 원본의 **정수 배율**이다(디자인 "픽셀아트는 항상 정수 배율").
-     예전 18×15는 ×1.5라 픽셀이 뭉개졌다. */
-  display: inline-block;
-  width: 24px;
-  height: 20px;
-  background-size: 24px 20px;
-  background-repeat: no-repeat;
-  image-rendering: pixelated;
-}
 
 /* ---- 유물 줄 · 적 능력 줄 ------------------------------------------------- */
 .brelics,
 .foerow {
   position: absolute;
-  top: 106px;
+  top: 152px; /* 상태이상 줄(102~140) 아래 — 2026-11-13 */
   z-index: 5;
   display: flex;
   gap: 6px;
@@ -3110,3 +3076,26 @@
 /* 넘어온 봉인(기절 · 빙결)이 잠근 슬롯 — 2026-11-13 이동불가 개편. 카드를 못 넣는다(임시 모양 · 시안 대기). */
 .slot.slot--locked { opacity: 0.6; cursor: not-allowed; }
 .slot__locked { font-weight: 700; }
+
+/* ---- 상태이상 · 버프 아이콘 줄(시안 `StatusIcons` · 2026-11-13 · `StatusIcons.tsx`) ---------
+   상태바 **아래** 한 줄 — `.bhud`(96px 고정) 밖에 따로 둔다. 내 쪽 왼쪽부터 · 상대 오른쪽부터.
+   타일 16×16 정수 배율(×2 = 32px) · 간격 12px · 2 이상이면 오른쪽 아래 `×N`. 유물 줄(`.brelics`)은 그 아래(152px). */
+.strow { position: absolute; top: 102px; z-index: 6; display: flex; gap: 12px; align-items: flex-start; pointer-events: none; }
+.strow--left { left: 26px; }
+.strow--right { right: 26px; flex-direction: row-reverse; }
+.strow__btn { position: relative; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; line-height: 0; }
+.strow__btn.is-on { outline: 2px solid var(--cream); outline-offset: 2px; }
+.sttile { position: relative; display: block; flex: none; background: url('/redesign/ui/status/tiles.png') no-repeat; image-rendering: pixelated; }
+/* 숫자 한 글자 5×7 · 이어 쓸 때 1px 겹침 · 타일 오른쪽 아래에 걸친다(×2에서 −8 · −6). */
+.sttile__n { position: absolute; right: calc(-4px * var(--k)); bottom: calc(-3px * var(--k)); display: flex; pointer-events: none; }
+.sttile__n i { display: block; width: calc(5px * var(--k)); height: calc(7px * var(--k)); background: url('/redesign/ui/status/digits.png') no-repeat; background-size: calc(55px * var(--k)) calc(7px * var(--k)); image-rendering: pixelated; }
+.sttile__n i + i { margin-left: calc(-1px * var(--k)); }
+.strow__tip { position: absolute; top: 46px; width: 300px; box-sizing: border-box; display: flex; gap: 12px; padding: 12px; background: var(--bg-2); border: 3px solid var(--edge-black); box-shadow: inset 0 0 0 2px var(--tipcol), 0 8px 0 rgba(0, 0, 0, 0.4); pointer-events: auto; text-align: left; }
+.strow__tip > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.strow__name { display: flex; gap: 6px; align-items: center; }
+.strow__name b { font-family: var(--font-display); font-size: 20px; font-weight: 400; color: var(--cream); }
+.strow__name em { font-style: normal; font-size: 11px; padding: 1px 6px; background: var(--tipcol); color: #160408; }
+.strow__tip p { margin: 0; font-size: 12px; line-height: 1.5; color: #e4def0; }
+.strow__next { font-size: 12px; color: var(--tipcol); }
+/* 발밑 줄도 같은 타일 — 칩 테두리 없이 아이콘만. */
+.fighter__status { gap: 6px; }

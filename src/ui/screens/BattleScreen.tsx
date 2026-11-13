@@ -26,6 +26,7 @@ import { PortraitSvg } from "../PortraitSvg";
 import { RELIC_ATLAS } from "../../art/relicAtlas";
 import { markFoeAbilitySeen, seenFoeAbilities } from "../../game/progress";
 import { getRelic } from "../../game/relics";
+import { StatusRow, StatusTile, statusIcons } from "../StatusIcons";
 import { FoeIcon, RARITY_LABEL, RelicIcon } from "../RelicIcon";
 import {
   battleRelics,
@@ -249,14 +250,6 @@ const RESULT_TEXT: Partial<Record<ActionResult, string>> = {
   frozen: "얼어붙음",
   rock: "",
 };
-/** 파이터 발밑 상태 칩 — 지금 뭐가 걸려 있는지 숫자를 안 읽어도 보이게. */
-const STATUS_CHIP: Record<string, string> = {
-  frozen: "❄",
-  stunned: "💫",
-  atkUp: "🔺",
-  defUp: "🔷",
-  freeCast: "🌀",
-};
 /** 몸에 두르는 기운의 색 — 상태이상 하나가 통째로 몸빛을 바꾼다. */
 const STATUS_AURA: Record<string, string> = {
   poison: "#7bd88f",
@@ -303,52 +296,6 @@ function bitsOn(step: Step, side: 0 | 1): { src: DamageSrc; n: number }[] {
   if (n <= 0) return [];
   // 내역이 없는 옛 경로 — 자기 몸에 뜨는 피해는 반동, 상대 몸이면 타격으로 본다.
   return [{ src: side === step.actor ? "recoil" : "attack", n }];
-}
-
-/** 픽셀 아이콘이 있는 상태이상(`public/redesign/ui/status/`). 나머지는 위 글리프. */
-const STATUS_ICON = new Set(["poison", "burn", "bind"]);
-function StatusGlyph({ kind }: { kind: string }) {
-  return STATUS_ICON.has(kind) ? (
-    <i
-      className="stchip__ico"
-      style={{ backgroundImage: `url(/redesign/ui/status/${kind}.png)` }}
-    />
-  ) : (
-    <>{STATUS_CHIP[kind]}</>
-  );
-}
-
-/**
- * 상태이상 목록을 **종류별로 묶는다**. 중독·화상은 겹마다 따로 살아 있어서
- * (남은 라운드가 겹마다 다르다) 그대로 그리면 같은 아이콘이 세 개씩 늘어선다.
- * 위력은 합(한 번에 들어오는 총 피해), 남은 라운드는 최대(그때까지는 남아 있다).
- */
-function statusChips(
-  list: readonly StatusEffect[],
-): { kind: string; power: number; rounds: number }[] {
-  const out: { kind: string; power: number; rounds: number }[] = [];
-  for (const e of list) {
-    const cur = out.find((c) => c.kind === e.kind);
-    if (cur) {
-      cur.power += e.power;
-      cur.rounds = Math.max(cur.rounds, e.rounds);
-    } else out.push({ kind: e.kind, power: e.power, rounds: e.rounds });
-  }
-  return out;
-}
-
-/**
- * 칩의 숫자. 중독 · 화상은 **겹 수 하나**(= 남은 라운드)라 `×N`만(2026-11-12/13 개편 · 임시 모양 —
- * 아이콘 줄 시안은 사용자가 추후 준다). 나머지는 "한 번에 들어오는 피해 + 남은 라운드".
- */
-function ChipNum({ chip }: { chip: { kind: string; power: number; rounds: number } }) {
-  if (chip.kind === "poison" || chip.kind === "burn") return <b>×{chip.rounds}</b>;
-  return (
-    <>
-      {chip.power > 0 ? chip.power : ""}
-      <b>{chip.rounds}</b>
-    </>
-  );
 }
 
 /**
@@ -1551,6 +1498,10 @@ export function BattleScreen({
         onQuit={onQuit}
       />
 
+      {/* 상태이상 · 버프 — 상태바 **아래** 한 줄(시안 `StatusIcons` · 2026-11-13). 유물 줄은 그 아래. */}
+      <StatusRow status={view.status[localSide]} side="left" owner={local.name} />
+      <StatusRow status={view.status[1 - localSide]} side="right" owner={battle.chars[1 - localSide].name} />
+
       {relics.length > 0 && (
         <BattleRelics
           ids={battleRelics(relics)}
@@ -2440,14 +2391,9 @@ function FighterSprite({
       )}
       {v.status[idx].length > 0 && (
         <div className="fighter__status">
-          {/* 중독·화상은 겹마다 한 칸씩 들어 있다 — 칩은 **종류별로 묶어** 보여준다
-              (겹 수만큼 아이콘이 늘어서면 발밑이 금세 넘친다). 앞의 수치는 한 번에
-              들어오는 총 피해, 굵은 수치는 가장 오래 남는 겹의 남은 라운드다. */}
-          {statusChips(v.status[idx]).map((c) => (
-            <span key={c.kind} className={`stchip stchip--${c.kind}`}>
-              <StatusGlyph kind={c.kind} />
-              <ChipNum chip={c} />
-            </span>
+          {/* 상단 아이콘 줄과 같은 타일(`StatusIcons.tsx`) — 어느 몸에 걸렸나를 보여 준다. */}
+          {statusIcons(v.status[idx]).map((c) => (
+            <StatusTile key={c.kind} kind={c.kind} n={c.n} />
           ))}
         </div>
       )}
@@ -2594,7 +2540,7 @@ function BhudSide({
   hp: number;
   energy: number;
   shield: number;
-  /** 지금 걸려 있는 지속효과 — 기력 바 **아래**에 늘어놓는다(아래 주석 참고). */
+  /** 지금 걸려 있는 지속효과 — 체력 바 색에만 쓴다(아이콘은 상태바 아래 `StatusRow`). */
   status: StatusEffect[];
   side: "left" | "right";
   /** 이 쪽이 스크립트 보스일 때만. 페이즈 전환 눈금을 그린다. */
@@ -2652,20 +2598,6 @@ function BhudSide({
           <span className="bhud__name">
             {boss && <span className="bhud__bosstag">BOSS</span>}
             {char.name}
-          </span>
-          {/* 상태이상 — 체력·기력과 **같은 자리**에 둬야 "지금 내 상태"를 한 번에 읽는다.
-              ⚠ 발밑 칩과 **같은 `statusChips()`를 쓴다** — 중독·화상은 겹마다 따로
-              살아 있어서, 여기서만 따로 묶으면 두 자리가 다른 숫자를 말하게 된다. */}
-          <span className="bhud__status">
-            {statusChips(status).map((c) => (
-              <span
-                key={c.kind}
-                className={`stchip stchip--hud stchip--${c.kind}`}
-              >
-                <StatusGlyph kind={c.kind} />
-                <ChipNum chip={c} />
-              </span>
-            ))}
           </span>
           <span className="bhud__sub">
             {shield > 0 ? `보호막 ${shield}` : sub}
