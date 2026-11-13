@@ -41,10 +41,24 @@ body{margin:0}
           <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,6,12,0.7) 0%, rgba(8,6,12,0) 18%)"></div>
           <div style="position: absolute; top: 0; bottom: 0; right: 0; width: 820px; background: linear-gradient(90deg, rgba(8,6,12,0) 0%, rgba(8,6,12,0.45) 42%)"></div>
           <span style="position: absolute; left: 32px; top: 16px; font-family: 'Do Hyeon', sans-serif; font-size: 34px; color: #fff6dc; text-shadow: 3px 3px 0 #0a0604">? 칸 · 이벤트</span>
-          <div style="position: absolute; left: 600px; top: 116px; width: 644px; box-sizing: border-box; padding: 18px 22px 20px; background: rgba(16,10,8,0.88); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px {{e.col}}, 0 8px 0 rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 12px">
-            <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{e.col}}">EVENT · {{e.kind}}</span>
-            <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">{{e.name}}</b>
-            <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{e.text}}</p>
+          <div style="position: absolute; left: 600px; top: {{e.top}}px; width: 644px; box-sizing: border-box; padding: {{e.pad}}; background: {{e.bg}}; border: {{e.bd}}; box-shadow: {{e.sh}}; display: flex; flex-direction: column; gap: 12px">
+            <sc-if value="{{e.plain}}" hint-placeholder-val="{{true}}">
+              <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{e.col}}">EVENT · {{e.kind}}</span>
+              <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">{{e.name}}</b>
+              <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{e.text}}</p>
+            </sc-if>
+            <sc-if value="{{e.talk}}" hint-placeholder-val="{{false}}">
+              <div style="position: relative; padding: 26px 24px 18px; background: rgba(16,10,8,0.92); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px {{e.col}}, 0 8px 0 rgba(0,0,0,0.4)">
+                <span style="position: absolute; left: -24px; top: 30px; width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-right: 22px solid {{e.col}}"></span>
+                <div style="position: absolute; left: 18px; top: -20px; display: flex; box-shadow: 0 4px 0 rgba(0,0,0,0.4)">
+                  <span style="padding: 3px 14px; background: {{e.tagBg}}; color: #fff6dc; border: 3px solid #0a0604; font-family: 'Do Hyeon', sans-serif; font-size: 21px">{{e.who}}</span>
+                  <span style="padding: 3px 10px; background: #0a0604; border: 3px solid #0a0604; border-left: 0; font-size: 12px; color: {{e.col}}; display: flex; align-items: center">{{e.look}}</span>
+                </div>
+                <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #fff6dc; white-space: pre-line">{{e.text}}</p>
+                <span style="position: absolute; right: 14px; bottom: 6px; color: {{e.col}}">▼</span>
+              </div>
+              <span style="font-size: 13px; color: #b9b1c9">고르면 → <b style="color: {{e.col}}">{{e.reply}}</b></span>
+            </sc-if>
             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px">
               <sc-for list="{{e.choices}}" as="c" hint-placeholder-count="3">
                 <div class="opt {{c.cls}}"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; flex-grow: 1">{{c.label}}</span><span class="chip {{c.chipCls}}" style="display: {{c.chipD}}">{{c.chip}}</span></div>
@@ -88,8 +102,9 @@ class Component extends DCLogic {
       { cls: 'eb-mole', name: '두더지', col: '#6ae0ff', kind: '반복', src: 'mole.png',
         text: '반짝거리는 걸 들고 땅으로 들어가는 두더지를 발견했다.\n잡을까요?',
         choices: [c('땅 파기', 'HP -10', 'hp'), c('가던 길 가기')] },
-      { cls: 'eb-surgery', name: '수술실', col: '#fff6dc', kind: '한 번', src: 'doctor_soosool.png',
-        text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?',
+      { cls: 'eb-surgery', name: '수술실', col: '#7ad6a8', kind: '한 번', src: 'doctor_soosool.png — 말풍선(의사가 말한다)',
+        talk: true, who: '의사', look: '수술실 주인', tagBg: '#1e4a3a', reply: '"잘 선택했어요. 누우세요."',
+        text: '"누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?"',
         choices: [c('심장', '최대 HP -10', 'hp'), c('손', 'HP -15', 'hp'), c('발', 'HP -15', 'hp')] },
       { cls: 'eb-dragon', name: '용족 마법사', col: '#c48aff', kind: '기획 전', src: 'dragon_magision.png',
         text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
@@ -98,6 +113,9 @@ class Component extends DCLogic {
       { cls: 'eb-macgora', name: '막고라', col: '#ffa24a', kind: '기획 전', src: 'macgora.png',
         text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
     ];
+    for (const e of evs) Object.assign(e, e.talk
+      ? { plain: false, top: 132, pad: '0', bg: 'transparent', bd: '0', sh: 'none' }
+      : { plain: true, talk: false, top: 116, pad: '18px 22px 20px', bg: 'rgba(16,10,8,0.88)', bd: '3px solid #0a0604', sh: `inset 0 0 0 2px ${e.col}, 0 8px 0 rgba(0,0,0,0.4)` });
     return { evs };
   }
 }

@@ -68,6 +68,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .shake{animation:shake .4s ease-in-out 1}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .bob{animation:bob 2.4s ease-in-out infinite}
+.tyA{animation:tyA 1.6s steps(32) both}.tyB{animation:tyB .8s steps(14) both}
+@keyframes tyA{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes tyB{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.next{animation:nx .8s ease-in-out infinite}@keyframes nx{50%{transform:translateY(4px)}}
 @keyframes bob{50%{transform:translateY(-4px)}}
 </style>
 </helmet>
@@ -97,9 +100,23 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   </div>
 
   <section style="position: absolute; left: {{secL}}px; top: {{secT}}px; width: {{secW}}px; box-sizing: border-box; padding: {{secPad}}; background: {{secBg}}; border: {{secBorder}}; box-shadow: {{secSh}}; display: flex; flex-direction: column; gap: 12px">
-    <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{ev.tagCol}}">EVENT · {{ev.kindTxt}}</span>
-    <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">{{ev.name}}</h2>
-    <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{ev.text}}</p>
+    <sc-if value="{{plain}}" hint-placeholder-val="{{true}}">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: {{ev.tagCol}}">EVENT · {{ev.kindTxt}}</span>
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 40px; color: #fff6dc">{{ev.name}}</h2>
+      <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #e4def0; white-space: pre-line">{{ev.text}}</p>
+    </sc-if>
+    <!-- 말하는 이벤트(수술실): 고블린 상점처럼 말풍선 — 꼬리가 왼쪽 인물을 가리킨다 -->
+    <sc-if value="{{talk}}" hint-placeholder-val="{{false}}">
+      <div style="position: relative; padding: 26px 24px 18px; background: rgba(16,10,8,0.92); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px {{sp.edge}}, 0 8px 0 rgba(0,0,0,0.4)">
+        <span aria-hidden="true" style="position: absolute; left: -24px; top: 30px; width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-right: 22px solid {{sp.edge}}"></span>
+        <div style="position: absolute; left: 18px; top: -20px; display: flex; box-shadow: 0 4px 0 rgba(0,0,0,0.4)">
+          <span style="padding: 3px 14px; background: {{sp.tagBg}}; color: #fff6dc; border: 3px solid #0a0604; font-family: 'Do Hyeon', sans-serif; font-size: 21px">{{sp.name}}</span>
+          <span style="padding: 3px 10px; background: #0a0604; border: 3px solid #0a0604; border-left: 0; font-size: 12px; color: {{sp.edge}}; display: flex; align-items: center">{{sp.look}}</span>
+        </div>
+        <p class="{{sp.ty}}" style="margin: 0; font-size: 18px; line-height: 1.6; color: #fff6dc; white-space: pre-line">{{sp.line}}</p>
+        <span class="next" aria-hidden="true" style="position: absolute; right: 14px; bottom: 6px; color: {{sp.edge}}">▼</span>
+      </div>
+    </sc-if>
 
     <sc-if value="{{showChoices}}" hint-placeholder-val="{{true}}">
       <div class="rise" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
@@ -347,6 +364,7 @@ class Component extends DCLogic {
         name: '수술실', code: 'EV-SURGERY', kindTxt: '한 번', tagCol: '#fff6dc', glow: 'rgba(255,246,220,0.18)',
         text: '누군가는 강해지기 위해, 누군가는 아름다워지기 위해 이곳을 찾죠.\n당신은 무엇을 위해 이곳에 왔나요?',
         art: ['a-surgery', '', 72, 56, 1], bg: 'eb-surgery',
+        speaker: { name: '의사', look: '수술실 주인', edge: '#7ad6a8', tagBg: '#1e4a3a', reply: '"잘 선택했어요. 누우세요."' },
         choices: [
           { label: '심장', chips: [mhp(10)], onTap: () => { const id = pick(POOL.heart); done(relicRes(id, '새 심장: {r}', '최대 체력이 10 줄었다.', '#e0485a'), { maxHp: st.maxHp - 10, hp: Math.min(st.hp, st.maxHp - 10) }); } },
           { label: '손', chips: [hpc(15)], onTap: () => { const id = pick(POOL.hand); done(relicRes(id, '새 손: {r}', '체력이 15 줄었다.', '#e8b080'), { hp: Math.max(1, st.hp - 15) }); } },
@@ -427,10 +445,13 @@ class Component extends DCLogic {
       glow: ev.glow, artFx: st.fx || '',
       // 일러스트가 있는 이벤트(대장간 · 거래 · 온천)는 여관처럼 그림을 통째로 깔고 글과 선택지를 오른쪽 패널에 올린다
       bgCls: ev.bg || '', bgD: ev.bg ? 'block' : 'none', artD: ev.bg ? 'none' : 'flex', asideBg: ev.bg ? 'rgba(8,6,12,0.7)' : 'transparent',
-      secL: ev.bg ? 600 : 480, secT: ev.bg ? 116 : 130, secW: ev.bg ? 644 : 740,
-      secPad: ev.bg ? '18px 22px 20px' : '0', secBg: ev.bg ? 'rgba(16,10,8,0.88)' : 'transparent',
-      secBorder: ev.bg ? '3px solid #0a0604' : '0', secSh: ev.bg ? 'inset 0 0 0 2px ' + ev.tagCol + ', 0 8px 0 rgba(0,0,0,0.4)' : 'none',
+      secL: ev.bg ? 600 : 480, secT: ev.speaker ? 132 : ev.bg ? 116 : 130, secW: ev.bg ? 644 : 740,
+      secPad: ev.speaker ? '0' : ev.bg ? '18px 22px 20px' : '0', secBg: ev.speaker ? 'transparent' : ev.bg ? 'rgba(16,10,8,0.88)' : 'transparent',
+      secBorder: ev.speaker ? '0' : ev.bg ? '3px solid #0a0604' : '0', secSh: ev.speaker ? 'none' : ev.bg ? 'inset 0 0 0 2px ' + ev.tagCol + ', 0 8px 0 rgba(0,0,0,0.4)' : 'none',
       showChoices: st.phase === 'choose', choices,
+      plain: !ev.speaker, talk: !!ev.speaker,
+      sp: ev.speaker ? { name: ev.speaker.name, look: ev.speaker.look, edge: ev.speaker.edge, tagBg: ev.speaker.tagBg,
+        line: st.phase === 'choose' ? `"${ev.text}"` : ev.speaker.reply, ty: st.phase === 'choose' ? 'tyA' : 'tyB' } : { name: '', look: '', edge: '#fff', tagBg: '#000', line: '', ty: '' },
       showPicker: st.phase === 'pick', pickTitle, pickItems, cancelPick: () => set({ phase: 'choose', pickFor: null }),
       showBattle: st.phase === 'battle',
       winSnake: () => { const id = pick(POOL.poison); done(relicRes(id, '뱀을 쓰러뜨렸다 — {r}', '항아리 바닥에 독 냄새가 밴 유물이 있었다.', '#6ab83a')); },
