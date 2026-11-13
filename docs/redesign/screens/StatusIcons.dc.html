@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상태이상 아이콘</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.layer{position:absolute;left:0;top:0;width:1280px;height:720px;background-repeat:repeat-x;background-size:1280px 720px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}
+.l-mountains{background-image:url(/redesign/bg/grassland/mountains.png)}
+.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}
+.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.board{background-image:url(/redesign/terrain/grass-tile.png);background-size:64px 64px;image-rendering:pixelated}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}
+@keyframes f6{to{background-position:120% 0}}
+.s-cairn-idle{background-image:url(/redesign/sprites/cairn/idle.png)}
+.s-goblin-idle{background-image:url(/redesign/sprites/goblin/idle.png)}
+.rl{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/relics/atlas-mini.png);background-size:320px 320px;background-repeat:no-repeat;image-rendering:pixelated}
+.st{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/status/tiles.png);background-size:320px 32px;background-repeat:no-repeat;image-rendering:pixelated;cursor:pointer;padding:0;border:0;font:inherit}
+.st1{width:16px;height:16px;background-size:160px 16px}
+.st3{width:48px;height:48px;background-size:480px 48px}
+.st.on{outline:2px solid #fff6dc;outline-offset:2px}
+.bd{position:absolute;right:-8px;bottom:-6px;display:flex;pointer-events:none}
+.dg{display:block;width:10px;height:14px;background-image:url(/redesign/ui/status/digits.png);background-size:110px 14px;background-repeat:no-repeat;image-rendering:pixelated}
+.dg+.dg{margin-left:-2px}
+.bump{animation:bump .35s steps(4)}
+@keyframes bump{0%{transform:translateY(-4px) scale(1.25)}100%{transform:none}}
+.strow{position:absolute;top:110px;display:flex;gap:12px;align-items:flex-start;min-height:38px}
+.pm{width:26px;height:24px;background:#2a2438;border:2px solid #4a4058;color:#efe9f5;font-family:'Silkscreen',monospace;font-size:14px;line-height:1;cursor:pointer;padding:0}
+.pm:hover{border-color:#f4d470}
+.tip{position:absolute;z-index:5}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1240px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; position: relative">
+
+  <section aria-label="전투 화면 — 상태이상 줄" style="position: absolute; left: 0; top: 0; width: 1280px; height: 720px; overflow: hidden; background: #5fb4ec">
+    <div class="layer l-sky" aria-hidden="true"></div>
+    <div class="layer l-mountains" aria-hidden="true"></div>
+    <div class="layer l-hills" aria-hidden="true"></div>
+    <div class="layer l-meadow" aria-hidden="true"></div>
+
+    <header style="position: absolute; left: 24px; right: 24px; top: 16px; height: 84px; display: grid; grid-template-columns: 1fr 220px 1fr; gap: 16px">
+      <div style="display: flex; gap: 12px; padding: 10px 14px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3c9c98">
+        <div aria-hidden="true" style="width: 58px; height: 58px; background: #0f2a30; border: 2px solid #3c9c98; overflow: hidden; position: relative">
+          <div class="spr n6 s-cairn-idle" style="position: absolute; left: -46px; top: -26px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: 720ms"></div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between"><span style="font-family: 'Silkscreen', monospace; font-size: 18px; color: #fff6dc">CAIRN</span><span style="font-size: 12px; color: #bff5ec">보호막 6</span></div>
+          <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div class="heal" style="width: 85%; height: 100%; background: #e0485a"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">91/103</span></div>
+          <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #7fc8ff">EN</span><div style="flex-grow: 1; height: 8px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 48%; height: 100%; background: #4a9aff"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">24</span></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810">
+        <span style="font-family: 'Silkscreen', monospace; font-size: 26px; color: #f4d470">ROUND 4</span>
+        <span style="font-size: 13px; color: #b6ea6a">초원 · 6층 · 실행 중</span>
+      </div>
+      <div style="display: flex; gap: 12px; padding: 10px 14px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #ff8a3a; flex-direction: row-reverse">
+        <div aria-hidden="true" style="width: 58px; height: 58px; background: #2a1a10; border: 2px solid #ff8a3a"></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; flex-direction: row-reverse"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px; color: #fff6dc">고블린 우두머리</span><span style="font-size: 12px; color: #ffc89a">엘리트</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-direction: row-reverse"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: 40%; height: 100%; background: #e0485a"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px">22/56</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-direction: row-reverse"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #7fc8ff">EN</span><div style="flex-grow: 1; height: 8px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: 55%; height: 100%; background: #4a9aff"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px">20</span></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 상태이상 줄: 상태바 바로 밑 · 내 쪽은 왼쪽부터, 상대 쪽은 오른쪽부터 -->
+    <div class="strow" aria-label="CAIRN의 상태" style="left: 26px">
+      <sc-for list="{{mine}}" as="s" hint-placeholder-count="5">
+        <button type="button" class="st {{s.on}} {{s.anim}}" aria-label="{{s.aria}}" style="background-position: {{s.pos}}" onClick="{{s.tap}}">
+          <span class="bd" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="display: {{s.d0D}}; background-position: {{s.d0}}"></i><i class="dg" style="background-position: {{s.d1}}"></i></span>
+        </button>
+      </sc-for>
+    </div>
+    <div class="strow" aria-label="고블린 우두머리의 상태" style="right: 26px; flex-direction: row-reverse">
+      <sc-for list="{{foe}}" as="s" hint-placeholder-count="5">
+        <button type="button" class="st {{s.on}}" aria-label="{{s.aria}}" style="background-position: {{s.pos}}" onClick="{{s.tap}}">
+          <span class="bd" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="display: {{s.d0D}}; background-position: {{s.d0}}"></i><i class="dg" style="background-position: {{s.d1}}"></i></span>
+        </button>
+      </sc-for>
+    </div>
+
+    <!-- 유물 줄은 상태이상 줄 아래로 내려간다 -->
+    <div aria-label="CAIRN의 유물(자리만)" style="position: absolute; left: 24px; top: 160px; display: flex; gap: 6px; padding: 6px 8px 4px; background: rgba(18,15,26,0.86); border: 2px solid #0a0810">
+      <div class="rl" style="background-position: 0 0"></div><div class="rl" style="background-position: -64px -32px"></div><div class="rl" style="background-position: -96px -64px"></div><div class="rl" style="background-position: -160px -32px"></div><div class="rl" style="background-position: -256px -128px"></div>
+    </div>
+
+    <sc-if value="{{tipShow}}" hint-placeholder-val="{{true}}">
+      <div class="tip" style="left: {{tipX}}px; top: 160px; width: 300px; box-sizing: border-box; padding: 12px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px {{tipCol}}, 0 8px 0 rgba(0,0,0,0.4); display: flex; gap: 12px">
+        <div class="st st3" aria-hidden="true" style="cursor: default; background-position: {{tipPos}}"></div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; gap: 6px; align-items: center"><span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px">{{tipName}}</span><span style="font-size: 11px; padding: 1px 6px; background: {{tipCol}}; color: #160408">{{tipCat}}</span></div>
+          <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #e4def0">{{tipBody}}</p>
+          <span style="font-size: 12px; color: {{tipCol}}">{{tipNext}}</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="board" aria-hidden="true" style="position: absolute; left: 160px; top: 320px; width: 960px; height: 272px; border: 4px solid #2a1c10; box-shadow: 0 8px 0 #5a3c22, 0 12px 0 #2a1c10; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, 68px)">
+      <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div style="border-right: 1px solid rgba(20,50,20,0.45); border-bottom: 1px solid rgba(20,50,20,0.45)"></div></sc-for>
+    </div>
+    <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="position: absolute; left: 328px; top: 388px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: 720ms"></div>
+    <div class="spr n6 s-goblin-idle" role="img" aria-label="고블린" style="position: absolute; left: 636px; top: 422px; width: 144px; height: 96px; background-size: 864px 96px; animation-duration: 660ms; transform: scaleX(-1)"></div>
+
+    <div style="position: absolute; left: 24px; bottom: 18px; padding: 8px 14px; background: rgba(18,15,26,0.9); border: 2px solid #4a4058; font-size: 13px; line-height: 1.6; color: #c9c2d6; max-width: 760px">
+      상태바 바로 밑에 한 줄 — <b style="color: #efe9f5">내 쪽은 왼쪽부터, 상대 쪽은 오른쪽부터</b> 걸린 순서대로. 2 이상이면 오른쪽 아래에 <b style="color: #efe9f5">×N</b>. 유물 줄은 그 아래로 내려간다. 아이콘을 누르면 설명.
+    </div>
+  </section>
+
+  <!-- 아이콘 표 -->
+  <section aria-label="상태이상 아이콘 10종" style="position: absolute; left: 24px; top: 744px; width: 1232px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px">
+      <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px">상태이상 · 버프 아이콘 10종 <span style="font-size: 14px; color: #b9b1c9">16×16 픽셀 · 화면 ×2(32px) · −/+ 로 위 화면 내 쪽 겹을 바꿔 본다</span></h2>
+      <button type="button" class="pm" style="width: auto; padding: 0 10px; font-family: 'Noto Sans KR', sans-serif; font-size: 12px" onClick="{{reset}}">처음대로</button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+      <sc-for list="{{all}}" as="s" hint-placeholder-count="10">
+        <div style="padding: 10px 12px; background: #1a1626; border: 2px solid #3a3150; border-top: 4px solid {{s.col}}; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; gap: 12px; align-items: center">
+            <div class="st" aria-hidden="true" style="cursor: default; background-position: {{s.pos}}">
+              <span class="bd" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="display: {{s.d0D}}; background-position: {{s.d0}}"></i><i class="dg" style="background-position: {{s.d1}}"></i></span>
+            </div>
+            <div style="display: flex; flex-direction: column; flex-grow: 1">
+              <span style="font-family: 'Do Hyeon', sans-serif; font-size: 19px">{{s.name}}</span>
+              <span style="font-family: 'Silkscreen', monospace; font-size: 10px; color: #8a809c">{{s.id}}</span>
+            </div>
+          </div>
+          <span style="font-size: 12px; color: {{s.col}}">{{s.cat}} · 숫자 = {{s.unit}}</span>
+          <div style="display: flex; gap: 6px; align-items: center">
+            <button type="button" class="pm" aria-label="{{s.name}} 1 빼기" onClick="{{s.minus}}">−</button>
+            <span style="font-family: 'Silkscreen', monospace; font-size: 13px; width: 28px; text-align: center">{{s.n}}</span>
+            <button type="button" class="pm" aria-label="{{s.name}} 1 더하기" onClick="{{s.plus}}">+</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; margin-top: 12px">
+      <div style="padding: 12px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 8px">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px">틀 색 = 갈래</span>
+        <span style="font-size: 12px; line-height: 1.6; color: #c9c2d6"><b style="color: #ff8a8a">빨강</b> 피해 — 중독 · 화상 · 출혈 (숫자 = 겹)<br><b style="color: #b8a8ff">보라</b> 이동불가 — 속박 · 기절 · 빙결 (숫자 = 남은 턴)<br><b style="color: #f4d470">금색</b> 힘 · 버프 (힘 = 수치 · 나머지 = 남은 라운드)</span>
+      </div>
+      <div style="padding: 12px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px">겹 숫자 ×N</span>
+        <div style="display: flex; gap: 18px; align-items: flex-end">
+          <sc-for list="{{demo}}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+              <div class="st" aria-hidden="true" style="cursor: default; background-position: {{s.pos}}"><span class="bd" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="display: {{s.d0D}}; background-position: {{s.d0}}"></i><i class="dg" style="background-position: {{s.d1}}"></i></span></div>
+              <span style="font-size: 11px; color: #b9b1c9">{{s.cap}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; line-height: 1.5; color: #c9c2d6">1이면 숫자 없음 · 2부터 오른쪽 아래 · 99까지 두 자리. 3×5 픽셀 숫자에 검은 외곽 1px.</span>
+      </div>
+      <div style="padding: 12px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 18px">크기 — 픽셀 그대로 정수배</span>
+        <div style="display: flex; gap: 16px; align-items: flex-end">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><div class="st st1" style="cursor: default; background-position: 0 0"></div><span style="font-size: 11px; color: #b9b1c9">×1 16px</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><div class="st" style="cursor: default; background-position: 0 0"></div><span style="font-size: 11px; color: #f4d470">×2 32px · 전투</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><div class="st st3" style="cursor: default; background-position: 0 0"></div><span style="font-size: 11px; color: #b9b1c9">×3 48px · 설명창</span></div>
+        </div>
+        <span style="font-size: 12px; line-height: 1.5; color: #c9c2d6">한 장짜리 시트 <b style="color: #efe9f5">tiles.png</b>(160×16, 10칸) · 숫자 <b style="color: #efe9f5">digits.png</b>(55×7 — 0~9, ×).</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mine: { poison: 3, burn: 2, empower: 5, atkUp: 2, freeCast: 1 }, sel: 'mine:poison', bump: '' };
+  }
+  renderVals() {
+    const st = this.state;
+    const DEF = [
+      ['poison', '중독', 'dot', '겹'], ['burn', '화상', 'dot', '겹'], ['bleed', '출혈', 'dot', '겹'],
+      ['bind', '속박', 'lock', '남은 턴'], ['stunned', '기절', 'lock', '남은 턴'], ['frozen', '빙결', 'lock', '남은 턴'],
+      ['empower', '힘', 'buff', '힘 수치'], ['atkUp', '공격 강화', 'buff', '남은 라운드'], ['defUp', '방어 강화', 'buff', '남은 라운드'], ['freeCast', '무아지경', 'buff', '남은 라운드'],
+    ];
+    const CAT = { dot: ['피해', '#ff6a6a'], lock: ['이동불가', '#b8a8ff'], buff: ['버프', '#f4d470'] };
+    const idx = (id) => DEF.findIndex((d) => d[0] === id);
+    const dpos = (ch) => `${-10 * Number(ch)}px 0`;
+    const look = (id, n) => {
+      const i = idx(id), s = String(Math.min(99, n));
+      return { pos: `${-32 * i}px 0`, bdD: n >= 2 ? 'flex' : 'none', d0D: s.length > 1 ? 'block' : 'none', d0: dpos(s[0]), d1: dpos(s[s.length - 1]) };
+    };
+    const body = (id, n) => ({
+      poison: [`중독 ${n}겹`, `행동할 때마다 피해 ${n}(보호막 무시).`, '라운드가 끝나면 1겹 줄어든다'],
+      burn: [`화상 ${n}겹`, `카드 공격에 맞으면 피해 +${Math.min(n, 3) * 10}%(3겹에서 멈춤).`, '라운드가 끝나면 1겹 줄어든다'],
+      bleed: [`출혈 ${n}겹`, `카드 공격에 맞을 때마다 추가 피해 ${Math.min(n, 3) * 5}(3겹에서 멈춤).`, '라운드가 끝나면 1겹 줄어든다'],
+      bind: [`속박 ${n}턴`, '이동 카드가 무효가 된다. 공격 · 수비는 된다.', '턴이 끝날 때마다 1 줄어든다'],
+      stunned: [`기절 ${n}턴`, '카드를 낼 수 없다.', '턴이 끝날 때마다 1 줄어든다'],
+      frozen: [`빙결 ${n}턴`, '카드를 낼 수 없다. 카드 공격 · 처박기 · 붕괴에 맞으면 깨지며 피해 +5.', '턴이 끝날 때마다 1 줄어든다'],
+      empower: [`힘 ${n}`, `모든 공격 피해 +${n}.`, '전투 내내 간다'],
+      atkUp: [`공격 강화 · ${n}라운드`, '공격 피해 +7(건 카드의 값).', '라운드가 끝나면 1 줄어든다'],
+      defUp: [`방어 강화 · ${n}라운드`, '받는 공격 피해 −5(건 카드의 값).', '라운드가 끝나면 1 줄어든다'],
+      freeCast: [`무아지경 · ${n}라운드`, '카드의 기력 소모가 0.', '라운드가 끝나면 1 줄어든다'],
+    })[id];
+    const FOE = [['bleed', 12], ['stunned', 2], ['frozen', 1], ['bind', 3], ['defUp', 2]];
+    const ORDER = ['poison', 'burn', 'bleed', 'bind', 'stunned', 'frozen', 'empower', 'atkUp', 'defUp', 'freeCast'];
+    const row = (side, pairs) => pairs.map(([id, n]) => {
+      const key = `${side}:${id}`;
+      return { ...look(id, n), aria: body(id, n)[0], on: st.sel === key ? 'on' : '', anim: st.bump === id ? 'bump' : '',
+        tap: () => this.setState({ sel: st.sel === key ? '' : key }) };
+    });
+    const minePairs = ORDER.filter((id) => (st.mine[id] || 0) > 0).map((id) => [id, st.mine[id]]);
+    const setN = (id, n) => this.setState({ mine: { ...st.mine, [id]: Math.max(0, Math.min(99, n)) }, bump: id, sel: n > 0 ? `mine:${id}` : st.sel });
+    const all = DEF.map(([id, name, cat, unit]) => {
+      const n = st.mine[id] || 0;
+      return { ...look(id, Math.max(n, 1)), bdD: n >= 2 ? 'flex' : 'none', id, name, cat: CAT[cat][0], col: CAT[cat][1], unit, n: String(n),
+        minus: () => setN(id, n - 1), plus: () => setN(id, n + 1) };
+    });
+    let tip = { tipShow: false, tipX: 0, tipPos: '0 0', tipName: '', tipCat: '', tipCol: '#fff', tipBody: '', tipNext: '' };
+    if (st.sel) {
+      const [side, id] = st.sel.split(':');
+      const pairs = side === 'mine' ? minePairs : FOE;
+      const k = pairs.findIndex((p) => p[0] === id);
+      if (k >= 0) {
+        const n = pairs[k][1], b = body(id, n), c = CAT[DEF[idx(id)][2]];
+        tip = { tipShow: true, tipX: side === 'mine' ? Math.max(24, 26 + k * 44 - 14) : Math.min(956, 1280 - 26 - (k + 1) * 44 - 260),
+          tipPos: `${-48 * idx(id)}px 0`, tipName: b[0], tipCat: c[0], tipCol: c[1], tipBody: b[1], tipNext: b[2] };
+      }
+    }
+    const demo = [['poison', 1, '1겹'], ['poison', 2, '×2'], ['burn', 9, '×9'], ['bleed', 12, '×12']].map(([id, n, cap]) => ({ ...look(id, n), cap }));
+    return { cells: Array.from({ length: 24 }, () => ({})), mine: row('mine', minePairs), foe: row('foe', FOE), all, demo, ...tip,
+      reset: () => this.setState({ mine: { poison: 3, burn: 2, empower: 5, atkUp: 2, freeCast: 1 }, sel: 'mine:poison', bump: '' }) };
+  }
+}
+</script>
+</body>
+</html>
