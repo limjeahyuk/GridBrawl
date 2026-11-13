@@ -520,11 +520,47 @@ export function decideAI(
     }
   }
 
+  /**
+   * **넘어온 봉인**(2026-11-13 · `STATUS.md` 4절) — 기절 · 빙결 턴이 이번 라운드 앞쪽 N슬롯을
+   * 막는다. 그 슬롯은 비워 두고(엔진이 "기절" 스텝으로 띄운다), **풀린 첫 턴엔 무조건 피하거나
+   * 막는다**(사용자 지정 — 묶인 동안 상대가 자리를 잡았으니 다음 공격부터 받아 내야 한다).
+   */
+  const lockedAhead = Math.min(
+    3,
+    state.status[self]
+      .filter((e) => e.kind === 'frozen' || e.kind === 'stunned')
+      .reduce((m, e) => Math.max(m, e.rounds), 0),
+  )
+
   for (let slot = 0; slot < 3; slot++) {
     // 이 슬롯의 조준점. ⚠ 슬롯당 딱 한 번 — 커서를 밀기 때문이다.
     const foe = advanceFoe(slot)
     // 이 슬롯에 나에게 들어올 공격(hard가 계획을 읽었을 때만).
     const inc = incomingAt(slot, foe, pos)
+
+    if (slot < lockedAhead) {
+      plan.push(undefined as unknown as CardDef)
+      continue
+    }
+    if (lockedAhead > 0 && slot === lockedAhead) {
+      // 읽은 공격이 있으면 그 사거리 밖으로, 없으면 줄을 바꾸는 쪽부터(대개 사격선을 벗어난다).
+      const safe = (c: CardDef) =>
+        c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr)
+      const dodge = inc
+        ? evadeCards(foe, inc).find(usable)
+        : pool
+            .filter(safe)
+            .sort((x, y) => Number(landingOf(y).row !== pos.row) - Number(landingOf(x).row !== pos.row))[0]
+      if (dodge) {
+        take(dodge)
+        continue
+      }
+      if (GUARD && usable(GUARD) && energy >= (GUARD.guardCost ?? 0)) {
+        take(GUARD)
+        guarded = true
+        continue
+      }
+    }
 
     // 0) 위기 회피 — 체력이 위험하면 첫 슬롯에 가드를 우선 (가드는 턴 전체 지속).
     //    ⚠ 계획을 읽는 AI는 **공격이 남아 있을 때만** 든다 — 아무것도 안 오는 라운드에

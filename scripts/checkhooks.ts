@@ -2445,6 +2445,38 @@ console.log('\n피해 내역(Step.bits) · 슬롯 번호(Step.slot)')
   }
 }
 
+// --- 이동불가 후속(2026-11-13 사용자 지정) — 붕괴도 빙결을 깨며 +5 · AI는 풀린 첫 턴에 피하거나 막는다 ---
+console.log('\n이동불가 후속 — 붕괴 파쇄 +5 · AI 풀린 첫 턴')
+{
+  const run = (frozen: boolean) => {
+    const b = battleWith({})
+    b.state.round = COLLAPSE_START_ROUND
+    b.state.pos = [{ col: 2, row: 1 }, { col: 5, row: 1 }] // p1만 무너진 열
+    if (frozen) b.state.status[1].push({ kind: 'frozen', rounds: 5, power: 0, since: 0 })
+    const hp = b.state.hp[1]
+    const steps = b.resolveRound(HOLD, HOLD)
+    const col = steps.find((x) => x.phase === 'collapse' && x.actor === 1)
+    const bitsSum = (col?.bits ?? []).reduce((n, x) => n + x.n, 0)
+    return { lost: hp - b.state.hp[1], bitsSum, still: !!b.statusOf(1, 'frozen') }
+  }
+  const plain = run(false)
+  const iced = run(true)
+  check('붕괴로 빙결이 깨지면 +5', iced.lost - plain.lost, FREEZE_SHATTER_BONUS)
+  check('붕괴 파쇄 — 피해 내역 합 = 깎인 체력', iced.bitsSum, iced.lost)
+  check('붕괴 파쇄 — 빙결이 풀린다', iced.still, false)
+}
+{
+  // AI: 넘어온 기절 1턴 → 1번 슬롯은 비우고 2번 슬롯엔 이동(또는 가드).
+  const b = battleWith({})
+  b.state.status[1].push({ kind: 'stunned', rounds: 1, power: 0, since: 0 })
+  let ok = 0
+  for (let i = 0; i < 20; i++) {
+    const plan = decideAI(b.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.concat(getChar('warrior').basics))
+    if (plan[0] === undefined && (plan[1]?.kind === 'move' || plan[1]?.kind === 'guard')) ok++
+  }
+  check('AI — 잠긴 슬롯은 비우고 풀린 첫 턴은 이동 · 수비(20/20)', ok, 20)
+}
+
 // --- 붕괴 늦추기 · 안전지대(2026-11-10 사용자 지정) ------------------------------
 console.log('\n붕괴 — 가운데 4칸은 끝까지 · 엘리트·보스는 늦게')
 {

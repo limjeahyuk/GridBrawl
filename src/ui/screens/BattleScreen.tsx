@@ -824,6 +824,12 @@ export function BattleScreen({
       : boundN > 0
         ? battle.statusOf(localSide, "bind")
         : undefined;
+  /**
+   * 다음에 채울 슬롯이 **속박 턴**인가 — 그 슬롯엔 이동 카드를 못 넣는다(2026-11-13 사용자 지정
+   * "속박은 이동 쪽에 잠금"). 슬롯은 앞에서부터 채워지므로 다음 빈 칸 하나만 보면 된다.
+   */
+  const nextFree = slots.indexOf(null);
+  const moveBound = nextFree !== -1 && nextFree < boundN;
   const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c);
 
   // which slot numbers (1-based) contain this card id
@@ -835,6 +841,7 @@ export function BattleScreen({
 
   const addCard = (c: CardDef) => {
     if (phase !== "select" || !selectable(c) || !canAfford(c)) return;
+    if (c.kind === "move" && moveBound) return;
     const i = slots.indexOf(null);
     if (i === -1) return;
     const next = slots.slice();
@@ -982,7 +989,7 @@ export function BattleScreen({
    */
   const moveTargets = useMemo(() => {
     const out = new Map<string, CardDef>();
-    if (phase !== "select" || slots.every((x) => x !== null)) return out;
+    if (phase !== "select" || slots.every((x) => x !== null) || moveBound) return out;
     const from = planPreview.ghost ?? view.pos[localSide];
     for (const c of hand) {
       if (c.kind !== "move" || !selectable(c) || !canAfford(c)) continue;
@@ -1000,6 +1007,7 @@ export function BattleScreen({
     view,
     localSide,
     phase,
+    moveBound,
     battle.state.cooldowns,
   ]);
 
@@ -1083,8 +1091,8 @@ export function BattleScreen({
     const ready = moveDeck.filter((c) => selectable(c) && canAfford(c)).length;
     const cooling = moveDeck.filter((c) => cdLeft(c.id) > 0).length;
     const full = slots.every((x) => x !== null);
-    // 세 턴이 다 막혔을 때만 묶음을 잠근다 — 일부만 막혔으면 남은 슬롯엔 이동할 수 있다.
-    const bind = boundN >= 3;
+    // 다음 빈 슬롯이 속박 턴이면 묶음을 잠근다 — 그 슬롯을 다른 카드로 채우면 다시 열린다.
+    const bind = moveBound;
     const dim = lockedN >= 3;
     return {
       compass,
@@ -1102,7 +1110,7 @@ export function BattleScreen({
               ? "순서 칸이 꽉 찼다"
               : "▲ 펼치기",
     };
-  }, [moveDeck, slots, tray, lockedN, boundN, battle.state.cooldowns, battle.state.energy]);
+  }, [moveDeck, slots, tray, lockedN, boundN, moveBound, battle.state.cooldowns, battle.state.energy]);
 
   // 강조할 타격 셀 — 공격 카드를 올려보는 중이면 그 카드의 사거리, 아니면 고른
   // 플랜의 공격들이 덮는 셀(그대로 남아 있는 예시).
@@ -1946,6 +1954,8 @@ export function BattleScreen({
                       const full = slots.every((x) => x !== null);
                       const st = at.length
                         ? { t: `${at.join(" ")}번 칸`, k: "in" }
+                        : moveBound
+                          ? { t: "속박", k: "stuck" }
                         : cd > 0
                           ? { t: `쿨 ${cd}`, k: "cd" }
                           : stuck

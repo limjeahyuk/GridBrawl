@@ -1448,9 +1448,12 @@ export class CardBattle {
         const dmg = Math.max(0, base - (this.passive[p].collapseResist ?? 0))
         if (dmg <= 0) continue
         const dealt = Math.min(s.hp[p], dmg)
-        s.hp[p] = Math.max(0, s.hp[p] - dmg)
         // 붕괴 피해도 **빙결을 깬다**(2026-11-12 사용자 지정 — 카드 공격 · 처박기 · 붕괴. 독안개 · 중독은 아님).
-        s.status[p] = s.status[p].filter((e) => e.kind !== 'frozen')
+        //   깨지면 **무조건 +5**(2026-11-13 사용자 지정 — 카드 타격과 같다).
+        const shatter = s.status[p].some((e) => e.kind === 'frozen') ? FREEZE_SHATTER_BONUS : 0
+        if (shatter) s.status[p] = s.status[p].filter((e) => e.kind !== 'frozen')
+        const shatterDealt = Math.min(s.hp[p] - dealt, shatter)
+        s.hp[p] = Math.max(0, s.hp[p] - dmg - shatter)
         steps.push({
           phase: 'collapse',
           actor: p,
@@ -1459,8 +1462,11 @@ export class CardBattle {
           damage: 0,
           heal: 0,
           drain: 0,
-          recoil: dmg,
-          bits: [{ src: 'collapse', on: p as 0 | 1, n: dealt }],
+          recoil: dmg + shatter,
+          bits: [
+            { src: 'collapse', on: p as 0 | 1, n: dealt },
+            ...(shatterDealt > 0 ? [{ src: 'shatter' as const, on: p as 0 | 1, n: shatterDealt }] : []),
+          ],
           snapshot: this.snapshot(),
         })
       }
