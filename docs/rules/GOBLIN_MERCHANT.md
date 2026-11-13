@@ -7,9 +7,9 @@
 
 | 단계 | 배경(1280×720) | 원본 일러스트 |
 | --- | --- | --- |
-| 가난한 고블린 (쓴 돈 0~139) | `public/redesign/cutscene/goblin/bg-poor.png` | `docs/redesign/2dImg/goblin_2.png` (두건 망토 · 맨발) |
-| 중간 고블린 (140~349) | `public/redesign/cutscene/goblin/bg-mid.png` | `docs/redesign/2dImg/goblin_1.png` (안경 · 조끼) |
-| 부자 고블린 (350 이상) | `public/redesign/cutscene/goblin/bg-rich.png` | `docs/redesign/2dImg/goblin_3.png` (왕좌) |
+| 가난한 고블린 (쓴 돈 0~139) | `public/redesign/cutscene/goblin/bg-poor.png` | `docs/design/2dImg/goblin_2.png` (두건 망토 · 맨발) |
+| 중간 고블린 (140~349) | `public/redesign/cutscene/goblin/bg-mid.png` | `docs/design/2dImg/goblin_1.png` (안경 · 조끼) |
+| 부자 고블린 (350 이상) | `public/redesign/cutscene/goblin/bg-rich.png` | `docs/design/2dImg/goblin_3.png` (왕좌) |
 
 - 배경은 `tools/event-bg/build.py <원본> <결과>`로 만든다: 그림은 왼쪽에 그대로 두고, 오른쪽은 **같은 그림을 크게 늘려 강하게 흐리고 어둡게 한 색 배경**이다(지어낸 풍경 없음). 그림의 오른쪽 가장자리는 그 배경으로 부드럽게 녹아든다. 다른 ? 이벤트도 일러스트가 생기면 같은 스크립트와 배치를 쓴다.
 - **고블린 재산은 화면에 보여 주지 않는다**(2026-11-12 사용자 지정) — 게이지 · 쓴 돈 · "N 더 쓰면 ○○" · 단계 얼굴 표시는 전부 없다. `goblinSpent`는 안에서만 세고, 플레이어에게는 고블린 그림과 진열이 달라지는 것으로만 드러난다. 세 단계 시안은 `screens/GoblinTiers.dc.html`.
@@ -18,7 +18,7 @@
 
 ## 1. 누가 어디서 나오나
 
-`ClipName`에 `haggle` · `cheer`가 있지만 지금은 안 쓴다(이 화면은 일러스트라 도트가 없다). (여관 주인 마렌은 배경 그림 `public/redesign/cutscene/inn/inn-bg.png` — 원본 `docs/redesign/2dImg/inn.png`)
+`ClipName`에 `haggle` · `cheer`가 있지만 지금은 안 쓴다(이 화면은 일러스트라 도트가 없다). (여관 주인 마렌은 배경 그림 `public/redesign/cutscene/inn/inn-bg.png` — 원본 `docs/design/2dImg/inn.png`)
 
 ## 2. 고블린 재산 — 쓸수록 부자가 된다
 

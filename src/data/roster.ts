@@ -5,7 +5,7 @@ import { ROCK_HP, type BuffKind, type CardDef, type Offset } from '../battle/typ
 // 바뀐 것은 이름·칭호·소개문·색뿐이고 **id·카드·수치는 그대로**다: id는 저장된
 // 덱(RTDB `decks/<uid>`)·유물(`sig-<id>`)·몬스터 `baseArtId`가 참조하고, 수치는
 // 시뮬로 맞춘 밸런스라 건드리면 재측정이 필요하다. 옛 이름 대응표는
-// docs/GAME_DESIGN.md "로스터 리스킨" 참고(밸런스 기록은 옛 이름 그대로 남겼다).
+// docs/rules/BATTLE.md "로스터 리스킨" 참고(밸런스 기록은 옛 이름 그대로 남겼다).
 //
 // 각 캐릭터는 고유 카드로 정체성을 낸다: 공용의 약한 공격/가드는 모두가 쓰고
 // (battle/cards.ts),

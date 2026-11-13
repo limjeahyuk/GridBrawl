@@ -13,7 +13,7 @@
 
 **일러스트가 있는 이벤트는 여관처럼 그림을 화면 전체 배경으로 깔고**, 이벤트 이름 · 글 · 선택지를 오른쪽 패널(x 600~1244)에 올린다. 도트 그림 틀(왼쪽 380×470)은 그 이벤트에서 뺀다. 오른쪽은 **글이 읽히는 만큼만** 어둡게 한다(가로 그라디언트 0.45 + 패널 0.88) — 그림을 가리지 않는다.
 
-| 이벤트 | 배경 `public/redesign/cutscene/events/` | 원본 `docs/redesign/2dImg/` |
+| 이벤트 | 배경 `public/redesign/cutscene/events/` | 원본 `docs/design/2dImg/` |
 | --- | --- | --- |
 | 낡은 대장간 `forge` | `forge.png` | `대장간.png` |
 | 거래 `trade` | `trade.png` | `거래상.png` |

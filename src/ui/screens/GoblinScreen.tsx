@@ -1,4 +1,4 @@
-// 고블린 장사꾼(디자인 `GoblinShop` · `GoblinTiers` · 규칙 `docs/redesign/GOBLIN_MERCHANT.md`).
+// 고블린 장사꾼(디자인 `GoblinShop` · `GoblinTiers` · 규칙 `docs/rules/GOBLIN_MERCHANT.md`).
 // 만남(거래한다 · 덮친다 · 지나간다) → 거래 / 습격 확인. 쓸수록 고블린이 부자가 되고,
 // 덮쳐서 이기면 재산이 0으로 — 다음 고블린 상점은 가난부터.
 // 2026-11-12: 여관과 같은 배치 — 단계별 일러스트를 왼쪽에 깔고 대사창 · 선택지는 오른쪽.

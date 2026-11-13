@@ -9,10 +9,10 @@
 // 2026-11-12에 그림이 바뀌었다. 전엔 `public/sprites/hero-knight` 도트에서
 // 얼굴을 떼어 배경까지 코드로 그렸는데, 그 전사는 **지금 게임에 없다** —
 // 리디자인으로 영웅 도트가 전부 새로 그려졌고 옛 시트는 아이콘에만 남아 있었다.
-// 지금 아이콘은 ? 칸 거래상 일러스트(`docs/redesign/2dImg/거래상.png`)에서
+// 지금 아이콘은 ? 칸 거래상 일러스트(`docs/design/2dImg/거래상.png`)에서
 // 구운 마스터다. 구도·빛을 바꾸려면 마스터를 다시 굽는다:
 //
-//   python3 docs/redesign/tools/icon/build.py   (pillow · rembg · numpy 필요)
+//   python3 docs/design/tools/icon/build.py   (pillow · rembg · numpy 필요)
 //
 // 마스터를 같이 커밋해 두므로 **아이콘만 다시 뽑을 때는 파이썬이 필요 없다.**
 // ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { decodePng, encodePng } from './png.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const MASTER_FILE = 'docs/redesign/tools/icon/master-1024.png'
+const MASTER_FILE = 'docs/design/tools/icon/master-1024.png'
 
 const master = decodePng(readFileSync(join(ROOT, MASTER_FILE)))
 if (master.w !== master.h) throw new Error('마스터는 정사각이어야 한다')

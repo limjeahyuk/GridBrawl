@@ -3,7 +3,7 @@
 // 개성은 **덱 + 패시브 + AI 성격**으로 낸다(진짜 다인 전투는 Phase 2). 몬스터는
 // 엔진에 넘길 합성 CharacterDef(monsterChar)를 만든다 — 아트는 baseArtId의
 // ROSTER 캐릭터를 재활용하고, 이름·최대체력·패시브·덱은 몬스터 것으로 갈아끼운다.
-// 상세 설계는 docs/ROGUELIKE.md ⑦.
+// 상세 설계는 docs/rules/RUN.md ⑦.
 // ---------------------------------------------------------------------------
 import { COMMON_CARDS } from '../battle/cards'
 import { getChar, ROSTER, type CharacterDef, type Passive } from '../data/roster'
@@ -69,7 +69,7 @@ const resolveCards = (ids: string[]): CardDef[] =>
 
 export const MONSTERS: MonsterDef[] = [
   // --- 이벤트 전용(tier 0 — 지도 풀에 안 나온다) · 2026-11 리디자인 ---------------
-  // 값은 시안 임의값(`docs/redesign/EVENTS.md`·`GOBLIN_MERCHANT.md`).
+  // 값은 시안 임의값(`docs/rules/EVENTS.md`·`GOBLIN_MERCHANT.md`).
   {
     id: 'snake', behavior: 'skirmisher', name: '동굴 뱀', baseArtId: 'archer', spriteId: 'snake',
     tier: 0, maxHp: 34, startEnergy: 20, aiLevel: 'easy', passive: {},

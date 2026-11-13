@@ -2,7 +2,7 @@
 // 로그라이크 런 — 노드 사다리(전투/엘리트/보스/이벤트/상점) 진행 + 덱/유물/골드
 // 성장. 전투는 엔진(battle/engine.ts)이, 여기선 그 위의 **메타 상태**를 순수
 // 함수로 다룬다(랜덤 Math.random — 싱글 전용이라 락스텝 무관). 설계는
-// docs/ROGUELIKE.md. UI 흐름 연결은 App.tsx(Phase 1b).
+// docs/rules/RUN.md. UI 흐름 연결은 App.tsx(Phase 1b).
 //
 // 유물 획득 경로(2026-07-24 개편): **엘리트·보스 전투 보상 확정** + **이벤트(대가를
 // 치르고)** + **상점(골드로 구매)**. 일반 전투 보상엔 유물이 없다.
@@ -147,7 +147,7 @@ export function shiftedAiLevel(level: Difficulty, shift: number): Difficulty {
 // --- 노드 사다리 템플릿 -----------------------------------------------------
 /**
  * 지도 칸 종류. 2026-11-09 상점·휴식 칸을 **여관(`inn`)·대장간(`smith`)**으로 바꿨다
- * (`docs/redesign/INN_SMITH.md`) — 상점은 여관 안으로 들어갔고 강화는 대장간이 맡는다.
+ * (`docs/rules/INN_SMITH.md`) — 상점은 여관 안으로 들어갔고 강화는 대장간이 맡는다.
  * 모닥불(`rest`)은 이제 지도 칸이 아니라 **? 칸의 정체 하나**로만 남는다(`QuestionFate`).
  */
 export type NodeType = 'combat' | 'elite' | 'boss' | 'event' | 'inn' | 'smith' | 'treasure'
@@ -1097,7 +1097,7 @@ export function buyShopItem(
   }
 }
 
-// --- 여관 · 대장간(2026-11-09 · `docs/redesign/INN_SMITH.md`) --------------
+// --- 여관 · 대장간(2026-11-09 · `docs/rules/INN_SMITH.md`) --------------
 /**
  * 여관 — 휴식(80G · 최대 체력 50%) / 상점(다녀와도 방문이 안 끝난다) / 나가기(20%).
  * **휴식과 나가기는 둘 중 하나만** — 어느 쪽이든 그걸로 방문이 끝난다(사용자 지정).
@@ -1151,7 +1151,7 @@ export function advanceFloor(run: RunState): RunState {
   const act = run.act + 1
   return { ...run, act, floor: 1, map: buildMap(act), picked: [], special: undefined, status: 'choosing' }
 }
-// --- ? 칸 정체 · 고블린 장사꾼(2026-11 리디자인 · `docs/redesign/GOBLIN_MERCHANT.md`) ---
+// --- ? 칸 정체 · 고블린 장사꾼(2026-11 리디자인 · `docs/rules/GOBLIN_MERCHANT.md`) ---
 /** ? 칸의 매복 전투 — 그 층의 일반 몬스터. */
 export function ambushFight(run: RunState): SpecialFight {
   return { kind: 'ambush', monsterId: combatMonster(runDepth(run)) }

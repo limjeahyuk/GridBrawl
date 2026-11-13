@@ -1,4 +1,4 @@
-// 룰렛 카드 강화(디자인 `Upgrade` · 규칙 `docs/redesign/CARD_UPGRADE.md`).
+// 룰렛 카드 강화(디자인 `Upgrade` · 규칙 `docs/rules/CARD_UPGRADE.md`).
 // 카드 → 강화 종류(수치/범위) → 10칸 룰렛 → (범위면 붙일 칸 / 뺄 칸 고르기) → 저장.
 // 대장간(지도 칸 · ? 칸 — 맡기기 `paid` / 직접 `free`)·낡은 대장간(이벤트 — `paid`)이 같은 화면을 쓴다.
 import { useEffect, useMemo, useRef, useState } from 'react'

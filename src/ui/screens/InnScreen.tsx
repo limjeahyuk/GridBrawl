@@ -1,4 +1,4 @@
-// 여관 · 대장간 — 2026-11-09 지도의 상점·휴식 칸을 대신하는 두 칸(`docs/redesign/INN_SMITH.md`).
+// 여관 · 대장간 — 2026-11-09 지도의 상점·휴식 칸을 대신하는 두 칸(`docs/rules/INN_SMITH.md`).
 // 시안 `Inn.dc.html` · `Blacksmith.dc.html`. 규칙(값·회복량)은 전부 `game/run.ts`에 있다.
 import { useMemo, useState } from 'react'
 import {

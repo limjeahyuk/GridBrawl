@@ -2,7 +2,7 @@
 The illustration is kept untouched at full screen height on the left. The scene is
 continued to the right by ping-pong mirroring a clean strip from the picture's right
 edge, then blurred progressively (depth of field) and dimmed for the UI.
-usage: python build.py   (expects cairn.png, sable.png, magision.png, all 832x1216 — docs/redesign/2dImg)
+usage: python build.py   (expects cairn.png, sable.png, magision.png, all 832x1216 — docs/design/2dImg)
 The mage is drawn from magision.png (2026-11-11) but still saved as bg-dirge.png, the name the game loads."""
 import numpy as np
 import cv2

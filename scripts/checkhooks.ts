@@ -150,7 +150,7 @@ console.log('누적 기력 트리거(energyTriggers)')
   check('주기가 섞이지 않는다', merged.energyTriggers?.map((t) => t.per), [100, 50])
 }
 
-// --- 이동불가 — 기절 (2026-11-13 개편 · docs/redesign/STATUS.md 4절) ---------------
+// --- 이동불가 — 기절 (2026-11-13 개편 · docs/rules/STATUS.md 4절) ---------------
 // 숫자 N = 건 턴 **다음부터** N턴(카드 · 유물은 1). 라운드를 넘어간다.
 console.log('\n기절(stun) — 건 턴 다음부터 N턴 · 라운드를 넘어간다')
 const stunrod = card('r-stunrod')
@@ -344,7 +344,7 @@ console.log('\n런 진행 규칙')
 // 중독=움직이면 아프다 / 화상=맞으면 더 아프다 / 빙결=이 라운드 정지(맞으면 깨짐)
 // / 속박=이 라운드 이동 불가. 셋(빙결·기절·속박)은 라운드를 넘지 않는다.
 console.log('\n상태이상 — 중독(이동) · 화상(피격) · 빙결 · 속박 · 독안개')
-// 중독(2026-11-12 개편 · docs/redesign/STATUS.md 1절): 겹 수 하나 · 상한 없음 · 라운드 끝 −1 ·
+// 중독(2026-11-12 개편 · docs/rules/STATUS.md 1절): 겹 수 하나 · 상한 없음 · 라운드 끝 −1 ·
 // 행동 한 번(이동 카드 · 공격 카드 · 밀려남)에 지금 겹 × 1 · 보호막 관통.
 const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poison: n })
 {

@@ -51,7 +51,7 @@ export interface Relic {
 // `id`(`sig-*`)는 아이콘 아틀라스 키로만 남았다.
 //
 // **런 보정(runEffect, 2026-07-30)**: 캐릭터 패시브를 그대로 유물화하면 런 클리어율이
-// 27~57%로 벌어진다(캐릭터별 대량 시뮬 — docs/ROGUELIKE.md ⑪). 이유는 구조적이다:
+// 27~57%로 벌어진다(캐릭터별 대량 시뮬 — docs/rules/RUN.md ⑪). 이유는 구조적이다:
 //   ① 체력이 층 사이에 이어지는 런에선 **지속회복 > 피해감소**다(감소는 출혈을 늦추고,
 //      회복은 되돌린다) → 회복 수단이 없는 캐릭터가 누적 출혈로 죽는다.
 //   ② 런의 제약은 기력이 아니라 **슬롯 3칸**이다(쿨0 공격은 턴당 1회, 기력은 턴마다
@@ -411,7 +411,7 @@ const genericRelics: Relic[] = [
   { id: 'ravenomen', name: '까마귀의 전조', icon: '🐦‍⬛', rarity: 'epic', desc: '일반 전투 보상에 유물이 섞일 확률 +18%p.', effect: {}, mods: { relicChanceBonus: 0.18 } },
   { id: 'kingsseal', name: '왕의 봉인', icon: '📜', rarity: 'legend', desc: '승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.', effect: {}, mods: { rewardOptions: 2, goldBonusPct: 60, shopExtraItems: 2 } },
 
-  // --- 이벤트 사슬(2026-11-09 · `docs/redesign/EVENTS.md` 초록 정령 · 타오르는 알 · 세계수 · 불사조) ---
+  // --- 이벤트 사슬(2026-11-09 · `docs/rules/EVENTS.md` 초록 정령 · 타오르는 알 · 세계수 · 불사조) ---
   // 알·영양가루는 보상 풀에도 있다. 가지·깃털은 사슬의 끝이라 이벤트에서만 나온다.
   { id: 'fireegg', name: '타오르는 알', icon: '🥚', rarity: 'epic', desc: '화상에 걸리지 않는다.', effect: { burnImmune: true } },
   { id: 'nutrient', name: '영양가루', icon: '✨', rarity: 'rare', desc: '최대 체력 +10, 최대 기력 +10.', effect: { maxHpBonus: 10, maxEnergyBonus: 10 } },

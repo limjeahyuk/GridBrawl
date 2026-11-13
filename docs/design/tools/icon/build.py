@@ -1,6 +1,6 @@
 """앱 아이콘 마스터(1024×1024) 굽기 — **? 칸 거래상 얼굴**.
 
-    python3 docs/redesign/tools/icon/build.py        # master-1024.png 를 다시 굽는다
+    python3 docs/design/tools/icon/build.py        # master-1024.png 를 다시 굽는다
 
 왜 파이썬인가: 일러스트에서 인물만 오려 내는 데 `rembg`(isnet-anime)를 쓴다.
 구운 마스터는 **이 폴더에 같이 커밋**하므로, 아이콘을 다시 뽑을 때는
@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
-SRC = os.path.join(ROOT, 'docs/redesign/2dImg/거래상.png')
+SRC = os.path.join(ROOT, 'docs/design/2dImg/거래상.png')
 OUT = os.path.join(os.path.dirname(__file__), 'master-1024.png')
 
 BOX = (209, 20, 529, 340)   # 원본에서 잘라 낼 정사각 — 후드 꼭대기부터 망토 여밈까지 · 두 눈 사이 중점이 가운데(2026-11-12)

@@ -515,7 +515,7 @@ export class CardBattle {
 
     /**
      * 상태이상을 건다. 종류에 따라 **쌓는 방식이 다르다**:
-     *   중독·화상  한 칸에 겹 수(`rounds`)를 **더한다** — 상한 없음(`docs/redesign/STATUS.md` 1 · 2절).
+     *   중독·화상  한 칸에 겹 수(`rounds`)를 **더한다** — 상한 없음(`docs/rules/STATUS.md` 1 · 2절).
      *   그 외      종류당 한 칸. 위력은 큰 쪽, 지속은 긴 쪽으로 갱신.
      */
     const applyStatus = (
@@ -573,7 +573,7 @@ export class CardBattle {
     const buffPower = (p: number, kind: StatusKind): number => this.statusOf(p, kind)?.power ?? 0
 
     /**
-     * **중독 정산**(2026-11-12 개편 · `docs/redesign/STATUS.md` 1절) — 이 진영이 **행동 한 번**
+     * **중독 정산**(2026-11-12 개편 · `docs/rules/STATUS.md` 1절) — 이 진영이 **행동 한 번**
      * 했다. `moved`는 실제로 옮겨진 칸 수이고 **0이면 안 아프다**(벽 · 바위 · 속박에 막힌
      * 이동 · 처박혀 0칸). 몇 칸이든 한 번 = **지금 겹 × `POISON_TICK_DAMAGE`**.
      * 보호막 · 경감을 관통하고 KO도 낼 수 있다.

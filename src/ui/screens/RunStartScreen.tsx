@@ -5,7 +5,7 @@
 // 시작 덱은 **기본 카드 9장**(공용 6 + 직업 기본기 3, 2026-08-04)이고 강한 직업 카드는
 // 런 중 보상으로 번다(2026-07-31). 예전엔 직업 카드 1장을 골라 시작했는데, 런에선 큰
 // 카드가 항상 유리해서 "시그니처로 시작"이 정답이 되고 나머지는 함정이었으며, 그 시작이
-// 1~6층을 무료로 만들었다. 상세는 docs/ROGUELIKE.md ⑪.
+// 1~6층을 무료로 만들었다. 상세는 docs/rules/RUN.md ⑪.
 import { useMemo, useState } from 'react'
 import { sheetFor } from '../../art/sprites'
 import { ROSTER } from '../../data/roster'
@@ -185,7 +185,7 @@ export function RunStartScreen({
   // ---- 1단계: 영웅 ---------------------------------------------------------
   // 디자인 `Select`(2026-11-09): 고른 영웅의 일러스트가 **화면 배경**이 된다(`public/redesign/heroes/
   // bg-*.png` — 원본은 왼쪽에 그대로, 오른쪽은 이어 그리고 흐리게. 만드는 스크립트
-  // `docs/redesign/tools/hero-bg/build.py`). 위쪽 탭은 같은 그림에서 얼굴만 잘라 보여 준다.
+  // `docs/design/tools/hero-bg/build.py`). 위쪽 탭은 같은 그림에서 얼굴만 잘라 보여 준다.
   const pick = (id: string) => {
     if (id === charId) return
     setPrevId(charId)

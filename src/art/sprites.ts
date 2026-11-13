@@ -114,7 +114,7 @@ const sheet = (id: string, over: Partial<SheetDef> = {}): SheetDef => ({
  */
 export const SHEETS: Record<string, SheetDef> = {
   // --- 2026-11 리디자인 시트 — `public/redesign/sprites/<id>/` --------------------
-  // 값은 `docs/redesign/sprites-v2.ts`(meta.json에서 자동 생성)를 옮겨 왔다.
+  // 값은 `docs/design/sprites-v2.ts`(meta.json에서 자동 생성)를 옮겨 왔다.
   // hero — 대체 대상: warrior
   warrior: { id: 'redesign/sprites/cairn', frameW: 96, frameH: 64, scale: 3, footY: 62, anchorX: 36, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 75, loop: true }, back: { frames: 6, frameMs: 95, loop: true }, attack1: { frames: 6, frameMs: 62, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 64, loop: false, impactFrame: 2 }, attack3: { frames: 8, frameMs: 66, loop: false, impactFrame: 4 }, block: { frames: 4, frameMs: 80, loop: false }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 100, loop: false } } },
@@ -126,7 +126,7 @@ export const SHEETS: Record<string, SheetDef> = {
     clips: { idle: { frames: 8, frameMs: 120, loop: true }, run: { frames: 8, frameMs: 78, loop: true }, back: { frames: 6, frameMs: 100, loop: true }, attack1: { frames: 6, frameMs: 70, loop: false, impactFrame: 2 }, attack2: { frames: 8, frameMs: 75, loop: false, impactFrame: 3 }, attack3: { frames: 7, frameMs: 70, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 95, loop: false }, death: { frames: 8, frameMs: 105, loop: false } } },
   // ⚠ 상인 마렌 시트(`trader`)는 지웠다(2026-11) — 상점 주인은 이제 스프라이트가 아니라
   //   그림 한 장이다(`public/redesign/cutscene/inn/inn-bg.png` — ShopScreen 배경).
-  // 이벤트 전용 — 항아리 뱀 · 고블린 장사꾼 3단계(`docs/redesign/sprites-v2.ts`).
+  // 이벤트 전용 — 항아리 뱀 · 고블린 장사꾼 3단계(`docs/design/sprites-v2.ts`).
   // ⚠ 고블린의 `haggle`·`cheer`는 상점 화면 전용 클립이다.
   snake: { id: 'redesign/sprites/snake', frameW: 72, frameH: 40, scale: 3, footY: 40, anchorX: 34, facesRight: true,
     clips: { idle: { frames: 6, frameMs: 120, loop: true }, run: { frames: 6, frameMs: 80, loop: true }, back: { frames: 6, frameMs: 90, loop: true }, attack1: { frames: 6, frameMs: 65, loop: false, impactFrame: 2 }, attack2: { frames: 6, frameMs: 75, loop: false, impactFrame: 3 }, hurt: { frames: 3, frameMs: 90, loop: false }, death: { frames: 7, frameMs: 100, loop: false } } },

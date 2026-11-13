@@ -1,5 +1,5 @@
 // 유물 아이콘 아틀라스 좌표 — `public/redesign/ui/relics/index.json`·`foes.json`에서 뽑았다.
-// 그림은 100종이고 유물도 그에 맞춰 합쳤다(2026-11-12 · `docs/redesign/RELICS_100.md`). 이벤트 사슬 유물은 아직 그림이 없다(이모지).
+// 그림은 100종이고 유물도 그에 맞춰 합쳤다(2026-11-12 · `docs/rules/RELICS_100.md`). 이벤트 사슬 유물은 아직 그림이 없다(이모지).
 // 뒤 글자 = 발동 방식: p 발동 · s 상시 · k 조건 · u 런 효과 · o 첫 라운드 · c 누적 · l 횟수.
 export type RelicBehavior = 'p' | 's' | 'k' | 'u' | 'o' | 'c' | 'l'
 

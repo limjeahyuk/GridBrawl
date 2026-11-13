@@ -203,10 +203,10 @@
 .artbg--warrior { background-image: url('/redesign/heroes/bg-cairn.png'); }
 .artbg--archer { background-image: url('/redesign/heroes/bg-sable.png'); }
 .artbg--mage { background-image: url('/redesign/heroes/bg-dirge.png'); }
-/* 여관(상점) — 마렌은 왼쪽 그림 그대로, 오른쪽은 이어 그리고 흐리게(`docs/redesign/tools/inn-bg/build.py`). */
+/* 여관(상점) — 마렌은 왼쪽 그림 그대로, 오른쪽은 이어 그리고 흐리게(`docs/design/tools/inn-bg/build.py`). */
 .artbg--inn { background-image: url('/redesign/cutscene/inn/inn-bg.png'); }
 /* 대장간 · 고블린 상점 단계별 · 그림 있는 ? 이벤트(2026-11-12, 디자인 `Blacksmith` · `GoblinTiers` · `EventScenes`).
-   전부 1280×720 한 장 — 인물은 왼쪽, 오른쪽은 이어 그리고 흐리게(`docs/redesign/tools/event-bg/build.py`). */
+   전부 1280×720 한 장 — 인물은 왼쪽, 오른쪽은 이어 그리고 흐리게(`docs/design/tools/event-bg/build.py`). */
 .artbg--smith { background-image: url('/redesign/cutscene/smith/smith-bg.png'); }
 .artbg--goblin-poor { background-image: url('/redesign/cutscene/goblin/bg-poor.png'); }
 .artbg--goblin-mid { background-image: url('/redesign/cutscene/goblin/bg-mid.png'); }
