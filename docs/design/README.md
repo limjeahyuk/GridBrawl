@@ -65,4 +65,5 @@ docs/design/
 | `tools/icon/build.py` | 웹 아이콘 마스터(`master-1024.png`, 거래상 얼굴) — `npm run icon`이 줄인다 |
 | `tools/relic_icons.py [outdir]` | 유물 아이콘 아틀라스(`../relics-source.json` · `../relics-100.json` → `out/ui/relics/` → `public/redesign/ui/relics/`). 글리프는 `legend_glyphs.py` · 새 유물(알 · 영양가루 · 깃털 — 지금 이모지)을 그릴 때 쓴다 |
 | `tools/status-icons/status_icons.py` | 상태이상 · 버프 아이콘 16×16 + 숫자(`StatusIcons` 시안) |
+| `tools/seal/seal.py` | 봉인 덮개 48×53 ×3(기절 사슬 · 빙결 얼음 · 속박 덩굴) + 자물쇠 14×16 ×3 → `public/redesign/ui/status/seal.png` · `lock.png`(`Seal.dc.html`) |
 

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>봉인 — 카드 칸</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.seal{position:absolute;left:50%;top:50%;width:96px;height:106px;margin:-53px 0 0 -48px;background-image:url(/redesign/ui/status/seal.png);background-size:288px 106px;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
+.s-stun{background-position:0 0}.s-frozen{background-position:-96px 0}.s-bind{background-position:-192px 0}
+.lk{width:28px;height:32px;background-image:url(/redesign/ui/status/lock.png);background-size:84px 32px;background-repeat:no-repeat;image-rendering:pixelated;flex-shrink:0}
+.lk-stun{background-position:0 0}.lk-frozen{background-position:-28px 0}.lk-bind{background-position:-56px 0}
+.st{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/status/tiles.png);background-size:320px 32px;background-repeat:no-repeat;image-rendering:pixelated}
+.bdg{position:absolute;right:-8px;bottom:-6px;display:flex}
+.dg{display:block;width:10px;height:14px;background-image:url(/redesign/ui/status/digits.png);background-size:110px 14px;background-repeat:no-repeat;image-rendering:pixelated}
+.dg+.dg{margin-left:-2px}
+.boot{background-image:url(/redesign/ui/move/boot.png);background-size:28px 28px;width:28px;height:28px;image-rendering:pixelated;flex-shrink:0}
+.card{position:relative;width:96px;height:106px;box-sizing:border-box;padding:6px;display:flex;flex-direction:column;gap:5px;font:inherit;color:#efe9f5;text-align:left;cursor:pointer}
+.card:hover{transform:translateY(-3px)}
+.card.off{cursor:not-allowed}.card.off:hover{transform:none}
+.dim{position:absolute;inset:0;background:rgba(8,6,14,0.55);pointer-events:none}
+.bd{position:relative;width:112px;height:120px;flex-shrink:0;cursor:pointer;padding:0;border:0;background:none;font:inherit;color:#efe9f5}
+.bd .b2,.bd .b1{position:absolute;left:0;right:0;height:110px;background:#10203a;border:2px solid #2a4a78;box-sizing:border-box}
+.bd .b2{top:0;transform:translateX(4px)}
+.bd .b1{top:5px;transform:translateX(2px)}
+.bd .f{position:absolute;left:0;right:0;bottom:0;height:110px;box-sizing:border-box;padding:6px 7px;background:#14243a;border:2px solid #f4d470;box-shadow:inset 0 0 0 2px #0a1424;display:flex;flex-direction:column;gap:5px;text-align:left}
+.tab{padding:6px 12px;font:inherit;font-size:14px;background:#1a1626;border:2px solid #4a4058;color:#c9c2d6;cursor:pointer}
+.tab-on{background:#f4d470;border-color:#f4d470;color:#1d1408}
+.fbtn{height:30px;padding:0 10px;background:#1a1626;border:2px solid #4a4058;color:#c9c2d6;font:inherit;font-size:12px;cursor:pointer}
+.shake{animation:shake .35s ease-in-out 1}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{filter:brightness(1.35)}}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1000px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; position: relative">
+  <header style="position: absolute; left: 24px; right: 24px; top: 20px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; gap: 14px; align-items: baseline">
+      <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 34px; color: #fff6dc">봉인 — 카드와 카드 칸</h1>
+      <span style="font-size: 14px; color: #b9b1c9">기절 · 빙결 = 그 턴 칸이 통째로 잠긴다 · 속박 = 그 턴엔 이동만 못 넣는다. 아래 카드 · 이동 묶음을 눌러 칸에 넣어 본다(칸의 카드를 누르면 뺀다).</span>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5"><button type="button" class="tab {{t.cls}}" onClick="{{t.onTap}}">{{t.label}}</button></sc-for>
+      <button type="button" class="fbtn" style="margin-left: auto" onClick="{{reset}}">칸 비우기</button>
+    </div>
+  </header>
+
+  <!-- 전투 화면 아랫부분 그대로 -->
+  <section aria-label="카드 고르기 — 봉인" style="position: absolute; left: 24px; top: 124px; width: 1232px; height: 300px; overflow: hidden; background: linear-gradient(180deg, #4a8a3a 0%, #2e5e24 46%, #1a1626 46%, #120f1a 100%); border: 3px solid #0a0810">
+    <div style="position: absolute; left: 16px; top: 14px; display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: rgba(18,15,26,0.88); border: 2px solid #0a0810">
+      <span style="font-family: 'Silkscreen', monospace; font-size: 13px; color: #fff6dc">CAIRN</span>
+      <sc-for list="{{icons}}" as="s" hint-placeholder-count="2">
+        <span class="st" role="img" aria-label="{{s.aria}}" style="background-position: {{s.pos}}"><span class="bdg" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="background-position: {{s.d}}"></i></span></span>
+      </sc-for>
+      <span style="font-size: 12px; color: #c9c2d6; margin-left: 6px">{{who}}</span>
+    </div>
+    <div class="{{msgFx}}" style="position: absolute; right: 16px; top: 18px; padding: 6px 12px; background: rgba(18,15,26,0.88); border: 2px solid {{msgEdge}}; font-size: 13px; color: {{msgFg}}">{{msg}}</div>
+
+    <footer style="position: absolute; left: 0; right: 0; bottom: 0; height: 150px; display: flex; align-items: flex-end; gap: 16px; padding: 0 16px 14px; box-sizing: border-box">
+      <div style="display: flex; gap: 8px; padding: 8px; background: #120f1a; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #f4d470">
+        <sc-for list="{{slots}}" as="k" hint-placeholder-count="3">
+          <button type="button" class="card {{k.off}}" aria-label="{{k.aria}}" onClick="{{k.onTap}}" style="background: {{k.bg}}; border: 2px {{k.bs}} {{k.edge}}">
+            <span style="position: absolute; left: -2px; top: -12px; font-family: 'Silkscreen', monospace; font-size: 12px; padding: 1px 6px; background: {{k.tagBg}}; color: #1d1408; z-index: 2">{{k.order}}</span>
+            <span style="display: {{k.dEmpty}}; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; color: #6a6478; font-size: 12px"><span style="font-family: 'Silkscreen', monospace; font-size: 24px">+</span>{{k.emptyTxt}}</span>
+            <span style="display: {{k.dMove}}; flex-direction: column; align-items: center; gap: 2px; height: 100%">
+              <span style="align-self: stretch; display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 10px; margin-top: 4px"><span style="color: #8ad0ff">MOVE</span><span style="color: #b9b1c9">EN0</span></span>
+              <span style="font-size: 32px; line-height: 40px; font-weight: 700; color: #8ad0ff">→</span>
+              <span style="margin-top: auto; font-family: 'Do Hyeon', sans-serif; font-size: 15px">오른쪽</span>
+            </span>
+            <span style="display: {{k.dCard}}; flex-direction: column; gap: 5px; height: 100%">
+              <span style="display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 10px; margin-top: 4px"><span style="color: #ff9a9a">{{k.dm}}</span><span style="color: #8ad0ff">{{k.en}}</span></span>
+              <span style="display: grid; grid-template-columns: repeat(3, 12px); gap: 2px; justify-content: center"><sc-for list="{{k.grid}}" as="g" hint-placeholder-count="9"><span style="width: 12px; height: 12px; background: {{g}}"></span></sc-for></span>
+              <span style="font-family: 'Do Hyeon', sans-serif; font-size: 15px; text-align: center; margin-top: auto">{{k.name}}</span>
+            </span>
+            <span class="dim" style="display: {{k.dimD}}"></span>
+            <span class="seal {{k.seal}}" style="display: {{k.sealD}}"></span>
+            <span class="lk lk-bind" aria-hidden="true" style="display: {{k.miniD}}; position: absolute; right: -10px; top: -14px; z-index: 2"></span>
+            <span style="display: {{k.barD}}; position: absolute; left: -2px; right: -2px; bottom: -2px; padding: 2px 0; text-align: center; font-family: 'Do Hyeon', sans-serif; font-size: 15px; background: {{k.barBg}}; color: {{k.barFg}}; border-top: 2px solid #0a0810">{{k.bar}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <button type="button" class="bd {{bundle.fx}}" aria-label="{{bundle.aria}}" onClick="{{bundle.onTap}}">
+        <span class="b2"></span><span class="b1"></span>
+        <span class="f" style="border-color: {{bundle.edge}}">
+          <span style="display: flex; align-items: center; gap: 4px"><span class="boot" aria-hidden="true"></span><span style="display: flex; flex-direction: column; line-height: 1.05"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; color: #8ad0ff">MOVE</span><span style="font-family: 'Silkscreen', monospace; font-size: 15px; color: #fff6dc">×7</span></span></span>
+          <span style="margin-top: auto; font-size: 11px; color: {{bundle.fg}}; text-align: center">{{bundle.hint}}</span>
+        </span>
+        <span class="dim" style="display: {{bundle.dimD}}; bottom: 0; top: auto; height: 110px"></span>
+        <span class="seal {{bundle.seal}}" style="display: {{bundle.sealD}}; top: auto; bottom: 2px; margin-top: 0"></span>
+        <span style="display: {{bundle.sealD}}; position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 0; text-align: center; font-family: 'Do Hyeon', sans-serif; font-size: 14px; background: {{bundle.barBg}}; color: {{bundle.fg}}; border-top: 2px solid #0a0810">{{bundle.hint}}</span>
+      </button>
+
+      <div style="display: flex; gap: 8px; flex-grow: 1">
+        <sc-for list="{{hand}}" as="k" hint-placeholder-count="5">
+          <button type="button" class="card {{k.off}}" aria-label="{{k.aria}}" onClick="{{k.onTap}}" style="background: {{k.bg}}; border: 2px solid {{k.edge}}; opacity: {{k.op}}">
+            <span style="display: flex; justify-content: space-between; font-family: 'Silkscreen', monospace; font-size: 10px"><span style="color: #ff9a9a">{{k.dm}}</span><span style="color: #8ad0ff">{{k.en}}</span></span>
+            <span style="display: grid; grid-template-columns: repeat(3, 12px); gap: 2px; justify-content: center"><sc-for list="{{k.grid}}" as="g" hint-placeholder-count="9"><span style="width: 12px; height: 12px; background: {{g}}"></span></sc-for></span>
+            <span style="font-family: 'Do Hyeon', sans-serif; font-size: 15px; text-align: center; margin-top: auto">{{k.name}}</span>
+            <span class="dim" style="display: {{k.dimD}}"></span>
+            <span class="seal {{k.seal}}" style="display: {{k.sealD}}"></span>
+          </button>
+        </sc-for>
+      </div>
+      <button type="button" style="height: 64px; padding: 0 22px; background: {{go.bg}}; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 24px; cursor: pointer; white-space: nowrap">{{go.label}}</button>
+    </footer>
+  </section>
+
+  <!-- 규칙 카드 -->
+  <section aria-label="봉인 세 가지" style="position: absolute; left: 24px; top: 446px; width: 1232px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+    <sc-for list="{{legend}}" as="l" hint-placeholder-count="3">
+      <div style="padding: 14px; background: #1a1626; border: 2px solid #3a3150; border-top: 4px solid {{l.col}}; display: flex; gap: 14px">
+        <div style="position: relative; width: 96px; height: 106px; flex-shrink: 0; background: {{l.slotBg}}; border: 2px {{l.bs}} {{l.col}}">
+          <span class="dim" style="display: {{l.dimD}}"></span>
+          <span class="seal {{l.seal}}"></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; gap: 8px; align-items: center"><span class="st" style="background-position: {{l.pos}}"></span><b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px">{{l.name}}</b><span style="font-size: 12px; color: {{l.col}}">{{l.what}}</span></div>
+          <span style="font-size: 12px; line-height: 1.6; color: #c9c2d6">{{l.body}}</span>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <section style="position: absolute; left: 24px; top: 640px; width: 1232px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px">
+    <div style="padding: 14px 16px; background: #1a1626; border: 2px solid #3a3150; font-size: 13px; line-height: 1.75; color: #c9c2d6">
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 20px; color: #fff6dc">어디에 무엇이 붙나</b><br>
+      · <b style="color: #ffd84a">카드 칸(1·2·3)</b> — 기절 · 빙결 턴의 칸은 <b style="color: #efe9f5">어둡게 + 봉인 그림</b>, 아래 띠에 이름. 칸을 눌러도 안 들어간다(흔들림).<br>
+      · <b style="color: #8ad04a">속박 턴의 칸</b> — 칸은 열려 있고 <b style="color: #efe9f5">초록 점선 + 오른쪽 위 덩굴 자물쇠</b>, 빈 칸엔 "이동 ✕". 공격 · 수비 카드는 들어간다.<br>
+      · <b style="color: #8ad0ff">이동 묶음</b> — 다음에 들어갈 칸이 속박 · 기절 · 빙결이면 그 봉인 그림으로 덮이고 "이동 못 함". 이동을 넣을 수 있는 칸이 뒤에 있으면 그 칸 번호를 가리킨다.<br>
+      · <b style="color: #ff9a9a">손패</b> — 카드를 넣을 칸이 하나도 안 남으면(기절 · 빙결로 다 잠김) 손패 전부가 봉인 그림으로 덮인다. 확정 버튼은 <b style="color: #efe9f5">"그냥 넘긴다"</b>.<br>
+      · 실행 중에도 같은 모양 — 잠긴 칸 차례가 오면 그 칸이 반짝이며 아무것도 안 나간다.
+    </div>
+    <div style="padding: 14px 16px; background: #1a1626; border: 2px solid #3a3150; font-size: 13px; line-height: 1.75; color: #c9c2d6">
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 20px; color: #fff6dc">그림</b><br>
+      <b style="color: #efe9f5">seal.png</b> 144×53 — 기절(사슬) · 빙결(얼음) · 속박(가시덩굴) 순, 한 칸 48×53을 <b style="color: #efe9f5">×2</b>로 카드 칸(96×106) 위에 덮는다.<br>
+      <b style="color: #efe9f5">lock.png</b> 42×16 — 같은 순서의 자물쇠 14×16. 속박 칸 구석 표시에 쓴다(×2 = 28×32).<br>
+      빙결 그림은 반투명 얼음이라 밑의 칸이 비친다. 어둡게 하는 막은 CSS(검정 55%).
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sc: 4, slots: [null, null, null], flash: -1, msg: '', k: 0 };
+  }
+  renderVals() {
+    const st = this.state;
+    // 시나리오: 이번 라운드 세 턴(칸)의 봉인
+    const SC = [
+      ['기절 1', ['stun', null, null], [['stunned', 1]]],
+      ['빙결 2', ['frozen', 'frozen', null], [['frozen', 2]]],
+      ['속박 3', ['bind', 'bind', 'bind'], [['bind', 3]]],
+      ['기절 3 (다 잠김)', ['stun', 'stun', 'stun'], [['stunned', 3]]],
+      ['속박 3 + 기절 1', ['stun', 'bind', 'bind'], [['bind', 3], ['stunned', 1]]],
+    ];
+    const [, locks, icons] = SC[st.sc];
+    const NAME = { stun: '기절', frozen: '빙결', bind: '속박' };
+    const COL = { stun: '#ffd84a', frozen: '#8ad8ff', bind: '#8ad04a' };
+    const IDX = { bind: 3, stunned: 4, frozen: 5 };
+    const E = '#2a2438', S = '#f4d470', H = '#e0485a', G = '#7fd6c8';
+    const both1 = [E, E, E, H, S, H, E, E, E], bar1 = [H, E, H, H, S, H, H, E, H];
+    const CARDS = [
+      { id: 'c1', name: '방패 밀치기', dm: 'DM14', en: 'EN13', grid: bar1, bg: '#2a1620', edge: '#8a3040' },
+      { id: 'c2', name: '대지 가르기', dm: 'DM14', en: 'EN12', grid: bar1, bg: '#2a1620', edge: '#8a3040' },
+      { id: 'c3', name: '가드', dm: 'BLOCK', en: 'EN6', grid: [E, E, E, E, G, E, E, E, E], bg: '#122a2a', edge: '#3c9c98' },
+      { id: 'c4', name: '응보의 일격', dm: 'DM10', en: 'EN9', grid: both1, bg: '#2a1620', edge: '#8a3040' },
+      { id: 'c5', name: '수혈', dm: 'HP+13', en: 'EN7', grid: [E, E, E, E, '#9ae06a', E, E, E, E], bg: '#18281a', edge: '#6ab83a' },
+    ];
+    const full = (l) => l === 'stun' || l === 'frozen';
+    const nextFor = (move) => st.slots.findIndex((c, i) => !c && !full(locks[i]) && !(move && locks[i] === 'bind'));
+    const firstEmpty = st.slots.findIndex((c, i) => !c && !full(locks[i]));
+    const say = (msg, flash = -1) => this.setState({ msg, flash, k: st.k + 1 });
+    const place = (i, card) => { const s = st.slots.slice(); s[i] = card; this.setState({ slots: s, msg: '', flash: -1 }); };
+
+    const slots = locks.map((l, i) => {
+      const c = st.slots[i];
+      const sealed = full(l);
+      const isMove = c && c.move;
+      return {
+        order: String(i + 1), off: sealed ? 'off' : '', aria: sealed ? `${i + 1}번 칸 — ${NAME[l]}로 잠김` : l === 'bind' ? `${i + 1}번 칸 — 속박: 이동 못 넣음` : `${i + 1}번 칸`,
+        bg: sealed ? '#0e0c14' : c ? (isMove ? '#14243a' : c.bg) : '#120f1a',
+        edge: sealed ? COL[l] : l === 'bind' ? '#8ad04a' : c ? (isMove ? '#5aa8ff' : c.edge) : '#4a4058',
+        bs: !c && (l === 'bind' || !l) ? 'dashed' : 'solid',
+        tagBg: sealed ? COL[l] : '#f4d470',
+        dEmpty: !c && !sealed ? 'flex' : 'none', emptyTxt: l === 'bind' ? '이동 ✕' : '',
+        dMove: isMove ? 'flex' : 'none', dCard: c && !isMove ? 'flex' : 'none',
+        name: c ? c.name : '', dm: c ? c.dm : '', en: c ? c.en : '', grid: c && !isMove ? c.grid : [],
+        dimD: sealed ? 'block' : 'none', seal: sealed ? 's-' + l : '', sealD: sealed ? 'block' : 'none',
+        miniD: l === 'bind' ? 'block' : 'none',
+        barD: sealed ? 'block' : 'none', bar: sealed ? NAME[l] : '', barBg: l === 'frozen' ? '#1e4a6a' : '#5a3a08', barFg: COL[l] || '#fff',
+        onTap: () => {
+          if (sealed) return say(`${i + 1}번 칸은 ${NAME[l]} — 이 턴엔 아무것도 못 낸다`, i);
+          if (c) { const s = st.slots.slice(); s[i] = null; this.setState({ slots: s, msg: '' }); }
+        },
+      };
+    });
+
+    const mi = nextFor(true);
+    // 이동을 넣을 칸이 없을 때: 빈 속박 칸이 남아 있으면 속박 봉인, 세 칸이 다 기절 · 빙결이면 그 봉인, 그냥 찼으면 봉인 없음
+    const emptyBind = locks.some((l, i) => l === 'bind' && !st.slots[i]);
+    const blockKind = mi >= 0 ? '' : emptyBind ? 'bind' : locks.every(full) ? locks[0] : '';
+    const bundleSealed = mi < 0 && !!blockKind;
+    const bundle = {
+      edge: bundleSealed ? COL[blockKind] : '#f4d470',
+      hint: mi >= 0 ? `${mi + 1}번 칸에 →` : bundleSealed ? `${NAME[blockKind]} · 이동 못 함` : '칸이 다 찼다',
+      fg: bundleSealed ? COL[blockKind] : '#f4d470', barBg: blockKind === 'bind' ? '#1e3a12' : blockKind === 'frozen' ? '#1e4a6a' : '#5a3a08',
+      seal: bundleSealed ? 's-' + blockKind : '', sealD: bundleSealed ? 'block' : 'none', dimD: bundleSealed ? 'block' : 'none',
+      fx: st.flash === 9 ? 'shake' : '',
+      aria: bundleSealed ? `이동 묶음 — ${NAME[blockKind]}로 이동 못 함` : '이동 카드 묶음 7장',
+      onTap: () => {
+        if (mi < 0) return say(bundleSealed ? (blockKind === 'bind' ? '속박 — 이 턴들엔 이동만 못 넣는다. 공격 · 수비는 된다' : `${NAME[blockKind]} — 남은 칸이 다 잠겼다`) : '칸이 다 찼다', 9);
+        place(mi, { move: true });
+      },
+    };
+
+    const handSealKind = locks.every(full) ? locks[0] : '';
+    const used = st.slots.filter(Boolean).map((c) => c.id);
+    const hand = CARDS.filter((c) => !used.includes(c.id)).map((c) => {
+      const sealed = !!handSealKind;
+      return { ...c, off: sealed || firstEmpty < 0 ? 'off' : '', op: !sealed && firstEmpty < 0 ? 0.55 : 1,
+        dimD: sealed ? 'block' : 'none', seal: sealed ? 's-' + handSealKind : '', sealD: sealed ? 'block' : 'none',
+        aria: sealed ? `${c.name} — ${NAME[handSealKind]}로 못 냄` : c.name,
+        onTap: () => { if (sealed) return say(`${NAME[handSealKind]} — 이번 라운드엔 카드를 낼 수 없다`); if (firstEmpty >= 0) place(firstEmpty, c); } };
+    });
+
+    const icons2 = icons.map(([id, n]) => ({ pos: `${-32 * IDX[id]}px 0`, bdD: n >= 2 ? 'flex' : 'none', d: `${-10 * n}px 0`, aria: `${NAME[id === 'stunned' ? 'stun' : id]} ${n}턴` }));
+    const who = icons.map(([id, n]) => `${NAME[id === 'stunned' ? 'stun' : id]} ${n}턴`).join(' · ') + ' — 이번 라운드 칸이 아래처럼';
+    const flashMsg = st.msg;
+    return {
+      tabs: SC.map((s, i) => ({ label: s[0], cls: st.sc === i ? 'tab-on' : '', onTap: () => this.setState({ sc: i, slots: [null, null, null], msg: '', flash: -1 }) })),
+      reset: () => this.setState({ slots: [null, null, null], msg: '', flash: -1 }),
+      icons: icons2, who, slots, bundle, hand,
+      msg: flashMsg || (handSealKind ? '세 턴이 다 잠겼다 — 이번 라운드는 그냥 넘긴다' : '카드를 눌러 빈 칸에 넣는다'),
+      msgEdge: flashMsg || handSealKind ? '#ff8a8a' : '#4a4058', msgFg: flashMsg || handSealKind ? '#ffc0c0' : '#c9c2d6', msgFx: flashMsg ? (st.k % 2 ? 'shake' : 'pulse') : '',
+      go: handSealKind ? { label: '그냥 넘긴다 ▶', bg: '#c9c2d6' } : { label: '확정 ▶', bg: '#f4d470' },
+      legend: [
+        { name: '기절', what: '그 턴 칸 잠김', col: '#ffd84a', seal: 's-stun', pos: '-128px 0', slotBg: '#0e0c14', bs: 'solid', dimD: 'block',
+          body: '사슬 X + 금빛 자물쇠. 그 턴 칸엔 아무 카드도 못 넣는다(이동 · 공격 · 수비 전부). 다음 라운드로 넘어간 턴도 고를 때 잠겨 있다.' },
+        { name: '빙결', what: '그 턴 칸 잠김', col: '#8ad8ff', seal: 's-frozen', pos: '-160px 0', slotBg: '#0e0c14', bs: 'solid', dimD: 'block',
+          body: '칸이 얼음에 덮이고 얼음 자물쇠. 기절과 같이 그 턴엔 아무것도 못 낸다. 맞아서 깨지면(+5) 그 칸의 얼음이 풀린다.' },
+        { name: '속박', what: '이동만 막힘', col: '#8ad04a', seal: 's-bind', pos: '-96px 0', slotBg: '#14243a', bs: 'dashed', dimD: 'none',
+          body: '가시덩굴 X + 덩굴 자물쇠는 이동 묶음 · 이동 카드에만 덮는다. 칸 자체는 초록 점선 + 구석 자물쇠로 열려 있고 공격 · 수비는 넣을 수 있다.' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
