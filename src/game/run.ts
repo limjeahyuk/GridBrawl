@@ -841,6 +841,8 @@ export const COMBAT_RELIC_ODDS: RarityOdds = [['common', 1]]
 export const ELITE_RELIC_ODDS: RarityOdds = [['rare', 0.94], ['epic', 0.06]]
 export const BOSS_RELIC_ODDS: RarityOdds = [['epic', 0.88], ['legend', 0.12]] // 영웅, 낮은 확률로 전설(2026-11-12 사용자)
 export const TREASURE_RELIC_ODDS: RarityOdds = [['common', 0.55], ['rare', 0.4], ['epic', 0.05]]
+/** 보물 상자가 비어 있을 확률(2026-11-13 사용자 지정) — 비면 아무것도 없다. */
+export const TREASURE_EMPTY_CHANCE = 0.05
 export const BOSS_RELIC_OPTIONS = 3
 export function rollRelicOf(run: RunState, odds: RarityOdds, exclude: string[] = []): string | undefined {
   const avail = availableRelicDefs(run).filter((r) => !exclude.includes(r.id))
@@ -851,12 +853,6 @@ export function rollRelicOf(run: RunState, odds: RarityOdds, exclude: string[] =
   if (same.length) return pick(same).id
   const near = avail.filter((x) => odds.some(([k]) => k === x.rarity))
   return (near.length ? pick(near) : pickWeightedRelic(avail, runDepth(run)))?.id
-}
-/** 무작위(미보유) 유물 하나를 준다. 다 가졌으면 소량 회복으로 대체. */
-export function grantRandomRelic(run: RunState): { run: RunState; relicId?: string } {
-  const relicId = rollRelicId(run)
-  if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
-  return { run: grantRelic(run, relicId), relicId }
 }
 /** 유물을 잃는다(이벤트 거래·쇠 두들기기). 최대 체력이 줄면 현재 체력도 그 안으로. */
 export function loseRelic(run: RunState, relicId: string): RunState {
@@ -1234,8 +1230,8 @@ export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; reli
 /** 보물 칸 — 유물 상자 하나. */
 export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
   // 지도 하나에 딱 하나 · 고르기 없이 하나(2026-11-12 사용자 지정).
-  // 받을 유물이 없으면(다 가졌을 때뿐 — 사실상 안 생긴다) 빈 상자 = 아무것도 안 준다(2026-11-13 사용자 지정).
-  const relicId = rollRelicOf(run, TREASURE_RELIC_ODDS)
+  // 빈 상자 5% = 아무것도 안 준다 · 대체 보상 없음(2026-11-13 사용자 지정). 받을 유물이 없을 때도 빈 상자.
+  const relicId = Math.random() < TREASURE_EMPTY_CHANCE ? undefined : rollRelicOf(run, TREASURE_RELIC_ODDS)
   if (!relicId) return { run }
   return { run: grantRelic(run, relicId), relicId }
 }

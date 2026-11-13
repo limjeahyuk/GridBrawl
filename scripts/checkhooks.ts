@@ -1337,8 +1337,19 @@ console.log('\n지도 — 막마다 20층 · 20층 보스 · 보물 하나 · �
   }
   check('엘리트 보상 — 좋은 카드 + 희귀(영웅) 유물 하나', eliteOk, true)
   const tr = new Set<string>()
-  for (let k = 0; k < 400; k++) tr.add(rar(openTreasure(startRun('warrior')).relicId!)!)
+  let trEmpty = 0
+  let trEmptyGain = 0
+  for (let k = 0; k < 2000; k++) {
+    const r0 = { ...startRun('warrior'), hp: 50 }
+    const o = openTreasure(r0)
+    if (!o.relicId) {
+      trEmpty++
+      if (o.run.hp !== r0.hp || o.run.gold !== r0.gold) trEmptyGain++
+    } else tr.add(rar(o.relicId)!)
+  }
   check('보물 — 일반 · 희귀 · (드물게) 영웅만', [...tr].every((x) => ['common', 'rare', 'epic'].includes(x)), true)
+  // 빈 상자 5%(`TREASURE_EMPTY_CHANCE`) — 비면 아무것도 없다(대체 보상 없음 · 2026-11-13).
+  check('보물 — 빈 상자 2~9% · 대체 보상 없음', trEmpty > 40 && trEmpty < 180 && trEmptyGain === 0, true)
   let combatRelicBad = 0
   for (let k = 0; k < 2000; k++)
     for (const r of rollRewards({ ...startRun('warrior'), map: [[{ type: 'combat' as const, monsterId: 'grunt', lane: 0, next: [] }]] }))
@@ -1700,7 +1711,10 @@ console.log('\n이벤트 사슬 — 정령 · 알 · 세계수 · 불사조')
   check('지도에 여관·대장간·보물 칸이 나온다', [inn > 0, smith > 0, treasure > 0], [true, true, true])
   check('지도에 옛 상점·휴식 칸이 없다', old, 0)
   const hurt = { ...startRun('warrior'), hp: 10, gold: 200 }
-  check('보물 — 유물 하나', openTreasure(hurt).run.relicIds.length, hurt.relicIds.length + 1)
+  // 5%는 빈 상자라 유물이 나온 상자를 고른다.
+  let opened = openTreasure(hurt)
+  for (let k = 0; k < 50 && !opened.relicId; k++) opened = openTreasure(hurt)
+  check('보물 — 유물 하나', opened.run.relicIds.length, hurt.relicIds.length + 1)
   // 여관 — 휴식 80G · 50%, 나가기 20%. 층은 화면이 대사를 보여 준 뒤 넘긴다.
   const rested = innRest(hurt)!
   check('여관 휴식 — 80골드 · 최대 체력 50%', [rested.gold, rested.hp, rested.floor], [200 - innRestPrice(hurt), 10 + Math.round(hurt.maxHp * 0.5), 1])

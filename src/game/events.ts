@@ -349,10 +349,10 @@ export function relicFromPool(run: RunState, pool: RelicPool, rng: () => number 
 }
 const relicName = (id: string) => RELIC_BY_ID[id]?.name ?? id
 
-/** 유물 하나를 받는 결과(다 가졌으면 소량 회복). */
+/** 유물 하나를 받는 결과. 받을 유물이 없으면 그걸로 끝 — 대체 보상 없음(2026-11-13 사용자 지정). */
 function gainRelic(run: RunState, st: EventState, pool: RelicPool, title: string, done = true, rng = Math.random): EventOutcome {
   const id = relicFromPool(run, pool, rng)
-  if (!id) return { run: healHp(run, 20), st, title, body: '더 받을 유물이 없다 — 대신 숨을 돌렸다.', big: 'HP +20', bigKind: 'gain', done }
+  if (!id) return { run, st, title, body: '더 받을 유물이 없다.', big: '—', bigKind: 'none', done }
   return { run: grantRelic(run, id), st, title, body: `「${relicName(id)}」을(를) 얻었다.`, relicId: id, done }
 }
 
@@ -384,7 +384,7 @@ export function resolveEventChoice(
       // 받는 카드는 **내준 카드와 같은 칸**(공격 / 보조 / 이동)에서 — 그래야 자리가 있다(덱 상한은 칸마다 5장).
       const slot = slotOfId(run, pickId!)
       const id = pickOne(cardRewardPool(gone).filter((x) => x !== pickId && slotOfId(run, x) === slot), rng)
-      if (!id) return { run: healHp(run, 20), st, title: '거래 무산', body: '마땅한 카드가 없다며 약을 건넸다.', big: 'HP +20', bigKind: 'gain', done: true }
+      if (!id) return { run, st, title: '거래 무산', body: '마땅한 카드가 없다며 고개를 저었다.', big: '—', bigKind: 'none', done: true }
       return { run: grantCard(gone, id).run, st, title: '거래 성사', body: '내 카드를 내주고 다른 카드를 받았다.', cardId: id, done: true }
     }
     case 'card-relic':
@@ -392,7 +392,7 @@ export function resolveEventChoice(
     case 'relic-relic': {
       const id = rollRelicId(run) // 내주는 유물은 아직 갖고 있으니 같은 걸 돌려받을 일이 없다
       const gone = loseRelic(run, pickId!)
-      if (!id) return { run: healHp(gone, 20), st, title: '거래 성사', body: '마땅한 물건이 없다며 약을 건넸다.', big: 'HP +20', bigKind: 'gain', done: true }
+      if (!id) return { run: gone, st, title: '거래 성사', body: '유물을 건넸지만 돌아온 건 없다.', big: '—', bigKind: 'none', done: true }
       return { run: grantRelic(gone, id), st, title: '거래 성사', body: `「${relicName(id)}」을(를) 받았다.`, relicId: id, done: true }
     }
     // --- 온천
