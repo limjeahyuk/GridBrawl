@@ -2476,6 +2476,21 @@ console.log('\n이동불가 후속 — 붕괴 파쇄 +5 · AI 풀린 첫 턴')
   }
   check('AI — 잠긴 슬롯은 비우고 풀린 첫 턴은 이동 · 수비(20/20)', ok, 20)
 }
+{
+  // AI: 넘어온 속박 2턴 → 1 · 2번 슬롯엔 이동이 없고, 3번(풀린 턴)엔 이동(또는 가드).
+  const b = battleWith({})
+  b.state.pos = [{ col: 0, row: 1 }, { col: 5, row: 1 }] // 멀리 — 평소라면 다가온다
+  b.state.status[1].push({ kind: 'bind', rounds: 2, power: 0, since: 0 })
+  let noMoveWhileBound = 0
+  let movedAfter = 0
+  for (let i = 0; i < 20; i++) {
+    const plan = decideAI(b.state, 1, getChar('warrior'), 'hard', COMMON_CARDS.concat(getChar('warrior').basics))
+    if (plan[0]?.kind !== 'move' && plan[1]?.kind !== 'move') noMoveWhileBound++
+    if (plan[2]?.kind === 'move' || plan[2]?.kind === 'guard') movedAfter++
+  }
+  check('AI — 속박 턴엔 이동하지 않는다(20/20)', noMoveWhileBound, 20)
+  check('AI — 속박이 끝난 턴엔 이동 · 수비(20/20)', movedAfter, 20)
+}
 
 // --- 붕괴 늦추기 · 안전지대(2026-11-10 사용자 지정) ------------------------------
 console.log('\n붕괴 — 가운데 4칸은 끝까지 · 엘리트·보스는 늦게')

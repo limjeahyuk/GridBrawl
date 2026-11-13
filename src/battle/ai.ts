@@ -253,7 +253,17 @@ export function decideAI(
   let energy = state.energy[self]
   const locked = new Set<string>() // cards spent this turn that can't repeat (cd >= 1)
   const cdLeft = (id: string) => state.cooldowns[self][id] ?? 0
-  const usable = (c: CardDef) => cdLeft(c.id) === 0 && !locked.has(c.id)
+  /**
+   * 넘어온 **속박** 턴 수(2026-11-13 사용자 지정) — 그 슬롯에선 이동 카드를 안 쓰고 수비 · 공격만 한다.
+   * 이동이 고르는 길은 전부 `usable`을 지나므로 여기 한 곳에서 막는다.
+   */
+  const boundAhead = Math.min(
+    3,
+    state.status[self].filter((e) => e.kind === 'bind').reduce((m, e) => Math.max(m, e.rounds), 0),
+  )
+  let curSlot = 0
+  const usable = (c: CardDef) =>
+    cdLeft(c.id) === 0 && !locked.has(c.id) && !(c.kind === 'move' && curSlot < boundAhead)
 
   // 사용 가능한 카드 풀 — 덱이 주어지면 그것만, 아니면 캐릭터 전체 카드
   const pool = availableCards ?? deckFor(char)
@@ -533,6 +543,7 @@ export function decideAI(
   )
 
   for (let slot = 0; slot < 3; slot++) {
+    curSlot = slot
     // 이 슬롯의 조준점. ⚠ 슬롯당 딱 한 번 — 커서를 밀기 때문이다.
     const foe = advanceFoe(slot)
     // 이 슬롯에 나에게 들어올 공격(hard가 계획을 읽었을 때만).
@@ -542,7 +553,8 @@ export function decideAI(
       plan.push(undefined as unknown as CardDef)
       continue
     }
-    if (lockedAhead > 0 && slot === lockedAhead) {
+    // 풀린 첫 턴 — 기절 · 빙결이 끝난 턴, 또는 속박이 끝난 턴(그땐 이동으로 피한다).
+    if ((lockedAhead > 0 && slot === lockedAhead) || (boundAhead > 0 && slot === boundAhead)) {
       // 읽은 공격이 있으면 그 사거리 밖으로, 없으면 줄을 바꾸는 쪽부터(대개 사격선을 벗어난다).
       const safe = (c: CardDef) =>
         c.kind === 'move' && usable(c) && goesSomewhere(c) && !intoTrap(c) && !isCollapsedCell(landingOf(c), cr)
