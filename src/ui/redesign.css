@@ -2812,7 +2812,7 @@
 @keyframes treasure-pop { from { transform: translateY(24px) scale(.6); opacity: 0; } }
 /* 아틀라스 한 칸 26px × 3 = 78 → × 5/3 = 130(원본의 정수 5배). */
 .treasure__relic { transform: scale(1.6667); filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.45)); pointer-events: none; }
-.treasure__big { font-family: var(--font-px); font-size: 54px; color: #b6ea6a; text-shadow: 3px 3px 0 #0a0604; }
+.treasure__big { font-family: var(--font-display); font-size: 54px; color: #b9b1c9; text-shadow: 3px 3px 0 #0a0604; }
 .treasure__hint { position: absolute; left: -90px; top: 82px; width: 180px; text-align: center; font-family: var(--font-display); font-size: 17px; color: #fff6dc; text-shadow: 2px 2px 0 #0a0604; animation: treasure-hint 1.4s ease-in-out .6s infinite both; pointer-events: none; }
 @keyframes treasure-hint { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 /* 툴팁 — 유물 오른쪽, 왼쪽 꼬리. 테두리 = 등급 색. */

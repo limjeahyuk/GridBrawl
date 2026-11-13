@@ -1,7 +1,7 @@
 // 보물 칸 = 유물 상자(2026-11 리디자인 · 시안 `Treasure.dc.html` 2026-11-13).
 // 닫힌 상자 그림 + 오른쪽 글 · 선택지(연다 / 그냥 지나간다). 열면 열린 상자(`box-in`) **한가운데**에 유물이
 // 떠오르고 오른쪽에 툴팁처럼 효과가 붙는다 — **유물을 누르면 바로 지도로**(사용자 지정 11-13).
-// 체력 · 골드 칩은 없다(유물만 얻는 곳 — 사용자 지정). 받을 유물이 없으면 체력 +20(`openTreasure`).
+// 체력 · 골드 칩은 없다(유물만 얻는 곳 — 사용자 지정). 받을 유물이 없으면 빈 상자 — 아무것도 안 준다(`openTreasure`).
 // ⚠ 시안의 미믹(`mimic.png`)은 규칙이 없어 아직 안 나온다(PROGRESS T17).
 import { useState } from 'react'
 import { getRelic } from '../../game/relics'
@@ -63,10 +63,10 @@ export function TreasureScreen({ run, onDone }: { run: RunState; onDone: (next: 
             onClick={() => onDone(advanceFloor(opened.run))}
             aria-label={relic ? `「${relic.name}」 받고 지도로` : '지도로'}
           >
-            {relic ? <RelicIcon id={relic.id} size={78} className="treasure__relic" /> : <span className="treasure__big">+20</span>}
+            {relic ? <RelicIcon id={relic.id} size={78} className="treasure__relic" /> : <span className="treasure__big">텅</span>}
           </button>
           <span className="treasure__hint">눌러서 지도로 ▶</span>
-          <div className="treasure__tip" style={{ ['--tipcol' as string]: relic ? RARITY_EDGE[relic.rarity] : '#6ab83a' }}>
+          <div className="treasure__tip" style={{ ['--tipcol' as string]: relic ? RARITY_EDGE[relic.rarity] : '#6a6478' }}>
             {relic ? (
               <>
                 <span className="relictip__name">
@@ -80,7 +80,7 @@ export function TreasureScreen({ run, onDone }: { run: RunState; onDone: (next: 
                 <span className="relictip__name">
                   <b>빈 상자</b>
                 </span>
-                <p>먼지만 풀썩인다. 대신 잠깐 숨을 돌렸다 — 체력 +20.</p>
+                <p>먼지만 풀썩인다. 아무것도 없었다.</p>
               </>
             )}
           </div>

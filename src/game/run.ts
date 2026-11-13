@@ -1234,8 +1234,9 @@ export const GOBLIN_LOOT: Record<GoblinTier, { gold: number; pick: boolean; reli
 /** 보물 칸 — 유물 상자 하나. */
 export function openTreasure(run: RunState): { run: RunState; relicId?: string } {
   // 지도 하나에 딱 하나 · 고르기 없이 하나(2026-11-12 사용자 지정).
+  // 받을 유물이 없으면(다 가졌을 때뿐 — 사실상 안 생긴다) 빈 상자 = 아무것도 안 준다(2026-11-13 사용자 지정).
   const relicId = rollRelicOf(run, TREASURE_RELIC_ODDS)
-  if (!relicId) return { run: { ...run, hp: Math.min(run.maxHp, run.hp + 20) } }
+  if (!relicId) return { run }
   return { run: grantRelic(run, relicId), relicId }
 }
 /**
