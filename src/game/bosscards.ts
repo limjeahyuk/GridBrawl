@@ -82,7 +82,7 @@ const ABYSS: CardDef[] = [
   atk({
     id: 'b-abyss-brand', name: '심연의 낙인', range: [...CROSS, ...both(2)], damage: 9, energyCost: 10,
     burn: 2, freeze: 1, fx: 'flame', accent: '#8f5fd4',
-    desc: '십자 네 칸 + 앞뒤 2칸째에 낙인을 새긴다. 화상 2겹 + 이 라운드 빙결.',
+    desc: '십자 네 칸 + 앞뒤 2칸째에 낙인을 새긴다. 화상 2겹 + 다음 턴 빙결.',
   }),
   atk({
     id: 'b-abyss-maw', name: '집어삼키는 아가리', range: [...RING, ...both(2)], damage: 21, energyCost: 23,
@@ -124,7 +124,7 @@ const SANCTUM: CardDef[] = [
   atk({
     id: 'b-ward-verdict', name: '최후의 심판', range: [...barBoth(1), ...both(2)], damage: 22, energyCost: 22,
     shatter: true, stun: 1, fx: 'quake', signature: true, accent: '#e6c05f',
-    desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째에 심판을 내린다. 보호막을 남김없이 부수고 이 라운드 동안 기절시킨다.',
+    desc: '시그니처. 앞뒤 세로 3줄 + 앞뒤 2칸째에 심판을 내린다. 보호막을 남김없이 부수고 다음 턴 기절시킨다.',
   }),
 ]
 

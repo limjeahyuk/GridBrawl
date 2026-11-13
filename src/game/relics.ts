@@ -174,12 +174,12 @@ const genericRelics: Relic[] = [
   // 대신 재료가 다 모이려면 희귀도 가중 추첨을 여러 번 통과해야 한다(⑫ 참고).
   {
     id: 'capacitor', name: '넘치는 술잔', icon: '🍷', rarity: 'epic',
-    desc: '기력을 100 쓸 때마다 상대를 그 라운드 기절시킨다.',
+    desc: '기력을 100 쓸 때마다 상대를 다음 턴 기절시킨다.',
     effect: { energyTriggers: [{ per: 100, stun: 1, label: '술잔 범람' }] },
   },
   {
     id: 'coil', name: '뇌운의 고리', icon: '⚡', rarity: 'legend',
-    desc: '기력을 60 쓸 때마다 상대를 그 라운드 기절시키고 13 고정 피해를 준다.',
+    desc: '기력을 60 쓸 때마다 상대를 다음 턴 기절시키고 13 고정 피해를 준다.',
     effect: { energyTriggers: [{ per: 60, stun: 1, damage: 13, label: '뇌격' }] },
   },
   {
@@ -234,7 +234,7 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'chainshock', name: '연쇄 벼락', icon: '⛈', rarity: 'epic',
-    desc: '전투당 세 번, 내 공격이 피해를 주면 상대를 그 라운드 기절시킨다.',
+    desc: '전투당 세 번, 내 공격이 피해를 주면 상대를 다음 턴 기절시킨다.',
     effect: { stunOnHit: 1, stunCap: 3 },
   },
   {
@@ -298,7 +298,7 @@ const genericRelics: Relic[] = [
   // 앞선 세트가 "같은 훅의 수치 차이"로 불어나 있었다(피해감소 5·6·10, 흡혈 5·6·9·12…).
   // 그래서 이번엔 **훅을 여섯 개 새로 파고**(`roster.ts` Passive 확장 훅) 그 위에
   // 세트를 짰다. 새 유물이 만드는 새 빌드는 이렇다:
-  //   빙결 부여   freezeOnHit  — 그 라운드를 통째로 지운다(단, 때리면 깨진다)
+  //   빙결 부여   freezeOnHit  — 다음 턴을 지운다(단, 때리면 깨진다)
   //   방벽 증폭   guardPowerPct— 수비 카드를 낸 턴만 보상. 버티기 연타 빌드
   //   치유 증폭   healPowerPct — 회복 카드만 키운다(regen은 안 탄다 — 2026-11-12). 장기전 빌드
   //   시작 기력   startEnergyBonus — 1턴부터 큰 카드. 짧고 굵게 끝내는 빌드
@@ -308,9 +308,9 @@ const genericRelics: Relic[] = [
   //   희석하므로, 평균 세기가 어긋나면 클리어율이 통째로 움직인다(실제로 측정했다).
 
   // --- 빙결 부여 계열 -------------------------------------------------------
-  { id: 'frostbite', name: '동상의 손', icon: '🧊', rarity: 'common', desc: '전투당 두 번, 피해를 주면 상대를 그 라운드 빙결.', effect: { freezeOnHit: 1 } },
-  { id: 'permafrost', name: '만년설', icon: '🏔', rarity: 'epic', desc: '전투당 네 번, 피해를 주면 상대를 그 라운드 빙결. 내 공격 피해 +3.', effect: { freezeOnHit: 1, freezeCap: 4, attackBonus: 3 } },
-  { id: 'rimeheart', name: '서릿발 심장', icon: '💙', rarity: 'legend', desc: '전투당 여섯 번, 피해를 주면 상대를 그 라운드 빙결. 상태이상 상대에게 피해 +6.', effect: { freezeOnHit: 1, freezeCap: 6, bonusVsAfflicted: 6 } },
+  { id: 'frostbite', name: '동상의 손', icon: '🧊', rarity: 'common', desc: '전투당 두 번, 피해를 주면 상대를 다음 턴 빙결.', effect: { freezeOnHit: 1 } },
+  { id: 'permafrost', name: '만년설', icon: '🏔', rarity: 'epic', desc: '전투당 네 번, 피해를 주면 상대를 다음 턴 빙결. 내 공격 피해 +3.', effect: { freezeOnHit: 1, freezeCap: 4, attackBonus: 3 } },
+  { id: 'rimeheart', name: '서릿발 심장', icon: '💙', rarity: 'legend', desc: '전투당 여섯 번, 피해를 주면 상대를 다음 턴 빙결. 상태이상 상대에게 피해 +6.', effect: { freezeOnHit: 1, freezeCap: 6, bonusVsAfflicted: 6 } },
   { id: 'coldsnap', name: '한파', icon: '🌨', rarity: 'rare', desc: '전투당 두 번 빙결을 걸고, 내가 거는 중독 위력 +25%.', effect: { freezeOnHit: 1, statusPowerPct: 25 } },
 
   // --- 방벽 증폭 계열 -------------------------------------------------------
@@ -350,8 +350,8 @@ const genericRelics: Relic[] = [
   { id: 'retribution', name: '응보의 문장', icon: '⚖️', rarity: 'legend', desc: '피격 시 11 반사, 받는 피해 -2.', effect: { thorns: 11, damageReduction: 2 } },
   { id: 'oxheart', name: '황소 심장', icon: '🐂', rarity: 'rare', desc: '최대 체력 +19.', effect: { maxHpBonus: 19 } },
   { id: 'colossus', name: '거상의 뼈', icon: '🦴', rarity: 'legend', desc: '최대 체력 +35, 받는 피해 -3. 대신 내 공격 피해 -2.', effect: { maxHpBonus: 35, damageReduction: 3, attackBonus: -2 } },
-  { id: 'punisher', name: '처벌자의 손', icon: '✊', rarity: 'rare', desc: '전투당 두 번, 피해를 주면 상대를 그 라운드 기절시킨다. 받는 피해 -2.', effect: { stunOnHit: 1, stunCap: 2, damageReduction: 2 } },
-  { id: 'oblivion', name: '망각의 종', icon: '🔔', rarity: 'legend', desc: '전투당 다섯 번, 피해를 주면 상대를 그 라운드 기절시킨다.', effect: { stunOnHit: 1, stunCap: 5 } },
+  { id: 'punisher', name: '처벌자의 손', icon: '✊', rarity: 'rare', desc: '전투당 두 번, 피해를 주면 상대를 다음 턴 기절시킨다. 받는 피해 -2.', effect: { stunOnHit: 1, stunCap: 2, damageReduction: 2 } },
+  { id: 'oblivion', name: '망각의 종', icon: '🔔', rarity: 'legend', desc: '전투당 다섯 번, 피해를 주면 상대를 다음 턴 기절시킨다.', effect: { stunOnHit: 1, stunCap: 5 } },
 
   // --- 누적 기력 트리거 보강 ------------------------------------------------
   {
@@ -386,10 +386,9 @@ const genericRelics: Relic[] = [
   // 그래서 **전부 `legend`**로만 낸다 — 층 1에서 ≈6%, 층 15에서 ≈17%로 뽑히고 상점가 230이라
   // "이걸 노리고 굴리는" 빌드가 되려면 깊이 살아남아야 한다.
   //
-  // ⚠ **봉인 연장(기절·빙결·속박)은 라운드를 넘어간다.** 무한 봉인이 안 되는 근거는
-  //   엔진 `applyStatus`의 **재부여 가드** 하나뿐이다 — 이미 걸린 봉인은 다시 안 걸리므로
-  //   "이번 라운드 + 다음 라운드"가 끝이고 그다음 라운드엔 반드시 일어난다. 그 가드를
-  //   지우면 이 유물들이 곧바로 "상대가 영원히 못 움직인다"가 된다.
+  // ⚠ **봉인 연장(기절·빙결·속박 — 값은 턴)은 라운드를 넘어간다**(2026-11-13). 무한 봉인이 안 되는
+  //   근거는 엔진 `applyStatus`의 겹치기 규칙 — 봉인 중엔 같은 것 · 낮은 것이 안 걸리고, 높은
+  //   것도 처음 걸린 봉인의 남은 길이를 못 넘는다. 그 규칙을 풀면 "영원히 못 움직인다"가 된다.
   // ⚠ **`ROSTER.passive`·몬스터에 이 훅을 넣지 말 것.** 유물에만 있는 한 규칙 자체가
   //   PvP에 존재하지 않아 `RULES_VERSION`을 안 올려도 된다(`npm run check`가 단정한다).
   {
@@ -399,8 +398,9 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'grasproot', name: '얽매는 뿌리', icon: '🕸', rarity: 'legend',
-    desc: '내가 거는 속박이 다음 라운드까지 이어진다. 받는 피해 -3.',
-    effect: { bindRoundBonus: 1, damageReduction: 3 },
+    // 2026-11-13 이동불가 개편: 속박 +2턴(사용자 지정 · 임시 — 추후 조정).
+    desc: '내가 거는 속박이 2턴 더 간다. 받는 피해 -3.',
+    effect: { bindRoundBonus: 2, damageReduction: 3 },
   },
 
   // --- 경제형 보강 ----------------------------------------------------------

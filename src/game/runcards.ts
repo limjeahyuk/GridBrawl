@@ -62,7 +62,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-stunrod', name: '뇌명의 지팡이', range: both(1), damage: 9, energyCost: 15, stun: 1, cooldown: 3,
     fx: 'bolt', accent: '#7fd4ff',
-    desc: '앞뒤 한 칸. 피해를 주면 이 라운드 동안 기절시킨다(남은 카드를 못 냄). 쿨타임 3라운드.',
+    desc: '앞뒤 한 칸. 피해를 주면 다음 턴 기절시킨다(그 턴 카드를 못 냄). 쿨타임 3라운드.',
   }),
   atk({
     id: 'r-hook', name: '사슬 갈고리', range: beamBoth(2, 3), damage: 8, energyCost: 8, pull: 2, pointBlank: false,
@@ -70,7 +70,7 @@ export const RUN_CARDS: CardDef[] = [
   }),
   atk({
     id: 'r-tether', name: '혼백의 손아귀', range: [...barBoth(2), ...barBoth(3)], damage: 12, energyCost: 11, bind: 1, cooldown: 1, pointBlank: false,
-    fx: 'orb', accent: '#b98cff', desc: '앞뒤 2~3칸째 세 줄에서 망령의 손이 발목을 잡는다 — 이 라운드 속박. 붙은 상대는 못 잡는다. 쿨타임 1라운드.',
+    fx: 'orb', accent: '#b98cff', desc: '앞뒤 2~3칸째 세 줄에서 망령의 손이 발목을 잡는다 — 다음 턴 속박. 붙은 상대는 못 잡는다. 쿨타임 1라운드.',
   }),
 
   // --- 기력 순환 — 누적 기력 트리거 유물과 맞물린다 --------------------------
@@ -217,7 +217,7 @@ export const RUN_CARDS: CardDef[] = [
   }),
   atk({
     id: 'r-frostnova', name: '서리 폭발', range: barBoth(1), damage: 10, energyCost: 13, freeze: 1, cooldown: 2,
-    fx: 'orb', accent: '#7fd4ff', desc: '앞뒤 세로 3줄을 얼린다 — 이 라운드 빙결(남은 카드를 못 낸다. 때리면 깨진다). 쿨타임 2라운드.',
+    fx: 'orb', accent: '#7fd4ff', desc: '앞뒤 세로 3줄을 얼린다 — 다음 턴 빙결(그 턴 카드를 못 낸다. 때리면 깨진다). 쿨타임 2라운드.',
   }),
   atk({
     id: 'r-blightwave', name: '역병의 물결', range: [...barBoth(1), ...both(2)], damage: 15, energyCost: 19,
@@ -281,7 +281,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-shockwave', name: '충격파', range: [...barBoth(1), ...barBoth(2)], damage: 14, energyCost: 20, stun: 1,
     cooldown: 3, fx: 'quake', accent: '#7fd4ff',
-    desc: '앞뒤 1~2칸의 세 줄을 통째로 흔든다. 피해를 주면 이 라운드 기절 — 쿨타임 3라운드.',
+    desc: '앞뒤 1~2칸의 세 줄을 통째로 흔든다. 피해를 주면 다음 턴 기절 — 쿨타임 3라운드.',
   }),
 
   // --- 수비·회복·이동 보강 ---------------------------------------------------

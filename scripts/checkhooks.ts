@@ -150,36 +150,48 @@ console.log('누적 기력 트리거(energyTriggers)')
   check('주기가 섞이지 않는다', merged.energyTriggers?.map((t) => t.per), [100, 50])
 }
 
-// --- 기절 (2026-08-07 새 규칙: **그 라운드 한정**) ---------------------------
-// 사용자 확정: "1턴 공격에서 기절을 맞으면 이후 두 카드가 발동하지 못하고, 3번째
-// 턴에서 기절에 걸리면 라운드가 끝나고 다음 3장은 정상 발동" → 기절은 **라운드를
-// 넘어가지 않는다**. 그래서 마지막 슬롯에 기절기를 넣을 이유가 없다.
-console.log('\n기절(stun) — 이 라운드 남은 슬롯만 지운다')
+// --- 이동불가 — 기절 (2026-11-13 개편 · docs/redesign/STATUS.md 4절) ---------------
+// 숫자 N = 건 턴 **다음부터** N턴(카드 · 유물은 1). 라운드를 넘어간다.
+console.log('\n기절(stun) — 건 턴 다음부터 N턴 · 라운드를 넘어간다')
+const stunrod = card('r-stunrod')
+const strike2: CardDef = { ...card('c-strike'), id: 'test-strike2' }
 {
-  // 1번 슬롯에서 기절시키면 상대의 2·3번 카드가 통째로 사라진다.
+  // 1번 슬롯 기절 → 상대의 2번 턴만 막히고 3번은 나간다.
   const b = battleWith({})
   const hp0 = b.state.hp[0]
   const steps = b.resolveRound(
-    [card('r-stunrod'), card('c-energy'), card('c-energy')],
-    [card('c-energy'), card('c-strike'), card('c-strike')],
+    [stunrod, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), strike2],
   )
-  check('1번 슬롯 기절 → 상대의 2·3번 카드가 안 나간다', b.state.hp[0], hp0)
-  check('기절 스텝이 로그에 남는다', steps.filter((s) => s.result === 'stun' && s.actor === 1).length, 2)
-  check('기절은 라운드를 넘기지 않는다', b.statusOf(1, 'stunned'), undefined)
+  check('1번 슬롯 기절 → 다음 턴(2번) 하나만 막힌다', steps.filter((s) => s.result === 'stun' && s.actor === 1).length, 1)
+  check('3번 슬롯 카드는 나간다', b.state.hp[0] < hp0, true)
+  check('다 쓴 기절은 라운드 끝에 남지 않는다', b.statusOf(1, 'stunned'), undefined)
 }
 {
-  // 다음 라운드는 멀쩡히 나간다 — 기절이 넘어오지 않는다는 뜻.
+  // 다음 라운드는 멀쩡히 나간다.
   const b = battleWith({})
-  b.resolveRound([card('r-stunrod'), card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([stunrod, card('c-energy'), card('c-energy')], HOLD)
   const hp0 = b.state.hp[0]
   b.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
   check('다음 라운드엔 상대 카드가 정상 발동', b.state.hp[0] < hp0, true)
 }
 {
-  // 마지막 슬롯의 기절은 아무것도 막지 못한다(그래서 넣을 이유가 없다).
+  // 3번 슬롯 기절 → 다음 라운드 1번 턴이 막힌다(라운드를 넘어간다 — 화면은 그 슬롯을 잠근다).
   const b = battleWith({})
-  b.resolveRound([card('c-energy'), card('c-energy'), card('r-stunrod')], HOLD)
-  check('3번 슬롯 기절 — 라운드가 끝나 아무 효과가 없다', b.statusOf(1, 'stunned'), undefined)
+  b.resolveRound([card('c-energy'), card('c-energy'), stunrod], HOLD)
+  check('3번 슬롯 기절 — 다음 라운드로 1턴 넘어간다', [b.statusOf(1, 'stunned')?.rounds, b.lockedSlots(1)], [1, 1])
+  const hp0 = b.state.hp[0]
+  const st = b.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
+  check('넘어온 기절 — 1번 턴 카드가 안 나간다', b.state.hp[0], hp0)
+  check('넘어온 기절 — 그 턴에 기절 스텝', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 1)
+  check('넘어온 기절 — 다 쓰고 풀린다', b.statusOf(1, 'stunned'), undefined)
+}
+{
+  // 잠긴 슬롯이 비어 있어도(화면이 비워 보낸다) 그 턴은 "기절" 스텝으로 보인다.
+  const b = battleWith({})
+  b.resolveRound([card('c-energy'), card('c-energy'), stunrod], HOLD)
+  const st = b.resolveRound(HOLD, [undefined as unknown as CardDef, card('c-energy'), card('c-energy')])
+  check('빈 잠긴 슬롯도 기절 스텝', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 1)
 }
 {
   const b = battleWith({ energyTriggers: [{ per: 5, stun: 1 }] })
@@ -481,11 +493,11 @@ const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poi
   const hp0 = b.state.hp[0]
   const steps = b.resolveRound(
     [freezeJab, card('c-energy'), card('c-energy')],
-    [card('c-energy'), card('c-strike'), card('c-strike')],
+    [card('c-energy'), card('c-strike'), strike2],
   )
-  check('빙결 — 남은 슬롯이 통째로 막힌다', b.state.hp[0], hp0)
-  check('빙결 — 결과가 frozen으로 표시된다', steps.some((s) => s.result === 'frozen'), true)
-  check('빙결 — 라운드를 넘기지 않는다', b.statusOf(1, 'frozen'), undefined)
+  check('빙결 — 다음 턴(2번) 하나만 막힌다', steps.filter((s) => s.result === 'frozen' && s.actor === 1).length, 1)
+  check('빙결 — 3번 슬롯 카드는 나간다', b.state.hp[0] < hp0, true)
+  check('빙결 — 다 쓰면 남지 않는다', b.statusOf(1, 'frozen'), undefined)
 }
 {
   // 빙결은 **맞으면 깨진다** — 그 타격에 +5(보호막 관통).
@@ -616,12 +628,13 @@ console.log('\n넉백 × 중독 — 밀려나면 독이 한 번 문다')
     [card('c-energy'), card('c-strike'), card('c-strike')],
   )
   check('두 칸 밀리고 벽에 부딪힌다', b.state.pos[1].col, GRID_COLS - 1)
+  // 처박기 기절은 다음 턴(2번)만 막는다(2026-11-13) → 3번 공격은 나가 중독이 한 번 더 문다.
   check(
-    '넉백 5 + 중독 2(한 번) = 7',
+    '넉백 5 + 중독 2(밀림) + 2(3번 공격) = 9',
     hp - b.state.hp[1],
-    KNOCKBACK_BLOCK_DAMAGE + 2,
+    KNOCKBACK_BLOCK_DAMAGE + 2 + 2,
   )
-  check('그리고 기절한다', steps.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+  check('그리고 다음 턴 기절한다', steps.filter((x) => x.result === 'stun' && x.actor === 1).length, 1)
 }
 {
   // 막히지 않고 끝까지 밀리면 넉백 피해는 없고 **중독만** 문다.
@@ -671,29 +684,18 @@ console.log('\n지속 연장 유물 — 중독·화상·기절·빙결·속박')
   check('화상 안식일 — 2겹 + 1 = 3겹(끝에 2)', b.stacksOf(1, 'burn'), 2)
 }
 {
-  // 기절 연장 — 사용자가 못박은 시나리오를 그대로 재현한다.
-  //   1라운드 기절 → 2라운드도 기절(그 라운드에 또 맞아도 갱신 안 됨) → 3라운드 기상.
+  // 기절 연장 — 3번 슬롯 기절 + 1 = 2턴이 다음 라운드로. 그 안에서 또 기절을 걸어도 안 늘어난다.
   const b = battleWith({ stunRoundBonus: 1 })
-  const hp0 = b.state.hp[0]
-  b.resolveRound(
-    [card('r-stunrod'), card('c-energy'), card('c-energy')],
-    [card('c-energy'), card('c-strike'), card('c-strike')],
-  )
-  check('R1 — 기절해서 남은 슬롯이 죽는다', b.state.hp[0], hp0)
-  check('R1 종료 — 기절이 다음 라운드까지 남는다', b.statusOf(1, 'stunned')?.rounds, 1)
-
-  // R2: 통째로 봉인. 그 안에서 또 기절을 걸어도 **갱신되지 않는다**(재부여 가드).
-  const st2 = b.resolveRound(
-    [card('c-strike'), card('c-strike'), card('c-strike')],
-    [card('c-strike'), card('c-strike'), card('c-strike')],
-  )
-  check('R2 — 세 슬롯이 통째로 봉인된다', st2.filter((x) => x.result === 'stun' && x.actor === 1).length, 3)
-  check('R2 종료 — 기절이 갱신되지 않고 풀린다', b.statusOf(1, 'stunned'), undefined)
-
-  // R3: 반드시 일어난다.
+  b.resolveRound([card('c-energy'), card('c-energy'), stunrod], HOLD)
+  check('기절 연장 — 다음 라운드 앞 2턴이 잠긴다', b.lockedSlots(1), 2)
   const hp1 = b.state.hp[0]
-  b.resolveRound(HOLD, [card('c-strike'), card('c-energy'), card('c-energy')])
-  check('R3 — 깨어나서 정상 발동(유물 하나로 영구 봉인 불가)', b.state.hp[0] < hp1, true)
+  const st2 = b.resolveRound(
+    [stunrod, card('c-energy'), card('c-energy')],
+    [card('c-strike'), strike2, { ...card('c-strike'), id: 'test-strike3' }],
+  )
+  check('기절 연장 — 2턴 막히고(같은 기절은 다시 안 걸린다)', st2.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+  check('기절 연장 — 3번 턴엔 깨어나 정상 발동', b.state.hp[0] < hp1, true)
+  check('기절 연장 — 끝나면 남지 않는다', b.statusOf(1, 'stunned'), undefined)
 }
 {
   // 처박기 기절은 연장을 타지 않는다 — 넉백 한 장이 판을 잠그면 안 된다.
@@ -703,28 +705,82 @@ console.log('\n지속 연장 유물 — 중독·화상·기절·빙결·속박')
   }
   const b = battleWith({ stunRoundBonus: 1 })
   b.state.pos = [{ col: 4, row: 1 }, { col: 5, row: 1 }]
-  b.resolveRound([shove, card('c-energy'), card('c-energy')], HOLD)
-  check('처박기 기절은 연장을 안 탄다', b.statusOf(1, 'stunned'), undefined)
+  b.resolveRound([card('c-energy'), card('c-energy'), shove], HOLD)
+  check('처박기 기절은 연장을 안 탄다(다음 라운드 1턴)', b.lockedSlots(1), 1)
 }
 {
-  // 빙결 연장 — 다음 라운드까지 가지만 **맞으면 여전히 깨진다**.
+  // 빙결 연장 — 3번 슬롯 빙결 + 1 = 다음 라운드 2턴. 그래도 맞으면 깨진다.
   const freezeJab: CardDef = { ...card('c-strike'), id: 'test-flong', freeze: 1 }
   const b = battleWith({ freezeRoundBonus: 1 }, {})
-  b.resolveRound([freezeJab, card('c-energy'), card('c-energy')], HOLD)
-  check('빙결 연장 — 다음 라운드까지 남는다', b.statusOf(1, 'frozen')?.rounds, 1)
+  b.resolveRound([card('c-energy'), card('c-energy'), freezeJab], HOLD)
+  check('빙결 연장 — 다음 라운드 앞 2턴이 잠긴다', b.lockedSlots(1), 2)
   b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('빙결 연장 — 그래도 맞으면 깨진다', b.statusOf(1, 'frozen'), undefined)
 }
 {
-  // 속박 연장 — 다음 라운드에도 이동이 막힌다.
+  // 속박 연장(얽매는 뿌리 +2) — 3번 슬롯 속박 1 + 2 = 다음 라운드 3턴 이동 불가.
   const bindJab: CardDef = { ...card('c-strike'), id: 'test-bindlong', bind: 1 }
-  const b = battleWith({ bindRoundBonus: 1 }, {})
-  b.resolveRound([bindJab, card('c-energy'), card('c-energy')], HOLD)
+  const b = battleWith({ bindRoundBonus: 2 }, {})
+  b.resolveRound([card('c-energy'), card('c-energy'), bindJab], HOLD)
+  check('속박 연장 — 다음 라운드 3턴', b.lockedSlots(1, 'bind'), 3)
+  check('속박은 슬롯을 잠그지 않는다', b.lockedSlots(1), 0)
   const before = { ...b.state.pos[1] }
-  const st = b.resolveRound(HOLD, [card('m-left'), card('c-energy'), card('c-energy')])
-  check('속박 연장 — 다음 라운드에도 이동 불가', b.state.pos[1], before)
-  check('속박 연장 — 공격은 여전히 나간다', st.some((x) => x.result === 'bind'), true)
-  check('속박 연장 — 두 라운드로 끝난다', b.statusOf(1, 'bind'), undefined)
+  const st = b.resolveRound(HOLD, [card('c-energy'), card('m-left'), card('c-energy')])
+  check('속박 연장 — 2번 턴 이동도 무효', [b.state.pos[1], st.some((x) => x.result === 'bind')], [before, true])
+}
+// --- 이동불가 겹치기 (2026-11-12 사용자 확정 · STATUS.md 4절) --------------------
+// 속박 → 기절 → 빙결 순으로만 얹히고, 얹혀도 처음 걸린 봉인의 남은 길이를 안 넘는다.
+console.log('\n이동불가 겹치기 — 속박 < 기절 < 빙결 · 처음 길이 유지')
+const bindJabX: CardDef = { ...card('c-strike'), id: 'test-xbind', bind: 1 }
+const freezeJabX: CardDef = { ...card('c-strike'), id: 'test-xfreeze', freeze: 1 }
+{
+  // 속박 3 + 기절 1 → 기절 1턴 뒤 속박(사용자 예시).
+  const b = battleWith({ bindRoundBonus: 2 }, {})
+  b.resolveRound([card('c-energy'), card('c-energy'), bindJabX], HOLD) // 속박 3 넘어옴
+  const st = b.resolveRound(
+    [stunrod, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-energy'), card('m-left')],
+  )
+  check('속박 위에 기절이 얹힌다(2번 턴 기절)', st.filter((x) => x.result === 'stun' && x.actor === 1 && x.slot === 1).length, 1)
+  check('기절 뒤엔 다시 속박(3번 턴 이동 무효)', st.some((x) => x.result === 'bind' && x.actor === 1 && x.slot === 2), true)
+}
+{
+  // 속박 1 + 기절 3 → 기절 1(처음 걸린 속박의 남은 길이에서 잘린다 · 사용자 예시).
+  const b = battleWith({ bindRoundBonus: 1, stunRoundBonus: 2 }, {})
+  b.resolveRound([card('c-energy'), card('c-energy'), bindJabX], HOLD) // 속박 2 → 다음 라운드 1번 턴 뒤 1 남음
+  const hp0 = b.state.hp[0]
+  const st = b.resolveRound(
+    [stunrod, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), strike2],
+  )
+  check('속박 1 + 기절 3 → 기절 1턴만', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 1)
+  check('잘린 기절 — 3번 턴엔 정상 발동', b.state.hp[0] < hp0, true)
+  check('잘린 기절 — 다음 라운드로 안 넘어간다', b.lockedSlots(1), 0)
+}
+{
+  // 기절 중엔 속박이 안 걸린다 · 빙결은 얹힌다 · 빙결이 깨져도 밑의 기절은 이어진다.
+  const b = battleWith({ stunRoundBonus: 3 }, {})
+  b.resolveRound([card('c-energy'), card('c-energy'), stunrod], HOLD) // 기절 4 넘어옴
+  const st = b.resolveRound(
+    [freezeJabX, card('c-strike'), bindJabX],
+    [card('c-strike'), strike2, { ...card('c-strike'), id: 'test-strike3' }],
+  )
+  check('기절 위 빙결 → 깨져도 세 턴 내내 못 낸다', st.filter((x) => (x.result === 'stun' || x.result === 'frozen') && x.actor === 1).length, 3)
+  check('빙결은 맞아서 깨졌다', b.statusOf(1, 'frozen'), undefined)
+  check('기절 중 속박은 안 걸린다', b.statusOf(1, 'bind'), undefined)
+  check('밑의 기절은 남은 턴만큼 이어진다', b.statusOf(1, 'stunned')?.rounds, 1)
+}
+{
+  // 빙결 중 기절 공격 → 빙결만 깨지고 기절은 안 걸린다(사용자 예시).
+  const b = battleWith({ freezeRoundBonus: 1 }, {})
+  b.resolveRound([card('c-energy'), card('c-energy'), freezeJabX], HOLD) // 빙결 2 넘어옴
+  const hp0 = b.state.hp[0]
+  b.resolveRound(
+    [stunrod, card('c-energy'), card('c-energy')],
+    [card('c-energy'), card('c-strike'), card('c-energy')],
+  )
+  check('빙결 중 기절 → 빙결만 깨진다', [b.statusOf(1, 'frozen'), b.statusOf(1, 'stunned')], [undefined, undefined])
+  check('깨진 뒤 2번 턴엔 움직인다', b.state.hp[0] < hp0, true)
 }
 {
   // ⚠ **런 전용 보장** — 이 훅들이 유물 밖으로 새면 PvP 락스텝이 깨진다.
@@ -1104,7 +1160,7 @@ console.log('\n확장 훅 — 빙결 부여 · 방벽/치유 증폭 · 시작 �
     [card('c-strike'), card('c-energy'), card('c-energy')],
     [card('c-energy'), card('c-strike'), card('c-strike')],
   )
-  check('freezeOnHit — 적중하면 남은 슬롯이 얼어붙는다', steps.filter((x) => x.result === 'frozen').length, 2)
+  check('freezeOnHit — 적중하면 다음 턴이 얼어붙는다', steps.filter((x) => x.result === 'frozen').length, 1)
   for (let t = 0; t < 4; t++)
     b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   check('freezeOnHit — 전투당 freezeCap(2)회까지만', b.state.freezesUsed[0], 2)
@@ -1878,8 +1934,8 @@ console.log('\n지형 — 바위')
     const st = b.resolveRound([shove, card('c-energy'), card('c-energy')], [card('c-strike'), card('c-strike'), card('c-strike')])
     check('바위에 막히면 한 칸도 안 밀린다', b.state.pos[1].col, 2)
     check('바위에 처박히면 2칸분 피해(1 + 5×2)', hp - b.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE * 2)
-    // 슬롯 1의 반격도 막힌다(2026-11-10) — 전엔 같은 슬롯 공격이 그대로 나가 기절 스텝이 2개(슬롯 2·3)였다.
-    check('바위에 처박히면 그 라운드 기절(같은 슬롯 반격까지)', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 3)
+    // 슬롯 1의 반격도 막힌다(2026-11-10). 처박기 기절은 1턴(2026-11-13) → 같은 슬롯 + 다음 턴 = 2.
+    check('바위에 처박히면 같은 슬롯 반격 + 다음 턴 기절', st.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
 
     // 벽도 같다 — 판 끝에 몰린 상대는 밀려날 곳이 없어 그대로 부딪힌다.
     const w = withRocks([])
@@ -1897,7 +1953,7 @@ console.log('\n지형 — 바위')
     )
     check('부분 차단 — 한 칸 밀리고 막혔다', p.state.pos[1].col, 3)
     check('부분 차단 — 못 간 한 칸만 피해(1 + 5)', hpp - p.state.hp[1], 1 + KNOCKBACK_BLOCK_DAMAGE)
-    check('부분 차단도 기절한다', sp.filter((x) => x.result === 'stun' && x.actor === 1).length, 2)
+    check('부분 차단도 기절한다(다음 턴)', sp.filter((x) => x.result === 'stun' && x.actor === 1).length, 1)
 
     // 온전히 밀리면 넉백 피해가 없다.
     const f = withRocks([], [1, 1], [2, 1])

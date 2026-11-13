@@ -3064,3 +3064,7 @@
 .gob__line i { font-style: normal; }
 .gob__line small { font-size: 12px; color: #c9c2d6; }
 .gob__q { width: 28px; height: 28px; font-size: 14px; }
+
+/* 넘어온 봉인(기절 · 빙결)이 잠근 슬롯 — 2026-11-13 이동불가 개편. 카드를 못 넣는다(임시 모양 · 시안 대기). */
+.slot.slot--locked { opacity: 0.6; cursor: not-allowed; }
+.slot__locked { font-weight: 700; }

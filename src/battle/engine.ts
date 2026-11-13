@@ -24,7 +24,8 @@ import {
   inBounds,
   isCollapsedCell,
   isFullLock,
-  isRoundLock,
+  isLock,
+  LOCK_RANK,
   rockAt,
   shadowRock,
   type BattleSnapshot,
@@ -247,9 +248,26 @@ export class CardBattle {
     return this.state.status[p].some((e) => !isBuff(e.kind))
   }
 
-  /** 이 라운드에 카드를 못 내는가(빙결·기절). 슬롯 루프가 이걸 보고 건너뛴다. */
-  lockedThisRound(p: number): StatusEffect | undefined {
-    return this.state.status[p].find((e) => isFullLock(e.kind))
+  /**
+   * 지금 카드를 못 내는가(빙결 · 기절) — 빙결을 먼저 돌려준다(맨 위 봉인). 슬롯 루프가 슬롯
+   * 시작에 이걸 보고 그 턴 카드를 비운다. 같은 슬롯 안에서 막 걸린 봉인도 여기 잡힌다
+   * (처박기 기절이 같은 슬롯 반격을 막는 데 쓴다).
+   */
+  lockedNow(p: number): StatusEffect | undefined {
+    const st = this.state.status[p]
+    return st.find((e) => e.kind === 'frozen') ?? st.find((e) => isFullLock(e.kind))
+  }
+
+  /**
+   * 다음 라운드에 **잠길 슬롯 수**(앞에서부터) — 카드를 고르는 동안 부른다. 봉인의 `rounds`는
+   * "지금 턴 뒤로 남은 턴"이라 라운드 사이엔 곧 다가올 봉인 턴 수다(2026-11-13 · `STATUS.md` 4절).
+   * `kind` 생략 = 카드를 통째로 못 내는 슬롯(빙결 · 기절), `'bind'` = 이동이 막히는 슬롯.
+   */
+  lockedSlots(p: number, kind?: 'bind'): number {
+    const n = this.state.status[p]
+      .filter((e) => (kind ? e.kind === kind : isFullLock(e.kind)))
+      .reduce((m, e) => Math.max(m, e.rounds), 0)
+    return Math.min(3, n)
   }
 
   /**
@@ -473,11 +491,8 @@ export class CardBattle {
               damage = Math.min(s.hp[d], t.damage) // 보호막 무시 고정 피해
               s.hp[d] -= damage
             }
-            // 유물 트리거 기절도 카드가 거는 기절과 같은 규칙 — 연장 유물을 탄다.
-            if (t.stun) {
-              const n = 1 + (this.passive[p].stunRoundBonus ?? 0)
-              applyStatus(d, 'stunned', 0, n, n)
-            }
+            // 유물 트리거 기절도 카드가 거는 기절과 같은 규칙 — 1턴(다음 턴) + 연장 유물.
+            if (t.stun) applyStatus(d, 'stunned', 0, 1 + (this.passive[p].stunRoundBonus ?? 0))
             steps.push({
               phase: t.stun ? 'stun' : 'trigger',
               actor: p,
@@ -508,24 +523,30 @@ export class CardBattle {
       kind: StatusKind,
       power: number,
       rounds: number,
-      /**
-       * 지속 상한. 기본은 봉인 1라운드 / 버프 `STATUS_MAX_ROUNDS`이고(중독 · 화상은 상한이 없어 안 본다), 런 전용
-       * 전설 유물(`*RoundBonus`)이 이걸 밀어 올린다. 호출부가 이미 보너스를 더한
-       * `rounds`를 넘기므로 상한도 같이 넘겨야 한다 — 안 그러면 유물이 무효가 된다.
-       */
-      maxRounds = isRoundLock(kind) ? 1 : STATUS_MAX_ROUNDS,
+      /** 지속 상한(버프 `STATUS_MAX_ROUNDS`). 중독 · 화상 · 이동불가는 안 본다. */
+      maxRounds = STATUS_MAX_ROUNDS,
     ) => {
       if (rounds <= 0) return
       // 화상 면역(런 전용 유물 훅) — 걸리지 않으니 피격 화상 피해도 없다.
       if (kind === 'burn' && this.passive[p].burnImmune) return
+      // **이동불가**(2026-11-13 개편 · `STATUS.md` 4절) — `rounds` = 건 턴 **다음부터** N턴.
+      //   ① 이미 봉인 중(이 턴 뒤로 남은 턴 > 0)이면 **더 높은 것만** 얹힌다(속박 < 기절 < 빙결).
+      //      같은 것 · 낮은 것은 안 걸린다 — 이게 옛 "재부여 가드"를 대신해 무한 연장을 막는다.
+      //   ② 얹힌 봉인은 **처음 걸린 봉인의 남은 길이**까지만 간다(전체 길이가 안 늘어난다).
+      //   이번 턴이 마지막인 봉인(남은 0)은 끝난 것으로 본다 — 새 봉인이 새 창을 연다.
+      if (isLock(kind)) {
+        const live = s.status[p].filter((e) => isLock(e.kind) && e.rounds > 0)
+        let n = rounds
+        if (live.length) {
+          const top = Math.max(...live.map((e) => LOCK_RANK[e.kind] ?? 0))
+          if ((LOCK_RANK[kind] ?? 0) <= top) return
+          n = Math.min(n, Math.max(...live.map((e) => e.rounds)))
+        }
+        s.status[p] = s.status[p].filter((e) => e.kind !== kind)
+        s.status[p].push({ kind, rounds: n, power: 0, since: s.round })
+        return
+      }
       const cap = Math.min(rounds, maxRounds)
-      // ⚠ **봉인 재부여 가드**(2026-08-07 2차). 이미 걸려 있는 기절·빙결·속박은
-      //   **다시 걸리지 않는다**. 지속 연장 유물이 없으면 아무것도 안 바뀌지만
-      //   (어차피 1라운드짜리라 갱신해도 같은 값), 유물이 붙는 순간 이 한 줄이
-      //   무한 봉인을 막는 유일한 장치가 된다 — 봉인된 상대를 계속 때려도 지속이
-      //   새로 채워지지 않으므로 "이번 + 다음 라운드"에서 반드시 끝난다.
-      //   (빙결은 맞으면 먼저 깨지므로(`thaw`) 깨진 뒤 다시 거는 건 그대로 된다.)
-      if (isRoundLock(kind) && s.status[p].some((e) => e.kind === kind)) return
       // **중독 · 화상**(2026-11-12/13 개편) — 한 칸에 겹 수(`rounds`)를 **더한다**. 상한 없음.
       //   라운드 끝 `tickStatuses`가 1씩 깎으므로 "겹 = 남은 라운드"가 저절로 된다.
       //   위력은 여기 박지 않는다 — 중독은 아플 때(`tickPoison`) 거는 쪽 유물로, 화상은
@@ -934,7 +955,7 @@ export class CardBattle {
       }
       // 기절: 카드의 `stun` + 유물 `stunOnHit`(전투당 `stunCap`회). 보호막을 실제로
       // 뚫었을 때만 — 가드에 막힌 타격으로는 기절하지 않는다.
-      // 값은 "몇 라운드"가 아니라 **이번 라운드 봉인**이라는 표시일 뿐이다.
+      // 카드 · 유물 값은 `>0`인지만 본다 — 봉인은 늘 **1턴(다음 턴까지)** + 연장 유물(2026-11-13).
       let stun = core > 0 ? (c.stun ?? 0) : 0
       const onHit = atkPas.stunOnHit ?? 0
       if (core > 0 && onHit > 0 && s.stunsUsed[p] < (atkPas.stunCap ?? 1)) {
@@ -971,8 +992,8 @@ export class CardBattle {
         recoil,
         push: c.push ?? 0,
         pull: c.pull ?? 0,
-        // 봉인 지속 = 1 + 유물 연장(`stunRoundBonus` 등). 1이면 이번 라운드만이고,
-        // 2 이상이면 다음 라운드까지 이어진다(재부여 가드가 그 이상을 막는다).
+        // 봉인 = 건 턴 **다음부터** 1턴 + 유물 연장(`stunRoundBonus` 등 — 값은 턴). 겹치기 ·
+        // 길이 상한은 `applyStatus`가 본다(2026-11-13 · `STATUS.md` 4절).
         stun: stun > 0 ? 1 + (atkPas.stunRoundBonus ?? 0) : 0,
         bind: core > 0 && c.bind ? 1 + (atkPas.bindRoundBonus ?? 0) : 0,
         poison,
@@ -1070,16 +1091,20 @@ export class CardBattle {
       // 화면의 숫자보다 체력이 더 줄어든다.
       const slamDealt = blocked > 0 ? Math.min(s.hp[d], blocked * KNOCKBACK_BLOCK_DAMAGE) : 0
       if (blocked > 0) s.hp[d] = Math.max(0, s.hp[d] - blocked * KNOCKBACK_BLOCK_DAMAGE)
-      // 라운드 한정 봉인. 지금 슬롯 이후의 카드를 막고, 라운드가 끝나면 지워진다.
-      // 처박기 기절은 **연장 유물을 안 탄다** — 넉백 자체가 이미 피해+봉인 둘을 주는
-      // 자리라, 여기까지 늘리면 밀어내기 카드 하나가 통째로 판을 잠근다.
-      if (slammed) applyStatus(d, 'stunned', 0, 1)
-      else if (r.stun) applyStatus(d, 'stunned', 0, r.stun, r.stun)
-      if (r.bind) applyStatus(d, 'bind', 0, r.bind, r.bind)
-      // 빙결은 **깨진 뒤에** 다시 걸릴 수 있다 — 순서가 뒤바뀌면 방금 얼린 걸
-      // 같은 타격이 도로 녹인다.
-      if (r.thaw) s.status[d] = s.status[d].filter((e) => e.kind !== 'frozen')
-      if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze, r.freeze)
+      // **이동불가**(2026-11-13 · `STATUS.md` 4절). 처박기 기절은 1턴(= 다음 턴까지)이고 연장
+      // 유물을 안 탄다 — 넉백 자체가 이미 피해 + 봉인 둘을 주는 자리다.
+      // ⚠ **빙결 중이던 상대**는 이 타격에 빙결만 깨지고 **새 봉인은 안 걸린다**(사용자 지정).
+      //   깨진 뒤에도 밑에 깔린 기절 · 속박은 남은 턴만큼 이어진다. 빗나간 타격(`whiff`)은
+      //   닿지 않았으므로 깨지 않는다.
+      // 거는 순서는 속박 → 기절 → 빙결(낮은 것부터) — 한 대에 여럿이면 높은 것이 위에 얹힌다.
+      if (r.thaw && r.result !== 'whiff') {
+        s.status[d] = s.status[d].filter((e) => e.kind !== 'frozen')
+      } else {
+        if (r.bind) applyStatus(d, 'bind', 0, r.bind)
+        if (slammed) applyStatus(d, 'stunned', 0, 1)
+        else if (r.stun) applyStatus(d, 'stunned', 0, r.stun)
+        if (r.freeze) applyStatus(d, 'frozen', 0, r.freeze)
+      }
       // 중독·화상 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤 함께 적용돼야
       // 선후가 안 생긴다.
       if (r.poison) applyStatus(d, 'poison', POISON_TICK_DAMAGE, r.poison)
@@ -1194,13 +1219,16 @@ export class CardBattle {
      *   라운드 종료에 또 갉으면 같은 상태이상을 두 번 받는 셈이 된다.
      *   라운드 종료에 갉는 건 이제 **독안개와 전장 붕괴**(자리 값)뿐이다.
      *
-     * 라운드 한정 제약(빙결·기절·속박)은 어차피 다음 라운드 시작에 통째로 지워지므로
-     * 여기서 따로 볼 게 없다. 순서는 p0 → p1 고정(랜덤 없음).
+     * 이동불가(빙결·기절·속박)는 턴 단위라 여기서 안 깎는다 — 슬롯 시작에 깎이고 라운드를
+     * 넘어간다(2026-11-13). 순서는 p0 → p1 고정(랜덤 없음).
      */
     const tickStatuses = () => {
       for (let p = 0; p < 2; p++) {
+        // 이동불가는 턴 단위라 여기서 안 깎는다(슬롯 시작에 깎인다 — 라운드를 넘어간다).
+        //   다만 남은 턴이 0인 봉인(방금 끝난 턴이 마지막)은 여기서 치운다 — 카드를 고르는 동안
+        //   "기절 0" 칩이 서지 않게.
         s.status[p] = s.status[p]
-          .map((e) => ({ ...e, rounds: e.rounds - 1 }))
+          .map((e) => (isLock(e.kind) ? e : { ...e, rounds: e.rounds - 1 }))
           .filter((e) => e.rounds > 0)
       }
     }
@@ -1237,12 +1265,17 @@ export class CardBattle {
       // 빠뜨리게 된다(연출 전용 값이라 빠져도 조용히 틀린다).
       const slotFrom = steps.length
       // cards present this slot, ordered move < defense < attack (p0 first on a tie)
-      // ⚠ **빙결·기절은 여기서 걸러 낸다** — 이번 라운드에 봉인된 쪽은 남은 슬롯의
-      //   카드를 통째로 못 낸다(카드는 소모되지 않고 쿨다운도 안 돈다: 애초에 낸
-      //   적이 없다). 봉인은 슬롯 도중에 걸리므로 **슬롯마다 다시 본다** —
-      //   1번 슬롯에서 기절하면 2·3번이 막히고, 3번에서 걸리면 아무것도 안 막힌다.
+      // **이동불가 턴 진행**(2026-11-13 · `STATUS.md` 4절) — 슬롯이 시작할 때마다 봉인이 한 턴씩
+      //   흐른다. 남은 0이던 봉인은 지난 턴이 마지막이었으므로 사라지고, 나머지는 이번 턴을
+      //   막고 1 준다. 라운드를 넘어온 봉인도 같은 길이다.
+      // ⚠ 그다음 **빙결 · 기절은 여기서 걸러 낸다** — 그 턴 카드는 못 낸다(소모되지 않고 쿨다운도
+      //   안 돈다). 넘어온 봉인 슬롯은 화면이 애초에 잠가 비워 오지만, 카드가 없어도 "기절"
+      //   스텝을 띄워 그 턴이 막혔다는 걸 보여 준다.
       for (let p = 0; p < 2; p++) {
-        const lock = plans[p][slot] ? this.lockedThisRound(p) : undefined
+        s.status[p] = s.status[p]
+          .filter((e) => !isLock(e.kind) || e.rounds > 0)
+          .map((e) => (isLock(e.kind) ? { ...e, rounds: e.rounds - 1 } : e))
+        const lock = this.lockedNow(p)
         if (!lock) continue
         plans[p][slot] = undefined as unknown as CardDef
         steps.push({
@@ -1323,7 +1356,7 @@ export class CardBattle {
            * 밀어내기가 순서를 정한 경우에만 건다 — 순서가 넉백으로 정해졌으니 비대칭이
            * 아니다(서로 밀면 `crossShove`라 여기 안 온다). 낸 대가(기력)는 이미 치렀다.
            */
-          if (!crossShove && shoved.has(e.p) && this.lockedThisRound(e.p)) {
+          if (!crossShove && shoved.has(e.p) && this.lockedNow(e.p)) {
             steps.push({
               phase: 'stun',
               actor: e.p,
@@ -1416,6 +1449,8 @@ export class CardBattle {
         if (dmg <= 0) continue
         const dealt = Math.min(s.hp[p], dmg)
         s.hp[p] = Math.max(0, s.hp[p] - dmg)
+        // 붕괴 피해도 **빙결을 깬다**(2026-11-12 사용자 지정 — 카드 공격 · 처박기 · 붕괴. 독안개 · 중독은 아님).
+        s.status[p] = s.status[p].filter((e) => e.kind !== 'frozen')
         steps.push({
           phase: 'collapse',
           actor: p,

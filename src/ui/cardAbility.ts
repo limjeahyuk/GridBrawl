@@ -52,32 +52,32 @@ export function abilityList(c: CardDef): AbilityInfo[] {
     out.push({
       icon: '👊',
       label: `넉백 ${c.push}`,
-      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 밀려나면 독도 한 번 받는다.`,
+      meaning: `맞은 상대를 나에게서 ${c.push}칸 밀어낸다. 벽이나 바위에 막히면 못 간 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 다음 턴 기절한다. 중독에 걸린 상대는 밀려나면 독도 한 번 받는다.`,
     })
   if (c.pull)
     out.push({
       icon: '🪝',
       label: `끌어당김 ${c.pull}`,
-      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 이번 라운드 기절한다. 중독에 걸린 상대는 끌려오면 독도 한 번 받는다.`,
+      meaning: `맞은 상대를 나에게로 ${c.pull}칸 끌어온다. 막히면 못 온 칸마다 ${KNOCKBACK_BLOCK_DAMAGE} 피해를 더 주고 그 상대는 다음 턴 기절한다. 중독에 걸린 상대는 끌려오면 독도 한 번 받는다.`,
     })
   if (c.stun)
     out.push({
       icon: '💫',
       label: '기절',
       meaning:
-        '맞은 상대는 이번 라운드 남은 카드를 한 장도 못 낸다. 앞 슬롯에 넣을수록 많이 지운다(마지막 슬롯이면 아무것도 못 막는다). 피해가 실제로 들어가야 걸린다.',
+        '맞은 상대는 다음 턴 카드를 못 낸다. 3번 슬롯에서 걸면 다음 라운드 1번 턴이 잠긴다. 이미 기절 · 빙결 중이면 안 걸리고, 속박 중이면 그 위에 얹힌다(속박의 남은 턴까지만). 피해가 실제로 들어가야 걸린다.',
     })
   if (c.freeze)
     out.push({
       icon: '❄',
       label: '빙결',
-      meaning: `맞은 상대는 이번 라운드 남은 카드를 못 낸다. 단 때리면 깨진다 — 깨뜨린 타격은 ${FREEZE_SHATTER_BONUS} 더 아프다(보호막 무시).`,
+      meaning: `맞은 상대는 다음 턴 카드를 못 낸다(라운드를 넘어갈 수 있다). 단 피해를 받으면 깨진다 — 깨뜨린 카드 타격은 ${FREEZE_SHATTER_BONUS} 더 아프다(보호막 무시). 빙결 중엔 다른 봉인이 안 걸리고, 속박 · 기절 위에는 얹힌다.`,
     })
   if (c.bind)
     out.push({
       icon: '🕸',
       label: '속박',
-      meaning: '맞은 상대는 이번 라운드 이동 카드를 쓸 수 없다. 공격과 수비는 그대로 나간다.',
+      meaning: '맞은 상대는 다음 턴 이동 카드를 쓸 수 없다. 공격과 수비는 그대로 나간다. 이미 기절 · 빙결 · 속박 중이면 안 걸린다.',
     })
   if (c.poison)
     out.push({

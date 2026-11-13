@@ -351,6 +351,27 @@ function ChipNum({ chip }: { chip: { kind: string; power: number; rounds: number
   );
 }
 
+/**
+ * **넘어온 봉인이 잠근 슬롯**의 자리표(2026-11-13 · `STATUS.md` 4절) — 다음 라운드 앞쪽 N턴이
+ * 기절 · 빙결이면 그 슬롯엔 카드를 못 넣는다. 카드가 아니라 자리표라 제출할 때 비운다.
+ */
+const LOCK_SLOT_ID = "slot-lock";
+const lockSlotCard = (kind: "frozen" | "stunned"): CardDef => ({
+  id: `${LOCK_SLOT_ID}-${kind}`,
+  name: kind === "frozen" ? "빙결" : "기절",
+  kind: "guard",
+  desc: kind === "frozen" ? "얼어붙어 이 턴엔 카드를 못 낸다(맞으면 깨진다)." : "기절해서 이 턴엔 카드를 못 낸다.",
+});
+const isLockSlot = (c: CardDef | null | undefined): boolean => !!c?.id.startsWith(LOCK_SLOT_ID);
+/** 카드를 고르기 시작할 때의 슬롯 — 앞에서부터 빙결 · 기절 턴만큼 잠근다(빙결이 위). */
+function freshSlots(battle: CardBattle, side: number): (CardDef | null)[] {
+  const fz = battle.statusOf(side, "frozen")?.rounds ?? 0;
+  const st = battle.statusOf(side, "stunned")?.rounds ?? 0;
+  return [0, 1, 2].map((i) =>
+    i < fz ? lockSlotCard("frozen") : i < st ? lockSlotCard("stunned") : null,
+  );
+}
+
 const isAtk = (r: ActionResult) =>
   r === "hit" || r === "blocked" || r === "whiff";
 const STEP_MS: Record<Step["phase"], number> = {
@@ -646,7 +667,7 @@ export function BattleScreen({
   // 필살기 컷인에 쓰는 대형 초상 (선택 화면과 같은 아트)
 
   const [view, setView] = useState<View>(() => baseView(battle));
-  const [slots, setSlots] = useState<(CardDef | null)[]>([null, null, null]);
+  const [slots, setSlots] = useState<(CardDef | null)[]>(() => freshSlots(battle, localSide));
   useEffect(() => onSlotsChange?.(slots), [slots, onSlotsChange]);
   const [phase, setPhase] = useState<"select" | "resolving" | "over">("select");
   const [waitingRemote, setWaitingRemote] = useState(false);
@@ -793,8 +814,16 @@ export function BattleScreen({
    *   (같은 라운드 안에서 풀릴 수도 있다 — 빙결은 맞으면 깨진다), 여기서 잠그면
    *   그 경우에 낼 수 있었던 카드를 화면이 먼저 빼앗는 셈이 된다.
    */
+  // 2026-11-13 개편 뒤: 봉인은 턴 단위로 라운드를 넘어온다. 기절 · 빙결 턴은 슬롯을 잠그고
+  // (`freshSlots`), 속박 턴은 그 슬롯의 이동만 무효라 막지 않고 이유만 세운다.
+  const lockedN = battle.lockedSlots(localSide);
+  const boundN = battle.lockedSlots(localSide, "bind");
   const roundLock =
-    battle.lockedThisRound(localSide) ?? battle.statusOf(localSide, "bind");
+    lockedN > 0
+      ? (battle.statusOf(localSide, "frozen") ?? battle.statusOf(localSide, "stunned"))
+      : boundN > 0
+        ? battle.statusOf(localSide, "bind")
+        : undefined;
   const selectable = (c: CardDef) => cdLeft(c.id) === 0 && !placedNoRepeat(c);
 
   // which slot numbers (1-based) contain this card id
@@ -819,7 +848,7 @@ export function BattleScreen({
     setHoverSlot(null);
   };
   const clearSlot = (i: number) => {
-    if (phase !== "select" || !slots[i]) return;
+    if (phase !== "select" || !slots[i] || isLockSlot(slots[i])) return;
     const next = slots.slice();
     next[i] = null;
     setSlots(next);
@@ -828,7 +857,7 @@ export function BattleScreen({
     setHoverSlot(null);
   };
   const reset = () => {
-    setSlots([null, null, null]);
+    setSlots(freshSlots(battle, localSide));
     playSfx("uiBack");
   };
 
@@ -1054,8 +1083,9 @@ export function BattleScreen({
     const ready = moveDeck.filter((c) => selectable(c) && canAfford(c)).length;
     const cooling = moveDeck.filter((c) => cdLeft(c.id) > 0).length;
     const full = slots.every((x) => x !== null);
-    const bind = roundLock?.kind === "bind";
-    const dim = roundLock?.kind === "frozen" || roundLock?.kind === "stunned";
+    // 세 턴이 다 막혔을 때만 묶음을 잠근다 — 일부만 막혔으면 남은 슬롯엔 이동할 수 있다.
+    const bind = boundN >= 3;
+    const dim = lockedN >= 3;
     return {
       compass,
       ready: bind || dim ? 0 : ready,
@@ -1064,15 +1094,15 @@ export function BattleScreen({
       dim,
       hint: dim
         ? "행동 불가"
-        : bind
-          ? "속박 · 1R"
+        : boundN > 0
+          ? `속박 · ${boundN}턴`
           : tray
             ? "▼ 닫기"
             : full
               ? "순서 칸이 꽉 찼다"
               : "▲ 펼치기",
     };
-  }, [moveDeck, slots, tray, roundLock, battle.state.cooldowns, battle.state.energy]);
+  }, [moveDeck, slots, tray, lockedN, boundN, battle.state.cooldowns, battle.state.energy]);
 
   // 강조할 타격 셀 — 공격 카드를 올려보는 중이면 그 카드의 사거리, 아니면 고른
   // 플랜의 공격들이 덮는 셀(그대로 남아 있는 예시).
@@ -1216,7 +1246,7 @@ export function BattleScreen({
 
       // 실행 중인 카드 안내 — 슬롯 번호는 그 쪽 계획에서의 자리다.
       const plan = actor === 0 ? planA : planB;
-      const slotNo = plan.findIndex((c) => c.id === step.card.id) + 1;
+      const slotNo = plan.findIndex((c) => c?.id === step.card.id) + 1;
       setCallout(
         slotNo > 0
           ? {
@@ -1397,7 +1427,7 @@ export function BattleScreen({
       return;
     }
 
-    setSlots([null, null, null]);
+    setSlots(freshSlots(battle, localSide));
     setTick((t) => t + 1); // refresh cooldown display
     submittingRef.current = false;
     setPhase("select");
@@ -1434,7 +1464,8 @@ export function BattleScreen({
   const confirm = () => {
     if (!filled || !affordable) return;
     playSfx("confirm");
-    void submitPlan(slots as CardDef[]);
+    // 잠긴 슬롯의 자리표는 카드가 아니다 — 비워서 보낸다(엔진이 그 턴을 "기절"로 띄운다).
+    void submitPlan(slots.map((c) => (isLockSlot(c) ? undefined : c)) as CardDef[]);
   };
 
   useEffect(() => {
@@ -1831,7 +1862,7 @@ export function BattleScreen({
             {slots.map((c, i) => (
               <button
                 key={i}
-                className={`slot ${c ? "slot--filled" : ""}`}
+                className={`slot ${isLockSlot(c) ? "slot--locked" : c ? "slot--filled" : ""}`}
                 onClick={() => {
                   // 슬롯도 꾹 누르면 읽힌다 — 담아 놓고 "이게 뭐였지" 할 때가 있다.
                   if (longPress.consumedClick()) return;
@@ -1874,7 +1905,11 @@ export function BattleScreen({
                 }
               >
                 <span className="slot__no">{i + 1}</span>
-                {c ? (
+                {isLockSlot(c) ? (
+                  <span className="slot__empty slot__locked">
+                    {c!.id.endsWith("frozen") ? "❄" : "💫"} {c!.name}
+                  </span>
+                ) : c ? (
                   <CardFace
                     card={faceCard(c)}
                     accent={cardAccent(c, local.accent)}
@@ -1994,8 +2029,8 @@ export function BattleScreen({
             </div>
           )}
           <div className="cards__row">
-            {/* 봉인이 라운드를 넘어왔을 때만 뜬다(전설 유물 상대). 이 자리가 없으면
-                "카드를 냈는데 아무 일도 안 일어난다"가 되고, 그건 버그로 읽힌다. */}
+            {/* 봉인이 라운드를 넘어왔을 때만 뜬다(2026-11-13~ 턴 단위 봉인). 기절 · 빙결 턴은
+                슬롯이 잠기고, 속박 턴은 그 슬롯의 이동이 무효다 — 이유를 말해 준다. */}
             {roundLock && (
               <span className="cards__note">
                 {roundLock.kind === "frozen"
@@ -2005,10 +2040,10 @@ export function BattleScreen({
                     : "💫 기절"}
                 <em>
                   {roundLock.kind === "bind"
-                    ? "이번 라운드 이동 불가"
+                    ? `앞 ${boundN}턴 이동 불가`
                     : roundLock.kind === "frozen"
-                      ? "맞으면 풀린다"
-                      : "이번 라운드 행동 불가"}
+                      ? `앞 ${lockedN}턴 잠김 · 맞으면 풀린다`
+                      : `앞 ${lockedN}턴 행동 불가`}
                 </em>
               </span>
             )}
@@ -2105,7 +2140,7 @@ export function BattleScreen({
             <button
               className="btn btn--ghost cards__reset"
               onClick={reset}
-              disabled={slots.every((s) => !s)}
+              disabled={slots.every((s) => !s || isLockSlot(s))}
             >
               초기화
             </button>

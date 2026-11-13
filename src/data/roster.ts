@@ -56,7 +56,7 @@ export interface Passive {
   lowHpBonusPct?: number
   /** 상대 보호막을 무시하고 피해를 관통시킨다(카드의 `pierce`를 상시화). */
   alwaysPierce?: boolean
-  /** 내 공격이 적중하면 상대를 **그 라운드 동안** 기절시킨다(전투당 `stunCap`회까지). */
+  /** 내 공격이 적중하면 상대를 **다음 턴** 기절시킨다(전투당 `stunCap`회까지 · 2026-11-13 턴 단위). */
   stunOnHit?: number
   /** `stunOnHit`이 전투당 발동할 수 있는 횟수(합산). 없으면 1회. */
   stunCap?: number
@@ -84,7 +84,7 @@ export interface Passive {
   // **다른 자리를 건드리는** 훅이라 유물이 서로 다르게 느껴지는 근거가 된다.
   // 전부 결정론적이고 정산 자리가 고정이라 멀티 락스텝은 그대로 안전하다.
   /**
-   * 내 공격이 피해를 입히면 상대를 **그 라운드 동안** 빙결(카드를 못 냄. 단 맞으면
+   * 내 공격이 피해를 입히면 상대를 **다음 턴** 빙결(카드를 못 냄. 단 맞으면
    * 깨진다). ⚠ 무제한이면 상대가 계속 봉인되므로 `freezeCap`(기본 2)회로 제한한다.
    */
   freezeOnHit?: number
@@ -112,18 +112,18 @@ export interface Passive {
   //   있는 한 규칙 자체가 PvP에 존재하지 않는다 — `RULES_VERSION`을 안 올리는 근거다.
   //   `npm run check`가 "ROSTER·몬스터에 연장 훅이 없다"를 직접 단정한다.
   //
-  // ⚠ **봉인(기절·빙결·속박)을 늘리면 라운드를 넘어간다.** 무한 봉인이 안 되는 이유는
-  //   `applyStatus`의 **재부여 가드**다 — 이미 걸려 있는 봉인은 다시 걸리지 않으므로
-  //   "이번 라운드 + 다음 라운드"까지가 끝이고 그다음 라운드엔 반드시 일어난다.
+  // ⚠ **봉인(기절·빙결·속박)은 턴 단위로 라운드를 넘어간다**(2026-11-13 · `STATUS.md` 4절).
+  //   무한 봉인이 안 되는 건 `applyStatus`의 겹치기 규칙 — 봉인 중엔 같은 것 · 낮은 것이
+  //   안 걸리고, 높은 것도 처음 걸린 봉인의 남은 길이를 못 넘는다.
   /** 내가 거는 **중독**에 +N겹(걸 때마다 · 2026-11-12 개편). */
   poisonRoundBonus?: number
   /** 내가 거는 **화상**에 +N겹(걸 때마다 · 2026-11-13 개편). */
   burnRoundBonus?: number
-  /** 내가 거는 **기절**의 지속 +N라운드(다음 라운드까지 이어진다). */
+  /** 내가 거는 **기절**에 +N턴(이름은 옛 이름 — 값은 턴, 2026-11-13). */
   stunRoundBonus?: number
-  /** 내가 거는 **빙결**의 지속 +N라운드. 맞으면 깨지는 규칙은 그대로다. */
+  /** 내가 거는 **빙결**에 +N턴. 맞으면 깨지는 규칙은 그대로다. */
   freezeRoundBonus?: number
-  /** 내가 거는 **속박**의 지속 +N라운드. */
+  /** 내가 거는 **속박**에 +N턴(「얽매는 뿌리」 2). */
   bindRoundBonus?: number
 
   // --- 이벤트 유물 훅(2026-11-09) — 런 전용 ---------------------------------
@@ -136,7 +136,7 @@ export interface Passive {
 /** 누적 기력 소비 트리거 한 개. `per`만큼 쓸 때마다 아래 효과가 한 번씩 터진다. */
 export interface EnergyTrigger {
   per: number
-  /** 상대를 **그 라운드 동안** 기절시킨다(남은 카드를 못 냄). */
+  /** 상대를 **다음 턴** 기절시킨다(그 턴 카드를 못 냄 · 2026-11-13). */
   stun?: number
   /** 내 체력 +N. */
   heal?: number
@@ -304,7 +304,7 @@ export const ROSTER: CharacterDef[] = [
     cards: [
       atk({ id: 'war-cleave', name: '파쇄 베기', range: both(1), damage: 13, energyCost: 5, fx: 'slash', desc: '앞뒤 한 칸을 후려치는 기본 근접. 싸고 묵직하다.' }),
       atk({ id: 'war-bash', name: '방패 밀치기', range: barBoth(1), damage: 14, energyCost: 13, push: 2, fx: 'punch', desc: '몸 앞뒤 세로 3줄을 방패로 후려쳐 두 칸 넉백. 들러붙는 상대를 떼어낸다.' }),
-      atk({ id: 'war-quake', name: '대지 가르기', range: barBoth(1), damage: 14, energyCost: 12, stun: 1, cooldown: 2, fx: 'quake', desc: '몸 주변 앞뒤 세로 3줄을 쪼갠다. 피해를 입히면 이 라운드 동안 기절 — 남은 카드를 통째로 못 낸다. 쿨타임 2라운드.' }),
+      atk({ id: 'war-quake', name: '대지 가르기', range: barBoth(1), damage: 14, energyCost: 12, stun: 1, cooldown: 2, fx: 'quake', desc: '몸 주변 앞뒤 세로 3줄을 쪼갠다. 피해를 입히면 다음 턴 기절 — 그 턴 카드를 못 낸다. 쿨타임 2라운드.' }),
       {
         id: 'war-wall',
         name: '불침의 벽',
@@ -327,7 +327,7 @@ export const ROSTER: CharacterDef[] = [
       // 지형 카드(2026-08-07) — 판의 모양을 **내가** 바꾸는 첫 플레이어 카드. 규칙·근거는
       // 아래 `mag-menhir` 옆 주석에 함께 적었다. 전사는 **바로 앞 한 칸**이라 밀착
       // 싸움에 그대로 얹힌다: 붙은 상대를 떼어내고 그 자리를 막아 다시 못 붙게 한다.
-      atk({ id: 'war-menhir', name: '돌기둥 세우기', range: [fwd(1)], damage: 8, energyCost: 11, push: 1, stun: 1, cooldown: 2, pointBlank: false, raiseRocks: { hp: ROCK_HP, where: 'ahead', dist: 1 }, fx: 'quake', accent: '#c9b183', desc: `바닥을 갈라 바로 앞 한 칸에 돌기둥을 세운다(체력 ${ROCK_HP}). 그 칸에 상대가 서 있었다면 한 칸 밀려나며 피해를 입고 이 라운드 기절한다. 쿨타임 2라운드.` }),
+      atk({ id: 'war-menhir', name: '돌기둥 세우기', range: [fwd(1)], damage: 8, energyCost: 11, push: 1, stun: 1, cooldown: 2, pointBlank: false, raiseRocks: { hp: ROCK_HP, where: 'ahead', dist: 1 }, fx: 'quake', accent: '#c9b183', desc: `바닥을 갈라 바로 앞 한 칸에 돌기둥을 세운다(체력 ${ROCK_HP}). 그 칸에 상대가 서 있었다면 한 칸 밀려나며 피해를 입고 다음 턴 기절한다. 쿨타임 2라운드.` }),
     ],
   },
   {
@@ -358,7 +358,7 @@ export const ROSTER: CharacterDef[] = [
       // ⚠ 궁수의 구조적 약점: 카드 대부분이 밀착 사각인데 몬스터가 접근한다.
       // 아래 두 장이 그 해법이다 — 물러나며 쏘고(카이팅), 붙은 적을 얼려 떼어낸다.
       atk({ id: 'arc-kite', name: '물러서며 쏘기', range: [...beamBoth(1, 2), ...FORK], damage: 11, energyCost: 10, dashForward: -1, fx: 'bolt', desc: '뒤로 한 칸 물러난 뒤에 앞뒤 1~2칸 + 앞뒤 대각 네 칸에 흩뿌린다. 빠지면서 어긋난 줄을 대각으로 쓸어 맞힌다 — 공격 페이즈에 움직이므로 상대가 붙은 다음에 빠진다.' }),
-      atk({ id: 'arc-snare', name: '가시 올가미', range: barBoth(1), damage: 8, energyCost: 12, bind: 1, push: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 한 칸 × 세 줄에 올가미를 깐다. 상대를 한 칸 밀고 이 라운드 동안 속박(이동 카드 무효 — 공격·수비는 그대로 나간다) — 쿨타임 2라운드.' }),
+      atk({ id: 'arc-snare', name: '가시 올가미', range: barBoth(1), damage: 8, energyCost: 12, bind: 1, push: 1, cooldown: 2, fx: 'orb', desc: '앞뒤 한 칸 × 세 줄에 올가미를 깐다. 상대를 한 칸 밀고 다음 턴 속박(이동 카드 무효 — 공격·수비는 그대로 나간다) — 쿨타임 2라운드.' }),
       buff({ id: 'arc-focus', name: '사냥꾼의 집중', buff: 'atkUp', buffPower: 6, buffRounds: 3, buffCost: 11, fx: 'bolt', accent: '#3cbf7a', desc: '3라운드간 내 공격 피해 +6. 거리를 벌어 둔 라운드에 깔아 두는 카드.' }),
       buff({ id: 'arc-veil', name: '잿빛 장막', buff: 'defUp', buffPower: 4, buffRounds: 3, buffCost: 10, accent: '#5aa06d', desc: '3라운드간 받는 공격 피해 -4. 갑주가 얇은 궁수가 붙잡혔을 때 버는 시간.' }),
     ],
@@ -379,20 +379,20 @@ export const ROSTER: CharacterDef[] = [
     // (매 라운드 기력 +12 패시브가 그 비용을 감당하는 자리다).
     basics: [
       atk({ id: 'mag-ember', name: '불티', range: beamBoth(2, 3), damage: 8, energyCost: 6, pointBlank: false, fx: 'flame', desc: '앞뒤 2~3칸째에 불티를 날린다. 멀리서 쏘는 기본 주문 — 붙은 상대는 못 맞힌다.' }),
-      atk({ id: 'mag-shard', name: '가시덩굴', range: barBoth(2), damage: 4, energyCost: 7, bind: 1, cooldown: 1, pointBlank: false, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 2칸째 세로 3줄에 가시덩굴을 돋운다. 맞으면 이 라운드 동안 속박 — 이동 카드를 못 쓴다. 다가오는 발을 묶는 카드. 쿨타임 1라운드.' }),
+      atk({ id: 'mag-shard', name: '가시덩굴', range: barBoth(2), damage: 4, energyCost: 7, bind: 1, cooldown: 1, pointBlank: false, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 2칸째 세로 3줄에 가시덩굴을 돋운다. 맞으면 다음 턴 속박 — 이동 카드를 못 쓴다. 다가오는 발을 묶는 카드. 쿨타임 1라운드.' }),
       atk({ id: 'mag-touch', name: '망령의 손길', range: barBoth(1), damage: 5, energyCost: 7, push: 1, fx: 'orb', desc: '앞뒤 세로 3줄을 훑어 붙은 상대를 한 칸 밀어낸다. 약하지만 거리를 되찾는 기본기 — 벽에 몰린 상대는 처박힌다.' }),
     ],
     cards: [
       atk({ id: 'mag-spark', name: '혼불', range: beamBoth(2, 3), damage: 11, energyCost: 7, burn: 1, pointBlank: false, fx: 'flame', desc: '앞뒤 2~3칸째에 도깨비불을 날린다. 피해를 입히면 화상 1겹 — 화상 중에는 카드 공격에 맞을 때 피해가 10% 늘어난다(3겹 이상 30%).' }),
-      atk({ id: 'mag-frost', name: '서리 결계', range: barBoth(1), damage: 9, energyCost: 14, freeze: 1, selfShield: 5, fx: 'orb', desc: '앞뒤 한 칸의 세 줄을 얼린다. 피해를 입히면 이 라운드 동안 빙결 — 남은 카드를 못 낸다. 단, 때리면 깨진다(그 타격에 +5). 사용 시 보호막 +5.' }),
+      atk({ id: 'mag-frost', name: '서리 결계', range: barBoth(1), damage: 9, energyCost: 14, freeze: 1, selfShield: 5, fx: 'orb', desc: '앞뒤 한 칸의 세 줄을 얼린다. 피해를 입히면 다음 턴 빙결 — 그 턴 카드를 못 낸다. 단, 때리면 깨진다(그 타격에 +5). 사용 시 보호막 +5.' }),
       atk({ id: 'mag-flame', name: '화염 폭풍', range: [...barBoth(2), ...both(3)], damage: 17, energyCost: 18, burn: 2, pointBlank: false, fx: 'flame', desc: '앞뒤 2칸째 세 줄 + 3칸째를 태우는 광역 화염. 피해를 입히면 화상 2겹. 붙은 상대는 못 맞힌다.' }),
-      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(2), ...barBoth(3)], damage: 30, energyCost: 25, burn: 3, bind: 1, pointBlank: false, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 2~3칸째 세 줄을 통째로 덮는 만가 — 화상 3겹 + 이 라운드 속박. 멀리 있을수록 무섭고, 붙은 상대는 못 맞힌다.' }),
+      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(2), ...barBoth(3)], damage: 30, energyCost: 25, burn: 3, bind: 1, pointBlank: false, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 2~3칸째 세 줄을 통째로 덮는 만가 — 화상 3겹 + 다음 턴 속박. 멀리 있을수록 무섭고, 붙은 상대는 못 맞힌다.' }),
       // 마법사의 제약은 기력이다. 무아지경이 그 제약을 2라운드간 통째로 없앤다 —
       // 선불이 비싸고 쿨이 길지만, 켜진 동안 종언의 만가를 계속 쏠 수 있다.
       buff({ id: 'mag-trance', name: '무아지경', buff: 'freeCast', buffRounds: 2, buffCost: 20, cooldown: 3, fx: 'flame', accent: '#d45fae', desc: '2라운드간 모든 카드의 기력 소모가 0이 된다. 켜진 동안 가장 비싼 주문을 매 턴 퍼부을 수 있다 — 쿨타임 3라운드.' }),
       buff({ id: 'mag-ward', name: '혼백의 장막', buff: 'defUp', buffPower: 5, buffRounds: 3, buffCost: 12, accent: '#6fc0b0', desc: '3라운드간 받는 공격 피해 -5. 큰 주문을 모으는 동안 몸을 지킨다.' }),
       atk({ id: 'mag-blink', name: '그림자 도약', range: beamBoth(2, 3), damage: 10, energyCost: 11, burn: 1, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 앞뒤 2~3칸째를 태운다 — 화상 1겹. 붙은 상대에게서 빠져나오며 쏘는 카드.' }),
-      atk({ id: 'mag-hex', name: '속박의 저주', range: [...barBoth(1), ...barBoth(2)], damage: 11, energyCost: 14, bind: 1, push: 1, cooldown: 2, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 1~2칸의 세 줄에 가시덩굴을 일으켜 상대를 한 칸 밀어내고 이 라운드 동안 속박한다. 떼어 놓고 묶어 두는 카드 — 쿨타임 2라운드.' }),
+      atk({ id: 'mag-hex', name: '속박의 저주', range: [...barBoth(1), ...barBoth(2)], damage: 11, energyCost: 14, bind: 1, push: 1, cooldown: 2, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 1~2칸의 세 줄에 가시덩굴을 일으켜 상대를 한 칸 밀어내고 다음 턴 속박한다. 떼어 놓고 묶어 두는 카드 — 쿨타임 2라운드.' }),
       // ---- 지형 카드(2026-08-07) ------------------------------------------------
       // 판의 모양을 **내가** 바꾸는 첫 플레이어 카드. 그전까지 바위는 무대가 주는
       // 것이라 플레이어에겐 순수한 방해물이었다.
@@ -407,7 +407,7 @@ export const ROSTER: CharacterDef[] = [
       // ⚠ 마법사는 **두 칸 앞**이라 붙기 전에 길을 끊는다. 전사의 한 칸(`war-menhir`)이
       //   "떼어내고 막는다"라면 이쪽은 "오지 못하게 한다"다 — 낮은 단일 화력을
       //   거리로 메우는 직업 정체성과 같은 방향이다.
-      atk({ id: 'mag-menhir', name: '석순 소환', range: [fwd(2)], damage: 7, energyCost: 13, push: 1, stun: 1, cooldown: 2, pointBlank: false, raiseRocks: { hp: ROCK_HP, where: 'ahead', dist: 2 }, fx: 'orb', accent: '#c9b183', desc: `두 칸 앞 바닥에서 석순을 끌어올린다(체력 ${ROCK_HP}). 그 칸에 상대가 서 있었다면 한 칸 밀려나며 피해를 입고 이 라운드 기절한다. 쿨타임 2라운드.` }),
+      atk({ id: 'mag-menhir', name: '석순 소환', range: [fwd(2)], damage: 7, energyCost: 13, push: 1, stun: 1, cooldown: 2, pointBlank: false, raiseRocks: { hp: ROCK_HP, where: 'ahead', dist: 2 }, fx: 'orb', accent: '#c9b183', desc: `두 칸 앞 바닥에서 석순을 끌어올린다(체력 ${ROCK_HP}). 그 칸에 상대가 서 있었다면 한 칸 밀려나며 피해를 입고 다음 턴 기절한다. 쿨타임 2라운드.` }),
     ],
   },
 ]
