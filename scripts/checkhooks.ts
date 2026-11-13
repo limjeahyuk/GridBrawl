@@ -78,7 +78,8 @@ import { BOSS_IDS, bossAction, bossCinematic, bossPlan, bossScene } from '../src
 import { BOSS_CARDS } from '../src/game/bosscards'
 import { getMonster, MONSTERS } from '../src/game/monsters'
 import {
-  BURN_HIT_DAMAGE,
+  BURN_PCT_PER_STACK,
+  burnPct,
   COLLAPSE_START_ROUND,
   COLLAPSE_STEP_ROUNDS,
   isCollapsedCell,
@@ -90,8 +91,6 @@ import {
   KNOCKBACK_BLOCK_DAMAGE,
   POISON_TICK_DAMAGE,
   ROCK_HP,
-  STATUS_MAX_ROUNDS,
-  STATUS_STACK_CAP,
   type CardDef,
   type Hazard,
   type Obstacle,
@@ -378,6 +377,14 @@ const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poi
   check('중독 4겹 — 빗나간 공격 한 장에도 4', hp - b.state.hp[1], 4)
 }
 {
+  // 이동공격(dashForward)도 움직임까지 합쳐 한 번.
+  const b = battleWith({}, {})
+  b.resolveRound([pjab('test-pdash0', 5), card('c-energy'), card('c-energy')], HOLD)
+  const hp = b.state.hp[1]
+  b.resolveRound(HOLD, [{ ...card('c-strike'), id: 'test-pdash', dashForward: -2 }, card('c-energy'), card('c-energy')])
+  check('중독 4겹 — 이동공격 한 장도 한 번(4)', hp - b.state.hp[1], 4)
+}
+{
   // 상한 없음 — 한 라운드에 세 대(3겹씩) = 9겹 → 끝에 8. 이동 한 번에 8.
   const b = battleWith({}, {})
   b.resolveRound([pjab('test-ps1', 3), pjab('test-ps2', 3), pjab('test-ps3', 3)], HOLD)
@@ -396,33 +403,69 @@ const pjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, poi
   check('중독 — 보호막은 안 깎인다', b.state.shield[1], 50)
 }
 {
-  // 화상 — **맞을 때마다** 5. 지속피해가 아니라 증폭기다.
-  const burnJab: CardDef = { ...card('c-strike'), id: 'test-burn', burn: 3 }
+  // 화상(2026-11-13 개편 · STATUS.md 2절): 겹 수 하나 · 상한 없음 · 라운드 끝 −1 ·
+  // 카드 공격에 맞을 때 보호막 전 피해 × (1 + 10%/겹, 3겹에서 멈춤) 반올림 · 늘어난 몫도 보호막이 막는다.
+  const bjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, burn: n })
   const plain = battleWith({}, {})
   const hpP = plain.state.hp[1]
   plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
   const base = hpP - plain.state.hp[1]
+  check('화상 세기 — 1 · 2 · 3 · 5겹 = 10 · 20 · 30 · 30%', [1, 2, 3, 5].map(burnPct), [10, 20, 30, 30])
 
   const b = battleWith({}, {})
-  b.resolveRound([burnJab, card('c-energy'), card('c-energy')], HOLD)
-  check('화상이 3라운드로 걸린다(1라운드 소모 후 2 남음)', b.statusOf(1, 'burn')?.rounds, 2)
+  b.resolveRound([bjab('test-burn', 3), card('c-energy'), card('c-energy')], HOLD)
+  check('화상 3겹 → 라운드 끝에 2겹 · 한 칸', [b.stacksOf(1, 'burn'), b.state.status[1].filter((e) => e.kind === 'burn').length], [2, 1])
   const hp0 = b.state.hp[1]
   b.resolveRound(HOLD, HOLD)
   check('화상 — 안 맞으면 아프지 않다', b.state.hp[1], hp0)
+  // 이제 1겹 → +10%
   b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
-  check('화상 — 맞으면 피해 +5', hp0 - b.state.hp[1], base + BURN_HIT_DAMAGE)
+  check('화상 1겹 — 카드 피해 +10%(반올림)', hp0 - b.state.hp[1], Math.round(base * (1 + BURN_PCT_PER_STACK / 100)))
+  check('화상 — 겹이 0이 되면 사라진다', b.statusOf(1, 'burn'), undefined)
 }
 {
-  // 화상은 보호막을 관통한다 — 가드로 완전히 막아도 5는 들어온다.
-  const burnJab: CardDef = { ...card('c-strike'), id: 'test-burn2', burn: 3 }
+  // 걸 때마다 더하고 상한 없음 · 세기는 3겹에서 멈춘다.
+  const bjab = (id: string, n: number): CardDef => ({ ...card('c-strike'), id, burn: n })
+  const plain = battleWith({}, {})
+  const hpP = plain.state.hp[1]
+  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const base = hpP - plain.state.hp[1]
   const b = battleWith({}, {})
-  b.resolveRound([burnJab, card('c-energy'), card('c-energy')], HOLD)
+  b.resolveRound([bjab('test-bs1', 3), bjab('test-bs2', 3), card('c-energy')], HOLD)
+  check('화상 — 더한다 · 상한 없음(6 → 5)', b.stacksOf(1, 'burn'), 5)
   const hp0 = b.state.hp[1]
-  b.resolveRound(
-    [card('c-strike'), card('c-energy'), card('c-energy')],
-    [card('c-guard'), card('c-energy'), card('c-energy')],
-  )
-  check('화상 — 가드로 막아도 5는 들어온다', hp0 - b.state.hp[1], BURN_HIT_DAMAGE)
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('화상 5겹 — 세기는 +30%에서 멈춘다', hp0 - b.state.hp[1], Math.round(base * 1.3))
+}
+{
+  // 카드 + 유물(burnOnHit) + 안식일(burnRoundBonus)을 다 더한다.
+  const b = battleWith({ burnOnHit: 2, burnRoundBonus: 1 }, {})
+  b.resolveRound([{ ...card('c-strike'), id: 'test-bsum', burn: 2 }, card('c-energy'), card('c-energy')], HOLD)
+  check('화상 — 카드 2 + 유물 2 + 안식일 1 = 5겹(끝에 4)', b.stacksOf(1, 'burn'), 4)
+}
+{
+  // 늘어난 몫도 **보호막이 막는다**(옛 규칙의 관통 +5가 아니다).
+  const plain = battleWith({}, {})
+  const hpP = plain.state.hp[1]
+  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const base = hpP - plain.state.hp[1]
+  const b = battleWith({}, { turnShield: 50 })
+  b.resolveRound([{ ...card('c-strike'), id: 'test-bshield', burn: 4, pierce: true }, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[1]
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('화상 — 늘어난 몫까지 보호막이 받는다(체력 그대로)', [hp0 - b.state.hp[1], 50 - b.state.shield[1]], [0, Math.round(base * 1.3)])
+}
+{
+  // 위력 % 유물(statusPowerPct)은 화상에 안 붙는다.
+  const plain = battleWith({}, {})
+  const hpP = plain.state.hp[1]
+  plain.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  const base = hpP - plain.state.hp[1]
+  const b = battleWith({ statusPowerPct: 100 }, {})
+  b.resolveRound([{ ...card('c-strike'), id: 'test-bpct', burn: 2 }, card('c-energy'), card('c-energy')], HOLD)
+  const hp0 = b.state.hp[1]
+  b.resolveRound([card('c-strike'), card('c-energy'), card('c-energy')], HOLD)
+  check('화상 — 위력 % 유물 무시(1겹 = +10%)', hp0 - b.state.hp[1], Math.round(base * 1.1))
 }
 {
   // 가드에 완전히 막히면 상태이상은 안 묻는다(기절과 같은 규칙).
@@ -621,11 +664,11 @@ console.log('\n지속 연장 유물 — 중독·화상·기절·빙결·속박')
   check('중독 연장 — 상한(3)을 넘겨 1라운드 더', [plain.statusOf(1, 'poison')?.rounds, b.statusOf(1, 'poison')?.rounds], [2, 3])
 }
 {
-  // 화상 연장.
+  // 화상 + 안식일 — 2겹 + 1 = 3겹(끝에 2).
   const jab: CardDef = { ...card('c-strike'), id: 'test-blong', burn: 2 }
   const b = battleWith({ burnRoundBonus: 1 }, {})
   b.resolveRound([jab, card('c-energy'), card('c-energy')], HOLD)
-  check('화상 연장 — 2 → 3라운드(1 소모 후 2)', b.statusOf(1, 'burn')?.rounds, 2)
+  check('화상 안식일 — 2겹 + 1 = 3겹(끝에 2)', b.stacksOf(1, 'burn'), 2)
 }
 {
   // 기절 연장 — 사용자가 못박은 시나리오를 그대로 재현한다.
@@ -2268,7 +2311,7 @@ console.log('\n피해 내역(Step.bits) · 슬롯 번호(Step.slot)')
     const steps = b.resolveRound([card('c-strike'), card('c-jab'), card('c-shot')], HOLD)
     check('화상 — 내역 합 = 깎인 체력', bitsMatchHp(b, steps, from), 'ok')
     const burned = steps.flatMap((s) => s.bits ?? []).filter((x) => x.src === 'burn')
-    check('화상 몫이 타격과 따로 잡힌다', burned.length > 0 && burned.every((x) => x.n === BURN_HIT_DAMAGE), true)
+    check('화상 몫이 타격과 따로 잡힌다', burned.length > 0 && burned.every((x) => x.n > 0), true)
   }
   // ③ 처박기 — **예전엔 화면에 아예 안 뜨던 피해**다(`damage`에도 `recoil`에도 없다).
   {

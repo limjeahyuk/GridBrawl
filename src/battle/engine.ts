@@ -2,7 +2,6 @@ import { getChar, type CharacterDef, type Passive } from '../data/roster'
 import { isBuff } from './types'
 import { ENERGY_REGEN } from './cards'
 import {
-  BURN_HIT_DAMAGE,
   COLLAPSE_START_ROUND,
   FOG_DAMAGE,
   FREEZE_SHATTER_BONUS,
@@ -12,9 +11,11 @@ import {
   LOW_HP_FRAC,
   MOVE_DELTA,
   POISON_TICK_DAMAGE,
+  burnPct,
+  isLayered,
+  FIRE_BURN_STACKS,
   START_CELLS,
   STATUS_MAX_ROUNDS,
-  STATUS_STACK_CAP,
   canStand,
   collapseDamageAt,
   collapseRound,
@@ -24,7 +25,6 @@ import {
   isCollapsedCell,
   isFullLock,
   isRoundLock,
-  isStacking,
   rockAt,
   shadowRock,
   type BattleSnapshot,
@@ -83,8 +83,8 @@ export interface BattleState {
    */
   empowered: [number, number]
   /**
-   * 걸려 있는 상태이상. 화상은 **겹마다 한 칸**(최대 `STATUS_STACK_CAP`), 중독은 한 칸의
-   * `rounds`가 겹 수(상한 없음), 나머지는 종류당 한 칸. 라운드 한정 제약(빙결·기절·속박)은 라운드 시작에 지워진다.
+   * 걸려 있는 상태이상 — 종류당 한 칸. 중독 · 화상은 그 칸의 `rounds`가 겹 수(상한 없음 ·
+   * 라운드 끝 −1 — 2026-11-12/13 개편). 라운드 한정 제약(빙결·기절·속박)은 라운드 시작에 지워진다.
    */
   status: [StatusEffect[], StatusEffect[]]
   /** 판 위의 바위(지형). 비어 있으면 지형 규칙이 통째로 no-op — PvP·봇전이 그렇다. */
@@ -229,17 +229,13 @@ export class CardBattle {
   }
 
   /**
-   * 이 종류가 몇 겹 걸려 있는가. 화상은 겹마다 한 칸씩 따로 살고, **중독은 한 칸의
-   * `rounds`가 곧 겹 수**다(2026-11-12 개편 — 겹 = 남은 라운드).
+   * 이 종류가 몇 겹 걸려 있는가. **중독 · 화상은 한 칸의 `rounds`가 곧 겹 수**다(겹 = 남은
+   * 라운드 — 2026-11-12/13 개편). 나머지(봉인 · 버프)는 걸려 있으면 1.
    */
   stacksOf(p: number, kind: StatusKind): number {
-    if (kind === 'poison') return this.statusOf(p, 'poison')?.rounds ?? 0
-    return this.state.status[p].reduce((n, e) => (e.kind === kind ? n + 1 : n), 0)
-  }
-
-  /** 이 종류의 겹들이 한 번에 주는 피해 총합(중독=이동 1칸당, 화상=피격 1회당). */
-  statusPower(p: number, kind: StatusKind): number {
-    return this.state.status[p].reduce((n, e) => (e.kind === kind ? n + e.power : n), 0)
+    const e = this.statusOf(p, kind)
+    if (!e) return 0
+    return isLayered(kind) ? e.rounds : 1
   }
 
   /**
@@ -504,10 +500,7 @@ export class CardBattle {
 
     /**
      * 상태이상을 건다. 종류에 따라 **쌓는 방식이 다르다**:
-     *   중독·화상  한 겹씩 따로 쌓인다(`STATUS_STACK_CAP`까지). 겹마다 남은 라운드가
-     *              달라서 합칠 수 없다 — `중독2`+`중독1`은 이번 라운드엔 6, 다음
-     *              라운드엔 3이다. 꽉 차 있으면 **가장 짧은 겹을 갱신**한다(겹 수를
-     *              늘리지 않고 지속만 새로 받는다 — 계속 때리면 계속 유지된다).
+     *   중독·화상  한 칸에 겹 수(`rounds`)를 **더한다** — 상한 없음(`docs/redesign/STATUS.md` 1 · 2절).
      *   그 외      종류당 한 칸. 위력은 큰 쪽, 지속은 긴 쪽으로 갱신.
      */
     const applyStatus = (
@@ -516,7 +509,7 @@ export class CardBattle {
       power: number,
       rounds: number,
       /**
-       * 지속 상한. 기본은 봉인 1라운드 / 화상 `STATUS_MAX_ROUNDS`이고(중독은 상한이 없어 안 본다), 런 전용
+       * 지속 상한. 기본은 봉인 1라운드 / 버프 `STATUS_MAX_ROUNDS`이고(중독 · 화상은 상한이 없어 안 본다), 런 전용
        * 전설 유물(`*RoundBonus`)이 이걸 밀어 올린다. 호출부가 이미 보너스를 더한
        * `rounds`를 넘기므로 상한도 같이 넘겨야 한다 — 안 그러면 유물이 무효가 된다.
        */
@@ -533,28 +526,16 @@ export class CardBattle {
       //   새로 채워지지 않으므로 "이번 + 다음 라운드"에서 반드시 끝난다.
       //   (빙결은 맞으면 먼저 깨지므로(`thaw`) 깨진 뒤 다시 거는 건 그대로 된다.)
       if (isRoundLock(kind) && s.status[p].some((e) => e.kind === kind)) return
-      // **중독**(2026-11-12 개편) — 한 칸에 겹 수(`rounds`)를 **더한다**. 상한 없음.
+      // **중독 · 화상**(2026-11-12/13 개편) — 한 칸에 겹 수(`rounds`)를 **더한다**. 상한 없음.
       //   라운드 끝 `tickStatuses`가 1씩 깎으므로 "겹 = 남은 라운드"가 저절로 된다.
-      //   위력 %는 여기 박지 않는다 — 아플 때(`tickPoison`) 거는 쪽 유물로 계산한다.
-      if (kind === 'poison') {
-        const cur = s.status[p].find((e) => e.kind === 'poison')
+      //   위력은 여기 박지 않는다 — 중독은 아플 때(`tickPoison`) 거는 쪽 유물로, 화상은
+      //   맞을 때(`computeAttack`) 겹 수로 계산한다.
+      if (isLayered(kind)) {
+        const cur = s.status[p].find((e) => e.kind === kind)
         if (cur) {
           cur.rounds += rounds
           cur.since = s.round
-        } else s.status[p].push({ kind, rounds, power: POISON_TICK_DAMAGE, since: s.round })
-        return
-      }
-      if (isStacking(kind)) {
-        const mine = s.status[p].filter((e) => e.kind === kind)
-        if (mine.length >= STATUS_STACK_CAP) {
-          // 가장 먼저 사라질 겹을 되살린다 — 중첩 상한에 닿아도 유지가 끊기지 않게.
-          const shortest = mine.reduce((a, b) => (b.rounds < a.rounds ? b : a))
-          shortest.rounds = Math.max(shortest.rounds, cap)
-          shortest.power = Math.max(shortest.power, power)
-          shortest.since = s.round
-          return
-        }
-        s.status[p].push({ kind, rounds: cap, power, since: s.round })
+        } else s.status[p].push({ kind, rounds, power: 0, since: s.round })
         return
       }
       const cur = s.status[p].find((e) => e.kind === kind)
@@ -620,7 +601,7 @@ export class CardBattle {
       if (!s.hazards.length) return 0
       const h = hazardAt(s.hazards, s.pos[p])
       if (!h) return 0
-      if (h.kind === 'fire') applyStatus(p, 'burn', BURN_HIT_DAMAGE, 1)
+      if (h.kind === 'fire') applyStatus(p, 'burn', 0, FIRE_BURN_STACKS)
       else if (h.kind === 'bramble' || (h.kind === 'spikes' && spikeStateAt(h, s.round) === 'up'))
         applyStatus(p, 'bind', 0, 1)
       else if (h.kind === 'ice' && !slid && (dc || dr)) {
@@ -640,12 +621,6 @@ export class CardBattle {
      */
     const costOf = (p: number, c: CardDef): number =>
       this.statusOf(p, 'freeCast') ? 0 : baseCostOf(c)
-
-    /** 유물 `statusPowerPct`를 **거는 순간** 한 번 반영한다(틱마다 다시 계산하지 않는다). */
-    const scaledPower = (p: number, power: number): number => {
-      const pct = this.passive[p].statusPowerPct ?? 0
-      return pct > 0 ? Math.round(power * (1 + pct / 100)) : power
-    }
 
     // resolve one move/guard/energy card in place
     const resolvePrep = (p: number, c: CardDef) => {
@@ -853,8 +828,8 @@ export class CardBattle {
         bind: 0,
         /** 중독 — 거는 겹 수(0이면 안 건다). */
         poison: 0,
+        /** 화상 — 거는 겹 수(0이면 안 건다). */
         burn: 0,
-        burnPow: 0,
         freeze: 0,
         /** 이 타격이 상대의 빙결을 깨뜨렸는가 — 깨면 그 자리에서 빙결이 사라진다. */
         thaw: false,
@@ -919,7 +894,12 @@ export class CardBattle {
       const exec =
         s.hp[d] <= this.maxHp[d] * LOW_HP_FRAC ? (atkPas.executeBonusPct ?? 0) : 0
       const pct = low + exec
-      const raw = pct > 0 ? Math.round(flat * (1 + pct / 100)) : flat
+      const raw0 = pct > 0 ? Math.round(flat * (1 + pct / 100)) : flat
+      // **화상**(2026-11-13 개편 · `STATUS.md` 2절) — 카드 공격에 맞을 때 **보호막 전 피해**에
+      //   1겹 +10% · 2겹 +20% · 3겹 이상 +30%를 곱하고 반올림한다. 늘어난 몫도 보호막 ·
+      //   경감이 막는다(옛 규칙의 "겹당 +5 관통"이 아니다). 중독 · 처박기 · 독안개 · 붕괴엔 안 붙는다.
+      const burnPctNow = burnPct(this.stacksOf(d, 'burn'))
+      const raw = burnPctNow > 0 ? Math.round(raw0 * (1 + burnPctNow / 100)) : raw0
       // shieldBreak: a connecting hit wipes the defender's shield first.
       if (atkPas.shieldBreak || c.shatter) s.shield[d] = 0
       // pierce: 보호막을 소모시키지 않고 그대로 통과한다(유물 alwaysPierce도 같은 효과).
@@ -930,16 +910,13 @@ export class CardBattle {
         0,
         raw - absorbed - (defPas.damageReduction ?? 0) - buffPower(d, 'defUp'),
       )
-      // **화상** — 걸린 겹마다 이 타격에 `BURN_HIT_DAMAGE`가 얹힌다(사용자 확정).
-      // 지속피해가 아니라 **증폭기**다: 화상 상태로 세 대 맞으면 세 번 다 더 아프다.
-      // ⚠ 보호막·경감을 **관통한다**("보호막이 막을 수 없는 데미지") — 그래서
-      //   `core`가 아니라 그 밖에서 더한다. 가드로 완전히 막아도 화상은 들어온다.
-      const burnBonus = this.statusPower(d, 'burn')
+      // 화상 몫(연출 내역) — 늘어난 몫 중 체력까지 닿은 만큼. 보호막 · 경감은 원래 피해부터 받는다고 본다.
+      const burnBonus = Math.min(raw - raw0, core)
       // **빙결 파쇄** — 얼어 있는 상대를 때리면 그 자리에서 녹고(움직일 수 있게 되고)
       // 그 타격에 `FREEZE_SHATTER_BONUS`가 얹힌다. 얼려 놓고 안 때리면 상대는
       // 라운드 내내 못 움직이지만, 때리는 순간 그 봉인은 끝난다 — 그게 교환이다.
       const thaw = !!this.statusOf(d, 'frozen')
-      const dmg = core + burnBonus + (thaw ? FREEZE_SHATTER_BONUS : 0)
+      const dmg = core + (thaw ? FREEZE_SHATTER_BONUS : 0)
       // drain: 적중하면(가드로 막혀도) 상대 기력을 빼앗아 흡수.
       let drain = 0
       if (c.drain) {
@@ -966,9 +943,9 @@ export class CardBattle {
       // 상태이상 부여도 같은 규칙 — 가드에 완전히 막힌 타격으로는 아무것도 안 묻는다.
       // **중독**(2026-11-12 개편)은 카드 + 유물 + 안식일(`poisonRoundBonus`)을 **다 더한
       //   겹**이다(예: 독니 화살 2 + 맹독 병 2 + 안식일 1 = 5겹).
-      // **화상**은 아직 옛 규칙 — 카드와 유물 중 **지속이 긴 쪽** 한 겹(+ `burnRoundBonus`).
+      // **화상**(2026-11-13 개편)도 같다 — 카드 + `burnOnHit` + 안식일(`burnRoundBonus`).
       const poisonBase = core > 0 ? (c.poison ?? 0) + (atkPas.poisonOnHit ?? 0) : 0
-      const burnBase = core > 0 ? Math.max(c.burn ?? 0, atkPas.burnOnHit ?? 0) : 0
+      const burnBase = core > 0 ? (c.burn ?? 0) + (atkPas.burnOnHit ?? 0) : 0
       const poisonPlus = atkPas.poisonRoundBonus ?? 0
       const burnPlus = atkPas.burnRoundBonus ?? 0
       const poison = poisonBase > 0 ? poisonBase + poisonPlus : 0
@@ -998,10 +975,7 @@ export class CardBattle {
         stun: stun > 0 ? 1 + (atkPas.stunRoundBonus ?? 0) : 0,
         bind: core > 0 && c.bind ? 1 + (atkPas.bindRoundBonus ?? 0) : 0,
         poison,
-        // 겹의 위력(이동 1칸당 / 피격 1회당)은 **거는 순간** 확정한다 — 유물을
-        // 나중에 얻어도 이미 걸린 겹까지 소급되지 않게.
         burn,
-        burnPow: scaledPower(p, BURN_HIT_DAMAGE),
         freeze: freeze > 0 ? 1 + (atkPas.freezeRoundBonus ?? 0) : 0,
         thaw,
         fog: core > 0 ? (c.fog ?? 0) : 0,
@@ -1108,7 +1082,7 @@ export class CardBattle {
       // 중독·화상 — 동시 트레이드에서 양쪽이 같은 판을 보고 계산한 뒤 함께 적용돼야
       // 선후가 안 생긴다.
       if (r.poison) applyStatus(d, 'poison', POISON_TICK_DAMAGE, r.poison)
-      if (r.burn) applyStatus(d, 'burn', r.burnPow, r.burn, Math.max(STATUS_MAX_ROUNDS, r.burn))
+      if (r.burn) applyStatus(d, 'burn', 0, r.burn)
       if (r.fog) layFog(s.pos[d], r.fog)
       return { moved, slam: slamDir, dmgDealt, slamDealt, thornsDealt, recoilDealt }
     }
@@ -1129,7 +1103,7 @@ export class CardBattle {
       const bit = (src: DamageBit['src'], on: 0 | 1, n: number) => {
         if (n > 0) bits.push({ src, on, n })
       }
-      // 타격 본체 = 최종 피해에서 화상·파쇄 몫을 뺀 것(= 보호막·경감을 뚫은 core).
+      // 타격 본체 = 최종 피해에서 화상·파쇄 몫을 뺀 것. 화상 몫은 `core` 안의 늘어난 부분이다.
       // ⚠ 쓰러지면서 잘린 경우(`dmgDealt < r.dmg`)에는 **앞에서부터 채운다** —
       //   비율로 나누면 정수가 안 떨어져 합이 어긋난다.
       let left = dmgDealt
@@ -1215,7 +1189,7 @@ export class CardBattle {
      * 라운드 종료 정산 — 남은 지속을 1 깎고 0이 된 겹을 치운다.
      *
      * ⚠ 2026-08-07부터 **여기서 피해를 주지 않는다.** 중독은 행동할 때(`tickPoison`),
-     *   화상은 맞을 때(`computeAttack`의 `burnBonus`) 이미 정산됐다 — 예전처럼
+     *   화상은 맞을 때(`computeAttack`이 피해에 % 곱) 이미 정산됐다 — 예전처럼
      *   라운드 종료에 또 갉으면 같은 상태이상을 두 번 받는 셈이 된다.
      *   라운드 종료에 갉는 건 이제 **독안개와 전장 붕괴**(자리 값)뿐이다.
      *
@@ -1412,7 +1386,7 @@ export class CardBattle {
     // 함정의 라운드 끝(런 전용) — ⚠ `tickStatuses` **뒤**라야 불길의 화상이 다음 라운드까지 간다.
     if (!s.over && s.hazards.length) {
       for (let p = 0; p < 2; p++)
-        if (hazardAt(s.hazards, s.pos[p])?.kind === 'fire') applyStatus(p, 'burn', BURN_HIT_DAMAGE, 1)
+        if (hazardAt(s.hazards, s.pos[p])?.kind === 'fire') applyStatus(p, 'burn', 0, FIRE_BURN_STACKS)
       // 불길에 붙은(상하좌우) 덩굴이 탄다 → 불길이 한 라운드 사그라든다.
       const fires = s.hazards.filter((h) => h.kind === 'fire')
       const touching = (a: Cell, b: Cell) => Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1

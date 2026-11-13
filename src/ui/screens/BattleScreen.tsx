@@ -338,11 +338,11 @@ function statusChips(
 }
 
 /**
- * 칩의 숫자. 중독은 **겹 수 하나**(= 남은 라운드)라 `×N`만(2026-11-12 개편 · 임시 모양 —
+ * 칩의 숫자. 중독 · 화상은 **겹 수 하나**(= 남은 라운드)라 `×N`만(2026-11-12/13 개편 · 임시 모양 —
  * 아이콘 줄 시안은 사용자가 추후 준다). 나머지는 "한 번에 들어오는 피해 + 남은 라운드".
  */
 function ChipNum({ chip }: { chip: { kind: string; power: number; rounds: number } }) {
-  if (chip.kind === "poison") return <b>×{chip.rounds}</b>;
+  if (chip.kind === "poison" || chip.kind === "burn") return <b>×{chip.rounds}</b>;
   return (
     <>
       {chip.power > 0 ? chip.power : ""}

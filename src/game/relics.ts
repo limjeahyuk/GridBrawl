@@ -116,8 +116,9 @@ const SIGNATURE: Record<
     //   ⚠ 그래서 직업 밴드를 더는 maxHpBonus로 못 맞춘다. 체력 100 + 시작 보호막만으로는 5%였고
     //   (카드를 원거리·속박으로 바꾼 뒤에도), **매 라운드 보호막(turnShield) 3 → 13**으로 메웠다 —
     //   7 = 11.9% · 11 = 20.4% · 13 = 26.6%(≈2.1%p/점). 마법사의 손잡이는 이제 이 값이다.
-    runEffect: { turnEnergy: 5, turnShield: 13, burnOnHit: 2, damageReduction: 2, maxHpBonus: 22, openingShield: 30 },
-    desc: '혼백의 마법서: 최대 체력 +22, 전투 시작 보호막 +30, 받는 피해 -2. 매 라운드 기력 +5·보호막 +13, 피해를 주면 화상 2라운드를 묻힌다.',
+    // 화상 2(`burnOnHit`)는 2026-11-13 화상 개편(`STATUS.md` 2절)으로 뺐다 — 다른 효과는 사용자가 추후 정한다.
+    runEffect: { turnEnergy: 5, turnShield: 13, damageReduction: 2, maxHpBonus: 22, openingShield: 30 },
+    desc: '혼백의 마법서: 최대 체력 +22, 전투 시작 보호막 +30, 받는 피해 -2. 매 라운드 기력 +5·보호막 +13.',
   },
 }
 
@@ -285,11 +286,11 @@ const genericRelics: Relic[] = [
   //   +14는 기본기 두세 대 값이었다.
   //   ⚠ 값을 다시 만질 생각이면 반드시 `sim:run --sweep` 5시드로 전후를 재고 들어갈 것.
   { id: 'venomflask', name: '독약 플라스크', icon: '🧪', rarity: 'common', desc: '공격으로 피해를 주면 중독 1겹을 묻힌다.', effect: { poisonOnHit: 1 } },
-  { id: 'emberbrand', name: '잉걸 낙인', icon: '🔥', rarity: 'common', desc: '공격으로 피해를 주면 화상 1라운드를 묻힌다.', effect: { burnOnHit: 1 } },
+  { id: 'emberbrand', name: '잉걸 낙인', icon: '🔥', rarity: 'common', desc: '공격으로 피해를 주면 화상 1겹을 묻힌다.', effect: { burnOnHit: 1 } },
   { id: 'coldiron', name: '차가운 쇠', icon: '❄️', rarity: 'common', desc: '상태이상에 걸린 상대에게 주는 피해 +3.', effect: { bonusVsAfflicted: 3 } },
-  { id: 'wickedmortar', name: '사악한 절구', icon: '⚗️', rarity: 'rare', desc: '내가 거는 중독·화상 위력 +40%.', effect: { statusPowerPct: 40 } },
+  { id: 'wickedmortar', name: '사악한 절구', icon: '⚗️', rarity: 'rare', desc: '내가 거는 중독 위력 +40%.', effect: { statusPowerPct: 40 } },
   { id: 'hunterspite', name: '사냥꾼의 앙심', icon: '🎯', rarity: 'epic', desc: '상태이상에 걸린 상대에게 피해 +7. 보호막을 무시한다.', effect: { bonusVsAfflicted: 7, alwaysPierce: true } },
-  { id: 'rotcrown', name: '부패의 왕관', icon: '👑', rarity: 'legend', desc: '피해를 주면 중독 2겹·화상 2라운드를 함께 묻히고, 중독·화상 위력 +50%, 상태이상 상대에게 피해 +5.', effect: { poisonOnHit: 2, burnOnHit: 2, statusPowerPct: 50, bonusVsAfflicted: 5 } },
+  { id: 'rotcrown', name: '부패의 왕관', icon: '👑', rarity: 'legend', desc: '피해를 주면 중독 2겹·화상 2겹을 함께 묻히고, 중독 위력 +50%, 상태이상 상대에게 피해 +5.', effect: { poisonOnHit: 2, burnOnHit: 2, statusPowerPct: 50, bonusVsAfflicted: 5 } },
 
   // =========================================================================
   // 확장 세트 3 (2026-08-05) — 유물 종류 2배
@@ -310,7 +311,7 @@ const genericRelics: Relic[] = [
   { id: 'frostbite', name: '동상의 손', icon: '🧊', rarity: 'common', desc: '전투당 두 번, 피해를 주면 상대를 그 라운드 빙결.', effect: { freezeOnHit: 1 } },
   { id: 'permafrost', name: '만년설', icon: '🏔', rarity: 'epic', desc: '전투당 네 번, 피해를 주면 상대를 그 라운드 빙결. 내 공격 피해 +3.', effect: { freezeOnHit: 1, freezeCap: 4, attackBonus: 3 } },
   { id: 'rimeheart', name: '서릿발 심장', icon: '💙', rarity: 'legend', desc: '전투당 여섯 번, 피해를 주면 상대를 그 라운드 빙결. 상태이상 상대에게 피해 +6.', effect: { freezeOnHit: 1, freezeCap: 6, bonusVsAfflicted: 6 } },
-  { id: 'coldsnap', name: '한파', icon: '🌨', rarity: 'rare', desc: '전투당 두 번 빙결을 걸고, 내가 거는 중독·화상 위력 +25%.', effect: { freezeOnHit: 1, statusPowerPct: 25 } },
+  { id: 'coldsnap', name: '한파', icon: '🌨', rarity: 'rare', desc: '전투당 두 번 빙결을 걸고, 내가 거는 중독 위력 +25%.', effect: { freezeOnHit: 1, statusPowerPct: 25 } },
 
   // --- 방벽 증폭 계열 -------------------------------------------------------
   { id: 'buckler', name: '단단한 손잡이', icon: '🛡', rarity: 'common', desc: '수비 카드의 흡수량 +35%.', effect: { guardPowerPct: 35 } },
@@ -370,18 +371,18 @@ const genericRelics: Relic[] = [
 
   // --- 상태이상 보강 --------------------------------------------------------
   { id: 'toxinvial', name: '맹독 병', icon: '🧫', rarity: 'rare', desc: '피해를 주면 중독 2겹을 묻힌다.', effect: { poisonOnHit: 2 } },
-  { id: 'cinderbrand', name: '잿불 인장', icon: '🕯', rarity: 'rare', desc: '피해를 주면 화상 2라운드를 묻힌다.', effect: { burnOnHit: 2 } },
-  { id: 'witchbrew', name: '마녀의 탕약', icon: '🍯', rarity: 'epic', desc: '내가 거는 중독·화상 위력 +65%.', effect: { statusPowerPct: 65 } },
+  { id: 'cinderbrand', name: '잿불 인장', icon: '🕯', rarity: 'rare', desc: '피해를 주면 화상 2겹을 묻힌다.', effect: { burnOnHit: 2 } },
+  { id: 'witchbrew', name: '마녀의 탕약', icon: '🍯', rarity: 'epic', desc: '내가 거는 중독 위력 +65%.', effect: { statusPowerPct: 65 } },
   { id: 'bonepicker', name: '뼈 발라내기', icon: '🦴', rarity: 'rare', desc: '상태이상에 걸린 상대에게 피해 +5.', effect: { bonusVsAfflicted: 5 } },
-  { id: 'ashlung', name: '재의 폐', icon: '🌫', rarity: 'epic', desc: '피해를 주면 화상 2라운드·중독 1겹을 함께 묻힌다.', effect: { burnOnHit: 2, poisonOnHit: 1 } },
-  { id: 'freezerot', name: '동사의 저주', icon: '🥶', rarity: 'legend', desc: '전투당 세 번 빙결을 걸고, 피해를 주면 중독 2겹·화상 2라운드를 묻힌다.', effect: { freezeOnHit: 1, freezeCap: 3, poisonOnHit: 2, burnOnHit: 2 } },
+  { id: 'ashlung', name: '재의 폐', icon: '🌫', rarity: 'epic', desc: '피해를 주면 화상 2겹·중독 1겹을 함께 묻힌다.', effect: { burnOnHit: 2, poisonOnHit: 1 } },
+  { id: 'freezerot', name: '동사의 저주', icon: '🥶', rarity: 'legend', desc: '전투당 세 번 빙결을 걸고, 피해를 주면 중독 2겹·화상 2겹을 묻힌다.', effect: { freezeOnHit: 1, freezeCap: 3, poisonOnHit: 2, burnOnHit: 2 } },
 
   // --- 지속 연장 계열 (2026-08-07 2차) — **전부 legend, 런 전용** ------------
   //
   // 다른 상태이상 유물은 **위력**이나 **부여 확률**을 사지만, 이 둘은 **시간**을 산다
   // (2026-11-12 유물 100종 정리로 여섯에서 둘이 됐다 — 기절·빙결 연장 유물은 없다. 훅은 엔진에 남아 있다).
-  // 시간은 다른 모든 훅과 곱해지므로(중독 1라운드가 늘면 그 라운드의 모든 행동이 아프고,
-  // 화상 1라운드가 늘면 그 라운드의 모든 피격이 아프다) 값이 작아도 판을 바꾼다.
+  // 시간은 다른 모든 훅과 곱해지므로(중독 · 화상은 겹 = 남은 라운드라 1겹이 곧 한 라운드 더 —
+  // 2026-11-12/13 개편) 값이 작아도 판을 바꾼다.
   // 그래서 **전부 `legend`**로만 낸다 — 층 1에서 ≈6%, 층 15에서 ≈17%로 뽑히고 상점가 230이라
   // "이걸 노리고 굴리는" 빌드가 되려면 깊이 살아남아야 한다.
   //
@@ -393,7 +394,7 @@ const genericRelics: Relic[] = [
   //   PvP에 존재하지 않아 `RULES_VERSION`을 안 올려도 된다(`npm run check`가 단정한다).
   {
     id: 'sabbath', name: '마녀의 안식일', icon: '🌙', rarity: 'legend',
-    desc: '내가 거는 중독은 1겹 더, 화상은 1라운드 더 간다.',
+    desc: '내가 중독 · 화상을 걸 때 각각 1겹 더.',
     effect: { poisonRoundBonus: 1, burnRoundBonus: 1 },
   },
   {

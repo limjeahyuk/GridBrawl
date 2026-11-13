@@ -100,8 +100,8 @@ export interface Offset {
 // 실제로 하는 일이 셋뿐이라 어느 것에 걸렸는지가 판에서 안 읽혔다. 이제 **각각이
 // 다른 자리를 때린다** — 무엇에 걸렸느냐가 곧 "이번 라운드에 뭘 하면 안 되는가"다.
 //
-//   중독 poison  **행동하면** 아프다   이동 1칸/공격 1장당 3(중첩당) · 관통 · N라운드
-//   화상 burn    **맞으면** 더 아프다  피격 1회당 +5(중첩당) · 보호막 관통 · N라운드
+//   중독 poison  **행동하면** 아프다   이동 · 공격 카드 1장 · 밀려남 한 번에 겹 × 1 · 관통 · 겹 = N라운드
+//   화상 burn    **맞으면** 더 아프다  카드 공격 피해 +10/20/30%(1/2/3겹~) · 보호막이 막는다 · 겹 = N라운드
 //   빙결 frozen  **이 라운드 정지**    맞으면 깨진다(그 타격에 +5)
 //   기절 stunned **이 라운드 정지**    깨지지 않는다 — 순수 봉인
 //   속박 bind    **이 라운드 이동 불가** 공격·수비는 그대로 나간다
@@ -122,7 +122,7 @@ export interface Offset {
 // ⚠ 중독·화상만 라운드를 넘어간다.
 //   **중독**(2026-11-12 개편 · `docs/redesign/STATUS.md` 1절)은 한 칸이고 `rounds`가 곧
 //   **겹 수 = 남은 라운드**다 — 걸 때마다 더하고(상한 없음), 라운드 끝마다 1 준다.
-//   **화상**은 아직 옛 규칙 — 겹마다 한 칸(서로 다른 남은 라운드), `STATUS_STACK_CAP`겹까지.
+//   **화상**(2026-11-13 개편 · 2절)도 같은 한 칸 + 겹 수다. 세기만 3겹에서 멈춘다(+30%).
 //
 // 정산 자리는 전부 고정이고 랜덤이 없다 → 멀티 락스텝은 그대로 안전하다.
 // ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ export interface StatusEffect {
   /**
    * 이 **한 겹**이 한 번에 주는 피해.
    *   중독  쓰지 않는다 — 피해는 `rounds`(겹) × `POISON_TICK_DAMAGE`를 아플 때 계산
-   *   화상  피격 1회당 (기본 `BURN_HIT_DAMAGE`)
+   *   화상  쓰지 않는다 — 세기는 맞을 때 겹(`rounds`)으로 `burnPct`
    *   버프  atkUp = 피해 +N / defUp = 받는 피해 −N
    * 거는 쪽의 `statusPowerPct`는 **거는 순간 한 번** 여기 박아 넣는다 — 매번 다시
    * 계산하면 유물을 도중에 얻었을 때 이미 걸린 것까지 소급돼 어긋난다.
@@ -186,8 +186,16 @@ export interface StatusEffect {
  * — 중독에 걸리면 "버티는 것"만 공짜로 남겨 두는 게 이 규칙의 요점이다.
  */
 export const POISON_TICK_DAMAGE = 1
-/** 화상 한 겹이 **피격 1회당** 얹는 추가 피해. 보호막을 관통한다. */
-export const BURN_HIT_DAMAGE = 5
+/**
+ * **화상**(2026-11-13 개편 · `docs/redesign/STATUS.md` 2절) — 카드 공격에 맞을 때 보호막 전 피해에
+ * 겹당 +10%, **3겹에서 멈춘다**(+30%). 늘어난 몫도 보호막 · 경감이 막는다.
+ */
+export const BURN_PCT_PER_STACK = 10
+export const BURN_PCT_MAX_STACKS = 3
+export const burnPct = (stacks: number): number =>
+  Math.min(Math.max(0, stacks), BURN_PCT_MAX_STACKS) * BURN_PCT_PER_STACK
+/** 불길 함정이 거는 화상 겹 — **임시**(함정 재설계 때 사용자가 정한다 · STATUS.md 2절). */
+export const FIRE_BURN_STACKS = 1
 /** 빙결을 깨뜨린 타격에 얹히는 추가 피해(보호막 관통). */
 export const FREEZE_SHATTER_BONUS = 5
 /** 넉백·끌어당김이 막혀 **못 밀려난 한 칸당** 피해. 0칸도 못 밀리면 기절까지 붙는다. */
@@ -195,13 +203,11 @@ export const KNOCKBACK_BLOCK_DAMAGE = 5
 /** 독안개 타일 위에서 라운드 종료에 받는 피해(보호막 무시 — 전장 붕괴와 같은 자리). */
 export const FOG_DAMAGE = 10
 
-/** 화상의 최대 중첩 수(중독은 상한 없음 — 2026-11-12). */
-export const STATUS_STACK_CAP = 3
-/** 화상 한 겹의 최대 지속 라운드(중독은 겹 = 라운드라 상한이 없다). */
+/** 버프의 최대 지속 라운드(중독 · 화상은 겹 = 라운드라 상한이 없다). */
 export const STATUS_MAX_ROUNDS = 3
 
-/** 겹마다 따로 사는 종류인가(화상) — 중독은 한 칸에 겹 수를 더하고, 나머지는 종류당 한 칸. */
-export const isStacking = (k: StatusKind): boolean => k === 'burn'
+/** 겹 수를 **더하는** 종류인가(중독 · 화상 — 한 칸의 `rounds`가 겹 수). 나머지는 종류당 한 칸. */
+export const isLayered = (k: StatusKind): boolean => k === 'poison' || k === 'burn'
 
 // ---------------------------------------------------------------------------
 // 독안개 타일 (2026-08-07)
@@ -293,7 +299,10 @@ export interface CardDef {
    * 지금 겹 × `POISON_TICK_DAMAGE`. **피해가 실제로 들어갔을 때만** 묻는다.
    */
   poison?: number
-  /** 적중 시 화상 한 겹 — 값은 지속 라운드. 한 겹당 피격 1회에 `BURN_HIT_DAMAGE`. */
+  /**
+   * 적중 시 화상 **N겹**을 더한다(2026-11-13 개편 — 상한 없음, 겹 = 남은 라운드). 유물 `burnOnHit` ·
+   * `burnRoundBonus`도 같은 타격에 더해진다. 화상 중엔 카드 공격 피해 +10/20/30%(`burnPct`).
+   */
   burn?: number
   /**
    * 적중 시 상대를 **이 라운드 동안** 빙결(카드를 못 냄). 기절과 달리 **맞으면
@@ -688,7 +697,7 @@ export interface Step {
 /** 피해가 들어온 이유 — 화면에 "왜 깎였는지"를 한 단어로 붙이기 위한 꼬리표. */
 export type DamageSrc =
   | 'attack' // 카드의 타격 자체(보호막·경감을 통과한 몫)
-  | 'burn' // 화상 — 피격 1회마다 얹히는 관통 피해
+  | 'burn' // 화상 — 카드 공격 피해에 곱해 늘어난 몫(보호막이 막을 수 있다)
   | 'shatter' // 빙결 파쇄 — 얼어 있는 상대를 때려 깨뜨린 몫
   | 'slam' // 처박기 — 넉백이 벽·바위에 막혀 못 간 칸의 대가
   | 'thorns' // 가시 반사 — 때린 쪽이 도로 받는다

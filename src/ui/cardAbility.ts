@@ -10,7 +10,8 @@
 //   능력을 새로 만들거나 규칙을 바꾸면 이 파일도 같은 커밋에서 고친다.
 // ---------------------------------------------------------------------------
 import {
-  BURN_HIT_DAMAGE,
+  BURN_PCT_MAX_STACKS,
+  BURN_PCT_PER_STACK,
   FOG_DAMAGE,
   FREEZE_SHATTER_BONUS,
   KNOCKBACK_BLOCK_DAMAGE,
@@ -87,8 +88,8 @@ export function abilityList(c: CardDef): AbilityInfo[] {
   if (c.burn)
     out.push({
       icon: '🔥',
-      label: `화상 ${c.burn}라운드`,
-      meaning: `${c.burn}라운드 동안, 그 상대가 맞을 때마다 피해가 ${BURN_HIT_DAMAGE} 늘어난다(보호막 무시). 겹쳐 걸면 그만큼 배가 된다.`,
+      label: `화상 ${c.burn}겹`,
+      meaning: `피해를 주면 화상 ${c.burn}겹을 더한다. 화상에 걸린 상대는 카드 공격에 맞을 때 피해가 겹당 ${BURN_PCT_PER_STACK}% 늘어난다(${BURN_PCT_MAX_STACKS}겹 이상은 ${BURN_PCT_PER_STACK * BURN_PCT_MAX_STACKS}%까지). 늘어난 몫도 보호막이 막는다. 겹은 라운드가 끝날 때마다 하나씩 줄고 상한은 없다.`,
     })
   if (c.fog)
     out.push({

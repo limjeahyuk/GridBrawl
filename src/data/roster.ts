@@ -69,13 +69,11 @@ export interface Passive {
    * ⚠ PvP `ROSTER.passive` 궁수 1은 그대로 둔다(PvP는 보지 않는다 — 사용자 지정).
    */
   poisonOnHit?: number
-  /** 같은 규칙의 화상판 — 값은 지속 라운드. */
+  /** 같은 규칙의 화상판 — 화상 **N겹**을 더 건다(카드의 `burn`과 더해진다 · 2026-11-13 개편). */
   burnOnHit?: number
   /**
-   * 내가 거는 중독·화상의 위력 +N%.
-   *   중독 = **아플 때** `round(겹 × (1 + N/100))` — 겹이 한 수라 거는 순간 박아 둘 곳이 없다
-   *          (거는 쪽 = 중독된 진영의 **상대** 유물을 본다. 2026-11-12 개편).
-   *   화상 = 거는 순간 한 겹의 위력(피격 1회당)에 한 번 박아 넣는다(옛 규칙 — 화상 개편 전).
+   * 내가 거는 **중독**의 위력 +N% — **아플 때** `round(겹 × (1 + N/100))`(거는 쪽 = 중독된 진영의
+   * **상대** 유물을 본다). 화상 · 출혈엔 **안 붙는다**(2026-11-13 화상 개편 — `STATUS.md` 2절).
    */
   statusPowerPct?: number
   /** 상대가 상태이상에 하나라도 걸려 있으면 내 공격 피해 +N(상태이상 시너지). */
@@ -119,7 +117,7 @@ export interface Passive {
   //   "이번 라운드 + 다음 라운드"까지가 끝이고 그다음 라운드엔 반드시 일어난다.
   /** 내가 거는 **중독**에 +N겹(걸 때마다 · 2026-11-12 개편). */
   poisonRoundBonus?: number
-  /** 내가 거는 **화상**의 지속 +N라운드. */
+  /** 내가 거는 **화상**에 +N겹(걸 때마다 · 2026-11-13 개편). */
   burnRoundBonus?: number
   /** 내가 거는 **기절**의 지속 +N라운드(다음 라운드까지 이어진다). */
   stunRoundBonus?: number
@@ -385,15 +383,15 @@ export const ROSTER: CharacterDef[] = [
       atk({ id: 'mag-touch', name: '망령의 손길', range: barBoth(1), damage: 5, energyCost: 7, push: 1, fx: 'orb', desc: '앞뒤 세로 3줄을 훑어 붙은 상대를 한 칸 밀어낸다. 약하지만 거리를 되찾는 기본기 — 벽에 몰린 상대는 처박힌다.' }),
     ],
     cards: [
-      atk({ id: 'mag-spark', name: '혼불', range: beamBoth(2, 3), damage: 11, energyCost: 7, burn: 1, pointBlank: false, fx: 'flame', desc: '앞뒤 2~3칸째에 도깨비불을 날린다. 피해를 입히면 화상 1라운드 — 화상 중에는 맞을 때마다 5씩 더 아프다.' }),
+      atk({ id: 'mag-spark', name: '혼불', range: beamBoth(2, 3), damage: 11, energyCost: 7, burn: 1, pointBlank: false, fx: 'flame', desc: '앞뒤 2~3칸째에 도깨비불을 날린다. 피해를 입히면 화상 1겹 — 화상 중에는 카드 공격에 맞을 때 피해가 10% 늘어난다(3겹 이상 30%).' }),
       atk({ id: 'mag-frost', name: '서리 결계', range: barBoth(1), damage: 9, energyCost: 14, freeze: 1, selfShield: 5, fx: 'orb', desc: '앞뒤 한 칸의 세 줄을 얼린다. 피해를 입히면 이 라운드 동안 빙결 — 남은 카드를 못 낸다. 단, 때리면 깨진다(그 타격에 +5). 사용 시 보호막 +5.' }),
-      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...barBoth(2), ...both(3)], damage: 17, energyCost: 18, burn: 2, pointBlank: false, fx: 'flame', desc: '앞뒤 2칸째 세 줄 + 3칸째를 태우는 광역 화염. 피해를 입히면 화상 2라운드. 붙은 상대는 못 맞힌다.' }),
-      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(2), ...barBoth(3)], damage: 30, energyCost: 25, burn: 3, bind: 1, pointBlank: false, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 2~3칸째 세 줄을 통째로 덮는 만가 — 화상 3라운드 + 이 라운드 속박. 멀리 있을수록 무섭고, 붙은 상대는 못 맞힌다.' }),
+      atk({ id: 'mag-flame', name: '화염 폭풍', range: [...barBoth(2), ...both(3)], damage: 17, energyCost: 18, burn: 2, pointBlank: false, fx: 'flame', desc: '앞뒤 2칸째 세 줄 + 3칸째를 태우는 광역 화염. 피해를 입히면 화상 2겹. 붙은 상대는 못 맞힌다.' }),
+      atk({ id: 'mag-doom', name: '종언의 만가', range: [...barBoth(2), ...barBoth(3)], damage: 30, energyCost: 25, burn: 3, bind: 1, pointBlank: false, fx: 'orb', signature: true, accent: '#d45fae', desc: '시그니처. 앞뒤 2~3칸째 세 줄을 통째로 덮는 만가 — 화상 3겹 + 이 라운드 속박. 멀리 있을수록 무섭고, 붙은 상대는 못 맞힌다.' }),
       // 마법사의 제약은 기력이다. 무아지경이 그 제약을 2라운드간 통째로 없앤다 —
       // 선불이 비싸고 쿨이 길지만, 켜진 동안 종언의 만가를 계속 쏠 수 있다.
       buff({ id: 'mag-trance', name: '무아지경', buff: 'freeCast', buffRounds: 2, buffCost: 20, cooldown: 3, fx: 'flame', accent: '#d45fae', desc: '2라운드간 모든 카드의 기력 소모가 0이 된다. 켜진 동안 가장 비싼 주문을 매 턴 퍼부을 수 있다 — 쿨타임 3라운드.' }),
       buff({ id: 'mag-ward', name: '혼백의 장막', buff: 'defUp', buffPower: 5, buffRounds: 3, buffCost: 12, accent: '#6fc0b0', desc: '3라운드간 받는 공격 피해 -5. 큰 주문을 모으는 동안 몸을 지킨다.' }),
-      atk({ id: 'mag-blink', name: '그림자 도약', range: beamBoth(2, 3), damage: 10, energyCost: 11, burn: 1, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 앞뒤 2~3칸째를 태운다 — 화상 1라운드. 붙은 상대에게서 빠져나오며 쏘는 카드.' }),
+      atk({ id: 'mag-blink', name: '그림자 도약', range: beamBoth(2, 3), damage: 10, energyCost: 11, burn: 1, dashForward: -2, fx: 'flame', desc: '뒤로 두 칸 물러난 뒤에 앞뒤 2~3칸째를 태운다 — 화상 1겹. 붙은 상대에게서 빠져나오며 쏘는 카드.' }),
       atk({ id: 'mag-hex', name: '속박의 저주', range: [...barBoth(1), ...barBoth(2)], damage: 11, energyCost: 14, bind: 1, push: 1, cooldown: 2, fx: 'orb', accent: '#7fd66a', desc: '앞뒤 1~2칸의 세 줄에 가시덩굴을 일으켜 상대를 한 칸 밀어내고 이 라운드 동안 속박한다. 떼어 놓고 묶어 두는 카드 — 쿨타임 2라운드.' }),
       // ---- 지형 카드(2026-08-07) ------------------------------------------------
       // 판의 모양을 **내가** 바꾸는 첫 플레이어 카드. 그전까지 바위는 무대가 주는

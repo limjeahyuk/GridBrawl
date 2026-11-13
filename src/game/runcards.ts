@@ -213,7 +213,7 @@ export const RUN_CARDS: CardDef[] = [
   }),
   atk({
     id: 'r-emberburst', name: '불티 폭발', range: CROSS, damage: 11, energyCost: 10, burn: 1,
-    fx: 'flame', accent: '#e2703c', desc: '상·하·좌·우 네 칸. 피해를 주면 화상 2라운드 — 그동안 맞을 때마다 5씩 더 아프다.',
+    fx: 'flame', accent: '#e2703c', desc: '상·하·좌·우 네 칸. 피해를 주면 화상 1겹 — 화상 중엔 카드 공격에 맞을 때 피해가 늘어난다.',
   }),
   atk({
     id: 'r-frostnova', name: '서리 폭발', range: barBoth(1), damage: 10, energyCost: 13, freeze: 1, cooldown: 2,
@@ -222,7 +222,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-blightwave', name: '역병의 물결', range: [...barBoth(1), ...both(2)], damage: 15, energyCost: 19,
     poison: 2, burn: 2, fx: 'quake', accent: '#8f6fb8',
-    desc: '앞뒤 세 줄 + 앞뒤 2칸째. 중독 2겹과 화상 2라운드를 함께 묻힌다.',
+    desc: '앞뒤 세 줄 + 앞뒤 2칸째. 중독 2겹과 화상 2겹을 함께 묻힌다.',
   }),
   atk({
     id: 'r-witherpulse', name: '쇠약의 파동', range: barBoth(1), damage: 9, energyCost: 11, poison: 2, drain: 8,
@@ -240,7 +240,7 @@ export const RUN_CARDS: CardDef[] = [
   }),
   atk({
     id: 'r-arcburn', name: '불길의 호', range: beamBoth(1, 2), damage: 9, energyCost: 7, burn: 2,
-    fx: 'bolt', desc: '앞뒤 1~2칸을 훑고 화상 2. 싸고 자주 낸다.',
+    fx: 'bolt', desc: '앞뒤 1~2칸을 훑고 화상 2겹. 싸고 자주 낸다.',
   }),
   {
     id: 'r-trickle', name: '실낱 기력', kind: 'energy', gain: 14, cooldown: 0,
@@ -323,7 +323,7 @@ export const RUN_CARDS: CardDef[] = [
   atk({
     id: 'r-meteor', name: '운석 낙하', range: barBoth(2), damage: 28, energyCost: 20, burn: 1, cooldown: 2, pointBlank: false,
     fx: 'flame', accent: '#ff7a3a',
-    desc: '앞뒤 2칸째 세로 세 줄에 운석을 떨어뜨린다. 맞으면 화상 1라운드. 붙은 상대는 못 맞힌다 — 쿨타임 2라운드.',
+    desc: '앞뒤 2칸째 세로 세 줄에 운석을 떨어뜨린다. 맞으면 화상 1겹. 붙은 상대는 못 맞힌다 — 쿨타임 2라운드.',
   }),
   atk({
     id: 'r-icespike', name: '얼음 송곳', range: beamBoth(1, 2), damage: 16, energyCost: 9,

@@ -82,7 +82,7 @@ const ABYSS: CardDef[] = [
   atk({
     id: 'b-abyss-brand', name: '심연의 낙인', range: [...CROSS, ...both(2)], damage: 9, energyCost: 10,
     burn: 2, freeze: 1, fx: 'flame', accent: '#8f5fd4',
-    desc: '십자 네 칸 + 앞뒤 2칸째에 낙인을 새긴다. 화상 2라운드 + 이 라운드 빙결.',
+    desc: '십자 네 칸 + 앞뒤 2칸째에 낙인을 새긴다. 화상 2겹 + 이 라운드 빙결.',
   }),
   atk({
     id: 'b-abyss-maw', name: '집어삼키는 아가리', range: [...RING, ...both(2)], damage: 21, energyCost: 23,
@@ -141,17 +141,17 @@ const PYRE: CardDef[] = [
   atk({
     id: 'b-pyre-lash', name: '화염 채찍', range: beamBoth(1, 3), damage: 12, energyCost: 12,
     burn: 2, fx: 'flame', accent: '#e0663a',
-    desc: '같은 줄 앞뒤 3칸까지 채찍처럼 뻗는 불길. 화상 2라운드.',
+    desc: '같은 줄 앞뒤 3칸까지 채찍처럼 뻗는 불길. 화상 2겹.',
   }),
   atk({
     id: 'b-pyre-pillar', name: '화염 기둥', range: [...bar(1), ...bar(-1), ...both(2)], damage: 12, energyCost: 15,
     burn: 2, fx: 'flame', accent: '#e0663a',
-    desc: '앞뒤 세로 3줄 + 앞뒤 2칸째에서 불기둥이 솟는다. 화상 2라운드.',
+    desc: '앞뒤 세로 3줄 + 앞뒤 2칸째에서 불기둥이 솟는다. 화상 2겹.',
   }),
   atk({
     id: 'b-pyre-inferno', name: '인페르노', range: [...barBoth(1), ...barBoth(2)], damage: 16, energyCost: 24,
     burn: 3, fx: 'flame', signature: true, accent: '#ff8a3d',
-    desc: '시그니처. 앞뒤 1~2칸의 세 줄을 통째로 불바다로 만든다. 화상 3라운드 — 모아 둔 불씨가 전부 얹힌다.',
+    desc: '시그니처. 앞뒤 1~2칸의 세 줄을 통째로 불바다로 만든다. 화상 3겹 — 모아 둔 불씨가 전부 얹힌다.',
   }),
 ]
 
