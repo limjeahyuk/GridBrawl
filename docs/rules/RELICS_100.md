@@ -114,7 +114,7 @@
 | --- | --- | --- | --- | --- |
 | 수호의 원석 (`aegis-core`) | 매 라운드 보호막 +9. | `turnShield 9` | 발동 | 방벽판, 균형의 저울, 달빛 샘 |
 | 고정 말뚝 (`anchorstone`) | 구멍에 빠졌을 때 받는 피해 -7, 최대 체력 +8. | `collapseResist 7` `maxHpBonus 8` | 상시 |  |
-| 치유 향유 (`balm`) | 모든 회복 효과 +50%(보상 포기·이벤트·상점). | `mods.healBonusPct 50` | 런 | 비약, 피의 잎사귀 |
+| 치유 향유 (`balm`) | 전투 밖 회복(여관 · 이벤트 · 물약) +50%. | `mods.healBonusPct 50` | 런 | 비약, 피의 잎사귀 |
 | 뼈 발라내기 (`bonepicker`) | 상태이상에 걸린 상대에게 피해 +5. | `bonusVsAfflicted 5` | 상시 |  |
 | 파쇄 날 (`breaker`) | 공격이 적중하면 상대 보호막을 전부 없앤다. | `shieldBreak` | 발동 | 면도날 파편 |
 | 가시 방패 (`bulwark`) | 매 라운드 보호막 +4, 피격 시 3 반사. | `turnShield 4` `thorns 3` | 발동 | 대못 갑옷, 고슴도치 갑주 |
@@ -154,7 +154,7 @@
 | 결투가의 검 (`duelist`) | 내 공격 피해 +8. | `attackBonus 8` | 상시 | 광기의 낙인, 유리 심장, 파성추 |
 | 불꽃 깃털 (`feather`) | 전투당 한 번, 체력 20으로 되살아난다. | `revive 20` | 횟수 | 재의 부적, 영원의 불씨, 두 번째 숨 |
 | 타오르는 알 (`fireegg`) | 화상에 걸리지 않는다. | `burnImmune` | ❌ 이모지 🥚 |  |
-| 성배 조각 (`grailshard`) | 모든 회복 효과 +80%, 회복 카드 회복량 +30%. | `healPowerPct 30` `mods.healBonusPct 80` | 런 | 생명의 우물 |
+| 성배 조각 (`grailshard`) | 전투 밖 회복(여관 · 이벤트 · 물약) +80%, 회복 카드 회복량 +30%. | `healPowerPct 30` `mods.healBonusPct 80` | 런 | 생명의 우물 |
 | 대송곳니 (`greatfang`) | 공격으로 피해를 주면 체력 6 회복. | `lifesteal 6` | 발동 |  |
 | 단두대 (`guillotine`) | 상대 체력이 절반 이하면 내 공격 피해 +70%. | `executeBonusPct 70` | 조건 | 숨통 |
 | 사냥꾼의 앙심 (`hunterspite`) | 상태이상에 걸린 상대에게 피해 +7. 보호막을 무시한다. | `bonusVsAfflicted 7` `alwaysPierce` | 상시 |  |
@@ -241,7 +241,6 @@
 | 마법사 직업 패시브(유물 아님) | 화상 2를 뺀 자리가 비어 있다 | 다른 효과는 사용자가 추후 정한다 — [BATTLE.md](BATTLE.md) ⑤ |
 | 빙결 횟수 표시 — 동상의 손 · 한파 | 설명 · 엔진은 "전투당 두 번", 유물 줄의 점은 1개만 그린다 | 표시 버그 — [PROGRESS.md](../PROGRESS.md) 2-ter-b |
 | 빙결 · 기절 횟수 합산(0-5) | 동상의 손 + 만년설 = 4번(설명을 더하면 6번) | 결정 필요 — [PROGRESS.md](../PROGRESS.md) 2-ter-b |
-| 치유 향유 · 성배 조각 문구 | "모든 회복 효과(보상 포기 · 이벤트 · 상점)" — 실제로 붙는 곳은 여관 휴식 · 떠날 때 회복 · 이벤트 회복 · 고블린 물약(`healHp`) | 문구를 고칠지 |
 | 그림 없는 3종(0-6) | 이모지 | 그림 필요 |
 | 출혈 유물 | 없다(훅도 없다) | 사용자가 추후 넣는다 — [STATUS.md](STATUS.md) 3절 |
 

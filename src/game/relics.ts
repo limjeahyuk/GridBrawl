@@ -20,7 +20,7 @@ export interface RunMods {
   goldBonusPct?: number
   /** 승리 보상 선택지 +N칸. */
   rewardOptions?: number
-  /** 모든 회복 효과(보상 포기·이벤트·상점) +N%. */
+  /** 전투 밖 회복(`healHp` — 여관 휴식 · 떠날 때 · 이벤트 · 고블린 물약) +N%. 승리 +10 · 전투 안 회복엔 안 붙는다. */
   healBonusPct?: number
   /** 일반 전투 보상에 유물이 섞일 확률 +N포인트(0.01 = +1%p). */
   relicChanceBonus?: number
@@ -262,7 +262,7 @@ const genericRelics: Relic[] = [
   },
   {
     id: 'balm', name: '치유 향유', icon: '🧴', rarity: 'rare',
-    desc: '모든 회복 효과 +50%(보상 포기·이벤트·상점).', effect: {}, mods: { healBonusPct: 50 },
+    desc: '전투 밖 회복(여관 · 이벤트 · 물약) +50%.', effect: {}, mods: { healBonusPct: 50 },
   },
   {
     id: 'midastouch', name: '황금손', icon: '🖐', rarity: 'rare',
@@ -407,7 +407,7 @@ const genericRelics: Relic[] = [
   { id: 'caravan', name: '행상 마차', icon: '🛒', rarity: 'rare', desc: '상점 진열 +2칸.', effect: {}, mods: { shopExtraItems: 2 } },
   { id: 'bazaar', name: '암시장 통로', icon: '🏮', rarity: 'epic', desc: '상점 진열 +3칸, 가격 25% 할인.', effect: {}, mods: { shopExtraItems: 3, shopDiscountPct: 25 } },
   { id: 'saddlebag', name: '안장 가방', icon: '👜', rarity: 'common', desc: '승리 보상 선택지 +1칸.', effect: {}, mods: { rewardOptions: 1 } },
-  { id: 'grailshard', name: '성배 조각', icon: '🏆', rarity: 'epic', desc: '모든 회복 효과 +80%, 회복 카드 회복량 +30%.', effect: { healPowerPct: 30 }, mods: { healBonusPct: 80 } },
+  { id: 'grailshard', name: '성배 조각', icon: '🏆', rarity: 'epic', desc: '전투 밖 회복(여관 · 이벤트 · 물약) +80%, 회복 카드 회복량 +30%.', effect: { healPowerPct: 30 }, mods: { healBonusPct: 80 } },
   { id: 'ravenomen', name: '까마귀의 전조', icon: '🐦‍⬛', rarity: 'epic', desc: '일반 전투 보상에 유물이 섞일 확률 +18%p.', effect: {}, mods: { relicChanceBonus: 0.18 } },
   { id: 'kingsseal', name: '왕의 봉인', icon: '📜', rarity: 'legend', desc: '승리 보상 선택지 +2칸, 골드 +60%, 상점 진열 +2칸.', effect: {}, mods: { rewardOptions: 2, goldBonusPct: 60, shopExtraItems: 2 } },
 
