@@ -26,6 +26,7 @@
 | `OneCell.dc.html`, `Hazards.dc.html` | `BattleScreen.tsx`(지형 렌더), `battlefx.css`(`.rock` 등) | **1칸 함정은 `hazards-cell/`을 쓴다**: 184×96, 칸 왼쪽 위에 맞추고 `top = 칸 top − 36px`. 128px판(`hazards/`)은 예전 규격 |
 | `RelicsHUD.dc.html` | `BattleScreen.tsx`(상태바 아래 유물 줄), `RunBar.tsx`(지도) | 상태 7종(상시·발동·누적·횟수·조건·첫 라운드·런) 표시 규칙과 발동 애니메이션 CSS(`pop`, `burst`, `rise`) |
 | `StatusIcons.dc.html` | `BattleScreen.tsx`(상태바 아래 상태이상 줄 — 지금 `STATUS_ICON` · `ChipNum`) | 상태이상 · 버프 10종 타일(`ui/status/tiles.png`) · `×N` 픽셀 숫자(`digits.png`) · 줄 위치 · 설명창. 규칙은 `STATUS.md` 화면 절 |
+| `Mobile*.dc.html`(7장) | 모바일 레이아웃(아직 코드 없음) | **가로 고정 844×390** — 세로 안내(`MobileRotate`) · 타이틀 · 영웅 선택 · 난이도 · 지도(층이 왼쪽 → 오른쪽) · 전투(칸 84×44 · 도트 ×1 · 카드 64×78 · 유물 줄은 버튼으로) · 규칙(`MobileSpec` — 안전 영역 좌우 44px · 터치 최소 44px · 글자 최소 10px). 2차: 나머지 화면 |
 | `Seal.dc.html` | `BattleScreen.tsx`(카드 칸 `slot--locked` · 이동 묶음 · 손패) | 기절 · 빙결 · 속박 봉인 — 칸 덮개 `ui/status/seal.png` · 자물쇠 `lock.png`. 규칙은 `rules/STATUS.md` 화면 절 "봉인" |
 | `BossHUD.dc.html` | `BattleScreen.tsx` | 보스·적 능력은 **? 칸으로 시작 → 처음 발동 때 뒤집혀 공개**(`flip`, 붉은 띠) |
 | `Reward.dc.html` | `screens/RewardScreen.tsx` | 골드는 항상 지급. 일반 = 카드 5장 중 1, 엘리트 = 카드 4장 + 유물 1 중 1. 건너뛰기 = 아무것도 안 받음(2026-11-09 — 회복은 승리 HP +10이 대신) |

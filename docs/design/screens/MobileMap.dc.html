@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모바일 — 지도</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn{background-image:url(/redesign/sprites/cairn/idle.png)}.s-sable{background-image:url(/redesign/sprites/sable/idle.png)}.s-dirge{background-image:url(/redesign/sprites/dirge/idle.png)}.s-slime{background-image:url(/redesign/sprites/slime/idle.png)}.s-goblin{background-image:url(/redesign/sprites/goblin/idle.png)}
+.lay{position:absolute;left:0;top:0;width:100%;height:390px;background-repeat:repeat-x;background-size:auto 390px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}.l-clouds{background-image:url(/redesign/bg/grassland/clouds.png)}.l-mtn{background-image:url(/redesign/bg/grassland/mountains.png)}.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;box-sizing:border-box;background:rgba(26,22,38,0.94);border:2px solid #4a4058;color:#efe9f5;font-family:'Do Hyeon',sans-serif;font-size:18px;text-decoration:none;cursor:pointer}
+.go{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 18px;box-sizing:border-box;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 4px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:20px;text-decoration:none;cursor:pointer}
+.px{font-family:'Silkscreen',monospace}
+.safe{position:absolute;top:0;bottom:0;width:44px;pointer-events:none;background:repeating-linear-gradient(135deg,rgba(255,90,90,0.0) 0 6px,rgba(255,90,90,0.0) 6px 12px)}
+.mapbg{position:absolute;inset:0;background-image:url(/redesign/bg/grassland/preview.png);background-size:844px 475px;background-position:0 -40px;image-rendering:pixelated}
+.node{position:absolute;box-sizing:border-box;border-radius:50%;padding:0;font:inherit;color:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.node:disabled{cursor:default}
+.ic{width:28px;height:28px;image-rendering:pixelated;background-repeat:no-repeat;background-size:28px 28px}
+.ic-unknown{background-image:url(/redesign/ui/map-icons/unknown.png)}.ic-inn{background-image:url(/redesign/ui/map-icons/inn.png)}.ic-treasure{background-image:url(/redesign/ui/map-icons/treasure.png)}.ic-smith{background-image:url(/redesign/ui/map-icons/smith.png)}.ic-enemy{background-image:url(/redesign/ui/map-icons/enemy.png)}.ic-elite{background-image:url(/redesign/ui/map-icons/elite.png)}
+.s-warden{background-image:url(/redesign/sprites/warden/idle.png)}
+.st-reach{animation:pul 1.2s ease-in-out infinite}@keyframes pul{50%{box-shadow:0 0 0 4px rgba(255,246,220,0.35),0 0 14px #f4d470}}
+.coin{width:16px;height:14px;background-image:url(/redesign/ui/map-icons/merchant.png);background-size:16px 14px;image-rendering:pixelated;flex-shrink:0}
+.edge{position:absolute;height:3px;transform-origin:0 50%}
+</style>
+</helmet>
+<div style="position: relative; width: 844px; height: 390px; overflow: hidden; background: #1a2a16; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="mapbg" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,8,16,0.6) 0%, rgba(10,8,16,0) 18%, rgba(10,8,16,0) 82%, rgba(10,8,16,0.65) 100%)"></div>
+
+  <header style="position: absolute; left: 44px; right: 44px; top: 8px; height: 44px; display: flex; align-items: center; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 10px; box-sizing: border-box; background: rgba(18,15,26,0.92); border: 2px solid #3c9c98">
+      <b class="px" style="font-size: 13px">Warrior</b>
+      <div style="width: 90px; height: 8px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 88%; height: 100%; background: #e0485a"></div></div>
+      <span class="px" style="font-size: 11px; color: #ffb0b0">91/103</span>
+    </div>
+    <span style="display: flex; align-items: center; gap: 5px; height: 44px; padding: 0 10px; box-sizing: border-box; background: rgba(42,28,8,0.92); border: 2px solid #c9952f"><span class="coin"></span><span class="px" style="font-size: 13px; color: #ffd86a">64</span></span>
+    <span style="font-size: 13px; color: #b6ea6a; margin-left: 4px">초원 · {{floor}}층</span>
+    <span style="flex-grow: 1"></span>
+    <a class="btn" style="font-size: 16px">덱 12</a>
+    <a class="btn" style="font-size: 16px">유물 6</a>
+    <a class="btn" aria-label="메뉴" style="width: 44px; padding: 0">☰</a>
+  </header>
+
+  <sc-for list="{{edges}}" as="e" hint-placeholder-count="30"><span class="edge" aria-hidden="true" style="left: {{e.x}}px; top: {{e.y}}px; width: {{e.w}}px; transform: rotate({{e.a}}deg); background: {{e.c}}; opacity: {{e.o}}"></span></sc-for>
+  <sc-for list="{{nodes}}" as="n" hint-placeholder-count="21">
+    <button type="button" class="node {{n.st}}" disabled="{{n.disabled}}" onClick="{{n.pick}}" aria-label="{{n.aria}}" style="left: {{n.l}}px; top: {{n.t}}px; width: {{n.size}}px; height: {{n.size}}px; background: {{n.bg}}; border: 3px solid {{n.edge}}; opacity: {{n.op}}">
+      <span class="ic {{n.icon}}" style="display: {{n.icD}}"></span>
+      <span style="display: {{n.bossD}}; position: relative; width: 58px; height: 58px; border-radius: 50%; overflow: hidden"><span class="spr n6 s-warden" style="position: absolute; left: -12px; top: 4px; width: 80px; height: 56px; background-size: 480px 56px; animation-duration: 840ms; transform: scaleX(-1)"></span></span>
+    </button>
+  </sc-for>
+  <div class="spr n6 s-cairn" aria-label="내 위치" style="position: absolute; left: {{meX}}px; top: {{meY}}px; width: 96px; height: 64px; background-size: 576px 64px; animation-duration: 720ms; pointer-events: none"></div>
+
+  <footer style="position: absolute; left: 44px; right: 44px; bottom: 8px; height: 40px; display: flex; align-items: center; gap: 10px">
+    <span style="padding: 6px 12px; background: rgba(18,15,26,0.92); border: 2px solid #4a4058; font-size: 13px">{{tip}}</span>
+    <span style="flex-grow: 1"></span>
+    <button type="button" class="btn" style="height: 40px; font-size: 15px" onClick="{{reset}}">처음부터(시안)</button>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":844,"height":390}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { path: [] }; }
+  renderVals() {
+    const T = { enemy: '적', elite: '엘리트', unknown: '미지', inn: '여관', treasure: '보물', smith: '대장간', boss: '보스' };
+    const N = [
+      ['a', 1, 0.18, 'enemy'], ['b', 1, 0.5, 'enemy'], ['c', 1, 0.82, 'enemy'],
+      ['d', 2, 0.08, 'unknown'], ['e', 2, 0.36, 'enemy'], ['f', 2, 0.64, 'inn'], ['g', 2, 0.92, 'enemy'],
+      ['h', 3, 0.22, 'elite'], ['i', 3, 0.5, 'unknown'], ['j', 3, 0.8, 'treasure'],
+      ['k', 4, 0.1, 'smith'], ['l', 4, 0.38, 'enemy'], ['m', 4, 0.64, 'enemy'], ['n', 4, 0.9, 'unknown'],
+      ['o', 5, 0.26, 'inn'], ['p', 5, 0.56, 'elite'], ['q', 5, 0.86, 'smith'],
+      ['r', 6, 0.18, 'smith'], ['s', 6, 0.5, 'unknown'], ['t', 6, 0.82, 'smith'],
+      ['z', 7, 0.5, 'boss'],
+    ];
+    const E = { a: ['d', 'e'], b: ['e', 'f'], c: ['f', 'g'], d: ['h'], e: ['h', 'i'], f: ['i', 'j'], g: ['j'], h: ['k', 'l'], i: ['l', 'm'], j: ['m', 'n'],
+      k: ['o'], l: ['o', 'p'], m: ['p'], n: ['q'], o: ['r', 's'], p: ['s', 't'], q: ['t'], r: ['z'], s: ['z'], t: ['z'] };
+    // 가로 지도: 층이 왼쪽 → 오른쪽, 같은 층은 위아래로
+    const pos = {};
+    N.forEach(([id, f, x]) => { pos[id] = { x: 150 + (f - 1) * 96, y: 76 + x * 230 }; });
+    pos.z.x = 150 + 6 * 96 + 20;
+    const path = this.state.path, cur = path.length ? path[path.length - 1] : null;
+    const reach = cur ? (E[cur] || []) : ['a', 'b', 'c'];
+    const curF = cur ? N.find((n) => n[0] === cur)[1] : 0;
+    const nodes = N.map(([id, f, x, type]) => {
+      const v = path.includes(id), can = reach.includes(id), boss = type === 'boss', size = boss ? 66 : 44;
+      let st = '', bg = '#2a2638', edge = '#4a4058', op = 1;
+      if (v) { bg = '#5a4a24'; edge = '#f4d470'; }
+      else if (can) { bg = '#3a3220'; edge = '#fff6dc'; st = 'st-reach'; }
+      else if (f <= curF) op = 0.32; else op = 0.8;
+      if (boss) { bg = '#2a0a12'; edge = can ? '#fff6dc' : '#ff4a3a'; }
+      return { st, bg, edge, op, size, l: pos[id].x - size / 2, t: pos[id].y - size / 2, icon: boss ? '' : 'ic-' + type, icD: boss ? 'none' : 'block', bossD: boss ? 'block' : 'none',
+        disabled: !can, pick: can ? () => this.setState({ path: path.concat([id]) }) : undefined, aria: f + '층 ' + T[type] + (can ? ' — 갈 수 있음' : '') };
+    });
+    const edges = [];
+    Object.keys(E).forEach((a) => E[a].forEach((b) => {
+      const p = pos[a], q = pos[b], dx = q.x - p.x, dy = q.y - p.y, ia = path.indexOf(a);
+      const walked = ia >= 0 && path[ia + 1] === b, live = a === cur;
+      edges.push({ x: p.x, y: p.y - 1.5, w: Math.round(Math.hypot(dx, dy)), a: (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(1),
+        c: walked ? '#f4d470' : live ? '#fff6dc' : '#2a2438', o: walked || live ? 1 : 0.55 });
+    }));
+    const me = cur ? pos[cur] : { x: 70, y: 191 };
+    return { nodes, edges, meX: me.x - 40, meY: me.y - 56, floor: String(curF || 1),
+      tip: cur ? '빛나는 칸을 눌러 다음으로' : '시작 — 1층 셋 중 하나를 누른다', reset: () => this.setState({ path: [] }) };
+  }
+}
+</script>
+</body>
+</html>

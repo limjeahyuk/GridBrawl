@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모바일 — 전투</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn{background-image:url(/redesign/sprites/cairn/idle.png)}.s-sable{background-image:url(/redesign/sprites/sable/idle.png)}.s-dirge{background-image:url(/redesign/sprites/dirge/idle.png)}.s-slime{background-image:url(/redesign/sprites/slime/idle.png)}.s-goblin{background-image:url(/redesign/sprites/goblin/idle.png)}
+.lay{position:absolute;left:0;top:0;width:100%;height:390px;background-repeat:repeat-x;background-size:auto 390px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}.l-clouds{background-image:url(/redesign/bg/grassland/clouds.png)}.l-mtn{background-image:url(/redesign/bg/grassland/mountains.png)}.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;box-sizing:border-box;background:rgba(26,22,38,0.94);border:2px solid #4a4058;color:#efe9f5;font-family:'Do Hyeon',sans-serif;font-size:18px;text-decoration:none;cursor:pointer}
+.go{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 18px;box-sizing:border-box;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 4px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:20px;text-decoration:none;cursor:pointer}
+.px{font-family:'Silkscreen',monospace}
+.safe{position:absolute;top:0;bottom:0;width:44px;pointer-events:none;background:repeating-linear-gradient(135deg,rgba(255,90,90,0.0) 0 6px,rgba(255,90,90,0.0) 6px 12px)}
+.board{background-image:url(/redesign/terrain/grass-tile.png);background-size:44px 44px;image-rendering:pixelated}
+.st{position:relative;width:32px;height:32px;flex-shrink:0;background-image:url(/redesign/ui/status/tiles.png);background-size:320px 32px;background-repeat:no-repeat;image-rendering:pixelated}
+.bdg{position:absolute;right:-8px;bottom:-6px;display:flex}
+.dg{display:block;width:10px;height:14px;background-image:url(/redesign/ui/status/digits.png);background-size:110px 14px;background-repeat:no-repeat;image-rendering:pixelated}
+.dg+.dg{margin-left:-2px}
+.seal{position:absolute;left:50%;top:50%;width:48px;height:53px;margin:-30px 0 0 -24px;background-image:url(/redesign/ui/status/seal.png);background-size:144px 53px;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
+.boot{background-image:url(/redesign/ui/move/boot.png);background-size:28px 28px;width:28px;height:28px;image-rendering:pixelated;flex-shrink:0}
+.card{position:relative;width:64px;height:78px;box-sizing:border-box;padding:4px;display:flex;flex-direction:column;gap:3px;font:inherit;color:#efe9f5;cursor:pointer;flex-shrink:0}
+.card:active{transform:translateY(-3px)}
+.mg{display:grid;grid-template-columns:repeat(3,8px);gap:1px;justify-content:center}
+.mg span{width:8px;height:8px}
+.cell{border-right:1px solid rgba(20,50,20,0.45);border-bottom:1px solid rgba(20,50,20,0.45)}
+.cell-me{background:rgba(127,214,200,0.38);box-shadow:inset 0 0 0 2px #bff5ec}
+.cell-foe{background:rgba(224,72,90,0.42);box-shadow:inset 0 0 0 2px #ff8a8a}
+</style>
+</helmet>
+<div style="position: relative; width: 844px; height: 390px; overflow: hidden; background: #5fb4ec; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5">
+  <div class="lay l-sky"></div><div class="lay l-mtn"></div><div class="lay l-hills"></div><div class="lay l-meadow"></div>
+
+  <!-- 상단 HUD (44px) -->
+  <header style="position: absolute; left: 44px; right: 44px; top: 6px; height: 44px; display: grid; grid-template-columns: 1fr 150px 1fr; gap: 8px">
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: rgba(18,15,26,0.92); border: 2px solid #3c9c98">
+      <div style="display: flex; align-items: center; gap: 6px"><b class="px" style="font-size: 12px; width: 58px">Warrior</b><div style="flex-grow: 1; height: 9px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 85%; height: 100%; background: #e0485a"></div></div><span class="px" style="font-size: 10px; width: 44px; text-align: right">88/103</span></div>
+      <div style="display: flex; align-items: center; gap: 6px"><span style="font-size: 10px; width: 58px; color: #bff5ec">보호막 6</span><div style="flex-grow: 1; height: 5px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 48%; height: 100%; background: #4a9aff"></div></div><span class="px" style="font-size: 10px; width: 44px; text-align: right; color: #7fc8ff">EN 24</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(18,15,26,0.92); border: 2px solid #0a0810">
+      <span class="px" style="font-size: 15px; color: #f4d470">ROUND 3</span>
+      <span style="font-size: 10px; color: #b6ea6a">카드 고르기</span>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: rgba(18,15,26,0.92); border: 2px solid #6ab83a">
+      <div style="display: flex; align-items: center; gap: 6px; flex-direction: row-reverse"><b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 15px; width: 58px; text-align: right">고블린</b><div style="flex-grow: 1; height: 9px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: 71%; height: 100%; background: #e0485a"></div></div><span class="px" style="font-size: 10px; width: 44px">17/24</span></div>
+      <div style="display: flex; align-items: center; gap: 6px; flex-direction: row-reverse"><span style="font-size: 10px; width: 58px; text-align: right; color: #c9e8a8">? 능력 1</span><div style="flex-grow: 1; height: 5px; background: #0a0810; border: 2px solid #3a3150; display: flex; justify-content: flex-end"><div style="width: 60%; height: 100%; background: #4a9aff"></div></div><span class="px" style="font-size: 10px; width: 44px; color: #7fc8ff">EN 18</span></div>
+    </div>
+  </header>
+
+  <!-- 상태 줄 (상태바 아래) + 유물 버튼 -->
+  <div style="position: absolute; left: 46px; top: 56px; display: flex; gap: 12px; align-items: flex-start">
+    <sc-for list="{{mine}}" as="s" hint-placeholder-count="2"><span class="st" role="img" aria-label="{{s.aria}}" style="background-position: {{s.pos}}"><span class="bdg" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="background-position: {{s.d}}"></i></span></span></sc-for>
+    <a class="btn" style="height: 32px; padding: 0 8px; font-size: 13px; margin-left: 4px">유물 6</a>
+  </div>
+  <div style="position: absolute; right: 46px; top: 56px; display: flex; gap: 12px; flex-direction: row-reverse">
+    <sc-for list="{{foe}}" as="s" hint-placeholder-count="1"><span class="st" role="img" aria-label="{{s.aria}}" style="background-position: {{s.pos}}"><span class="bdg" style="display: {{s.bdD}}"><i class="dg" style="background-position: -100px 0"></i><i class="dg" style="background-position: {{s.d}}"></i></span></span></sc-for>
+  </div>
+
+  <!-- 판 6×4 (칸 84×44) -->
+  <div class="board" aria-label="6×4 전투판" style="position: absolute; left: 170px; top: 110px; width: 504px; height: 176px; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #5a3c22; display: grid; grid-template-columns: repeat(6, 84px); grid-template-rows: repeat(4, 44px)">
+    <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div class="cell {{c}}"></div></sc-for>
+  </div>
+  <div class="spr n6 s-cairn" role="img" aria-label="Warrior" style="position: absolute; left: 254px; top: 182px; width: 96px; height: 64px; background-size: 576px 64px; animation-duration: 720ms"></div>
+  <div class="spr n6 s-goblin" role="img" aria-label="고블린" style="position: absolute; left: 512px; top: 150px; width: 72px; height: 48px; background-size: 432px 48px; animation-duration: 660ms; transform: scaleX(-1)"></div>
+
+  <span style="position: absolute; right: 46px; bottom: 98px; padding: 1px 6px; font-size: 10px; color: #c9c2d6; background: rgba(18,15,26,0.8)">카드를 꾹 누르면 설명</span>
+  <!-- 아래 카드 줄 (88px) -->
+  <footer style="position: absolute; left: 44px; right: 44px; bottom: 6px; height: 88px; display: flex; align-items: flex-end; gap: 8px">
+    <div style="display: flex; gap: 4px; padding: 4px; background: #120f1a; border: 2px solid #0a0810; box-shadow: inset 0 0 0 2px #f4d470">
+      <sc-for list="{{slots}}" as="k" hint-placeholder-count="3">
+        <button type="button" class="card" aria-label="{{k.aria}}" onClick="{{k.onTap}}" style="background: {{k.bg}}; border: 2px {{k.bs}} {{k.edge}}">
+          <span class="px" style="position: absolute; left: -2px; top: -10px; font-size: 10px; padding: 0 4px; background: {{k.tagBg}}; color: #1d1408; z-index: 2">{{k.order}}</span>
+          <span style="display: {{k.dEmpty}}; height: 100%; align-items: center; justify-content: center; color: #6a6478" class="px">+</span>
+          <span style="display: {{k.dMove}}; flex-direction: column; align-items: center; height: 100%"><span class="px" style="font-size: 9px; color: #8ad0ff; align-self: flex-start">MOVE</span><span style="font-size: 26px; line-height: 30px; font-weight: 700; color: #8ad0ff">→</span><span style="margin-top: auto; font-family: 'Do Hyeon', sans-serif; font-size: 12px">오른쪽</span></span>
+          <span style="display: {{k.dCard}}; flex-direction: column; gap: 3px; height: 100%">
+            <span class="px" style="display: flex; justify-content: space-between; font-size: 9px"><span style="color: #ff9a9a">{{k.dm}}</span><span style="color: #8ad0ff">{{k.en}}</span></span>
+            <span class="mg"><sc-for list="{{k.grid}}" as="g" hint-placeholder-count="9"><span style="background: {{g}}"></span></sc-for></span>
+            <span style="margin-top: auto; font-family: 'Do Hyeon', sans-serif; font-size: 12px; line-height: 1.05; text-align: center; word-break: keep-all">{{k.name}}</span>
+          </span>
+          <span style="display: {{k.sealD}}; position: absolute; inset: 0; background: rgba(8,6,14,0.55)"></span>
+          <span class="seal" style="display: {{k.sealD}}; background-position: {{k.sealPos}}"></span>
+          <span style="display: {{k.sealD}}; position: absolute; left: -2px; right: -2px; bottom: -2px; text-align: center; font-family: 'Do Hyeon', sans-serif; font-size: 12px; background: #5a3a08; color: #ffd84a; border-top: 2px solid #0a0810">{{k.lockName}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <button type="button" aria-label="이동 카드 묶음" onClick="{{moveTap}}" style="position: relative; width: 64px; height: 78px; flex-shrink: 0; box-sizing: border-box; padding: 4px; background: #14243a; border: 2px solid #f4d470; box-shadow: 3px -3px 0 #10203a, 5px -5px 0 #2a4a78; color: #efe9f5; font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer">
+      <span style="display: flex; align-items: center; gap: 2px"><span class="boot"></span><span class="px" style="font-size: 12px">×7</span></span>
+      <span class="px" style="font-size: 9px; color: #8ad0ff">MOVE</span>
+      <span style="margin-top: auto; font-size: 10px; color: #f4d470; white-space: nowrap">{{moveHint}}</span>
+    </button>
+    <div style="display: flex; gap: 4px">
+      <sc-for list="{{hand}}" as="k" hint-placeholder-count="5">
+        <button type="button" class="card" aria-label="{{k.name}}" onClick="{{k.onTap}}" style="background: {{k.bg}}; border: 2px solid {{k.edge}}; opacity: {{k.op}}">
+          <span class="px" style="display: flex; justify-content: space-between; font-size: 9px"><span style="color: #ff9a9a">{{k.dm}}</span><span style="color: #8ad0ff">{{k.en}}</span></span>
+          <span class="mg"><sc-for list="{{k.grid}}" as="g" hint-placeholder-count="9"><span style="background: {{g}}"></span></sc-for></span>
+          <span style="margin-top: auto; font-family: 'Do Hyeon', sans-serif; font-size: 12px; line-height: 1.05; text-align: center; word-break: keep-all">{{k.name}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <button type="button" class="go" style="height: 52px; padding: 0 14px; margin-left: auto; flex-shrink: 0">확정 ▶</button>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":844,"height":390}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { slots: [null, null, null] }; }
+  renderVals() {
+    const st = this.state;
+    const E = '#2a2438', S = '#f4d470', H = '#e0485a', G = '#7fd6c8';
+    const both1 = [E, E, E, H, S, H, E, E, E], bar1 = [H, E, H, H, S, H, H, E, H];
+    const C = [
+      { id: 1, name: '방패 밀치기', dm: 'DM14', en: 'EN13', grid: bar1, bg: '#2a1620', edge: '#8a3040' },
+      { id: 2, name: '대지 가르기', dm: 'DM14', en: 'EN12', grid: bar1, bg: '#2a1620', edge: '#8a3040' },
+      { id: 3, name: '가드', dm: 'BLOCK', en: 'EN6', grid: [E, E, E, E, G, E, E, E, E], bg: '#122a2a', edge: '#3c9c98' },
+      { id: 4, name: '파쇄 베기', dm: 'DM13', en: 'EN5', grid: both1, bg: '#2a1620', edge: '#8a3040' },
+      { id: 5, name: '서약의 파쇄', dm: 'DM23', en: 'EN24', grid: bar1, bg: '#1e2a46', edge: '#8fb6ff' },
+    ];
+    const LOCK = ['stun', null, null];   // 이번 라운드 1턴 = 기절(넘어온 봉인)
+    const free = (move) => st.slots.findIndex((c, i) => !c && !LOCK[i]);
+    const put = (c) => { const i = free(); if (i < 0) return; const s = st.slots.slice(); s[i] = c; this.setState({ slots: s }); };
+    const slots = st.slots.map((c, i) => {
+      const lock = LOCK[i];
+      return { order: String(i + 1), aria: lock ? (i + 1) + '번 칸 — 기절로 잠김' : (i + 1) + '번 칸',
+        bg: lock ? '#0e0c14' : c ? (c.move ? '#14243a' : c.bg) : '#120f1a', edge: lock ? '#ffd84a' : c ? (c.move ? '#5aa8ff' : c.edge) : '#4a4058',
+        bs: !c && !lock ? 'dashed' : 'solid', tagBg: lock ? '#ffd84a' : '#f4d470',
+        dEmpty: !c && !lock ? 'flex' : 'none', dMove: c && c.move ? 'flex' : 'none', dCard: c && !c.move ? 'flex' : 'none',
+        name: c ? c.name || '' : '', dm: c ? c.dm || '' : '', en: c ? c.en || '' : '', grid: c && !c.move ? c.grid : [],
+        sealD: lock ? 'block' : 'none', sealPos: '0 0', lockName: lock ? '기절' : '',
+        onTap: () => { if (!lock && c) { const s = st.slots.slice(); s[i] = null; this.setState({ slots: s }); } } };
+    });
+    const used = st.slots.filter(Boolean).map((c) => c.id);
+    const hand = C.filter((c) => !used.includes(c.id)).map((c) => Object.assign({}, c, { op: free() < 0 ? 0.5 : 1, onTap: () => put(c) }));
+    const fi = free(true);
+    const tile = (i, n) => ({ pos: `${-32 * i}px 0`, bdD: n >= 2 ? 'flex' : 'none', d: `${-10 * n}px 0` });
+    const cells = [];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) cells.push(r === 2 && (c === 1 || c === 3) ? 'cell-me' : r === 1 && c === 3 ? 'cell-foe' : '');
+    return { slots, hand, cells,
+      moveHint: fi >= 0 ? (fi + 1) + '번에 →' : '칸이 참', moveTap: () => put({ id: 'm' + Date.now(), move: true }),
+      mine: [Object.assign(tile(4, 1), { aria: '기절 1턴' }), Object.assign(tile(1, 2), { aria: '화상 2겹' })],
+      foe: [Object.assign(tile(0, 3), { aria: '중독 3겹' })] };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모바일 규칙</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Do+Hyeon&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f4d470}
+.spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
+.n6{animation-name:f6;animation-timing-function:steps(6)}.n8{animation-name:f8;animation-timing-function:steps(8)}
+@keyframes f6{to{background-position:120% 0}}@keyframes f8{to{background-position:114.2857% 0}}
+.s-cairn{background-image:url(/redesign/sprites/cairn/idle.png)}.s-sable{background-image:url(/redesign/sprites/sable/idle.png)}.s-dirge{background-image:url(/redesign/sprites/dirge/idle.png)}.s-slime{background-image:url(/redesign/sprites/slime/idle.png)}.s-goblin{background-image:url(/redesign/sprites/goblin/idle.png)}
+.lay{position:absolute;left:0;top:0;width:100%;height:390px;background-repeat:repeat-x;background-size:auto 390px;image-rendering:pixelated}
+.l-sky{background-image:url(/redesign/bg/grassland/sky.png)}.l-clouds{background-image:url(/redesign/bg/grassland/clouds.png)}.l-mtn{background-image:url(/redesign/bg/grassland/mountains.png)}.l-hills{background-image:url(/redesign/bg/grassland/hills.png)}.l-meadow{background-image:url(/redesign/bg/grassland/meadow.png)}
+.l-wall{background-image:url(/redesign/bg/dungeon/wall.png)}.l-light{background-image:url(/redesign/bg/dungeon/torchlight.png)}.l-floor{background-image:url(/redesign/bg/dungeon/floor.png)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;box-sizing:border-box;background:rgba(26,22,38,0.94);border:2px solid #4a4058;color:#efe9f5;font-family:'Do Hyeon',sans-serif;font-size:18px;text-decoration:none;cursor:pointer}
+.go{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 18px;box-sizing:border-box;background:#f4d470;color:#1d1408;border:3px solid #2a1c10;box-shadow:0 4px 0 #7a5418;font-family:'Do Hyeon',sans-serif;font-size:20px;text-decoration:none;cursor:pointer}
+.px{font-family:'Silkscreen',monospace}
+.safe{position:absolute;top:0;bottom:0;width:44px;pointer-events:none;background:repeating-linear-gradient(135deg,rgba(255,90,90,0.0) 0 6px,rgba(255,90,90,0.0) 6px 12px)}
+
+</style>
+</helmet>
+<div style="width: 960px; height: 620px; box-sizing: border-box; padding: 26px 30px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 16px">
+  <div>
+    <p class="px" style="margin: 0 0 4px; font-size: 12px; letter-spacing: 4px; color: #f4d470">MOBILE · LANDSCAPE ONLY · 844×390</p>
+    <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 32px; color: #fff6dc">모바일 규칙 — 가로 고정</h1>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+    <section style="padding: 12px 16px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 10px">
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 19px">기준 화면 · 안전 영역</b>
+      <div style="position: relative; width: 422px; height: 195px; background: #2a2438; border: 2px solid #4a4058">
+        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 22px; background: repeating-linear-gradient(135deg, rgba(255,106,106,0.35) 0 4px, transparent 4px 8px)"></div>
+        <div style="position: absolute; right: 0; top: 0; bottom: 0; width: 22px; background: repeating-linear-gradient(135deg, rgba(255,106,106,0.35) 0 4px, transparent 4px 8px)"></div>
+        <div style="position: absolute; left: 22px; right: 22px; top: 3px; height: 22px; background: rgba(60,156,152,0.35); font-size: 10px; display: flex; align-items: center; justify-content: center">위 HUD · 버튼 44px</div>
+        <div style="position: absolute; left: 22px; right: 22px; bottom: 3px; height: 44px; background: rgba(244,212,112,0.25); font-size: 10px; display: flex; align-items: center; justify-content: center">아래 카드 줄 88px</div>
+        <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 12px; color: #c9c2d6">844 × 390 (½ 축소)</span>
+      </div>
+      <span style="font-size: 12px; line-height: 1.6; color: #c9c2d6">기준 = 아이폰 14/15 가로(844×390). 빗금 = <b style="color: #ff9a9a">좌우 44px 안전 영역</b>(노치 · 둥근 모서리) — 배경만 깔고 버튼 · 글은 넣지 않는다. 더 넓은 폰은 가운데 정렬로 좌우만 늘어난다.</span>
+    </section>
+    <section style="padding: 12px 16px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 8px">
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 19px">크기 규칙</b>
+      <table style="border-collapse: collapse; font-size: 12px; line-height: 1.5">
+        <tr style="color: #b9b1c9"><td style="padding: 3px 8px 3px 0">무엇</td><td style="padding: 3px 8px">PC(1280×720)</td><td style="padding: 3px 0">모바일</td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">누르는 것</td><td style="padding: 3px 8px">40~56px</td><td style="padding: 3px 0"><b>최소 44px</b></td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">글자</td><td style="padding: 3px 8px">13~40px</td><td style="padding: 3px 0">본문 12~13 · 최소 10(픽셀 숫자 9)</td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">전투판 칸</td><td style="padding: 3px 8px">160×68</td><td style="padding: 3px 0">84×44</td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">캐릭터 도트</td><td style="padding: 3px 8px">×2</td><td style="padding: 3px 0"><b>×1</b>(폰은 화면이 3배 촘촘해 또렷하다)</td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">상태 · 유물 아이콘</td><td style="padding: 3px 8px">×2(32px)</td><td style="padding: 3px 0">×2 그대로</td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">카드</td><td style="padding: 3px 8px">96×106</td><td style="padding: 3px 0">60×78 · 꾹 누르면 상세</td></tr>
+        <tr><td style="padding: 3px 8px 3px 0">봉인 덮개</td><td style="padding: 3px 8px">×2</td><td style="padding: 3px 0">×1(48×53)</td></tr>
+      </table>
+    </section>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+    <section style="padding: 12px 16px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 1.6; color: #e4def0">
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 19px; color: #efe9f5">PC 화면을 그대로 줄이지 않는 이유</b>
+      <span>1280×720을 390 높이에 맞추면 0.54배 — 13px 글자가 7px, 카드가 52px가 된다. 그래서 <b>화면마다 다시 배치</b>한다.</span>
+      <span>· 세로로 들면 "가로로 돌려 주세요" 안내만 보인다.</span>
+      <span>· 유물 줄은 접어서 「유물 6」 버튼(누르면 목록), 상태이상 줄은 그대로 상태바 아래.</span>
+      <span>· 지도는 층이 <b>왼쪽 → 오른쪽</b>(PC는 아래 → 위) — 7층이 한 화면에 들어간다.</span>
+    </section>
+    <section style="padding: 12px 16px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 1.6; color: #e4def0">
+      <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 19px; color: #efe9f5">진행</b>
+      <span><b style="color: #b6ea6a">1차(이번)</b> — 세로 안내 · 타이틀 · 영웅 선택 · 난이도 · 지도 · 전투(카드 고르기 · 기절 봉인 · 상태 줄)</span>
+      <span><b style="color: #f4d470">2차</b> — 여관 · 상점 · 대장간 · 카드 강화 · ? 이벤트 · 고블린 · 보물 · 보상 · 결과 · 도감 · 카드 상세 · 튜토리얼</span>
+      <span style="color: #ff9a8a">· 함정 1칸 타일(184×96)은 모바일 칸(84×44)에 안 맞는다 — 2차에서 모바일용으로 다시 굽는다.</span>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":620}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
