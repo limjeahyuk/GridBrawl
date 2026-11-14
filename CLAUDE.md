@@ -17,7 +17,7 @@
 | ? 이벤트 · 이벤트 사슬 | [docs/rules/EVENTS.md](docs/rules/EVENTS.md) | |
 | 고블린 장사꾼 | [docs/rules/GOBLIN_MERCHANT.md](docs/rules/GOBLIN_MERCHANT.md) | |
 | 룰렛 강화 | [docs/rules/CARD_UPGRADE.md](docs/rules/CARD_UPGRADE.md) | |
-| 유물 100종 | [docs/rules/RELICS_100.md](docs/rules/RELICS_100.md) | **0절 = 지금 코드**(목록 · 얻는 곳 · 합치는 법 · 그림), 1절 = 임시 · 미정, 2절 = 경위. 유물 상세는 여기에만 |
+| 유물 100종 | [docs/rules/RELICS_100.md](docs/rules/RELICS_100.md) | **0절 = 지금 코드**(목록 · 얻는 곳 · 합치는 법 · 그림), 1절 = 임시 · 미정, 2절 = 경위, **3절 = 유물 전면 개편 기획(구현 전)**. 유물 상세는 여기에만 |
 | 그림 · 시안 · 굽는 도구 | [docs/design/README.md](docs/design/README.md) — 시안 `docs/design/screens/*.dc.html`(대응표 `screens/README.md`) · 도구 `docs/design/tools/` · 원본 그림 `docs/design/2dImg/` | 화면은 시안이 기준 |
 | 작업 경위 | [docs/HISTORY.md](docs/HISTORY.md) | 사실 아님 — "왜 이렇게 됐나"용 |
 
