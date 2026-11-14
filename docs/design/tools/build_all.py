@@ -2,7 +2,7 @@ import json, os, shutil
 import numpy as np
 from PIL import Image
 from pix import save_sheet, preview
-import hero_cairn, hero_sable, hero_dirge, mon_field, mon_dungeon, mon_boss, bgs
+import hero_cairn, hero_sable, hero_dirge, mon_field, mon_dungeon, mon_boss, mon_gladiator, bgs
 
 OUT = 'out'
 shutil.rmtree(OUT, ignore_errors=True)
@@ -22,6 +22,7 @@ SHEETS = [
     ('warden', mon_boss.warden_clips, 2, 'boss', 'grassland', 'warden'),
     ('pyrelord', mon_boss.pyre_clips, 2, 'boss', 'dungeon', 'pyrelord'),
     ('overlord', mon_boss.over_clips, 2, 'boss', 'dungeon', 'overlord'),
+    ('gladiator', mon_gladiator.gladiator_clips, 3, 'monster', 'event', 'gladiator'),
 ]
 
 index = {}

@@ -68,7 +68,13 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .shake{animation:shake .4s ease-in-out 1}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .bob{animation:bob 2.4s ease-in-out infinite}
-.tyA{animation:tyA 1.6s steps(32) both}.tyB{animation:tyB .8s steps(14) both}
+.tyA{animation:tyA 1.4s steps(30) both}.tyB{animation:tyB 1.4s steps(30) both}
+.dcoin{display:block;width:88px;height:88px;background-image:url(/redesign/ui/events/coin.png);background-size:1056px 88px;background-repeat:no-repeat;image-rendering:pixelated}
+.coin-spin{animation:cspin .3s steps(12) infinite}@keyframes cspin{to{background-position:-1056px 0}}
+.coin-fly{animation:cfly 1.7s cubic-bezier(.3,.0,.4,1) 1 both}@keyframes cfly{0%{transform:translateY(60px) scale(.7)}45%{transform:translateY(-120px) scale(1.15)}85%{transform:translateY(8px) scale(1)}92%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+.coin-land{animation:cland .5s ease-out 1}@keyframes cland{0%{transform:scale(1.4);filter:brightness(2)}100%{transform:none;filter:none}}
+.s-cairn6{background-image:url(/redesign/sprites/cairn/idle.png)}.s-glad{background-image:url(/redesign/sprites/gladiator/idle.png)}.s-glad-atk{background-image:url(/redesign/sprites/gladiator/attack2.png)}
+.tile2{position:relative;width:150px;height:96px;background:linear-gradient(180deg,#e2c690 0%,#c8a868 100%);border:3px solid #6a4a22;box-shadow:inset 0 -6px 0 rgba(0,0,0,0.18)}
 @keyframes tyA{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes tyB{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 .next{animation:nx .8s ease-in-out infinite}@keyframes nx{50%{transform:translateY(4px)}}
 @keyframes bob{50%{transform:translateY(-4px)}}
@@ -107,6 +113,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
     </sc-if>
     <!-- 말하는 이벤트(수술실): 고블린 상점처럼 말풍선 — 꼬리가 왼쪽 인물을 가리킨다 -->
     <sc-if value="{{talk}}" hint-placeholder-val="{{false}}">
+      <p style="display: {{sp.narrD}}; margin: 0 0 14px; padding: 10px 14px; font-size: 15px; line-height: 1.6; color: #e4def0; background: rgba(8,6,12,0.78); border-left: 4px solid {{sp.edge}}">{{sp.narr}}</p>
       <div style="position: relative; padding: 26px 24px 18px; background: rgba(16,10,8,0.92); border: 3px solid #0a0604; box-shadow: inset 0 0 0 2px {{sp.edge}}, 0 8px 0 rgba(0,0,0,0.4)">
         <span aria-hidden="true" style="position: absolute; left: -24px; top: 30px; width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-right: 22px solid {{sp.edge}}"></span>
         <div style="position: absolute; left: 18px; top: -20px; display: flex; box-shadow: 0 4px 0 rgba(0,0,0,0.4)">
@@ -170,8 +177,40 @@ a{color:#f4d470}a:hover{color:#fff1b8}
       </div>
     </sc-if>
 
+    <sc-if value="{{showFlip}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 0 8px; margin-top: 8px; background: radial-gradient(ellipse at 50% 80%, rgba(40,120,70,0.55) 0%, rgba(16,10,8,0) 70%)">
+        <div class="coin-fly"><span class="dcoin coin-spin" role="img" aria-label="던져진 동전"></span></div>
+        <span style="font-family: 'Do Hyeon', sans-serif; font-size: 22px; color: #ffd86a">동전이 공중에서 돈다…</span>
+        <span style="font-size: 12px; color: #b9b1c9">건 것: {{betTxt}}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showArena}}" hint-placeholder-val="{{false}}">
+      <div class="rise" style="display: flex; flex-direction: column; gap: 12px; padding: 14px 18px 16px; margin-top: 8px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #ffa24a">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <b style="font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 26px">막고라 — 2칸 결투장</b>
+          <span style="font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 3px; color: #ffa24a">DUEL</span>
+        </div>
+        <div aria-label="2칸 판 — 왼쪽 나, 오른쪽 검투사" style="position: relative; display: flex; justify-content: center; gap: 0; padding-top: 70px">
+          <div class="tile2"><div class="px s-cairn6 f6" role="img" aria-label="CAIRN" style="position: absolute; left: -20px; bottom: 6px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: .72s"></div></div>
+          <div class="tile2" style="border-left: 0"><div class="px {{arenaFoe}} f6" role="img" aria-label="검투사" style="position: absolute; left: -38px; bottom: 6px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: .72s; transform: scaleX(-1)"></div></div>
+        </div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap">
+          <span class="chip" style="background: #3a1a08; color: #ffc89a; border: 1px solid #ffa24a">판 2칸 — 물러설 곳이 없다</span>
+          <span class="chip" style="background: #3a1016; color: #ff9a9a; border: 1px solid #e0485a">지면 죽음 (런 끝)</span>
+          <span class="chip" style="background: #2a1c08; color: #ffd86a; border: 1px solid #c9952f">이기면 희귀 유물 + 100G</span>
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button type="button" class="go" style="background: #ffa24a; box-shadow: 0 5px 0 #7a3a10">결투 시작 ▶</button>
+          <button type="button" class="ghost" onClick="{{arenaWin}}">이겼다고 치고(시안)</button>
+          <button type="button" class="ghost" onClick="{{arenaLose}}">졌다고 치고(시안)</button>
+        </div>
+      </div>
+    </sc-if>
+
     <sc-if value="{{showResult}}" hint-placeholder-val="{{false}}">
       <div class="rise" style="display: flex; gap: 18px; align-items: center; padding: 18px 20px; margin-top: 8px; background: #1a1626; border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px {{res.edge}}">
+        <span class="dcoin coin-land" aria-hidden="true" style="display: {{coinD}}; flex-shrink: 0; background-position: {{coinPos}}"></span>
         <span class="rf78" style="display: {{res.relicD}}; background-position: {{res.pos}}"></span>
         <span style="display: {{res.bigD}}; min-width: 110px; justify-content: center; font-family: 'Silkscreen', monospace; font-size: 34px; color: {{res.bigFg}}">{{res.big}}</span>
         <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1">
@@ -208,7 +247,8 @@ class Component extends DCLogic {
     const fx = ['heal', 'hurt', 'none'];
     for (let i = fx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [fx[i], fx[j]] = [fx[j], fx[i]]; }
     return { ev, phase: 'choose', hp: 70, maxHp: 103, gold: 300, iron: this.state ? this.state.iron : false, res: null, pickFor: null,
-      gachaTries: 0, gachaGot: [], moleTries: 0, potFx: fx, fx: '', exit: null, exitNow: false, forceJar: null, forceGacha: false, forceMole: false };
+      gachaTries: 0, gachaGot: [], moleTries: 0, potFx: fx, fx: '', exit: null, exitNow: false, forceJar: null, forceGacha: false, forceMole: false,
+      cstep: 'meet', bet: null, coin: null, forceCoin: this.state ? this.state.forceCoin : null, say: null, sayN: 0 };
   }
   renderVals() {
     const st = this.state;
@@ -230,6 +270,8 @@ class Component extends DCLogic {
       hand: ['frostbite', 'punisher', 'midastouch', 'chainshock'],
       foot: ['ironshoes', 'anchorstone', 'skywalk'],
       any: ['fang', 'rage', 'luckycharm', 'plating', 'heart', 'toxinvial'],
+      common: ['fang', 'rage', 'plating', 'heart', 'venomflask'],   // 시안용 — 실제 등급은 RELICS_100
+      rare: ['oxheart', 'punisher', 'frostbite', 'toxinvial', 'thorns'],
     };
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
     // 받침에 맞는 조사 — "X을(를)" 같은 표기를 실제 조사로 바꾼다
@@ -262,6 +304,28 @@ class Component extends DCLogic {
 
     // ---------------------------------------------------------------- 이벤트 정의
     // 그림만 온 이벤트의 빈 선택지 — 기획이 오면 라벨 · 대가 · 결과만 채우면 된다
+    // 카지노: 동전 — 앞면 = 딜러 승, 뒷면 = 내 승. 1.7초 날린 뒤 결과
+    const BET = { gold: '골드 200G', hp: '체력 40', max: '최대 체력 20' };
+    const flip = (bet) => {
+      const face = st.forceCoin || (Math.random() < 0.5 ? 'h' : 't');
+      set({ phase: 'flip', bet, coin: face, say: '"자, 던질게요!"', sayN: st.sayN + 1 });
+      setTimeout(() => {
+        const s2 = this.state;
+        if (s2.phase !== 'flip') return;
+        const lose = face === 'h';
+        const bye = '"저의 승리네요. 안녕히 가세요."';
+        if (lose) {
+          if (bet === 'gold') return done(bigRes('-200', '#ffd86a', '앞면 — 딜러의 승리', '200G를 잃었다.', '#ff8ab0'), { gold: s2.gold - 200, say: bye, sayN: s2.sayN + 1 });
+          if (bet === 'hp') return done(bigRes('-40', '#ff6a6a', '앞면 — 딜러의 승리', '체력이 40 줄었다.', '#ff8ab0'), { hp: Math.max(1, s2.hp - 40), say: bye, sayN: s2.sayN + 1, fx: 'shake' });
+          return done(bigRes('-20', '#ff8ab0', '앞면 — 딜러의 승리', '최대 체력이 20 줄었다.', '#ff8ab0'), { maxHp: s2.maxHp - 20, hp: Math.min(s2.hp, s2.maxHp - 20), say: bye, sayN: s2.sayN + 1, fx: 'shake' });
+        }
+        const win = '"어머, 당신의 승리네요. 약속대로 드릴게요."';
+        if (bet === 'gold') return done(bigRes('+200', '#ffd86a', '뒷면 — 나의 승리', '200G를 건네받았다.', '#ffd86a'), { gold: s2.gold + 200, say: win, sayN: s2.sayN + 1 });
+        if (bet === 'hp') { const id = pick(POOL.common); return done(relicRes(id, '뒷면 — {r}을(를) 받았다', `체력을 ${Math.min(s2.maxHp, s2.hp + 20) - s2.hp} 회복했다.`, '#6ab83a'), { hp: Math.min(s2.maxHp, s2.hp + 20), say: win, sayN: s2.sayN + 1 }); }
+        const id = pick(POOL.rare);
+        return done(relicRes(id, '뒷면 — {r}을(를) 받았다', '최대 체력이 10 늘었다.', '#c48aff'), { maxHp: s2.maxHp + 10, hp: s2.hp + 10, say: win, sayN: s2.sayN + 1 });
+      }, 1700);
+    };
     const blank = (i) => ({ label: `(선택지 ${i})`, sub: '기획 전 — 비워 둠', chips: [],
       onTap: () => done(bigRes('…', '#8a849a', '(결과 — 기획이 오면 채운다)', '고른 뒤 무슨 일이 생기는지를 여기에 적는다.', '#4a4058')) });
     const E = {
@@ -379,16 +443,29 @@ class Component extends DCLogic {
         choices: [blank(1), blank(2)],
       },
       casino: {
-        name: '카지노', code: 'EV-CASINO', kindTxt: '기획 전', tagCol: '#ff8ab0', glow: 'rgba(255,138,176,0.22)',
-        text: '(이벤트 글 — 기획이 오면 채운다)',
+        name: '카지노', code: 'EV-CASINO', kindTxt: '한 번 · 동전 던지기', tagCol: '#ff8ab0', glow: 'rgba(255,138,176,0.22)',
+        text: '어서오세요. 저와 게임 한 판 어때요?',
         art: ['a-jar', '', 48, 52, 1], bg: 'eb-casino',
-        choices: [blank(1), blank(2)],
+        speaker: { name: '딜러', look: '카지노', edge: '#ff8ab0', tagBg: '#5a1a3a' },
+        choices: st.cstep === 'bet' ? [
+          { label: '골드', chips: [gold(200)], sub: st.gold < 200 ? '골드가 모자란다' : '', off: st.gold < 200, onTap: () => flip('gold') },
+          { label: '체력', chips: [hpc(40)], sub: st.hp <= 40 ? '체력이 모자란다' : '', off: st.hp <= 40, onTap: () => flip('hp') },
+          { label: '최대 체력', chips: [mhp(20)], onTap: () => flip('max') },
+        ] : [
+          { label: '게임한다', chips: [], onTap: () => set({ cstep: 'bet', say: '"좋아요. 앞면이 나오면 제가 승리, 뒷면이 나오면 당신이 승리하는 간단한 게임이에요.\n무엇을 거시겠어요?"', sayN: st.sayN + 1 }) },
+          { label: '거절한다', chips: [], onTap: () => done(bigRes('', '', '카지노를 나왔다', '딜러가 손을 흔든다.', '#4a4058'), { say: '"다음에 봐요."', sayN: st.sayN + 1 }) },
+        ],
       },
       macgora: {
-        name: '막고라', code: 'EV-MACGORA', kindTxt: '기획 전', tagCol: '#ffa24a', glow: 'rgba(255,162,74,0.22)',
-        text: '(이벤트 글 — 기획이 오면 채운다)',
+        name: '막고라', code: 'EV-MACGORA', kindTxt: '한 번 · 결투', tagCol: '#ffa24a', glow: 'rgba(255,162,74,0.22)',
+        narr: '엄청난 관중들이 환호성을 지르고 있다. 멀리서 울려 퍼진다.',
+        text: '나와 막고라를 이기는 자, 그만한 보상을 얻을 것이다!!!\n도전할 자 누구인가!!!!!!',
         art: ['a-jar', '', 48, 52, 1], bg: 'eb-macgora',
-        choices: [blank(1), blank(2)],
+        speaker: { name: '검투사', look: '막고라', edge: '#ffa24a', tagBg: '#6a3010' },
+        choices: [
+          { label: '도전한다', chips: [tag('2칸 결투 · 지면 죽음')], onTap: () => set({ phase: 'arena', fx: 'shake', say: '"좋다!!! 관중들이여, 도전자가 나섰다!!!"', sayN: st.sayN + 1 }) },
+          { label: '포기한다', chips: [], onTap: () => done(bigRes('', '', '등을 돌렸다', '관중의 야유가 등 뒤로 쏟아진다.', '#4a4058'), { say: '"겁쟁이 녀석!!!"', sayN: st.sayN + 1 }) },
+        ],
       },
     };
     const ORDER = [['forge', '대장장이'], ['trade', '거래'], ['spring', '온천'], ['apothecary', '약방'], ['jar', '항아리'], ['gacha', '갓챠'], ['mole', '두더지'], ['surgery', '수술실'], ['dragon', '용족 마법사'], ['casino', '카지노'], ['macgora', '막고라']];
@@ -436,8 +513,13 @@ class Component extends DCLogic {
       { t: '뱀 나오기', cls: st.forceJar === 'snake' ? 'fbtn-on' : '', onTap: () => set({ forceJar: 'snake' }) },
       { t: '빈 항아리', cls: st.forceJar === 'empty' ? 'fbtn-on' : '', onTap: () => set({ forceJar: 'empty' }) },
     ] : st.ev === 'gacha' ? [{ t: st.forceGacha ? '다음은 당첨 ✓' : '확률대로', cls: st.forceGacha ? 'fbtn-on' : '', onTap: () => set({ forceGacha: !st.forceGacha }) }]
+      : st.ev === 'casino' ? [
+        { t: '무작위', cls: !st.forceCoin ? 'fbtn-on' : '', onTap: () => set({ forceCoin: null }) },
+        { t: '앞면(딜러 승)', cls: st.forceCoin === 'h' ? 'fbtn-on' : '', onTap: () => set({ forceCoin: 'h' }) },
+        { t: '뒷면(내 승)', cls: st.forceCoin === 't' ? 'fbtn-on' : '', onTap: () => set({ forceCoin: 't' }) },
+      ]
       : st.ev === 'mole' ? [{ t: st.forceMole ? '다음은 성공 ✓' : '확률대로', cls: st.forceMole ? 'fbtn-on' : '', onTap: () => set({ forceMole: !st.forceMole }) }] : [];
-    const demoNote = { forge: '차가운 쇠를 가지고 있으면 잠긴 선택지가 열린다. "주변에 쇠라도 챙긴다"를 고르면 실제로 생긴다.', jar: '항아리를 열면 50%로 뱀과 전투(중독 상태로 시작), 아니면 빈 항아리.', gacha: '당첨 확률 10%에서 시작, 실패할 때마다 +10%. 상품 2개(회복 · 유물)를 다 뽑으면 나간다.', mole: '성공 30%에서 시작, 실패할 때마다 +10%. 팔 때마다 체력 소모가 3씩 는다.', apothecary: '약 세 병의 효과(회복 · 피해 · 아무 일 없음)는 방문마다 섞인다. 같은 약을 또 살 수 있다.', trade: '고른 뒤에야 무엇을 받는지 보인다.', spring: '휴식 = 최대 체력의 30% 회복.', surgery: '부위마다 관련 유물 중 하나.' }[st.ev];
+    const demoNote = { forge: '차가운 쇠를 가지고 있으면 잠긴 선택지가 열린다. "주변에 쇠라도 챙긴다"를 고르면 실제로 생긴다.', jar: '항아리를 열면 50%로 뱀과 전투(중독 상태로 시작), 아니면 빈 항아리.', gacha: '당첨 확률 10%에서 시작, 실패할 때마다 +10%. 상품 2개(회복 · 유물)를 다 뽑으면 나간다.', mole: '성공 30%에서 시작, 실패할 때마다 +10%. 팔 때마다 체력 소모가 3씩 는다.', apothecary: '약 세 병의 효과(회복 · 피해 · 아무 일 없음)는 방문마다 섞인다. 같은 약을 또 살 수 있다.', trade: '고른 뒤에야 무엇을 받는지 보인다.', spring: '휴식 = 최대 체력의 30% 회복.', surgery: '부위마다 관련 유물 중 하나.', casino: '앞면 = 딜러 승(건 것을 잃는다) · 뒷면 = 내 승. 골드 +200G / 체력 +20 · 일반 유물 / 최대 체력 +10 · 희귀 유물.', macgora: '도전하면 검투사와 2칸 판에서 결투. 이기면 희귀 유물 + 100G, 지면 죽음.' }[st.ev];
 
     return {
       gold: String(st.gold), hp: String(st.hp), maxHp: String(st.maxHp), tabs,
@@ -451,14 +533,22 @@ class Component extends DCLogic {
       showChoices: st.phase === 'choose', choices,
       plain: !ev.speaker, talk: !!ev.speaker,
       sp: ev.speaker ? { name: ev.speaker.name, look: ev.speaker.look, edge: ev.speaker.edge, tagBg: ev.speaker.tagBg,
-        line: st.phase === 'choose' ? `"${ev.text}"` : ev.speaker.reply, ty: st.phase === 'choose' ? 'tyA' : 'tyB' } : { name: '', look: '', edge: '#fff', tagBg: '#000', line: '', ty: '' },
+        line: st.say || (st.phase === 'choose' || !ev.speaker.reply ? `"${ev.text}"` : ev.speaker.reply),
+        ty: (st.sayN + (st.phase === 'choose' ? 0 : 1)) % 2 ? 'tyB' : 'tyA', narr: ev.narr || '', narrD: ev.narr ? 'block' : 'none' }
+        : { name: '', look: '', edge: '#fff', tagBg: '#000', line: '', ty: '', narr: '', narrD: 'none' },
+      showFlip: st.phase === 'flip', betTxt: BET[st.bet] || '',
+      coinD: st.ev === 'casino' && st.coin && st.phase === 'result' ? 'block' : 'none', coinPos: st.coin === 't' ? '-528px 0' : '0 0',
+      showArena: st.phase === 'arena', arenaFoe: 's-glad',
+      arenaWin: () => { const id = pick(POOL.rare); done(relicRes(id, '검투사를 쓰러뜨렸다 — {r}', '관중이 일어나 환호한다. 100G도 받았다.', '#ffa24a'), { gold: st.gold + 100, say: '"…훌륭한 싸움이었다. 가져가라!!!"', sayN: st.sayN + 1 }); },
+      arenaLose: () => done(bigRes('☠', '#ff6a6a', '쓰러졌다', '막고라에서 졌다 — 런이 끝난다.', '#e0485a'), { hp: 0, exit: 'dead', say: '"관중들이여!!! 승자는 나다!!!"', sayN: st.sayN + 1 }),
       showPicker: st.phase === 'pick', pickTitle, pickItems, cancelPick: () => set({ phase: 'choose', pickFor: null }),
       showBattle: st.phase === 'battle',
       winSnake: () => { const id = pick(POOL.poison); done(relicRes(id, '뱀을 쓰러뜨렸다 — {r}', '항아리 바닥에 독 냄새가 밴 유물이 있었다.', '#6ab83a')); },
       showResult: st.phase === 'result', res,
       againD: repeatOpen ? 'inline-flex' : 'none', againLabel: '계속하기', again: () => set({ phase: 'choose', res: null, fx: '' }),
       exitNote: repeatOpen ? '계속 고를 수 있다 — 그만두려면 선택지의 나가기' : '', exitD: repeatOpen ? 'none' : 'inline-flex',
-      exitHref: st.exit === 'upgrade' ? 'Upgrade.dc.html' : 'RunMap.dc.html', exitLabel: st.exit === 'upgrade' ? '강화하러 ▶' : '지도로 ▶',
+      exitHref: st.exit === 'upgrade' ? 'Upgrade.dc.html' : st.exit === 'dead' ? 'Result.dc.html' : 'RunMap.dc.html',
+      exitLabel: st.exit === 'upgrade' ? '강화하러 ▶' : st.exit === 'dead' ? '결과로 ▶' : '지도로 ▶',
       demo, demoNote,
       resetAll: () => this.setState(Object.assign(this.fresh(st.ev), { iron: false })),
     };

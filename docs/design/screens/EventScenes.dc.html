@@ -32,7 +32,7 @@ body{margin:0}
 <div style="width: 5400px; height: 2560px; box-sizing: border-box; padding: 36px 40px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 22px">
   <header>
     <h1 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 42px; color: #fff6dc">? 이벤트 화면 모음 — 일러스트 11종</h1>
-    <p style="margin: 8px 0 0; font-size: 16px; color: #c9c2d6">그림을 화면 전체 배경으로 깔고, 이벤트 이름 · 글 · 선택지는 오른쪽 패널에 올린다. 오른쪽은 글이 읽히는 만큼만 어둡게 했다. 직접 눌러 보려면 "? 이벤트 11종" 보드의 탭. <b style="color: #ffd86a">빗금 친 선택지</b>는 기획이 아직 없어 비워 둔 것이다.</p>
+    <p style="margin: 8px 0 0; font-size: 16px; color: #c9c2d6">그림을 화면 전체 배경으로 깔고, 이벤트 이름 · 글 · 선택지는 오른쪽 패널에 올린다. 오른쪽은 글이 읽히는 만큼만 어둡게 했다. 직접 눌러 보려면 "? 이벤트 11종" 보드의 탭. <b style="color: #ffd86a">빗금 친 선택지</b>는 기획이 아직 없어 비워 둔 것이다(용족 마법사). 말풍선 셋(수술실 · 카지노 · 막고라)은 인물이 말한다.</p>
   </header>
   <div style="display: flex; flex-wrap: wrap; gap: 36px 40px">
     <sc-for list="{{evs}}" as="e" hint-placeholder-count="11">
@@ -108,10 +108,14 @@ class Component extends DCLogic {
         choices: [c('심장', '최대 HP -10', 'hp'), c('손', 'HP -15', 'hp'), c('발', 'HP -15', 'hp')] },
       { cls: 'eb-dragon', name: '용족 마법사', col: '#c48aff', kind: '기획 전', src: 'dragon_magision.png',
         text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
-      { cls: 'eb-casino', name: '카지노', col: '#ff8ab0', kind: '기획 전', src: 'casino.png',
-        text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
-      { cls: 'eb-macgora', name: '막고라', col: '#ffa24a', kind: '기획 전', src: 'macgora.png',
-        text: '(이벤트 글 — 기획이 오면 채운다)', choices: B },
+      { cls: 'eb-casino', name: '카지노', col: '#ff8ab0', kind: '한 번', src: 'casino.png — 말풍선(딜러) · 동전 던지기',
+        talk: true, who: '딜러', look: '카지노', tagBg: '#5a1a3a', reply: '게임한다 → 무엇을 거시겠어요? (골드 200G · 체력 40 · 최대 체력 20) → 동전',
+        text: '"어서오세요. 저와 게임 한 판 어때요?"',
+        choices: [c('게임한다'), c('거절한다')] },
+      { cls: 'eb-macgora', name: '막고라', col: '#ffa24a', kind: '한 번', src: 'macgora.png — 말풍선(검투사) · 2칸 결투',
+        talk: true, who: '검투사', look: '막고라', tagBg: '#6a3010', reply: '도전한다 → 2칸 판에서 검투사와 결투(이기면 희귀 유물 + 100G · 지면 죽음)',
+        text: '"나와 막고라를 이기는 자, 그만한 보상을 얻을 것이다!!!\n도전할 자 누구인가!!!!!!"',
+        choices: [c('도전한다', '지면 죽음', 'hp'), c('포기한다')] },
     ];
     for (const e of evs) Object.assign(e, e.talk
       ? { plain: false, top: 132, pad: '0', bg: 'transparent', bd: '0', sh: 'none' }

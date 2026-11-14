@@ -38,6 +38,12 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .ogre-attack2{background-image:url(/redesign/sprites/ogre/attack2.png)}
 .ogre-hurt{background-image:url(/redesign/sprites/ogre/hurt.png)}
 .ogre-death{background-image:url(/redesign/sprites/ogre/death.png)}
+.gladiator-idle{background-image:url(/redesign/sprites/gladiator/idle.png)}
+.gladiator-run{background-image:url(/redesign/sprites/gladiator/run.png)}
+.gladiator-attack1{background-image:url(/redesign/sprites/gladiator/attack1.png)}
+.gladiator-attack2{background-image:url(/redesign/sprites/gladiator/attack2.png)}
+.gladiator-hurt{background-image:url(/redesign/sprites/gladiator/hurt.png)}
+.gladiator-death{background-image:url(/redesign/sprites/gladiator/death.png)}
 .bat-idle{background-image:url(/redesign/sprites/bat/idle.png)}
 .bat-run{background-image:url(/redesign/sprites/bat/run.png)}
 .bat-attack1{background-image:url(/redesign/sprites/bat/attack1.png)}
@@ -58,7 +64,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .cellbg{background:linear-gradient(180deg,#1d1828 0%,#1d1828 85%,#2a2438 85%,#2a2438 100%)}
 </style>
 </helmet>
-<div style="width: 1640px; height: 1760px; box-sizing: border-box; padding: 40px 60px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 22px">
+<div style="width: 1640px; height: 1920px; box-sizing: border-box; padding: 40px 60px; background: #120f1a; font-family: 'Noto Sans KR', sans-serif; color: #efe9f5; display: flex; flex-direction: column; gap: 22px">
   <div style="display: flex; justify-content: space-between; align-items: flex-end">
     <div>
       <p style="margin: 0 0 6px; font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 4px; color: #f4d470">MONSTER SPRITES · ×2 PREVIEW</p>
@@ -98,7 +104,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   </sc-for>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1760}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1920}}'>
 class Component extends DCLogic {
   renderVals() {
     const mk = (id, fw, fh, rows) => rows.map(([clip, label, n, ms, imp]) => ({
@@ -121,6 +127,10 @@ class Component extends DCLogic {
           clips: mk('golem', 120, 92, [['idle', '대기', 6, 150], ['run', '이동', 8, 95], ['attack1', '룬 주먹', 6, 80, 2], ['attack2', '대지 분쇄', 6, 90, 2], ['hurt', '피격', 3, 100], ['death', '붕괴', 9, 110]]) },
         { name: '마녀', spec: '96×64', look: '휜 고깔모자 · 녹색 피부 · 독불 지팡이. 독구슬과 독 기둥.',
           clips: mk('witch', 96, 64, [['idle', '대기', 8, 120], ['run', '이동', 8, 78], ['attack1', '독구슬', 6, 70, 2], ['attack2', '독 기둥', 8, 75, 3], ['hurt', '피격', 3, 95], ['death', '사망', 8, 105]]) },
+      ] },
+      { name: '이벤트', sub: '? 칸 막고라 · 2칸 결투장', accent: '#ffa24a', edge: '#a85a20', mons: [
+        { name: '검투사 (막고라)', spec: '96×64', look: '쇠 투구 + 빨간 깃 · 맨 가슴 · 쇠 견갑 · 징 박은 가죽 허리띠 · 넓은 단검(일러스트와 같은 차림). 찌르기와 머리 위 내려찍기.',
+          clips: mk('gladiator', 96, 64, [['idle', '대기', 6, 120], ['run', '이동', 8, 75], ['attack1', '찌르기', 6, 62, 2], ['attack2', '내려찍기', 6, 64, 2], ['hurt', '피격', 3, 95], ['death', '사망', 8, 100]]) },
       ] },
     ];
     return { regions };

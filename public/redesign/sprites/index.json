@@ -810,5 +810,51 @@
   "kind": "monster",
   "region": "dungeon",
   "replaces": null
+ },
+ "gladiator": {
+  "id": "gladiator",
+  "frameW": 96,
+  "frameH": 64,
+  "scale": 3,
+  "facesRight": true,
+  "clips": {
+   "idle": {
+    "frames": 6,
+    "frameMs": 120,
+    "loop": true
+   },
+   "run": {
+    "frames": 8,
+    "frameMs": 75,
+    "loop": true
+   },
+   "attack1": {
+    "frames": 6,
+    "frameMs": 62,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "attack2": {
+    "frames": 6,
+    "frameMs": 64,
+    "loop": false,
+    "impactFrame": 2
+   },
+   "hurt": {
+    "frames": 3,
+    "frameMs": 95,
+    "loop": false
+   },
+   "death": {
+    "frames": 8,
+    "frameMs": 100,
+    "loop": false
+   }
+  },
+  "footY": 62,
+  "anchorX": 36,
+  "kind": "monster",
+  "region": "event",
+  "replaces": "gladiator"
  }
 }
