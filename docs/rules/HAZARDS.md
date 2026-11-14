@@ -175,6 +175,7 @@
 - **속박 중 넉백 · 끌어당김 무효**(2절 · `STATUS.md` 4절) — 엔진 `applyShove` 앞에서 속박을 본다.
 - `battle/ai.ts` — 새 함정 회피. `game/run.ts` `hazardsFor` — 배치(Q18). 화면 — 타일 · 칩 · 툴팁 · 위험 칸 빨강.
 - 그림: 용암 · 균열 3단계 · 구멍 · 덩굴 → 화염 변환 · 빙판 넘어짐 · 독안개 퍼짐(PROGRESS 2-bis T19). 구멍에서 나오는 칸은 무작위라 고르는 화면은 없다.
+  - ✅ **2026-11-15 시안**(`screens/Hazards.dc.html` · `OneCell.dc.html`) — 1칸 타일(46×24 ×4) `public/redesign/terrain/hazards-cell/`: `lava`(6F) · `crack-meadow` / `crack-dungeon`(6F — 0 · 1 · 2 = 균열 1 · 2 · 3단계, 3 · 4 = 무너짐, 5 = 구멍) · `hole-meadow` / `hole-dungeon`(4F 루프) · `vine-burn`(4F 덩굴 → 화염) · `fire-out`(4F 9턴 뒤 꺼짐) · `ice-break`(4F 넘어져 깨짐 → 빈 칸) · `danger`(2F 깜빡임). 바위 · 덩굴 · 화염 · 빙판 · 독안개는 지금 타일 그대로(바위는 0번 프레임만 — 999라 금 가는 단계가 필요 없다). 독안개 퍼짐은 같은 타일을 십자 칸에 더 깐다. 도구 `docs/design/tools/hazards_cell.py`(`sheets_v2`). 옛 `spikes` · `collapse-*`는 코드가 아직 써서 남겨 둠 — 재설계 구현 때 지운다.
 
 ## 부록 A — 지금 코드 (재설계 구현 전까지 · 2026-11-13 `BATTLE.md` ⑦에서 옮김)
 

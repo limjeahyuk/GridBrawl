@@ -29,16 +29,20 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 .c-rock{background-image:url(/redesign/terrain/hazards-cell/rock-meadow.png);background-size:1104px 96px}
 .c-pillar{background-image:url(/redesign/terrain/hazards-cell/rock-pillar.png);background-size:1104px 96px}
 .c-fire{background-image:url(/redesign/terrain/hazards-cell/fire.png);background-size:1104px 96px}
-.c-spikes{background-image:url(/redesign/terrain/hazards-cell/spikes.png);background-size:1104px 96px}
 .c-bramble{background-image:url(/redesign/terrain/hazards-cell/bramble.png);background-size:1288px 96px}
 .c-fog{background-image:url(/redesign/terrain/hazards-cell/fog.png);background-size:1104px 96px}
-.c-col{background-image:url(/redesign/terrain/hazards-cell/collapse-meadow.png);background-size:920px 96px;background-position:-184px 0}
-.c-cold{background-image:url(/redesign/terrain/hazards-cell/collapse-dungeon.png);background-size:920px 96px}
 .c-ice{background-image:url(/redesign/terrain/hazards-cell/ice.png);background-size:736px 96px}
+.c-lava{background-image:url(/redesign/terrain/hazards-cell/lava.png);background-size:1104px 96px}
+.c-crack{background-image:url(/redesign/terrain/hazards-cell/crack-meadow.png);background-size:1104px 96px}
+.c-crackd{background-image:url(/redesign/terrain/hazards-cell/crack-dungeon.png);background-size:1104px 96px}
+.c-hole{background-image:url(/redesign/terrain/hazards-cell/hole-meadow.png);background-size:736px 96px}
+.c-danger{background-image:url(/redesign/terrain/hazards-cell/danger.png);background-size:368px 96px}
+.s3.c-lava,.s3.c-crackd{background-size:828px 72px}
+.a2{animation:f2 900ms steps(2) infinite}@keyframes f2{to{background-position:200% 0}}
+.a6l{animation:f6 3600ms steps(6) infinite}
 .s3{width:138px;height:72px}
-.s3.c-pillar,.s3.c-spikes{background-size:828px 72px}
+.s3.c-pillar{background-size:828px 72px}
 .s3.c-ice{background-size:552px 72px}
-.s3.c-cold{background-size:690px 72px}
 .old-rock{background-image:url(/redesign/terrain/hazards/rock-meadow.png);background-size:768px 128px}
 .spr{image-rendering:pixelated;background-repeat:no-repeat;background-position:0 0;animation-iteration-count:infinite}
 .n6{animation-name:f6;animation-timing-function:steps(6)}
@@ -64,11 +68,10 @@ a{color:#f4d470}a:hover{color:#fff1b8}
     <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div class="cell"></div></sc-for>
   </div>
 
-  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 174px"></div>
-  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 239px"></div>
-  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 304px"></div>
-  <div class="hz c-col" role="img" aria-label="붕괴 경고" style="left: 70px; top: 369px"></div>
-  <div class="hz c-bramble a4" role="img" aria-label="가시덩굴" style="left: 452px; top: 369px"></div>
+  <div class="hz c-crack" role="img" aria-label="균열 2단계" style="left: 70px; top: 304px; background-position: -184px 0"></div>
+  <div class="hz c-hole" role="img" aria-label="구멍" style="left: 70px; top: 174px"></div>
+  <div class="hz c-danger a2" role="img" aria-label="위험 칸" style="left: 834px; top: 304px"></div>
+  <div class="hz c-bramble a4" role="img" aria-label="덩굴" style="left: 452px; top: 369px"></div>
   <div class="hz c-fire a6" role="img" aria-label="불길" style="left: 643px; top: 369px"></div>
   <div class="hz c-fire a6" role="img" aria-label="불길" style="left: 834px; top: 369px; animation-delay: -180ms"></div>
 
@@ -78,9 +81,9 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   <div class="hz c-fog a6s" role="img" aria-label="독안개" style="left: 1025px; top: 174px"></div>
 
   <div style="position: absolute; left: 70px; top: 478px; display: flex; gap: 20px; font-size: 13px">
-    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">붕괴 경고 열 (가장자리 1칸씩)</span>
-    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">바위 — 사이에 끼어 같은 줄 사격선을 가림</span>
-    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">불길 2칸 = 1칸 타일 두 장을 나란히</span>
+    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">왼쪽 끝 — 구멍 · 균열 2단계</span>
+    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">바위 — 못 지나가지만 공격은 넘어간다(사격선 안 막음)</span>
+    <span style="padding: 3px 10px; background: rgba(18,15,26,0.9)">덩굴 옆 화염 2칸 → 다음 라운드에 덩굴도 화염 · 빨강 = 위험 칸</span>
   </div>
 
   <section style="position: absolute; left: 40px; top: 544px; width: 520px; height: 304px; box-sizing: border-box; padding: 16px 20px; background: #1a1626; border: 2px solid #3a3150; display: flex; flex-direction: column; gap: 12px">
@@ -109,14 +112,14 @@ a{color:#f4d470}a:hover{color:#fff1b8}
     <h2 style="margin: 0; font-family: 'Do Hyeon', sans-serif; font-weight: 400; font-size: 22px; color: #fff6dc">던전 쪽 1칸 타일 <span style="font-size: 14px; color: #b9b1c9">(×3 미리보기)</span></h2>
     <div style="display: flex; gap: 18px">
       <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-pillar" role="img" aria-label="돌기둥" style="animation: f6 2400ms steps(6) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">돌기둥</figcaption></figure>
-      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-spikes" role="img" aria-label="가시덫" style="animation: f6 1080ms steps(6) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">가시덫</figcaption></figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-lava" role="img" aria-label="용암" style="animation: f6 1080ms steps(6) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">용암</figcaption></figure>
       <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-ice" role="img" aria-label="빙판" style="animation: f4 800ms steps(4) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">빙판</figcaption></figure>
-      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-cold" role="img" aria-label="붕괴 판석" style="animation: f5 1500ms steps(5) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">붕괴(판석)</figcaption></figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px"><div class="px s3 c-crackd" role="img" aria-label="균열 → 구멍(판석)" style="animation: f6 3600ms steps(6) infinite"></div><figcaption style="font-family: 'Do Hyeon', sans-serif; font-size: 16px">균열 → 구멍</figcaption></figure>
     </div>
     <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.55; color: #e4def0">
       <li>프레임 46×24 · ×4 = 184×96. 아래 15줄(60px)이 칸, 위 9줄(36px)이 서 있는 것만 쓰는 여유 공간.</li>
       <li>놓는 법: 칸의 왼쪽 위에 맞추고 <code style="color: #f4d470">top = 칸 top − 36px</code>. 중앙 정렬 계산이 필요 없다.</li>
-      <li>테두리 색 = 종류: 회색 바위 · 주황 불/붕괴 · 빨강 가시(경고 때부터) · 초록 덩굴/독 · 하늘색 빙판.</li>
+      <li>테두리 색 = 종류: 회색 바위 · 주황 화염 · 진홍 용암 · 흙색 → 주황 균열(단계) · 초록 덩굴/독 · 하늘색 빙판 · 빨강 위험 칸. 가시덫 · 가장자리 붕괴는 없앴다(재설계).</li>
     </ul>
   </section>
 </div>

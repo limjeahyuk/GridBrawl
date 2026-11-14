@@ -68,4 +68,5 @@ docs/design/
 | `tools/seal/seal.py` | 봉인 덮개 48×53 ×3(기절 사슬 · 빙결 얼음 · 속박 덩굴) + 자물쇠 14×16 ×3 → `public/redesign/ui/status/seal.png` · `lock.png`(`Seal.dc.html`) |
 | `tools/mon_gladiator.py` | 막고라 검투사 96×64 6동작(`gladiator_clips()` — `pix.save_sheet`로 `sprites/gladiator/`) |
 | `tools/coin/coin.py` | 카지노 동전 22×22 × 12프레임 → `public/redesign/ui/events/coin.png` |
+| `tools/hazards_cell.py <out>` | 판 위 지형 1칸 타일 46×24(×4 = 184×96) → `public/redesign/terrain/hazards-cell/`. `sheets_v2()` = 재설계 세트(용암 · 균열 → 구멍 · 덩굴 → 화염 · 화염 꺼짐 · 빙판 깨짐 · 위험 칸), `sheets()` = 옛 세트(가시덫 · 가장자리 붕괴 포함) |
 
