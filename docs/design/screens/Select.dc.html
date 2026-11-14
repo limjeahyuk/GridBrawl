@@ -77,7 +77,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
         <div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: {{h.hpPct}}%; height: 100%; background: #e0485a"></div></div>
         <span style="font-family: 'Silkscreen', monospace; font-size: 14px; width: 34px; text-align: right">{{h.hp}}</span>
       </div>
-      <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #efe9f5"><b style="color: {{h.accent}}">{{h.passive}}</b> — {{h.passiveDesc}}</p>
+      <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #efe9f5"><b style="color: {{h.accent}}">{{h.passive}}</b>&nbsp;<br><br>{{h.passiveDesc}}</p>
       <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: {{h.sigBg}}; border: 2px solid {{h.sigEdge}}">
         <span style="font-family: 'Do Hyeon', sans-serif; font-size: 20px">시그니처 · {{h.sig}}</span>
         <span style="font-family: 'Silkscreen', monospace; font-size: 12px; color: {{h.sigFg}}">{{h.sigStat}}</span>
@@ -93,7 +93,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   </section>
 
   <div style="position: absolute; left: 560px; right: 36px; bottom: 30px; display: flex; justify-content: flex-end; align-items: center; gap: 18px">
-    <span style="font-size: 14px; color: #c9c2d6">다음 단계에서 난이도를 고른다</span>
+    
     <a href="Difficulty.dc.html" style="display: flex; align-items: center; height: 52px; padding: 0 26px; background: #f4d470; color: #1d1408; border: 3px solid #2a1c10; box-shadow: 0 5px 0 #7a5418; font-family: 'Do Hyeon', sans-serif; font-size: 25px; text-decoration: none">{{h.name}} 선택 · 다음 ▶</a>
   </div>
 </div>
@@ -108,13 +108,13 @@ class Component extends DCLogic {
     const st = this.state;
     // 일러스트는 화면 높이(720)에 맞춰 왼쪽에, 오른쪽은 이어 그린 뒤 흐리게 (public/redesign/heroes/bg-*.png)
     const H = {
-      cairn: { name: 'CAIRN', cls: '전사', epithet: 'Oathbound Warden', hp: 103, hpPct: 94, accent: '#7fd6c8', edge: '#3c9c98',
+      cairn: { name: 'Warrior', cls: '전사', epithet: 'Oathbound Warden', hp: 103, hpPct: 94, accent: '#7fd6c8', edge: '#3c9c98',
         passive: '불침의 서약', passiveDesc: '받는 공격 피해 -3, 매 라운드 체력 +2.', sig: '서약의 파쇄', sigStat: 'DM23 EN24', sigBg: '#0f2a30', sigEdge: '#3c9c98', sigFg: '#bff5ec',
         stageBg: 'linear-gradient(180deg, #123a40 0%, #0d2a30 100%)', spr: 'n6 s-cairn-idle', sprBs: '1728px 192px', sprDur: '720ms', sprX: -108, face: [240, 140] },
-      sable: { name: 'SABLE', cls: '궁수', epithet: 'Ashen Fletcher', hp: 81, hpPct: 74, accent: '#ffa24a', edge: '#c4501c',
+      sable: { name: 'Archer', cls: '궁수', epithet: 'Ashen Fletcher', hp: 81, hpPct: 74, accent: '#ffa24a', edge: '#c4501c',
         passive: '독니', passiveDesc: '내 공격 피해 +3, 피해를 주면 중독 1라운드를 묻힌다.', sig: '독의 비', sigStat: 'DM20 EN23', sigBg: '#2a160e', sigEdge: '#c4501c', sigFg: '#ffd0a0',
         stageBg: 'linear-gradient(180deg, #3a1e16 0%, #24140f 100%)', spr: 'n6 s-sable-idle', sprBs: '1728px 192px', sprDur: '750ms', sprX: -105, face: [215, 212] },
-      dirge: { name: 'DIRGE', cls: '마법사', epithet: 'Azure Witch', hp: 78, hpPct: 71, accent: '#c9a6ff', edge: '#8d6fd0',
+      dirge: { name: 'Wizard', cls: '마법사', epithet: 'Azure Witch', hp: 78, hpPct: 71, accent: '#c9a6ff', edge: '#8d6fd0',
         passive: '혼백의 마법서', passiveDesc: '매 라운드 기력 +6, 보호막 +4.', sig: '종언의 만가', sigStat: 'DM22 EN25', sigBg: '#1e1436', sigEdge: '#8d6fd0', sigFg: '#e0d0ff',
         stageBg: 'linear-gradient(180deg, #24183e 0%, #160f28 100%)', spr: 'n8 s-dirge-idle', sprBs: '2304px 192px', sprDur: '960ms', sprX: -111, face: [262, 186] },
     };

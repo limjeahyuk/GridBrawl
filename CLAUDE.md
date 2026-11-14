@@ -51,7 +51,7 @@
 
 **1:1 카드 전투 로그라이크.** 직업을 고르고 **지도 두 장(1막 초원 20층 → 2막 던전 20층)**을 오르며 전투 · ? · 여관 · 대장간 · 보물을 지나 보스를 잡는다. 한 라운드에 카드 3장을 골라 슬롯 1→2→3 순서로 실행한다. 세계관 · 그림은 **2026-11 리디자인**(에셋 `public/redesign/` · 스타일 맨 뒤 층 `src/ui/redesign.css`).
 
-- **3직업** — 전사 `warrior`(CAIRN · 내구 · 넉백 · 기절) · 궁수 `archer`(SABLE · 기동 · 한방 · 중독) · 마법사 `mage`(DIRGE · Azure Witch · 원거리 주문 · 속박 · 보호막, **붙으면 진다**). 상세 [BATTLE.md](docs/rules/BATTLE.md) ⑤.
+- **3직업** — 전사 `warrior`(Warrior · 내구 · 넉백 · 기절) · 궁수 `archer`(Archer · 기동 · 한방 · 중독) · 마법사 `mage`(Wizard · Azure Witch · 원거리 주문 · 속박 · 보호막, **붙으면 진다**). 표시 이름은 2026-11-15부터 Warrior · Archer · Wizard(옛 CAIRN · SABLE · DIRGE — 그림 · 파일 id `cairn` · `sable` · `dirge`는 그대로). 상세 [BATTLE.md](docs/rules/BATTLE.md) ⑤.
 - **런 시작 체력 전사 200 · 궁수 100 · 마법사 100 — 사용자 고정값**(2026-11-10). 그래서 **직업 밴드를 `maxHpBonus`로 맞추지 않는다**(마법사 손잡이는 `turnShield`).
 - ⚠ **직업 패시브는 유물이 아니다**(2026-11-09 사용자 확정) — `RELICS` · `run.relicIds` · 유물 줄 · 도감 · 거래 어디에도 없고 `mergeRelics(ids, charId)`가 직업에서 얹는다. 유물로 되돌리지 말 것. 런은 유물 0개로 시작한다.
 - ⚠ 직업 기본기 3장(`CharacterDef.basics`)은 `deckFor`에 꼭 들어 있어야 한다(AI 풀 · 플랜 복원).

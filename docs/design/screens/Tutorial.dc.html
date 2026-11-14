@@ -54,7 +54,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
 
   <header style="position: absolute; left: 24px; right: 24px; top: 16px; height: 84px; display: grid; grid-template-columns: 1fr 220px 1fr; gap: 16px">
     <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 10px 14px; background: rgba(18,15,26,0.92); border: 3px solid #0a0810; box-shadow: inset 0 0 0 2px #3c9c98">
-      <span style="font-family: 'Silkscreen', monospace; font-size: 16px; color: #fff6dc">CAIRN</span>
+      <span style="font-family: 'Silkscreen', monospace; font-size: 16px; color: #fff6dc">Warrior</span>
       <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #ff8a8a">HP</span><div style="flex-grow: 1; height: 12px; background: #0a0810; border: 2px solid #3a3150"><div style="width: 100%; height: 100%; background: #e0485a"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">103/103</span></div>
       <div style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'Silkscreen', monospace; font-size: 11px; width: 20px; color: #7fc8ff">EN</span><div style="flex-grow: 1; height: 8px; background: #0a0810; border: 2px solid #3a3150"><div style="width: {{en}}%; height: 100%; background: #4a9aff"></div></div><span style="font-family: 'Silkscreen', monospace; font-size: 12px; width: 58px; text-align: right">{{enN}}</span></div>
     </div>
@@ -77,7 +77,7 @@ a{color:#f4d470}a:hover{color:#fff1b8}
   <div class="board" aria-label="6×4 판" style="position: absolute; left: 160px; top: 300px; width: 960px; height: 272px; border: 4px solid #2a1c10; box-shadow: 0 8px 0 #5a3c22, 0 12px 0 #2a1c10; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, 68px)">
     <sc-for list="{{cells}}" as="c" hint-placeholder-count="24"><div class="{{c.cls}}" style="border-right: 1px solid rgba(20,50,20,0.45); border-bottom: 1px solid rgba(20,50,20,0.45); background: {{c.bg}}; box-shadow: {{c.sh}}; display: flex; align-items: flex-end; justify-content: center"><span style="display: {{c.labD}}; margin-bottom: 5px; padding: 1px 7px; font-size: 12px; font-weight: 700; background: #f4d470; color: #1d1408; border: 2px solid #2a1c10">→ 오른쪽</span></div></sc-for>
   </div>
-  <div class="spr n6 s-cairn-idle" role="img" aria-label="CAIRN" style="position: absolute; left: {{heroL}}px; top: 372px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: 720ms"></div>
+  <div class="spr n6 s-cairn-idle" role="img" aria-label="Warrior" style="position: absolute; left: {{heroL}}px; top: 372px; width: 192px; height: 128px; background-size: 1152px 128px; animation-duration: 720ms"></div>
   <sc-if value="{{foeAlive}}" hint-placeholder-val="{{true}}">
     <div class="spr n6 s-slime-idle" role="img" aria-label="슬라임" style="position: absolute; left: 644px; top: 410px; width: 128px; height: 88px; background-size: 768px 88px; animation-duration: 780ms; transform: scaleX(-1)"></div>
   </sc-if>
@@ -145,7 +145,7 @@ class Component extends DCLogic {
   }
   renderVals() {
     const S = [
-      { tag: '상대', title: '한 명만 쓰러뜨리면 끝', body: '6×4 칸짜리 판 위에서 1:1로 싸운다.\n이 슬라임이 첫 상대 — 쓰러뜨리면 튜토리얼이 끝난다.', x: 150, y: 290, w: 980, h: 292, bx: 450, by: 116, cta: '다음' },
+      { tag: '상대', title: '적과 싸워서 죽이면 승리합니다.', body: '6×4 칸짜리 판 위에서 싸웁니다.\n슬라임을 쓰러트려보세요', x: 150, y: 290, w: 980, h: 292, bx: 450, by: 116, cta: '다음' },
       { tag: 'HP', title: 'HP — 0이 되면 진다', body: '빨간 막대가 내 체력. 상대 막대도 똑같이 읽는다.\n상대를 먼저 0으로 만들면 이긴다.', x: 84, y: 54, w: 470, h: 24, bx: 84, by: 150, cta: '다음' },
       { tag: '기력', title: '기력(EN) — 카드의 연료', body: '공격 카드는 기력을 쓴다. 카드 오른쪽 위 숫자가 비용.\n매 라운드 조금씩 다시 찬다 — 한 번에 다 쓰지 말 것.', x: 84, y: 76, w: 470, h: 20, bx: 84, by: 150, cta: '다음' },
       { tag: '이동', title: '판을 눌러 다가가기', body: '노랗게 깜빡이는 칸을 눌러 보자.\n그 칸으로 가는 「오른쪽」이 1번 칸에 담긴다.\n이동 카드는 손패 왼쪽 묶음(×4)에 모여 있다.', x: 480, y: 436, w: 168, h: 76, tap: true, tx: 544, ty: 456, bx: 680, by: 150, cta: '칸을 눌렀다' },
