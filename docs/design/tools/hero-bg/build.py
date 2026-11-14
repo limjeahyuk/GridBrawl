@@ -2,8 +2,9 @@
 The illustration is kept untouched at full screen height on the left. The scene is
 continued to the right by ping-pong mirroring a clean strip from the picture's right
 edge, then blurred progressively (depth of field) and dimmed for the UI.
-usage: python build.py   (expects cairn.png, sable.png, magision.png, all 832x1216 — docs/design/2dImg)
-The mage is drawn from magision.png (2026-11-11) but still saved as bg-dirge.png, the name the game loads."""
+usage: python build.py   (expects cairn.png, sable.png (832x1216) and magision_full.png (768x1344) — docs/design/2dImg)
+The mage is drawn from magision_full.png (2026-11-15, full body — magision.png was cut at the thighs)
+but still saved as bg-dirge.png, the name the game loads. Any source size works: it is fit to 720 high."""
 import numpy as np
 import cv2
 from PIL import Image, ImageFilter
@@ -60,6 +61,9 @@ def strip_witch(a, x0=796, y0=870, y1=1165):
 
 def build(name, strip, keep_first=None, src=None):
     a = load(src or name)
+    H, W = a.shape[:2]
+    S = 720 / H
+    PW = round(W * S)
     seg = np.concatenate([strip[:, ::-1], strip], axis=1)
     need = round((1280 - PW) / S) + 8
     ext = np.concatenate([seg] * (need // seg.shape[1] + 2), axis=1)[:, :need]
@@ -88,7 +92,7 @@ def build(name, strip, keep_first=None, src=None):
 
 
 if __name__ == '__main__':
-    build('dirge', strip_witch(load('magision')), src='magision')
+    build('dirge', strip_simple(load('magision_full'), 712), src='magision_full')
     build('sable', strip_simple(load('sable'), 795, holes=[(650, 700, 795, 832)]))
     build('cairn', strip_knight(load('cairn')), keep_first=(44, (600, 960)))
     im = Image.new('RGB', (1280, 2160))

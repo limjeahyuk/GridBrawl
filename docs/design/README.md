@@ -59,7 +59,7 @@ docs/design/
 
 | 도구 | 하는 일 |
 | --- | --- |
-| `tools/hero-bg/build.py` | 영웅 선택 배경(`cairn` · `sable` · `magision` → `heroes/bg-*.png` — 마법사 결과 이름은 그대로 `bg-dirge.png`) |
+| `tools/hero-bg/build.py` | 영웅 선택 배경(`cairn` · `sable` · `magision_full` → `heroes/bg-*.png` — 마법사 결과 이름은 그대로 `bg-dirge.png` · 원본 크기가 달라도 높이 720에 맞춘다) |
 | `tools/inn-bg/build.py` | 여관 배경 |
 | `tools/event-bg/build.py` · `build_wide.py` · `cover.py` | 이벤트 배경 — 세로 그림을 한쪽에 세우기 · 가로 그림 · 가로 그림 꽉 채우기(1344×768은 화면비가 거의 같다) |
 | `tools/icon/build.py` | 웹 아이콘 마스터(`master-1024.png`, 거래상 얼굴) — `npm run icon`이 줄인다 |
